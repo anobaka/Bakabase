@@ -14,8 +14,10 @@ internal static class CloudDownloadPayloadRoot
         TryValidate(downloadDirectory, candidate, files, out var root) ? root : downloadDirectory;
 
     public static string SelectLayout(string downloadDirectory, string? candidate, IReadOnlyList<string> files,
-        CloudDownloadTarget target) => target.SelectedSource?.ProviderId == "baidu" && target.DownloadLayout == "separateDirectory"
-            ? downloadDirectory : Select(downloadDirectory, candidate, files);
+        CloudDownloadTarget target) => UsesDestination(target) ? downloadDirectory : Select(downloadDirectory, candidate, files);
+
+    internal static bool UsesDestination(CloudDownloadTarget target) =>
+        target.SelectedSource?.ProviderId == "baidu" && target.DownloadLayout == "separateDirectory";
 
     public static bool TryValidate(string downloadDirectory, string? candidate, IReadOnlyList<string> files,
         out string root)

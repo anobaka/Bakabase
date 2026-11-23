@@ -213,20 +213,8 @@ public sealed class AcquisitionCandidateTests
         options.RecipeByLeadKind[AcquisitionLeadKind.DirectUrl] = custom.Name;
         options.InboxDirectory = Path.Combine(Path.GetTempPath(), "candidate-inbox-" + Guid.NewGuid().ToString("N"));
         options.LibraryRootDirectory = Path.Combine(Path.GetTempPath(), "candidate-library-" + Guid.NewGuid().ToString("N"));
-        options.Concurrency = 1;
-        var busyResource = await Missing("Already running");
-        var target = await Missing("A direct link to queue");
+        var target = await Missing("A direct link to acquire");
         await AddLead(target, AcquisitionLeadKind.DirectUrl, "https://example.invalid/archive.zip");
-
-        // Occupy the sole slot so CreateAsync resolves its real default and queues without ever
-        // executing a step, opening a browser or starting a download.
-        Db.Set<AcquisitionTaskDbModel>().Add(new AcquisitionTaskDbModel
-        {
-            ResourceId = busyResource, Status = AcquisitionStatus.Running,
-            RecipeDefinitionId = custom.Id, LeadKind = AcquisitionLeadKind.Manual,
-            CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now
-        });
-        await Db.SaveChangesAsync();
 
         var lead = (await Candidates.SearchAsync()).Items.Single(r => r.ResourceId == target).Leads.Single();
         Assert.AreEqual(custom.Id, lead.DefaultRecipeDefinitionId);
@@ -239,10 +227,12 @@ public sealed class AcquisitionCandidateTests
         var task = await _sp.GetRequiredService<IAcquisitionService>().CreateAsync(target,
             lead.Kind, lead.Value, lead.Id);
         Assert.AreEqual(lead.DefaultRecipeDefinitionId, task.RecipeDefinitionId);
-        Assert.IsNull(task.WorkflowRunId, "This regression must not run any acquisition steps.");
+        // The daemon is not initialized in this fixture, so creating the workflow does not
+        // execute activities or perform external work.
+        Assert.IsNotNull(task.WorkflowRunId);
         var reread = (await Candidates.SearchAsync()).Items.Single(r => r.ResourceId == target);
         Assert.AreEqual(task.Id, reread.ActiveTaskId);
-        Assert.AreEqual(AcquisitionStatus.Pending, reread.ActiveTaskStatus);
+        Assert.AreEqual(AcquisitionStatus.Running, reread.ActiveTaskStatus);
     }
 
     [TestMethod]

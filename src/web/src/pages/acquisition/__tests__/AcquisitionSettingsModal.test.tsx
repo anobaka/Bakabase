@@ -188,27 +188,39 @@ beforeEach(() => {
   api.setup.mockReset().mockResolvedValue({ code: 0, data: {} });
 });
 afterEach(cleanup);
-it("saves just the acquisition concurrency while preserving inherited paths and templates", async () => {
+it("defaults to twenty parallel acquisition tasks and saves only the edited concurrency", async () => {
   api.get.mockResolvedValue({ code: 0, data: {
     ...options, concurrency: undefined, deliveryDirectoryTemplate: undefined, deliveryPartDirectoryTemplate: undefined,
     processingWorkspaceDirectory: undefined, storagePolicy: { ...defaultStoragePolicy, processingWorkspaceDirectory: "/saved-work" },
   } });
   render(<AcquisitionSettingsModal />);
   const input = await screen.findByLabelText("acquisition.settings.concurrency.label");
-  expect(input).toHaveValue(2);
+  expect(input).toHaveValue(20);
   expect(saveButton()).toBeDisabled();
   for (const value of ["0", "101", "1.5"]) {
     fireEvent.change(input, { target: { value } });
     expect(input).toHaveAttribute("aria-invalid", "true");
     expect(saveButton()).toBeDisabled();
   }
-  for (const concurrency of [100, 1]) {
+  for (const concurrency of [100, 1, 20]) {
     fireEvent.change(input, { target: { value: String(concurrency) } });
     fireEvent.click(saveButton());
     await screen.findByText("acquisition.settings.saved");
     expect(api.setup).toHaveBeenLastCalledWith({ concurrency }, { showErrorToast: false });
     expect(saveButton()).toBeDisabled();
   }
+  expect(api.put).not.toHaveBeenCalled();
+});
+
+it("preserves configured concurrency when saving another setting", async () => {
+  render(<AcquisitionSettingsModal />);
+  expect(await screen.findByLabelText("acquisition.settings.concurrency.label")).toHaveValue(7);
+  fireEvent.change(screen.getByLabelText("acquisition.storage.minimumFreeGiB.label"), { target: { value: "120" } });
+  fireEvent.click(saveButton());
+  await screen.findByText("acquisition.settings.saved");
+  expect(api.setup).toHaveBeenCalledExactlyOnceWith({ minimumFreeSpaceBytes: 120 * 1024 ** 3 }, { showErrorToast: false });
+  expect(saveButton()).toBeDisabled();
+  expect(screen.getByLabelText("acquisition.settings.concurrency.label")).toHaveValue(7);
   expect(api.put).not.toHaveBeenCalled();
 });
 

@@ -10,10 +10,12 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Components;
+using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.FileProcessing;
 using Microsoft.EntityFrameworkCore;
 
@@ -68,25 +70,29 @@ public sealed class AcquisitionRecoveryPreviewStore
 
 public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitionRecoveryDiagnostics diagnostics,
     AcquisitionRecoveryPreviewStore previews, IWorkflowRunResumer resumer, AcquisitionPlanService? plans = null,
-    IAcquisitionDownloadOnlyRecoveryService? downloadOnly = null, AcquisitionLocalFilesRecoveryService? localFiles = null)
+    IAcquisitionDownloadOnlyRecoveryService? downloadOnly = null, AcquisitionLocalFilesRecoveryService? localFiles = null,
+    CloudOperationService? transfers = null)
 {
     public async Task<AcquisitionRecoveryPreview> PreviewAsync(AcquisitionRecoveryPreviewInput input, CancellationToken ct = default,
         Func<string?, Task>? guardDirectory = null)
     {
         var ids = Ids(input.TaskIds);
         var scope = input.Scope ?? "workflow";
-        if (scope is not ("workflow" or "downloads" or "localFiles")) throw new ArgumentException("RECOVERY_SCOPE_INVALID");
+        if (scope is not ("workflow" or "downloads" or "localFiles" or "retryTransfer")) throw new ArgumentException("RECOVERY_SCOPE_INVALID");
         async Task<AcquisitionRecoveryDiagnosis> Diagnose(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, bool verify, CancellationToken token)
         {
+            if (scope == "retryTransfer") return await diagnostics.DiagnoseTransferRetryAsync(task, run, token);
             if (scope != "localFiles")
             {
-                var current = await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify, includeStoppedDownloads: scope == "downloads");
+                var current = await diagnostics.DiagnoseAsync(task, run, token, verifyFiles: verify,
+                    includeStoppedDownloads: scope == "downloads", includeStoppedVerification: scope == "workflow",
+                    deferCompletedDownloadVerification: true);
                 if (guardDirectory != null)
                     foreach (var directory in current.InitialDownloadDirectories) await guardDirectory(directory);
                 return ForScope(current, run, scope);
             }
             if (localFiles == null) throw new ArgumentException("RECOVERY_LOCAL_FILES_UNAVAILABLE");
-            var diagnosis = await localFiles.DiagnoseAsync(task, run, verify, token, guardDirectory);
+            var diagnosis = await localFiles.PreviewAsync(task, run, token, guardDirectory);
             if (diagnosis.Row.CanContinue && diagnosis.Row.LocalFiles is { } files &&
                 AcquisitionLocalFilesRecoveryService.CanPrepareWithoutFileOperations(task))
                 return diagnosis with {Row = diagnosis.Row with {LocalFiles = files with {SupportsPrepareOnly = true}}};
@@ -122,8 +128,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         {
             using var itemBudget = CancellationTokenSource.CreateLinkedTokenSource(budget.Token);
             itemBudget.CancelAfter(TimeSpan.FromSeconds(rows[pending.Index].ReasonCode == "RECOVERY_RECHECK_SOURCE" ? 12 : 4));
-            var inspectingOneFileSet = ids.Length == 1 && (scope == "localFiles" ||
-                scope == "workflow" && IsLocalFileStep(rows[pending.Index].CurrentStepKind));
+            var inspectingOneFileSet = ids.Length == 1 && scope == "workflow" && IsLocalFileStep(rows[pending.Index].CurrentStepKind);
             var checkToken = inspectingOneFileSet ? ct : itemBudget.Token;
             try
             {
@@ -148,9 +153,23 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
     public async Task<AcquisitionRecoveryResult> ApplyAsync(AcquisitionRecoveryApplyInput input, CancellationToken ct = default,
         Func<string?, Task>? guardDirectory = null) => await ApplyCoreAsync(input, ct, guardDirectory);
 
+    // The worker has already performed the full action diagnosis and checked its frozen
+    // signal. Pin that exact read to the newly persisted starting state. Apply still checks
+    // the version and diagnoses the provider again inside the task and workflow gates.
+    internal Task<AcquisitionRecoveryResult> ApplyBatchAdmissionAsync(string scope, AcquisitionRecoveryRow row,
+        string version, string signal, string? placementStamp, bool transferRetryConfirmed, CancellationToken ct)
+    {
+        var token = Guid.NewGuid().ToString("N");
+        var preview = new AcquisitionRecoveryPreview(token, DateTimeOffset.UtcNow.AddMinutes(10), 1, 1, 0, [row], scope);
+        previews.Add(new(preview, new Dictionary<int, string> {{row.TaskId, version}},
+            new Dictionary<int, string> {{row.TaskId, signal}}));
+        return ApplyBatchAsync(new(token, [row.TaskId]), placementStamp, ct, transferRetryConfirmed, signal);
+    }
+
     internal Task<AcquisitionRecoveryResult> ApplyBatchAsync(AcquisitionRecoveryApplyInput input,
-        string? processingPlacementStamp, CancellationToken ct) =>
-        ApplyCoreAsync(input, ct, null, processingPlacementStamp: processingPlacementStamp, preserveReserve: true);
+        string? processingPlacementStamp, CancellationToken ct, bool transferRetryConfirmed = false, string? expectedSignal = null) =>
+        ApplyCoreAsync(input, ct, null, processingPlacementStamp: processingPlacementStamp, preserveReserve: true,
+            transferRetryConfirmed: transferRetryConfirmed, expectedSignal: expectedSignal);
 
     // The durable continuation request already binds its task/run/revision. Verify once at
     // dispatch, under the task gate, then keep the same exact-state guard inside the run gate.
@@ -171,7 +190,9 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                     useEmergencySpaceReserve: useEmergencySpaceReserve);
                 return new(outcome.Status == "started" ? [id] : [], [], LocalFiles: [outcome]);
             }
-            var diagnosis = ForScope(await diagnostics.DiagnoseAsync(task, run, ct, verifyContent: true, includeStoppedDownloads: scope == "downloads"), run, scope);
+            var diagnosis = ForScope(await diagnostics.DiagnoseAsync(task, run, ct, verifyContent: true,
+                includeStoppedDownloads: scope == "downloads", includeStoppedVerification: scope == "workflow",
+                deferCompletedDownloadVerification: true), run, scope);
             if (!diagnosis.Row.CanContinue) return new([], [new(id, diagnosis.Row.ReasonCode)]);
             return await DispatchVerifiedWhileLockedAsync(task, run, scope, guardDirectory, diagnosis, ct, useEmergencySpaceReserve);
         }
@@ -223,7 +244,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
 
     private async Task<AcquisitionRecoveryResult> ApplyCoreAsync(AcquisitionRecoveryApplyInput input, CancellationToken ct,
         Func<string?, Task>? guardDirectory, int? heldTask = null, AcquisitionRecoveryDiagnosis? verified = null,
-        string? processingPlacementStamp = null, bool preserveReserve = false)
+        string? processingPlacementStamp = null, bool preserveReserve = false, bool transferRetryConfirmed = false, string? expectedSignal = null)
     {
         var ids = Ids(input.TaskIds).Order().ToArray();
         var entry = previews.Claim(input.PreviewToken, ids, input.UseEmergencySpaceReserve, input.AnalyzeFilesFirst == true,
@@ -240,6 +261,10 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
             try
             {
                 var expected = entry.Preview.Rows.Single(r => r.TaskId == id);
+                if (expectedSignal != null && entry.Signals[id] != expectedSignal)
+                    throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
+                if (expected.ReasonCode == AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired && !transferRetryConfirmed)
+                    throw new RecoveryBlockedException(AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired);
                 await EnsureCurrentVersion(id, entry.Versions[id], ct);
                 if (entry.Preview.Scope == "localFiles")
                 {
@@ -283,8 +308,9 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                         token => EnsureCurrentVersion(id, version, token), ct);
                     downloadOutcomes.Add(outcome);
                     if (outcome.ReasonCode == null && outcome.IndeterminateDownloadTaskIds.Count == 0 &&
-                        outcome.StartedDownloadTaskIds.Count ==
-                        AcquisitionDownloadOnlyRecoveryService.Targets(run, entry.Signals[id])!.Length)
+                        outcome.StartedDownloadTaskIds.Count + (outcome.VerifiedDownloadTaskIds?.Count ?? 0) ==
+                        AcquisitionDownloadOnlyRecoveryService.Targets(run, entry.Signals[id],
+                            verificationOnly: expected.ReasonCode == "RECOVERY_EXISTING_FILES_VERIFY_REQUIRED")!.Length)
                         continued.Add(id);
                     else skipped.Add(new(id, outcome.StartedDownloadTaskIds.Count > 0 ? "RECOVERY_DOWNLOAD_PARTIALLY_STARTED" :
                         outcome.ReasonCode ?? "RECOVERY_DOWNLOAD_OUTCOME_UNKNOWN"));
@@ -313,15 +339,48 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                             throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
                         using var validationBudget = CancellationTokenSource.CreateLinkedTokenSource(token);
                         if (entry.Preview.TotalCount != 1 || !IsLocalFileStep(expected.CurrentStepKind))
-                            validationBudget.CancelAfter(TimeSpan.FromSeconds(15));
+                            validationBudget.CancelAfter(preserveReserve && diagnostics.IsTransferStep(expected.CurrentStepKind)
+                                ? TimeSpan.FromMinutes(2) : TimeSpan.FromSeconds(15));
                         AcquisitionRecoveryDiagnosis current;
-                        try { current = verified ?? await diagnostics.DiagnoseAsync(task, run, validationBudget.Token, verifyContent: true); }
+                        try { current = entry.Preview.Scope == "retryTransfer"
+                            ? await diagnostics.DiagnoseTransferRetryAsync(task, run, validationBudget.Token)
+                            : verified ?? await diagnostics.DiagnoseAsync(task, run, validationBudget.Token,
+                            verifyContent: true, includeStoppedVerification: true, deferCompletedDownloadVerification: true); }
                         catch (OperationCanceledException) when (!token.IsCancellationRequested)
                         { throw new RecoveryBlockedException("RECOVERY_CHECK_INCOMPLETE"); }
                         if (!current.Row.CanContinue) throw new RecoveryBlockedException(current.Row.ReasonCode);
                         if (current.SignalJson != entry.Signals[id]) throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
                         if (processingPlacementStamp != null && current.ProcessingPlacementStamp != processingPlacementStamp)
                             throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
+                        if (current.TransferRetryTargets.Count > 0)
+                        {
+                            if (transfers == null || expected.ReasonCode != current.Row.ReasonCode ||
+                                current.Row.ReasonCode != AcquisitionRecoveryDiagnostics.TransferRecoveryReady)
+                                throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
+                            try
+                            {
+                                foreach (var retry in current.TransferRetryTargets)
+                                {
+                                    var authorized = await transfers.AuthorizeTransferRecoveryAsync(run.Id, retry.Target,
+                                        retry.AccountId, retry.RemoteDirectory, validationBudget.Token, retry.NextIsolatedOperationId);
+                                    if (authorized.Disposition is not (CloudTransferRecoveryDisposition.Authorized or
+                                        CloudTransferRecoveryDisposition.Reconcile or CloudTransferRecoveryDisposition.Retry))
+                                        throw new RecoveryBlockedException("RECOVERY_TRANSFER_REVIEW_REQUIRED");
+                                }
+                            }
+                            catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                            {throw new RecoveryBlockedException("RECOVERY_CHECK_INCOMPLETE");}
+                        }
+                        if (entry.Preview.Scope == "retryTransfer")
+                        {
+                            if (!transferRetryConfirmed || transfers == null || current.TransferReplays.Count == 0)
+                                throw new RecoveryBlockedException(AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired);
+                            await using var preparation = await db.Database.BeginTransactionAsync(token);
+                            foreach (var replay in current.TransferReplays)
+                                if (!await transfers.PrepareTransferReplayAsync(run.Id, replay, validationBudget.Token))
+                                    throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
+                            await preparation.CommitAsync(token);
+                        }
                         task = await AcquisitionContinuationReserve.SaveWhileLockedAsync(db, task, run, input.UseEmergencySpaceReserve,
                             "recovery:" + input.PreviewToken, token, preserveReserve);
                         // Enqueue may be consumed immediately. Commit the confirmed follow-up
@@ -349,7 +408,8 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
     private static AcquisitionRecoveryDiagnosis ForScope(AcquisitionRecoveryDiagnosis diagnosis, WorkflowRunDbModel? run, string scope)
     {
         if (scope != "downloads" || !diagnosis.Row.CanContinue) return diagnosis;
-        return AcquisitionDownloadOnlyRecoveryService.Targets(run, diagnosis.SignalJson) == null
+        return AcquisitionDownloadOnlyRecoveryService.Targets(run, diagnosis.SignalJson,
+            verificationOnly: diagnosis.Row.ReasonCode == "RECOVERY_EXISTING_FILES_VERIFY_REQUIRED") == null
             ? diagnosis with {Row = diagnosis.Row with {CanContinue = false, Action = null, ReasonCode = "RECOVERY_DOWNLOAD_SCOPE_UNAVAILABLE"}}
             : diagnosis with {Row = diagnosis.Row with {Action = "downloads"}};
     }

@@ -1,6 +1,7 @@
 using Bakabase.Abstractions.Components.Telemetry;
 using Bakabase.Modules.AI.Components.Cache;
 using Bakabase.Modules.AI.Components.Observation;
+using Bakabase.Modules.AI.Components.Providers;
 using Bakabase.Modules.AI.Components.Providers.OpenAI;
 using Bakabase.Modules.AI.Models.Domain;
 using Microsoft.Extensions.AI;
@@ -20,6 +21,7 @@ public class LlmService(
     IOptionsMonitor<AiModuleOptions> aiOptions,
     LlmCacheRequestCoordinator cacheRequestCoordinator,
     ILogger<LlmService> logger,
+    IEnumerable<ILlmFeatureExecutionPolicy> executionPolicies,
     IProductTelemetry? telemetry = null,
     ITelemetryActorAccessor? telemetryActor = null
 ) : ILlmService
@@ -158,6 +160,7 @@ public class LlmService(
             rawClient = new ProductTelemetryChatClient(rawClient, telemetry, telemetryActor, config.Kind, feature);
         IChatClient client = new ObservationChatClient(rawClient, usageService, providerConfigId.Value, modelId,
             feature.ToString(), aiOptions.CurrentValue.AuditLogRequestContent);
+        client = ApplyExecutionPolicy(client, feature);
 
         options ??= new ChatOptions();
         options.Temperature ??= featureConfig?.Temperature;
@@ -187,6 +190,7 @@ public class LlmService(
         // Observe actual provider calls; the outer cache bypasses inference on a hit.
         client = new ObservationChatClient(client, usageService, providerConfigId, modelId, feature?.ToString(),
             opts.AuditLogRequestContent, onUsageRecorded);
+        client = ApplyExecutionPolicy(client, feature);
 
         // Cache layer
         if (opts.EnableCache)
@@ -196,5 +200,11 @@ public class LlmService(
         }
 
         return client;
+    }
+
+    private IChatClient ApplyExecutionPolicy(IChatClient client, AiFeature? feature)
+    {
+        var policy = executionPolicies.SingleOrDefault(p => p.Feature == feature);
+        return policy == null ? client : new FeatureExecutionChatClient(client, policy, logger);
     }
 }

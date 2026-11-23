@@ -43,6 +43,11 @@ public class WorkflowRunResumer<TDbContext>(
 
         var definition = await ValidateRemaining(run, ct);
 
+        var activity = run.CurrentStepIndex is >= 0 and {} index
+            ? definition.Activities.OrderBy(a => a.Order).ElementAtOrDefault(index) : null;
+        foreach (var guard in mutationGuards ?? [])
+            guard.ValidateAnswer(activity, run.WaitReason, run.WaitPromptJson, signalJson);
+
         // The signal travels on the row: the runner is re-entered through a background task that
         // carries nothing but the run id.
         run.PendingSignalJson = signalJson;
@@ -80,10 +85,11 @@ public class WorkflowRunResumer<TDbContext>(
 
         var definition = await ValidateRemaining(run, ct);
 
+        if (run.Status == WorkflowRunStatus.Cancelled || continuationSignal != null)
+            run.PendingSignalJson = continuationSignal;
         run.Status = WorkflowRunStatus.Pending;
         run.CompletedAt = null;
         run.ErrorMessage = null;
-        if (continuationSignal != null) run.PendingSignalJson = continuationSignal;
         await db.SaveChangesAsync(ct);
 
         await Enqueue(run, definition, ct);

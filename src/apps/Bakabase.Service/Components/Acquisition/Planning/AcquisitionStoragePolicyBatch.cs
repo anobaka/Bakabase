@@ -210,12 +210,16 @@ public sealed partial class AcquisitionPlanService
         var ids = BatchIds(input.TaskIds); var rows = await Tasks.AsNoTracking().Where(t => ids.Contains(t.Id)).ToListAsync(ct);
         var result = new List<AcquisitionWorkspaceCleanupRow>(); var versions = new Dictionary<int, string>();
         var recorded = new Dictionary<int, IReadOnlyList<ArtifactWorkspaceCleanupPreview>>();
+        var processing = new Dictionary<int, IReadOnlyList<AcquisitionProcessingWorkspaceCandidate>>();
         var ownerRuns = new Dictionary<int, IReadOnlyList<int>>();
         var included = new HashSet<string>(StringComparer.Ordinal);
         foreach (var id in ids)
         {
             var row = rows.SingleOrDefault(t => t.Id == id); var (reason, artifactIds, publications, owners) = await CleanupArtifacts(row, ct);
             var candidates = new List<ArtifactWorkspaceCleanupPreview>();
+            var stageFiles = new List<AcquisitionProcessingWorkspaceCandidate>();
+            if (reason == "not_completed" && await ReadCheckpointReviewAsync(row, ct) != null)
+                reason = "processed_checkpoint_requires_confirmation";
             if (reason == null && publications.Count == 0 && artifactIds.All(included.Contains)) reason = "shared_artifact";
             artifactIds = artifactIds.Where(a => !included.Contains(a)).ToList();
             if (reason == null)
@@ -223,25 +227,39 @@ public sealed partial class AcquisitionPlanService
                 await GuardStoragePathsAsync(row!, guard);
                 foreach (var artifactId in artifactIds)
                 {
-                    var artifact = await artifacts!.GetArtifactAsync(artifactId, ct);
-                    if (artifact != null) await guard(artifact.RootDirectory);
+                    if (await artifacts!.GetArtifactDirectoryAsync(artifactId, ct) is {} directory) await guard(directory);
                 }
                 foreach (var chunk in artifactIds.Chunk(100)) candidates.AddRange(await maintenance.PreviewAsync(chunk, ct));
                 if (ancestors != null && publications.Count > 0)
                     candidates.AddRange(await ancestors.PreviewAsync(publications, owners, ct));
                 foreach (var candidate in candidates.Where(c => c.Eligible)) await guard(candidate.ResultDirectory);
                 foreach (var publicationId in publications)
-                    if (await artifacts!.GetArtifactAsync(publicationId, ct) is { } publication) await guard(publication.RootDirectory);
+                    if (await artifacts!.GetArtifactDirectoryAsync(publicationId, ct) is {} directory) await guard(directory);
                 var retained = candidates.Any(c => c.Reason == "RetentionPolicyKeep");
                 candidates = candidates.Where(c => c.Eligible).ToList();
-                if (candidates.Count == 0) reason = retained ? "policy_keep" : "nothing_to_reclaim";
+                await RequireRetainedInputSelectionAsync(row!, candidates, ct);
+                stageFiles = await ProcessingWorkspacesAsync(row!, owners, guard, ancestors, ct);
+                if (stageFiles.Count > 0)
+                {
+                    // The same producer can also report its old private snapshot after committing it to this stage.
+                    // Its separate maintenance selection must never count or remove any of these physical files twice.
+                    stageFiles = stageFiles.Select(stage => stage with {RetireMovedInputs = candidates.Where(c =>
+                        c.PublishedArtifactId != null && c.PreviewFiles == null && stage.MovedInputIds.Contains(c.ArtifactId))
+                        .Select(c => c.ArtifactId).Distinct().ToArray()}).ToList();
+                    candidates.RemoveAll(c => stageFiles.Any(stage => stage.RetireMovedInputs.Contains(c.ArtifactId) ||
+                        StageDirectoryOverlap(stage.Selection.Root, c.ResultDirectory) ||
+                        stage.StageArtifactIds.Contains(c.ArtifactId) || c.PreviewFiles?.Any(f => StageDirectoryOverlap(stage.Selection.Root, f.Path)) == true));
+                    processing[id] = stageFiles;
+                }
+                if (candidates.Count == 0 && stageFiles.Count == 0) reason = retained ? "policy_keep" : "nothing_to_reclaim";
                 else {versions[id] = StorageVersion(row!); recorded[id] = candidates; ownerRuns[id] = owners; included.UnionWith(candidates.Select(c => c.ArtifactId));}
             }
-            result.Add(new(id, row?.Title, reason == null, reason, candidates.Select(c => c.ArtifactId).ToArray(),
-                candidates.Sum(c => c.FileCount), candidates.Sum(c => c.Bytes)));
+            result.Add(new(id, row?.Title, reason == null, reason, candidates.Select(c => c.ArtifactId).Concat(stageFiles.SelectMany(s => s.StageArtifactIds)).Distinct().ToArray(),
+                candidates.Sum(c => c.FileCount) + stageFiles.Sum(s => s.Selection.Remaining.Count),
+                candidates.Sum(c => c.Bytes) + stageFiles.Sum(s => s.Selection.Remaining.Sum(f => f.Entry.Length))));
         }
         var preview = new AcquisitionWorkspaceCleanupPreview(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddMinutes(10), result, versions.Count);
-        previews.Add(preview.PreviewId, new("cleanup", preview.ExpiresAt, versions) {Artifacts = recorded, CleanupOwnerRuns = ownerRuns}); return preview;
+        previews.Add(preview.PreviewId, new("cleanup", preview.ExpiresAt, versions) {Artifacts = recorded, CleanupOwnerRuns = ownerRuns, ProcessingWorkspaces = processing}); return preview;
     }
     public async Task<AcquisitionWorkspaceCleanupResult> ReclaimWorkspacesAsync(AcquisitionStoragePolicyApplyInput input,
         AcquisitionStoragePolicyPreviewStore previews, ArtifactWorkspaceMaintenance maintenance, Func<string, Task> guard, CancellationToken ct,
@@ -249,7 +267,7 @@ public sealed partial class AcquisitionPlanService
     {
         var ids = BatchIds(input.TaskIds); var entry = previews.Claim(input.PreviewId, "cleanup", ids);
         if (entry.Result is AcquisitionWorkspaceCleanupResult saved) return saved;
-        if (entry.CleanupConsents.Count > 0) return await ReclaimExplicitWorkspacesAsync(ids, entry, maintenance, guard, ct, ancestors);
+        if (entry.CleanupConsents.Count > 0 || entry.ReviewedCheckpoints.Count > 0) return await ReclaimExplicitWorkspacesAsync(ids, entry, maintenance, guard, ct, ancestors);
         var completed = new List<int>(); var skipped = new List<AcquisitionStoragePolicySkip>(); var files = 0; long bytes = 0;
         foreach (var id in ids)
         {
@@ -265,17 +283,21 @@ public sealed partial class AcquisitionPlanService
                 }
                 if (blocked != null) { skipped.Add(new(id, blocked)); continue; }
             }
-            var gate = AcquisitionTaskGate.For(id); System.Threading.SemaphoreSlim? runGate = null;
+            var gate = AcquisitionTaskGate.For(id); var runGates = new List<SemaphoreSlim>();
             if (!await gate.WaitAsync(0, ct)) {skipped.Add(new(id, "task_busy")); continue;}
             try
             {
                 var row = await Tasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id, ct);
-                if (row?.WorkflowRunId is {} runId)
+                var stageFiles = entry.ProcessingWorkspaces.GetValueOrDefault(id);
+                int[] heldOwners = stageFiles != null ? entry.CleanupOwnerRuns[id].Distinct().Order().ToArray()
+                    : row?.WorkflowRunId is {} runId ? [runId] : [];
+                foreach (var owner in heldOwners)
                 {
-                    var candidate = WorkflowRunMutationGate.For(runId);
-                    if (!await candidate.WaitAsync(0, ct)) {skipped.Add(new(id, "task_busy")); continue;}
-                    runGate = candidate;
+                    var runGate = WorkflowRunMutationGate.For(owner);
+                    if (!await runGate.WaitAsync(0, ct)) break;
+                    runGates.Add(runGate);
                 }
+                if (runGates.Count != heldOwners.Length) {skipped.Add(new(id, "task_busy")); continue;}
                 var (reason, artifactIds, publications, owners) = await CleanupArtifacts(row, ct);
                 if (reason == null && StorageVersion(row!) != entry.Versions[id]) reason = "revision_changed";
                 if (reason == null && (!entry.CleanupOwnerRuns[id].Order().SequenceEqual(owners.Order()) ||
@@ -283,6 +305,13 @@ public sealed partial class AcquisitionPlanService
                         ancestors == null || !publications.Contains(a.PublishedArtifactId)))) reason = "files_changed";
                 if (reason != null) {skipped.Add(new(id, reason)); continue;}
                 await GuardStoragePathsAsync(row!, guard);
+                if (stageFiles != null)
+                {
+                    var outcome = await RemoveProcessingWorkspacesAsync(row!, owners, stageFiles, guard, ancestors, ct);
+                    files += outcome.RemovedFiles;
+                    bytes += outcome.RemovedBytes;
+                    if (!outcome.Completed) {skipped.Add(new(id, outcome.Reason ?? "files_changed")); continue;}
+                }
                 var succeeded = true;
                 foreach (var chunk in entry.Artifacts[id].Where(a => a.PublishedArtifactId == null).Chunk(100))
                 {
@@ -301,14 +330,14 @@ public sealed partial class AcquisitionPlanService
                     foreach (var candidate in entry.Artifacts[id].Where(a => a.PublishedArtifactId != null))
                     {
                         await guard(candidate.ResultDirectory);
-                        if (await artifacts!.GetArtifactAsync(candidate.PublishedArtifactId!, ct) is { } publication) await guard(publication.RootDirectory);
-                        var outcome = await ancestors.ReclaimWithHeldRunGatesAsync(candidate, owners, row?.WorkflowRunId is {} held ? [held] : [], ct);
+                        if (await artifacts!.GetArtifactDirectoryAsync(candidate.PublishedArtifactId!, ct) is {} directory) await guard(directory);
+                        var outcome = await ancestors.ReclaimWithHeldRunGatesAsync(candidate, owners, heldOwners, ct);
                         files += outcome.RemovedFiles; bytes += outcome.RemovedBytes;
                         if (!outcome.Completed) { skipped.Add(new(id, outcome.Reason ?? "artifact_busy")); succeeded = false; }
                     }
                 if (succeeded) completed.Add(id);
             }
-            finally {runGate?.Release(); gate.Release();}
+            finally {foreach (var runGate in runGates) runGate.Release(); gate.Release();}
         }
         var result = new AcquisitionWorkspaceCleanupResult(completed, files, bytes, skipped); lock (entry) entry.Result = result; return result;
     }

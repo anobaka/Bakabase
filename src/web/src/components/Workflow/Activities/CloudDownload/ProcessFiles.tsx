@@ -121,6 +121,8 @@ function limitsPayload(options: ProcessingConfig["recursive"]) {
   };
 }
 
+const archiveSignatureLabels = new Map([[".7z", "7z"], [".zip", "ZIP"], [".rar", "RAR"]]);
+
 interface ProcessingPrompt {
   targetId?: string;
   title?: string;
@@ -140,6 +142,7 @@ interface ProcessingPrompt {
   allowedActions?: string[];
   deliveryReview?: boolean;
   files?: string[];
+  archiveSignatures?: Record<string, string>;
   pathConflict?: unknown;
   adaptiveAssessment?: boolean;
 }
@@ -194,9 +197,13 @@ const ResumeForm: NonNullable<WorkflowActivityUI<ProcessingConfig>["ResumeForm"]
     prompt.sourcePasswordEvidenceChecked !== true &&
     (activityKind === "acquisition.plan.process" || activityKind === "fs.assessDelivery");
   const pathConflict = reason === "ProcessingPathConflict";
+  const revisableDeliveryReview = prompt.deliveryReview === true &&
+    (pathConflict || reason === "ArchiveNameEncodingUnsupported") &&
+    prompt.allowedArchivePolicies?.includes("instructions") === true;
+  const planLocked = prompt.canEditPlan === false && !revisableDeliveryReview;
   const needsPlan =
     ["ExtractionPlanUnknown", "ExtractionLayoutConflict", "ProcessingPathConflict", "ArchiveInputRequired", "ProcessingInputNotMatched", "ArchiveNameEncodingUnsupported", "ArchivePasswordEncodingUnsupported", "ArchivePasswordNotRepresentable", "ArchiveGroupInputChanged", "FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED", "FILE_DELIVERY_RESULT_UNCERTAIN", ...(prompt.deliveryReview ? ["RepeatedContent"] : [])].includes(reason ?? "") &&
-    prompt.canEditPlan !== false;
+    !planLocked;
   const needsBudget = [
     "RecursiveBudgetExceeded",
     "DepthLimit",
@@ -288,13 +295,22 @@ const ResumeForm: NonNullable<WorkflowActivityUI<ProcessingConfig>["ResumeForm"]
       {pathConflict && <ProcessingPathConflictSummary conflict={prompt.pathConflict} />}
       {requiredComponentId && <DependencyManager id={requiredComponentId} mode="summary" />}
       {!fileTask && prompt.deliveryReview && <p className="text-xs text-default-500">{t("cloudDownload.deliveryReview.automaticRule")}</p>}
-      {!fileTask && prompt.deliveryReview && Array.isArray(prompt.files) && prompt.files.length > 0 && (
+      {prompt.deliveryReview && (!fileTask || reason === "FILE_DELIVERY_RESULT_UNCERTAIN" || reason === "FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED") &&
+        Array.isArray(prompt.files) && prompt.files.length > 0 && (
         <ul className="list-disc space-y-1 pl-5 text-sm">
           {prompt.files.slice(0, 8).filter((file): file is string => typeof file === "string")
-            .map((file) => <li key={file} className="break-all">{file}</li>)}
+            .map((file) => {
+              const format = archiveSignatureLabels.get(prompt.archiveSignatures?.[file] ?? "");
+              return <li key={file} className="break-all">
+                <span>{file}</span>
+                {format && <span className="ms-2 text-xs text-default-500">
+                  {t("cloudDownload.deliveryReview.archiveSignature", { format })}
+                </span>}
+              </li>;
+            })}
         </ul>
       )}
-      {prompt.canEditPlan === false && !needsPassword && !retryCurrentStep && (
+      {planLocked && !needsPassword && !retryCurrentStep && (
         <p className="text-sm text-warning-600">{t("acquisition.plan.lockedPlan")}</p>
       )}
       {!fileTask && prompt.adaptiveAssessment && (
@@ -341,17 +357,18 @@ const ResumeForm: NonNullable<WorkflowActivityUI<ProcessingConfig>["ResumeForm"]
       ) : needsPlan && fileTask ? (
         <TaskFilePlanDecision targetId={prompt.targetId} saved={prompt.extractionPlanJson}
           policies={prompt.allowedArchivePolicies} adaptive={prompt.adaptiveAssessment === true}
-          pathConflict={pathConflict} submitting={submitting} onSubmit={onSubmit} />
+          pathConflict={pathConflict} allowKeepOnPathConflict={revisableDeliveryReview}
+          submitting={submitting} onSubmit={onSubmit} />
       ) : needsPlan ? (
         <div className="space-y-2">
-          {!pathConflict && (
+          {(!pathConflict || revisableDeliveryReview) && (
             <>
               <ArchivePolicy
                 value={archivePolicy}
                 onChange={setArchivePolicy}
                 disabled={submitting}
                 allowedPolicies={prompt.allowedArchivePolicies}
-                keepLabel={prompt.deliveryReview ? t(prompt.reason === "FILE_DELIVERY_RESULT_UNCERTAIN" ? "cloudDownload.deliveryReview.keepCurrentFiles" : "cloudDownload.deliveryReview.keepArchives") : undefined}
+                keepLabel={prompt.deliveryReview ? t(pathConflict || prompt.reason === "FILE_DELIVERY_RESULT_UNCERTAIN" ? "cloudDownload.deliveryReview.keepCurrentFiles" : "cloudDownload.deliveryReview.keepArchives") : undefined}
               />
               <p className="text-xs text-default-500">
                 {t("cloudDownload.processing.policyScopeHint")}

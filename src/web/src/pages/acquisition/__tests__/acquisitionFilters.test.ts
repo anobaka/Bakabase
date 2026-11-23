@@ -23,3 +23,9 @@ it("toggles only the requested condition and produces a canonical set", () => {
   expect(toggleAcquisitionFilter(["downloadedPending", "spaceInsufficient"], "downloadedPending"))
     .toEqual(["spaceInsufficient"]);
 });
+
+it("drops the retired catch-all from both legacy and multiple-tag inputs", () => {
+  expect(normalizeAcquisitionFilters({ attentionTag: "planNeedsInput",
+    attentionTags: ["planNeedsInput", "downloadInfoMissing", "sourceSelectionRequired", "configurationRequired"],
+  })).toEqual({ attentionTags: ["configurationRequired", "downloadInfoMissing", "sourceSelectionRequired"], facts: [] });
+});

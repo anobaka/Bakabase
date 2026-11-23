@@ -4,16 +4,109 @@ using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.FileProcessing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionReplanTests
 {
+    [DataTestMethod]
+    [DataRow("missingStage")]
+    [DataRow("emptyStage")]
+    [DataRow("confirmedInstructions")]
+    [DataRow("populatedStage")]
+    [DataRow("populatedOwnedStage")]
+    [DataRow("existingReceipt")]
+    [DataRow("modifiedDownload")]
+    [DataRow("newStageFiles")]
+    public async Task Registered_download_waits_for_instructions_before_creating_a_processing_copy(string scenario)
+    {
+        var (task, run, download) = await InitialUnknownInput();
+        var stage = Path.Combine(_root, "review-stage");
+        if (scenario != "missingStage") Directory.CreateDirectory(stage);
+        task = await BindCurrentStage(task, "processing", stage, taskAllocation: scenario != "populatedStage");
+        var binding = task.Plan!.StageDirectories!.Parts["main"];
+        var payload = (DownloadWorkset)WorkflowItemSnapshot.Restore(run.CurrentItemJson!);
+        payload = payload with {Targets = [payload.Targets.Single() with
+            {StageDirectories = binding, ProcessingWaitReason = null, ProcessingDirectoryScope = binding.Processing!.Allocation}]};
+        var manual = Path.Combine(stage, "manual.txt");
+        var locations = _services.GetRequiredService<FileProcessingWorkspaceResolver>();
+        var manualInput = scenario is "populatedStage" or "populatedOwnedStage";
+        if (scenario == "populatedOwnedStage") await locations.EnsureScopedDirectoryAsync(binding.Processing!.Allocation!, default);
+        if (manualInput) await File.WriteAllTextAsync(manual, "user prepared");
+        ArtifactRecord? existing = null;
+        if (scenario == "existingReceipt")
+            existing = await AcquisitionProcessingStageInput.PrepareCoreAsync(Db, Artifacts, new CompositeStorage(), locations,
+                task.Id, run.Id, "main", binding.Processing!, download, new StageInputMaterializer(),
+                _services.GetRequiredService<IServiceScopeFactory>(), default);
+        var config = WorkflowRunPlans.Read(run.PlanSnapshotJson)!.Nodes[run.CurrentStepIndex!.Value].ConfigJson;
+        run.Status = WorkflowRunStatus.Running; run.PendingSignalJson = null; await Db.SaveChangesAsync();
+        WorkflowExecutionContext Context(string? prompt = null) => new() {RunId = run.Id, WorkflowDefinitionId = 0,
+            TriggerKind = CloudWorkflow.Trigger, Payload = payload, ActivityConfigJson = config, ResumePromptJson = prompt,
+            Services = _services, Logger = NullLogger.Instance};
+        var operations = await Db.ArtifactOperations.CountAsync();
+        var activity = new AcquisitionPlanProcessingActivity();
+        var waiting = await activity.ProcessItemAsync(Context(), payload, default);
+        Assert.IsNotNull(waiting.Suspension);
+        using var prompt = JsonDocument.Parse(waiting.Suspension.PromptJson!);
+        Assert.AreEqual("cloud.fileProcessing", waiting.Suspension.Reason);
+        Assert.AreEqual("ExtractionPlanUnknown", prompt.RootElement.GetProperty("reason").GetString());
+        Assert.IsTrue(prompt.RootElement.GetProperty("canEditPlan").GetBoolean());
+        var observed = (await Artifacts.GetArtifactAsync(prompt.RootElement.GetProperty("artifactId").GetString()!))!;
+        Assert.AreEqual(observed.Fingerprint, prompt.RootElement.GetProperty("fingerprint").GetString());
+        if (manualInput)
+        {
+            Assert.AreEqual("currentFiles", observed.Kind);
+            CollectionAssert.AreEqual(new[] {manual}, observed.Files.ToArray());
+        }
+        else
+        {
+            Assert.AreEqual(existing?.Id ?? download.Id, observed.Id);
+            Assert.AreEqual(operations, await Db.ArtifactOperations.CountAsync());
+            if (existing == null)
+                Assert.IsNull(await AcquisitionProcessingStageInput.ReadPreparedAsync(Db, Artifacts, locations, task.Id, run.Id,
+                    payload.Targets.Single(), download, default));
+        }
+        if (scenario == "missingStage") Assert.IsFalse(Directory.Exists(stage));
+        if (existing == null) Assert.IsFalse(File.Exists(Path.Combine(stage, "original.bin")));
+        Assert.IsTrue(await Artifacts.HasActiveConsumersAsync(download.OperationId));
+        var answer = scenario == "confirmedInstructions" ? new CloudFileProcessingSignal {TargetId = "main", ExtractionPlanJson =
+            JsonSerializer.Serialize(new FileProcessingPlan {Requirement = "required", Steps = [
+                new() {Id = "rename", Op = "renameFile", Selector = "original.bin", TargetName = "confirmed.bin"}]}, WorkflowJson.Options)} :
+            new CloudFileProcessingSignal {TargetId = "main", ArchivePolicy = "keep"};
+        Task<WorkflowItemOutcome> Resume() => activity.ResumeAsync(Context(waiting.Suspension.PromptJson),
+            waiting.Suspension.Item, JsonSerializer.Serialize(answer, WorkflowJson.Options), default);
+        if (scenario == "newStageFiles")
+        {
+            await File.WriteAllTextAsync(manual, "new input");
+            var error = await Assert.ThrowsExactlyAsync<InvalidDataException>(Resume);
+            Assert.AreEqual("STAGE_COMMIT_TARGET_CONFLICT", error.Message);
+            Assert.AreEqual("new input", await File.ReadAllTextAsync(manual));
+            Assert.AreEqual(operations, await Db.ArtifactOperations.CountAsync()); return;
+        }
+        if (scenario == "modifiedDownload")
+        {
+            await File.WriteAllTextAsync(download.Files.Single(), "changed original bytes");
+            await Assert.ThrowsExactlyAsync<InvalidOperationException>(Resume);
+            Assert.AreEqual(operations, await Db.ArtifactOperations.CountAsync()); return;
+        }
+        var completed = await Resume();
+        Assert.IsNull(completed.Suspension, completed.Suspension?.PromptJson);
+        var output = ((DownloadWorkset)completed.Replacement!).Targets.Single();
+        Assert.AreEqual(stage, output.ProcessedDirectory);
+        Assert.AreEqual(manualInput ? "user prepared" : "original bytes",
+            await File.ReadAllTextAsync(output.ProcessedFiles.Single()));
+        if (scenario == "confirmedInstructions") Assert.AreEqual("confirmed.bin", Path.GetFileName(output.ProcessedFiles.Single()));
+        Assert.AreEqual("original bytes", await File.ReadAllTextAsync(download.Files.Single()));
+        Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
+    }
+
     [DataTestMethod]
     [DataRow(false)]
     [DataRow(true)]

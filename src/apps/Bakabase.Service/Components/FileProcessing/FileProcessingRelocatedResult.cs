@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
@@ -13,7 +14,28 @@ internal sealed record FileProcessingRelocatedResult(string OriginalRoot, string
     internal bool Matches(string originalRoot, ArtifactManifest expected) =>
         ArtifactManifestFiles.PathComparer.Equals(Path.GetFullPath(OriginalRoot), Path.GetFullPath(originalRoot)) &&
         Manifest.Fingerprint == expected.Fingerprint && Manifest.Entries.Count == expected.Entries.Count &&
-        Manifest.Entries.All(e => expected.Entries.Any(f => FileDispositionProofs.SameEntry(e, f))) &&
+        CoversEntries(expected.Entries, Manifest.Entries) &&
         (Manifest.Directories ?? []).ToHashSet(ArtifactManifestFiles.PathComparer)
             .SetEquals(expected.Directories ?? []);
+
+    internal static bool CoversEntries(IReadOnlyList<ArtifactManifestEntry> manifest, IReadOnlyList<ArtifactManifestEntry> required)
+    {
+        if (required.Count > manifest.Count || IndexEntries(manifest) is not {} remaining) return false;
+        foreach (var entry in required)
+        {
+            if (entry?.RelativePath == null || !remaining.Remove(entry.RelativePath, out var match) ||
+                !FileDispositionProofs.SameEntry(entry, match)) return false;
+        }
+        return true;
+    }
+
+    internal static Dictionary<string, ArtifactManifestEntry>? IndexEntries(IReadOnlyList<ArtifactManifestEntry> entries)
+    {
+        var index = new Dictionary<string, ArtifactManifestEntry>(entries.Count, StringComparer.Ordinal);
+        foreach (var entry in entries)
+        {
+            if (entry?.RelativePath == null || !index.TryAdd(entry.RelativePath, entry)) return null;
+        }
+        return index;
+    }
 }

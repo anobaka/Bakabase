@@ -20,33 +20,41 @@ public sealed partial class AcquisitionRecoveryTests
         var (task, run, original) = await Seed(kind, WorkflowRunStatus.Waiting,
             "Choose a folder inside a mounted storage location. previous destination");
         var oldRoot = Path.Combine(_root, "unavailable-old-root");
-        var newRoot = Path.Combine(_root, "new-root");
-        var directory = Path.Combine(newRoot, "task"); Directory.CreateDirectory(directory);
         var target = original.Targets.Single();
         if (accountId != null) target = target with {AccountId = accountId,
             Sources = target.Sources.Select(source => source with {AccountId = accountId}).ToList()};
-        var workset = original with {OutputDirectory = oldRoot};
+        var (download, operation) = await RecordFixtureDownloadPart(run.Id, target, oldRoot, "task");
+        var workset = original with {OutputDirectory = oldRoot, Targets = [target with {DownloadTaskId = download.Id}]};
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
+        await _db.SaveChangesAsync();
+        return (task, run, workset, download, operation);
+    }
+
+    private async Task<(DownloadTaskDbModel Download, CloudOperationDbModel Operation)> RecordFixtureDownloadPart(
+        int runId, CloudDownloadTarget target, string oldRoot, string folder)
+    {
+        var newRoot = Path.Combine(_root, "new-root");
+        var directory = Directory.CreateDirectory(Path.Combine(newRoot, folder)).FullName;
         var intent = DownloadArtifactCoordinator.DownloadIntent(target, oldRoot);
-        var request = new CloudDownloadRequest(intent, target.SelectedSource!, target.AccountId, null, Path.Combine(oldRoot, "task"))
+        var request = new CloudDownloadRequest(intent, target.SelectedSource!, target.AccountId, null, Path.Combine(oldRoot, folder))
         {
-            DestinationRevisions = [new(Guid.NewGuid().ToString("N"), Path.Combine(oldRoot, "task"), directory,
+            DestinationRevisions = [new(Guid.NewGuid().ToString("N"), Path.Combine(oldRoot, folder), directory,
                 newRoot, DateTime.UtcNow, new string('a', 64))]
         };
         var download = new DownloadTaskDbModel {DownloadPath = directory, Status = DownloadTaskDbModelStatus.Complete,
             ThirdPartyId = CloudSites.Site("baidu"), Options = JsonSerializer.Serialize(request, JsonSerializerOptions.Web)};
         _db.DownloadTasks.Add(download); await _db.SaveChangesAsync();
-        var operation = new CloudOperationDbModel {Id = intent, WorkflowRunId = run.Id, TargetId = target.Id,
+        var operation = new CloudOperationDbModel {Id = intent, WorkflowRunId = runId, TargetId = target.Id,
             Kind = "download", State = "started", DownloadTaskId = download.Id, RequestJson = download.Options};
         _db.CloudDownloadOperations.Add(operation);
         _db.ArtifactOperationBindings.Add(new() {Id = Guid.NewGuid().ToString("N"), OwnerKind = "workflow",
-            OwnerId = run.Id.ToString(), OperationId = intent, Slot = CloudOperationService.OperationSlot(target, "download")});
+            OwnerId = runId.ToString(), OperationId = intent, Slot = CloudOperationService.OperationSlot(target, "download")});
         var file = Path.Combine(directory, "official.bin"); await File.WriteAllTextAsync(file, "verified existing bytes");
         var manifest = await ArtifactManifestFiles.CaptureAsync(directory, [file]);
         _db.DownloadResults.Add(new() {DownloadTaskId = download.Id, DeduplicationKey = intent, DownloadDirectory = directory, Path = directory,
             FilesJson = JsonSerializer.Serialize(new[] {file}), Fingerprint = manifest.Fingerprint});
-        workset = workset with {Targets = [target with {DownloadTaskId = download.Id}]};
-        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
-        await _db.SaveChangesAsync(); return (task, run, workset, download, operation);
+        await _db.SaveChangesAsync();
+        return (download, operation);
     }
 
     [DataTestMethod]

@@ -11,10 +11,10 @@ public partial class CompressedFileService
     private static async Task EnsureAutomaticZipNamesAsync(string path, ArchiveOpenOptions? opening, CancellationToken ct)
     {
         if (OperatingSystem.IsWindows() || opening?.ZipFileNameCodePage != null ||
-            opening?.UsesZipCompatibilityReader == true || opening?.Mode != null) return;
+            opening?.UsesZipCompatibilityReader == true || opening?.OpensSevenZipVolumes == true || opening?.Mode != null) return;
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
         stop.CancelAfter(ArchiveFormatProbeLimits.PerCandidate);
-        try { await ZipNameEncodingProbe.EnsureLosslessAsync(path, opening?.ExpectedZipOffset ?? 0, stop.Token); }
+        try { await ZipNameEncodingProbe.EnsureLosslessAsync(opening?.InspectionPath(path) ?? path, opening?.ExpectedZipOffset ?? 0, stop.Token); }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             throw new ArchiveFormatProbeIncompleteException("ZIP filename inspection exceeded its time limit.",

@@ -19,18 +19,40 @@ namespace Bakabase.InsideWorld.Business.Components.Artifacts;
 public sealed class ArtifactOperationStore : IArtifactOperationStore
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private static readonly TimeSpan AdoptionLeaseDuration = TimeSpan.FromMinutes(30);
     private readonly BakabaseDbContext _db;
     private readonly Func<string> _appData;
     private readonly IUserStoragePolicy? _storage;
+    private readonly TimeProvider _clock;
+    private readonly Func<string, IReadOnlyList<string>, VerifiedStorageMount?> _verifiedMount;
 
     public ArtifactOperationStore(BakabaseDbContext db, AppService app, IUserStoragePolicy storage)
         : this(db, () => app.AppDataDirectory, storage) { }
 
-    internal ArtifactOperationStore(BakabaseDbContext db, Func<string> appData, IUserStoragePolicy? storage = null)
-    { _db = db; _appData = appData; _storage = storage; }
+    internal ArtifactOperationStore(BakabaseDbContext db, Func<string> appData, IUserStoragePolicy? storage = null,
+        TimeProvider? clock = null) : this(db, appData, storage, clock, StorageVolumes.VerifiedFileMount) { }
+
+    internal ArtifactOperationStore(BakabaseDbContext db, Func<string> appData, IUserStoragePolicy? storage,
+        TimeProvider? clock, Func<string, IReadOnlyList<string>, VerifiedStorageMount?> verifiedMount)
+    {
+        _db = db; _appData = appData; _storage = storage; _clock = clock ?? TimeProvider.System;
+        _verifiedMount = verifiedMount;
+    }
 
     public Task<IAsyncDisposable> AcquireMaintenanceAsync(CancellationToken ct = default) =>
         ArtifactMaintenanceGate.For(_appData()).EnterMaintenanceAsync(ct);
+
+    public async Task<IAsyncDisposable> AcquirePublishedFilesMaintenanceAsync(string artifactId, string root,
+        string fingerprint, IReadOnlyList<string> files, CancellationToken ct = default)
+    {
+        var gate = ArtifactMaintenanceGate.For(_appData());
+        if (files.Count is > 0 and <= ArtifactVerifiedFileScope.MaximumFiles &&
+            await GetArtifactAsync(artifactId, ct) is {Kind: "publishedFiles", State: ArtifactLocationState.Available} published &&
+            published.RootDirectory == root && published.Fingerprint == fingerprint &&
+            ArtifactVerifiedFileScope.TryCapture(root, published.Manifest, files, ct, _verifiedMount) is {} scope)
+            return await gate.EnterPublishedFileRemovalAsync(scope, ct);
+        return await gate.EnterMaintenanceAsync(ct);
+    }
 
     public async Task<bool> HasRegisteredFilesAsync(IReadOnlyList<string> files, CancellationToken ct = default)
     {
@@ -125,8 +147,17 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
         return await ClaimCoreAsync(request, ownerId, leaseDuration, ct, expectedAttempt);
     }
 
+    public async Task<ArtifactOperationClaim> ReopenFailedAttemptAsync(ArtifactOperationRequest request, int expectedAttempt,
+        string expectedError, string ownerId, TimeSpan leaseDuration, CancellationToken ct = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(expectedAttempt, 1);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedError);
+        await using var mutation = await ArtifactMaintenanceGate.For(_appData()).EnterMutationAsync(ct);
+        return await ClaimCoreAsync(request, ownerId, leaseDuration, ct, expectedAttempt, expectedError);
+    }
+
     private async Task<ArtifactOperationClaim> ClaimCoreAsync(ArtifactOperationRequest request, string ownerId,
-        TimeSpan leaseDuration, CancellationToken ct = default, int? expectedAttempt = null)
+        TimeSpan leaseDuration, CancellationToken ct = default, int? expectedAttempt = null, string? expectedError = null)
     {
         ValidateRequest(request);
         ValidateDuration(leaseDuration);
@@ -161,8 +192,11 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
                 return new(ArtifactClaimStatus.NeedsReconciliation, operation.Id);
             // Rechecked on each CAS iteration: queue delay or another consumer must never
             // turn this explicitly authorized continuation into a new operation generation.
+            var reopen = expectedError != null && operation.State == ArtifactOperationState.Failed && operation.Error == expectedError &&
+                operation.OutputArtifactId == null && operation.LeaseOwner == ownerId;
+            if (expectedError != null && !reopen) return new(ArtifactClaimStatus.NeedsReconciliation, operation.Id);
             if (expectedAttempt is { } expected && (operation.Attempt != expected ||
-                operation.State is not (ArtifactOperationState.Running or ArtifactOperationState.Completed) ||
+                !reopen && operation.State is not (ArtifactOperationState.Running or ArtifactOperationState.Completed) ||
                 !operation.Restartable || operation.State == ArtifactOperationState.Running && operation.LeaseOwner != ownerId))
                 return new(ArtifactClaimStatus.NeedsReconciliation, operation.Id);
             if (operation.State == ArtifactOperationState.Completed && operation.OutputArtifactId != null &&
@@ -194,11 +228,12 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
                 return new(ArtifactClaimStatus.NeedsReconciliation, operation.Id);
             var token = Guid.NewGuid().ToString("N");
             var until = now + leaseDuration;
-            var generation = operation.State == ArtifactOperationState.Running
+            var generation = reopen || operation.State == ArtifactOperationState.Running
                 ? operation.Attempt : operation.Attempt + 1;
             var updated = await _db.Set<ArtifactOperationDbModel>().Where(o => o.Id == operation.Id &&
                     o.State == operation.State && o.LeaseToken == operation.LeaseToken && o.Attempt == operation.Attempt &&
-                    o.LeaseUntil == operation.LeaseUntil)
+                    o.LeaseUntil == operation.LeaseUntil && (expectedError == null ||
+                        o.Error == expectedError && o.LeaseOwner == ownerId && o.OutputArtifactId == null))
                 .ExecuteUpdateAsync(s => s.SetProperty(o => o.State, ArtifactOperationState.Running)
                     .SetProperty(o => o.LeaseToken, token).SetProperty(o => o.LeaseOwner, ownerId)
                     .SetProperty(o => o.LeaseUntil, until).SetProperty(o => o.Attempt, generation)
@@ -218,8 +253,9 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
     private async Task<bool> RenewCore(ArtifactOperationLease lease, TimeSpan duration, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
+        // Evaluate expiry when the UPDATE executes, even if another writer delayed it.
         return await _db.Set<ArtifactOperationDbModel>().Where(o => o.Id == lease.OperationId &&
-                o.LeaseToken == lease.Token && o.State == ArtifactOperationState.Running && o.LeaseUntil > now)
+                o.LeaseToken == lease.Token && o.State == ArtifactOperationState.Running && o.LeaseUntil > DateTime.UtcNow)
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.LeaseUntil, now + duration)
                 .SetProperty(o => o.UpdatedAt, now), ct) == 1;
     }
@@ -232,7 +268,8 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
     }
 
     private async Task<ArtifactRecord> CompleteCoreAsync(ArtifactOperationLease lease, ArtifactRegistration registration,
-        CancellationToken ct = default)
+        CancellationToken ct = default, Func<CancellationToken, ValueTask>? onReadCheckpoint = null,
+        ArtifactMaintenanceGate.Mutation? adoption = null)
     {
         var current = await GetOperationAsync(lease.OperationId, ct);
         if (current?.State == ArtifactOperationState.Completed && current.LeaseToken == lease.Token &&
@@ -243,8 +280,23 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
         EnsureAllowed(registration.RootDirectory);
         foreach (var file in registration.Files) EnsureAllowed(file);
         foreach (var directory in registration.Directories ?? []) EnsureAllowed(directory);
-        var manifest = await ArtifactManifestFiles.CaptureAsync(registration.RootDirectory, registration.Files.ToArray(), ct,
-            registration.Directories);
+        // Completed-operation reuse above can resolve a different root. Only this bounded hash
+        // phase of a new, parentless, previously verified download may overlap exact file removal.
+        var scoped = adoption != null && current is {Kind: "download", OutputArtifactId: null} && registration is {Kind: "download",
+            Managed: true, VerifiedDownloadFiles: {} verified} && registration.ParentArtifactIds is not {Count: > 0} &&
+            registration.Directories is not {Count: > 0} &&
+            registration.ExpectedManifestFingerprint == verified.Fingerprint && verified.Entries.Count == registration.Files.Count
+            ? ArtifactVerifiedFileScope.TryCapture(registration.RootDirectory, verified, registration.Files, ct, _verifiedMount) : null;
+        ArtifactManifest manifest;
+        if (scoped != null) adoption!.BeginVerifiedRead(scoped);
+        try
+        {
+            manifest = await ArtifactManifestFiles.CaptureAsync(registration.RootDirectory, registration.Files.ToArray(),
+                path => new FileInfo(path), onReadCheckpoint == null ? null :
+                    (stream, token) => ArtifactContentHash.ComputeAsync(stream, token, onReadCheckpoint: onReadCheckpoint),
+                ct, registration.Directories, onEmptyFileVerified: onReadCheckpoint);
+        }
+        finally { if (scoped != null) await adoption!.EndVerifiedReadAsync(); }
         if (registration.ExpectedManifestFingerprint != null &&
             !string.Equals(registration.ExpectedManifestFingerprint, manifest.Fingerprint, StringComparison.Ordinal))
             throw new IOException("The output files changed after their file-disposition proof was recorded; no artifact was committed.");
@@ -260,7 +312,7 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var now = DateTime.UtcNow;
         var changed = await _db.Set<ArtifactOperationDbModel>().Where(o => o.Id == lease.OperationId &&
-                o.LeaseToken == lease.Token && o.State == ArtifactOperationState.Running && o.LeaseUntil > now)
+                o.LeaseToken == lease.Token && o.State == ArtifactOperationState.Running && o.LeaseUntil > DateTime.UtcNow)
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.State, ArtifactOperationState.Completed)
                 .SetProperty(o => o.OutputArtifactId, artifact.Id).SetProperty(o => o.LeaseUntil, (DateTime?) null)
                 .SetProperty(o => o.Error, (string?) null).SetProperty(o => o.UpdatedAt, now), ct);
@@ -280,7 +332,7 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
     {
         var now = DateTime.UtcNow;
         return await _db.Set<ArtifactOperationDbModel>().Where(o => o.Id == lease.OperationId &&
-                o.LeaseToken == lease.Token && o.State == ArtifactOperationState.Running && o.LeaseUntil > now)
+                o.LeaseToken == lease.Token && o.State == ArtifactOperationState.Running && o.LeaseUntil > DateTime.UtcNow)
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.State, outcomeUnknown ? ArtifactOperationState.Unknown : ArtifactOperationState.Failed)
                 .SetProperty(o => o.Error, error).SetProperty(o => o.LeaseUntil, (DateTime?) null)
                 .SetProperty(o => o.UpdatedAt, now), ct) == 1;
@@ -290,23 +342,35 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
         string ownerId, CancellationToken ct = default)
     {
         await using var mutation = await ArtifactMaintenanceGate.For(_appData()).EnterMutationAsync(ct);
-        var claim = await ClaimCoreAsync(request, ownerId, TimeSpan.FromMinutes(30), ct);
+        var claim = await ClaimCoreAsync(request, ownerId, AdoptionLeaseDuration, ct);
         // Adoption is local publication, so another completed publisher can be reused safely.
         var waitUntil = DateTime.UtcNow + TimeSpan.FromSeconds(30);
         while (claim.Status == ArtifactClaimStatus.Busy && DateTime.UtcNow < waitUntil)
         {
             await Task.Delay(100, ct);
-            claim = await ClaimCoreAsync(request, ownerId, TimeSpan.FromMinutes(30), ct);
+            claim = await ClaimCoreAsync(request, ownerId, AdoptionLeaseDuration, ct);
         }
         if (claim.Artifact != null) return claim.Artifact;
         if (claim.Lease == null) throw new InvalidOperationException("Another operation owns this artifact adoption.");
-        try { return await CompleteCoreAsync(claim.Lease, registration, ct); }
+        var lastRenewal = _clock.GetTimestamp();
+        // Verification of a single file on a remote volume can exceed the lease. Renew only
+        // after actual bytes were read or an entire empty file was verified. The reader awaits
+        // each checkpoint and never shares its DbContext with a concurrent EF operation.
+        async ValueTask RenewOnRead(CancellationToken token)
+        {
+            if (_clock.GetElapsedTime(lastRenewal) < AdoptionLeaseDuration / 3) return;
+            if (!await RenewAsync(claim.Lease, AdoptionLeaseDuration, token))
+                throw new InvalidOperationException("The operation lease is no longer owned.");
+            lastRenewal = _clock.GetTimestamp();
+        }
+        try { return await CompleteCoreAsync(claim.Lease, registration, ct, RenewOnRead, mutation); }
         catch (Exception error)
         {
             // The same owner can resume twice concurrently. A completed publication wins;
             // the losing publisher must not fail an operation that already has valid output.
             var completed = await GetOperationAsync(claim.OperationId, ct);
             if (completed is {State: ArtifactOperationState.Completed, OutputArtifactId: not null} &&
+                completed.LeaseToken == claim.Lease.Token &&
                 await ResolveByIdAsync(completed.OutputArtifactId, ct) is { } result) return result;
             await FailAsync(claim.Lease, error.Message, ct: CancellationToken.None);
             throw;
@@ -395,7 +459,14 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
     public Task<bool> HasActiveConsumersAsync(string operationId, CancellationToken ct = default) =>
         ActiveConsumers().AnyAsync(c => c.OperationId == operationId, ct);
 
-    public async Task<bool> TryQuarantineAsync(string artifactId, CancellationToken ct = default)
+    public Task<bool> TryQuarantineAsync(string artifactId, CancellationToken ct = default) =>
+        TryQuarantineCoreAsync(artifactId, null, null, 0, ct);
+
+    public Task<bool> TryQuarantineProcessingBoundaryAsync(string artifactId, string fingerprint,
+        string downloadId, int retainedByRunId, CancellationToken ct) =>
+        TryQuarantineCoreAsync(artifactId, fingerprint, downloadId, retainedByRunId, ct);
+
+    private async Task<bool> TryQuarantineCoreAsync(string artifactId, string? fingerprint, string? downloadId, int retainedByRunId, CancellationToken ct)
     {
         await using var mutation = await ArtifactMaintenanceGate.For(_appData()).EnterMutationAsync(ct);
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
@@ -414,7 +485,23 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
         }
         var operations = artifacts.Where(a => related.Contains(a.Id)).Select(a => a.OperationId).Distinct().ToArray();
         var now = DateTime.UtcNow;
-        if (await ActiveConsumers().AnyAsync(c => operations.Contains(c.OperationId), ct)) return false;
+        if (downloadId != null)
+        {
+            var parent = artifacts.SingleOrDefault(a => a.Id == downloadId);
+            var owner = retainedByRunId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (parent?.State != ArtifactLocationState.Available || target.Fingerprint != fingerprint ||
+                !related.SetEquals([artifactId, downloadId]) || edges.Count(e => e.ChildArtifactId == artifactId) != 1 ||
+                !edges.Any(e => e.ChildArtifactId == artifactId && e.ParentArtifactId == downloadId) ||
+                edges.Any(e => e.ParentArtifactId == artifactId || e.ChildArtifactId == downloadId) ||
+                Paths(parent).Any(targetPaths.Contains) ||
+                !await _db.Set<ArtifactDbModel>().AnyAsync(a => a.Id == artifactId && a.Kind == "processedFiles", ct) ||
+                !await _db.Set<ArtifactDbModel>().AnyAsync(a => a.Id == downloadId && a.Kind == "download", ct) ||
+                !await _db.Set<WorkflowRunDbModel>().AnyAsync(r => r.Id == retainedByRunId && r.Status == WorkflowRunStatus.Waiting && r.PendingSignalJson == null, ct) ||
+                await _db.Set<ArtifactConsumerDbModel>().AnyAsync(c => operations.Contains(c.OperationId) && c.ReleasedAt == null &&
+                    (c.OperationId != parent.OperationId || c.OwnerKind != "workflow" || c.OwnerId != owner), ct))
+                return false;
+        }
+        else if (await ActiveConsumers().AnyAsync(c => operations.Contains(c.OperationId), ct)) return false;
         var changedRows = await _db.Set<ArtifactDbModel>().Where(a => a.Id == artifactId && a.State == ArtifactLocationState.Available)
             .ExecuteUpdateAsync(s => s.SetProperty(a => a.State, ArtifactLocationState.Quarantined)
                 .SetProperty(a => a.QuarantineSourceRootPath, target.RootPath)

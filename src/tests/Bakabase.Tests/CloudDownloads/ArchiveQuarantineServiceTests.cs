@@ -202,6 +202,32 @@ public sealed partial class ArchiveQuarantineServiceTests
     }
 
     [TestMethod]
+    public async Task Concurrent_permanent_cleanup_joins_the_receipt_without_counting_another_callers_files()
+    {
+        var source = await Artifact("source", "archive.zip", "original");
+        var final = await Artifact("output", "archive.zip", "original", source.Id);
+        _store.Records[final.Id] = final with {Kind = "publishedFiles"};
+        ArchiveQuarantineResult? other = null;
+        var result = await Service.DeleteManagedAncestorAfterDeliveryAsync(source.Id, [final.Id], async (_, ct) =>
+        {
+            other ??= await Service.DeleteAfterDeliveryAsync(source.Id, [final.Id], ct);
+            return true;
+        }, default);
+
+        Assert.IsNotNull(other);
+        Assert.IsTrue(other.Completed, other.Message);
+        Assert.AreEqual(1, other.RemovedFiles);
+        Assert.IsTrue(result.Completed, result.Message);
+        Assert.AreEqual(other.ReceiptId, result.ReceiptId);
+        Assert.AreEqual("Purged", result.Status);
+        Assert.AreEqual(0, result.RemovedFiles);
+        Assert.AreEqual(0L, result.RemovedBytes);
+        Assert.IsFalse(File.Exists(source.Files.Single()));
+        Assert.IsTrue(File.Exists(final.Files.Single()));
+        Assert.IsFalse((await Service.QuarantineAsync(source.Id, [final.Id])).Completed);
+    }
+
+    [TestMethod]
     public async Task Interrupted_permanent_cleanup_resumes_without_restoring_or_deleting_new_user_files()
     {
         var source = await Artifact("source", "archive.zip", "original");

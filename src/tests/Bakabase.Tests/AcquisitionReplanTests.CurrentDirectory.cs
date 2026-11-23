@@ -36,6 +36,29 @@ public sealed partial class AcquisitionReplanTests
                 UseAdaptiveAssessment: true, InputMode: "currentDirectory")], EnableAdaptiveAssessment: true);
 
     [TestMethod]
+    [DataRow("spaceBlocked", true)]
+    [DataRow("paused", true)]
+    [DataRow("running", false)]
+    public async Task Replanning_current_directory_records_the_disposition_of_the_old_batch_approval(string status, bool superseded)
+    {
+        var (task, run, original) = await CurrentDirectoryInput();
+        var row = await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
+        var queue = new AcquisitionLocalRecoveryQueueEntry {BatchId = "old-batch", Version = "frozen", Signal = "{}",
+            RecoveryScope = "workflow", StorageStamp = "pinned", WorkflowRunId = run.Id, PlanRevision = row.PlanRevision, Status = status};
+        var json = AcquisitionLocalRecoveryQueueEntry.Write(row.BuilderStateJson, queue);
+        await Db.AcquisitionTasks.Where(t => t.Id == task.Id).ExecuteUpdateAsync(s => s.SetProperty(t => t.BuilderStateJson, json));
+        await Plans.ReplanAsync(task.Id, FreshRequest(task, run.Id, original.Id), default);
+        var revised = await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
+        Assert.IsNull(revised.WorkflowRunId);
+        var retained = AcquisitionLocalRecoveryQueueEntry.Read(revised)!;
+        Assert.AreEqual(superseded ? "skipped" : status, retained.Status);
+        Assert.AreEqual(superseded ? "ACQUISITION_TASK_CHANGED" : null, retained.ReasonCode);
+        Assert.AreEqual(queue.BatchId, retained.BatchId);
+        Assert.AreEqual(queue.WorkflowRunId, retained.WorkflowRunId);
+        Assert.AreEqual(queue.PlanRevision, retained.PlanRevision);
+    }
+
+    [TestMethod]
     public async Task Current_directory_captures_renamed_added_and_removed_files_without_rewriting_history_or_downloading()
     {
         var (task, run, original) = await CurrentDirectoryInput();

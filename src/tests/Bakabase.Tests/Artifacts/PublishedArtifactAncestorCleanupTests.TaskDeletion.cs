@@ -72,6 +72,11 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var first = await service.PreviewAsync(new([id], true));
         var partial = await service.DeleteAsync(new(first.PreviewId, RemoveTaskIfCleanupFails: true));
         CollectionAssert.AreEqual(new[] { id }, partial.DeletedTaskIds.ToArray());
+        var retained = (await service.GetDeletedTasksAsync(1, 25, "incomplete", default)).Items.Single();
+        Assert.AreEqual(id, retained.TaskId);
+        Assert.AreEqual("incomplete", retained.IntermediateCleanup);
+        Assert.AreEqual("notRequested", retained.DeliveryCleanup);
+        CollectionAssert.Contains(retained.LastReasonCodes.ToArray(), "SharedOwner");
         Assert.IsTrue(File.Exists(fixture.Source.Files.Single()));
         var deletedAt = await db.AcquisitionTasks.Where(t => t.Id == id).Select(t => t.DeletedAt).SingleAsync();
         Assert.IsNotNull(deletedAt);
@@ -97,6 +102,9 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         Assert.IsFalse(File.Exists(fixture.Source.Files.Single()));
         Assert.IsTrue(File.Exists(fixture.Final.Files.Single()));
         Assert.AreEqual(deletedAt, await db.AcquisitionTasks.Where(t => t.Id == id).Select(t => t.DeletedAt).SingleAsync());
+        var cleared = (await service.GetDeletedTasksAsync(1, 25, "all", default)).Items.Single();
+        Assert.AreEqual("completed", cleared.IntermediateCleanup);
+        Assert.AreEqual("notRequested", cleared.DeliveryCleanup);
         Assert.AreEqual(result, await service.DeleteAsync(submitted));
         var repeated = await service.PreviewAsync(review);
         Assert.AreEqual(0, (await service.DeleteAsync(new(repeated.PreviewId, RetryRetainedFiles: true))).RemovedFiles);

@@ -65,13 +65,14 @@ public sealed partial class AcquisitionReplanTests
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
     }
 
-    private async Task<(AcquisitionPlanTaskDetail Task, WorkflowRunDbModel Run, ArtifactRecord Artifact)> Failed(bool implicitAccount = false)
+    private async Task<(AcquisitionPlanTaskDetail Task, WorkflowRunDbModel Run, ArtifactRecord Artifact)> Failed(bool implicitAccount = false, bool passwordProtectedDownload = false)
     {
         var source = new WorkflowSourceRef("test", "item", "original", "2", "0");
         var plan = new AcquisitionPlan {Title = "Saved source", OutputDirectory = _root, Parts = [new()
         {
             Id = "main", SelectedSourceId = "source", ProcessingSource = source, AppliedProcessingRevisionId = "source-revision",
-            Sources = [new() {Id = "source", Url = "https://example.test/files", Kind = "http", AccountId = implicitAccount ? null : "11111111111111111111111111111111", AccessCode = "saved-code"}],
+            Sources = [new() {Id = "source", Url = "https://example.test/files", Kind = "http", AccountId = implicitAccount ? null : "11111111111111111111111111111111", AccessCode = "saved-code",
+                ArchivePassword = passwordProtectedDownload ? "source-credential" : null}],
             Processing = new() {Requirement = "required", Steps = [new() {Id = "extract", Op = "extractArchive"}]}
         }]};
         var prepared = await Plans.CreatePreparedPlanAsync(plan, [source]);
@@ -95,12 +96,20 @@ public sealed partial class AcquisitionReplanTests
         var row = await Db.AcquisitionTasks.FindAsync(prepared.Id);
         row!.WorkflowRunId = run.Id; row.Status = AcquisitionStatus.Failed; row.Phase = "attention";
         row.Error = run.ErrorMessage; row.CompletedAt = run.CompletedAt; await Db.SaveChangesAsync();
-        var file = Path.Combine(_root, "original.bin"); await File.WriteAllTextAsync(file, "original bytes");
+        var download = passwordProtectedDownload ? Directory.CreateDirectory(Path.Combine(_root, "archives")).FullName : _root;
+        var file = Path.Combine(download, passwordProtectedDownload ? "sample.zip" : "original.bin");
+        if (passwordProtectedDownload)
+        {
+            using var zip = System.IO.Compression.ZipFile.Open(file, System.IO.Compression.ZipArchiveMode.Create);
+            using var output = new StreamWriter(zip.CreateEntry("sample.txt").Open());
+            await output.WriteAsync("archive payload");
+        }
+        else await File.WriteAllTextAsync(file, "original bytes");
         var target = AcquisitionPlanCompiler.Workset(prepared.Id, 1, plan, [source]).Targets.Single();
         if (implicitAccount) target = target with {AccountId = "22222222222222222222222222222222"};
-        var intent = DownloadArtifactCoordinator.DownloadIntent(target, _root);
+        var intent = DownloadArtifactCoordinator.DownloadIntent(target, download);
         var artifact = await Artifacts.AdoptAsync(new("download-op", intent, "download", "input"),
-            new(_root, [file], "download", true), "test");
+            new(download, [file], "download", true), "test");
         await new ArtifactOperationBindingService(Db).BindAsync("workflow", run.Id.ToString(), "main:artifact.download", artifact.OperationId);
         return ((await Plans.GetAsync(prepared.Id, default))!, run, artifact);
     }

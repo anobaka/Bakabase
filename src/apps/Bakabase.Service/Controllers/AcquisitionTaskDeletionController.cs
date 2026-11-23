@@ -15,6 +15,13 @@ namespace Bakabase.Service.Controllers;
 [Route("~/acquisition/tasks/delete")]
 public sealed class AcquisitionTaskDeletionController(AcquisitionTaskDeletionService service, IMediaPathGuard paths) : ControllerBase
 {
+    [HttpGet("history"), RemoteAccessible, SwaggerOperation(OperationId = "GetDeletedAcquisitionTasks")]
+    public async Task<SingletonResponse<AcquisitionDeletedTaskPage>> History(int pageIndex = 1, int pageSize = 25, string filter = "all")
+    {
+        try { return new(await service.GetDeletedTasksAsync(pageIndex, pageSize, filter, HttpContext.RequestAborted)); }
+        catch (ArgumentException error) { return SingletonResponseBuilder<AcquisitionDeletedTaskPage>.BuildBadRequest(error.Message); }
+    }
+
     [HttpPost("preview")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "PreviewDeleteAcquisitionTasks")]

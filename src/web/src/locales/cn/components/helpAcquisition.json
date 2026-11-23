@@ -81,7 +81,7 @@
   "helpCenter.acquisition.concept.task.name": "获取任务",
   "helpCenter.acquisition.concept.task.intro": "任务是针对某个资源的一次工作流执行，记录进度、当前步骤，以及需要你处理的问题。多个任务可以使用同一份工作流。",
   "helpCenter.acquisition.concept.task.start.title": "查看排队和执行进度",
-  "helpCenter.acquisition.concept.task.start.desc": "创建后在「进行中的任务」查看。并发数量有限时任务会等待运行；开始后按所选工作流逐步执行。",
+  "helpCenter.acquisition.concept.task.start.desc": "创建后在「进行中的任务」查看。获取任务在可配置的总并行上限内推进，默认 20。AI、下载及其他能力各自控制执行与排队；下载沿用下载中心的渠道与账号限制。",
   "helpCenter.acquisition.concept.task.wait.title": "处理等待中的输入",
   "helpCenter.acquisition.concept.task.wait.desc": "等待文件、密码或冲突处理时，按当前任务的提示操作。完成认领或提交所需输入后，工作流可从等待的步骤继续。",
   "helpCenter.acquisition.concept.task.finish.title": "查看完成结果或失败原因",

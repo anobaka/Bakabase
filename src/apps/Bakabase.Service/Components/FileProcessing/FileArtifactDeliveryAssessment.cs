@@ -74,6 +74,28 @@ internal static class FileArtifactDeliveryAssessment
     internal static async Task<Assessment> AssessAsync(ArtifactRecord artifact,
         CancellationToken ct, bool extractionWasReviewed = false)
     {
+        var result = await AssessPackagingAsync(artifact, ct, extractionWasReviewed);
+        var retained = RetainedArchiveFiles(artifact);
+        if (retained.Count == 0) return result;
+        // Keep actionable packaging candidates visible alongside the retained original.
+        var files = result.Files.Where(f => !retained.Contains(f, StringComparer.Ordinal)).Take(MaximumFiles - 1)
+            .Concat(retained).Take(MaximumFiles).ToArray();
+        return new(files, Uncertain: true);
+    }
+
+    internal static IReadOnlyList<string> RetainedArchiveFiles(ArtifactRecord artifact)
+    {
+        if (artifact.Kind != "processedFiles" || artifact.MetadataJson == null ||
+            !artifact.MetadataJson.Contains("\"retainedArchiveFiles\"", StringComparison.Ordinal)) return [];
+        var retained = ReadProcessingMetadata(artifact.MetadataJson)?.RetainedArchiveFiles;
+        if (retained is not {Count: > 0}) return [];
+        var paths = retained.ToHashSet(StringComparer.Ordinal);
+        return artifact.Manifest.Entries.Where(e => paths.Contains(e.RelativePath)).Select(e => e.RelativePath).Take(MaximumFiles).ToArray();
+    }
+
+    private static async Task<Assessment> AssessPackagingAsync(ArtifactRecord artifact,
+        CancellationToken ct, bool extractionWasReviewed)
+    {
         // Structure proves packaging, not whether it should be extracted or with which password.
         var wrappers = await DisguisedVideoArchivesAsync(artifact, ct);
         if (wrappers.Count > 0) return new(wrappers);
@@ -92,8 +114,13 @@ internal static class FileArtifactDeliveryAssessment
         // No external probes or directory discovery. Large/unknown sets never acquire automatic
         // extraction authority simply because their names resemble compressed files.
         if (relativeFiles.Length > MaximumFiles)
+        {
+            var wrappersToReview = await ReviewNamedArchiveCarriersAsync(artifact, ct);
+            if (wrappersToReview.Count > 0)
+                return new(wrappersToReview.Concat(unclassifiedFiles).Take(MaximumFiles).ToArray(), Uncertain: true);
             return await IsFinishedResultAsync(artifact, ct) ? new([]) :
                 new(unclassifiedFiles.Take(MaximumFiles).ToArray(), Uncertain: true);
+        }
         var files = ArtifactManifestFiles.ResolveFiles(artifact.RootDirectory, artifact.Manifest);
         var groups = await AuthorizedArchiveDetection.DetectAsync(files, recursive: true, ct);
         var covered = groups.SelectMany(g => g.Files).ToHashSet(ArtifactManifestFiles.PathComparer);
@@ -106,6 +133,98 @@ internal static class FileArtifactDeliveryAssessment
         if (!await IsFinishedResultAsync(artifact, ct))
             return new(unclassifiedFiles, Uncertain: true);
         return new([]);
+    }
+
+    // Describes only the displayed, already verified artifact entries. These observations never enter a plan or a review token.
+    internal static async Task<IReadOnlyDictionary<string, string>> ReadReviewSignaturesAsync(ArtifactRecord artifact,
+        IReadOnlyList<string> displayedFiles, CancellationToken ct)
+    {
+        var selected = displayedFiles.Take(MaximumFiles).ToHashSet(StringComparer.Ordinal);
+        var signatures = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (selected.Count == 0) return signatures;
+        var paths = ArtifactManifestFiles.ResolveFiles(artifact.RootDirectory, artifact.Manifest);
+        foreach (var (entry, path) in artifact.Manifest.Entries.Zip(paths))
+        {
+            if (!selected.Remove(entry.RelativePath)) continue;
+            ct.ThrowIfCancellationRequested();
+            var header = await ReadRegisteredHeaderAsync(entry, path, ct);
+            if (header.Signature != null) signatures.Add(entry.RelativePath, header.Signature);
+            if (selected.Count == 0) break;
+        }
+        return signatures;
+    }
+
+    // The inner extension narrows which registered headers we inspect. A genuine PDF or image
+    // with such a name stays a finished file. ZIP-based document and application formats keep
+    // their own delivery semantics even if their descriptive basename ends in an archive suffix.
+    private static bool IsNamedArchiveCarrier(string name)
+    {
+        var outer = Path.GetExtension(name);
+        if (!FinishedFormats.Contains(outer) || ApplicationFormats.Contains(outer) ||
+            outer.ToLowerInvariant() is ".docx" or ".xlsx" or ".pptx" or ".epub") return false;
+        return Path.GetExtension(Path.GetFileNameWithoutExtension(name)).ToLowerInvariant() is ".zip" or ".rar" or ".7z";
+    }
+
+    private static async Task<IReadOnlyList<string>> ReviewNamedArchiveCarriersAsync(ArtifactRecord artifact, CancellationToken ct)
+    {
+        var entries = artifact.Manifest.Entries;
+        var candidates = Enumerable.Range(0, entries.Count).Where(i => IsNamedArchiveCarrier(entries[i].RelativePath))
+            .Take(MaximumCompanionProbeFiles + MaximumFiles).ToList();
+        if (candidates.Count == 0) return [];
+        var paths = ArtifactManifestFiles.ResolveFiles(artifact.RootDirectory, artifact.Manifest);
+        var confirmed = new List<string>();
+        var unresolved = new List<string>();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        deadline.CancelAfter(TimeSpan.FromSeconds(3));
+        for (var index = 0; index < candidates.Count; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var member = candidates[index];
+            var entry = entries[member];
+            if (index >= MaximumCompanionProbeFiles || deadline.IsCancellationRequested)
+            {
+                unresolved.Add(entry.RelativePath);
+                continue;
+            }
+            try
+            {
+                var header = await ReadRegisteredHeaderAsync(entry, paths[member], deadline.Token);
+                if (header.Signature != null) confirmed.Add(entry.RelativePath);
+                else if (!header.Checked) unresolved.Add(entry.RelativePath);
+                if (confirmed.Count == MaximumFiles) break;
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested && deadline.IsCancellationRequested)
+            {
+                unresolved.Add(entry.RelativePath);
+            }
+        }
+        // Missing or uninspected candidates can require a generic review, but only an observed
+        // header is labelled with a format by the prompt. Neither case authorizes extraction.
+        return confirmed.Concat(unresolved).Take(MaximumFiles).ToArray();
+    }
+
+    private static async Task<(bool Checked, string? Signature)> ReadRegisteredHeaderAsync(
+        ArtifactManifestEntry entry, string path, CancellationToken ct)
+    {
+        try
+        {
+            ArtifactManifestFiles.RejectLinks(path);
+            var file = new FileInfo(path);
+            if (file.Exists && file.Length == entry.Length)
+            {
+                var modified = file.LastWriteTimeUtc;
+                var signature = await AuthorizedArchiveDetection.SignatureAsync(path, ct);
+                ArtifactManifestFiles.RejectLinks(path);
+                file.Refresh();
+                if (file.Exists && file.Length == entry.Length && file.LastWriteTimeUtc == modified)
+                    return (true, signature);
+            }
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            // The resume path validates the full artifact before applying any explicit instructions.
+        }
+        return (false, null);
     }
 
     // Never scan a gallery, software installation or a video collection for embedded payloads.

@@ -68,6 +68,86 @@ public sealed partial class AcquisitionRecoveryTests
         Assert.AreEqual(0, await _db.DownloadResults.CountAsync());
     }
 
+    [TestMethod]
+    public async Task Downloads_only_can_resume_the_original_incomplete_local_file_change()
+    {
+        var (run, target, download, operation, transfer, provider, service) = await SeedRetainedDownload();
+        download.Message = "BAIDU_LOCAL_FILE_CHANGED";
+        download.Progress = 75;
+        provider.ExistingInspectionFailure = "BAIDU_EXISTING_DOWNLOAD_UNVERIFIED";
+        var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson!)! with
+            {Targets = [target with {Problem = download.Message}]};
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
+        await _db.SaveChangesAsync();
+        var task = await _db.AcquisitionTasks.SingleAsync(t => t.WorkflowRunId == run.Id);
+        var original = JsonSerializer.Serialize(new {operation, transfer});
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, new UserStoragePolicy(false),
+            _services.GetRequiredService<IArtifactOperationStore>(), downloads: service);
+        var starter = new OnlyDownloadStarter(this, run.Id);
+        var recovery = new AcquisitionRecoveryService(_db, diagnostics, new(), new RecordingHost(),
+            downloadOnly: OnlyDownloads(service, starter, new()));
+
+        var workflow = await recovery.PreviewAsync(new([task.Id], "workflow"));
+        Assert.AreEqual("RECOVERY_SOURCE_STILL_BLOCKED", workflow.Rows.Single().ReasonCode);
+        Assert.AreEqual(0, workflow.ContinuableCount);
+        Assert.AreEqual(0, provider.RetainedInspectionCalls);
+        var preview = await recovery.PreviewAsync(new([task.Id], "downloads"));
+        Assert.AreEqual("RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED", preview.Rows.Single().ReasonCode);
+        Assert.AreEqual(1, preview.ContinuableCount);
+        Assert.AreEqual(0, starter.Calls.Count);
+        var result = await recovery.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+
+        CollectionAssert.AreEqual(new[] {download.Id}, result.Downloads!.Single().StartedDownloadTaskIds.ToArray());
+        CollectionAssert.AreEqual(new[] {download.Id}, starter.Calls.ToArray());
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+        Assert.AreEqual(0, await _db.DownloadResults.CountAsync());
+        Assert.AreEqual(0, provider.VerificationCalls);
+        Assert.IsTrue(provider.Checks.Contains(true), "The original remote manifest must be revalidated.");
+        Assert.AreEqual(original, JsonSerializer.Serialize(new {operation, transfer}));
+        Assert.AreEqual("bytes", await File.ReadAllTextAsync(Path.Combine(download.DownloadPath, "retained-fixture")));
+    }
+
+    [DataTestMethod]
+    [DataRow("BAIDU_DOWNLOAD_CHECKSUM_MISMATCH", "BAIDU_EXISTING_DOWNLOAD_UNVERIFIED", false)]
+    [DataRow("BAIDU_VERIFIED_FILE_MISSING", "BAIDU_EXISTING_DOWNLOAD_UNVERIFIED", true)]
+    [DataRow("BAIDU_VERIFIED_FILE_REPLACED", "BAIDU_DOWNLOAD_CHECKPOINT_INVALID", false)]
+    [DataRow("BAIDU_LOCAL_FILE_CHANGED", "BAIDU_DOWNLOAD_CHECKPOINT_INVALID", false)]
+    [DataRow("BAIDU_LOCAL_FILE_CHANGED", "BAIDU_EXISTING_DOWNLOAD_UNVERIFIED", true)]
+    public async Task Explicit_partial_resume_rejects_other_failures_and_empty_locations(string failure,
+        string inspectionFailure, bool removeFile)
+    {
+        var (run, target, download, _, _, provider, service) = await SeedRetainedDownload();
+        download.Message = failure;
+        provider.ExistingInspectionFailure = inspectionFailure;
+        if (removeFile) File.Delete(Path.Combine(download.DownloadPath, "retained-fixture"));
+        await _db.SaveChangesAsync();
+
+        var check = await service.CheckAsync(run.Id, target, _root, true, default, includeStopped: true);
+
+        Assert.IsFalse(check.CanRetry);
+        Assert.IsFalse(check.Candidate);
+        Assert.AreEqual(0, provider.RetainedInspectionCalls);
+        Assert.AreEqual(0, provider.VerificationCalls);
+    }
+
+    [TestMethod]
+    public async Task Complete_files_still_require_verification_if_they_appear_during_partial_resume_revalidation()
+    {
+        var (run, target, download, _, _, provider, service) = await SeedRetainedDownload();
+        download.Message = "BAIDU_LOCAL_FILE_CHANGED";
+        provider.ExistingInspectionFailure = "BAIDU_EXISTING_DOWNLOAD_UNVERIFIED";
+        provider.DuringRemote = () => { provider.ExistingInspectionFailure = null; return Task.CompletedTask; };
+        await _db.SaveChangesAsync();
+
+        var check = await service.CheckAsync(run.Id, target, _root, true, default, includeStopped: true);
+
+        Assert.IsFalse(check.CanRetry);
+        Assert.IsTrue(check.VerifyExistingOnly);
+        Assert.AreEqual("RECOVERY_EXISTING_FILES_VERIFY_REQUIRED", check.ReasonCode);
+        Assert.AreEqual(1, provider.RetainedInspectionCalls);
+        Assert.AreEqual(0, provider.VerificationCalls);
+    }
+
     [DataTestMethod]
     [DataRow("BAIDU_LOCAL_FILE_CHANGED", true)]
     [DataRow("BAIDU_DOWNLOAD_CHECKSUM_MISMATCH", false)]

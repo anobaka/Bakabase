@@ -82,6 +82,9 @@ public sealed record AcquisitionPlanArtifactInput(int TaskId, int PreviousRunId,
 
 public sealed record AcquisitionPlanSource
 {
+    /// <summary>Server-recorded manual choice to try this exact source despite an availability observation.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AcquisitionSourceAvailabilityOverride? ManualAvailabilityOverride { get; init; }
     public string Id { get; init; } = "";
     public string Url { get; init; } = "";
     /// <summary>The producer's locator before a reviewed redirect resolution. Never another execution candidate.</summary>
@@ -105,6 +108,9 @@ public sealed record AcquisitionPlanSource
     [Newtonsoft.Json.JsonConverter(typeof(Bakabase.Modules.Acquisition.Abstractions.Serialization.JsonElementNewtonsoftConverter))]
     public JsonElement? SourceCorrection { get; init; }
 }
+
+public sealed record AcquisitionSourceAvailabilityOverride(int TaskId, string SourceFingerprint,
+    string ResolvedSourceFingerprint, DateTimeOffset ConfirmedAt);
 
 public sealed record AcquisitionPlanRevision(int Revision, AcquisitionPlan Plan,
     IReadOnlyList<WorkflowSourceRef> SourceRefs,

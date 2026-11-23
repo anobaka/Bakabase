@@ -29,6 +29,11 @@ namespace Bakabase.Service.Components.CloudDownloads;
 
 public static class CloudWorkflow
 {
+    private static readonly ICloudTransferActivity BuiltinTransfer = new BaiduTransferActivity();
+    internal static ICloudTransferActivity? TransferActivity(string? kind, IWorkflowActivityRegistry? registry = null) =>
+        kind == null ? null : registry == null ? kind == BuiltinTransfer.Kind ? BuiltinTransfer : null :
+        registry.Get(kind) as ICloudTransferActivity;
+
     public const string Trigger = "download.sources";
     public const string ItemType = "item.download.workset";
     public const string BuiltinName = "Download selected sources (v1)";
@@ -165,6 +170,34 @@ public abstract class CloudActivity(string kind, string name, string description
 
     private async Task<WorkflowItemOutcome> Run(WorkflowExecutionContext ctx, DownloadWorkset workset, CloudSelectionSignal? signal, CancellationToken ct)
     {
+        if (signal?.TransferReplay is {} replay)
+        {
+            var targets = workset.Targets.Where(t => !t.Excluded).ToArray();
+            if (kind != "download.enqueueSupported" || replay.Attempts == null || targets.Length == 0 ||
+                !targets.Select(t => t.Id).ToHashSet(StringComparer.Ordinal).SetEquals(replay.Attempts.Keys) ||
+                JsonSerializer.Serialize(signal, WorkflowJson.Options) != JsonSerializer.Serialize(
+                    new CloudSelectionSignal {TransferReplay = replay}, WorkflowJson.Options))
+                throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
+            var replayOperations = ctx.Services.GetRequiredService<CloudOperationService>();
+            var refreshed = workset.Targets.ToList();
+            foreach (var target in targets)
+            {
+                var receipt = await replayOperations.ExecutePreparedTransferReplayAsync(checked((int)ctx.RunId), target,
+                    workset.OutputDirectory, replay.RemoteDirectory, replay.Attempts[target.Id], ct);
+                refreshed[refreshed.IndexOf(target)] = target with {RemoteEntry = receipt.Entry, ReviewedTransferId = receipt.OperationId};
+            }
+            workset = workset with {Targets = refreshed, NoRepeatExistingDownloads = true};
+        }
+        var completedDownloadReceipts = signal?.CompletedDownloadReceipts;
+        if (completedDownloadReceipts != null)
+        {
+            var nativeIds = workset.Targets.Where(t => !t.Excluded).Select(t => t.DownloadTaskId).Distinct().ToArray();
+            var expected = new CloudSelectionSignal {ObserveExistingOnly = true, CompletedDownloadReceipts = completedDownloadReceipts};
+            if (kind != "download.awaitCompletion" || nativeIds.Length == 0 || nativeIds.Length != completedDownloadReceipts.Count ||
+                nativeIds.Any(id => id == null || !completedDownloadReceipts.ContainsKey(id.Value)) ||
+                JsonSerializer.Serialize(expected, WorkflowJson.Options) != JsonSerializer.Serialize(signal, WorkflowJson.Options))
+                throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
+        }
         if (signal?.TransferredDownloadPlacement is {} placement)
         {
             // The public workflow resume endpoint also accepts JSON. The receipt alone cannot
@@ -315,8 +348,18 @@ public abstract class CloudActivity(string kind, string name, string description
         if (string.IsNullOrWhiteSpace(workset.OutputDirectory) && kind != "baidu.transfer") return Wait(workset, "chooseDirectory");
         if (!string.IsNullOrWhiteSpace(workset.OutputDirectory))
             foreach (var target in workset.Targets.Where(t => !t.Excluded))
-                ctx.Services.GetRequiredService<IUserStoragePolicy>().EnsurePathAllowed(
-                    CloudStageDirectoryPath.Download(target) ?? workset.OutputDirectory);
+            {
+                try
+                {
+                    ctx.Services.GetRequiredService<IUserStoragePolicy>().EnsurePathAllowed(
+                        CloudStageDirectoryPath.Download(target) ?? workset.OutputDirectory);
+                }
+                catch (UserStoragePathException error) when (kind == "download.awaitCompletion" && error.MountUnavailable)
+                {
+                    return Wait(workset with {Targets = workset.Targets.Select(t => ReferenceEquals(t, target)
+                        ? t with {Problem = TargetProblem(error)} : t).ToList()}, "cloudAttention");
+                }
+            }
         if (kind != "download.awaitCompletion" && workset.Targets.Any(t => !t.Excluded && t.SelectedSource is { } selected &&
                 DownloadMethodCatalog.Select(selected) is {EngineId: "rclone", AccountProvider: not null}) &&
             ctx.Services.GetService<DownloadMethodRegistry>() is { } accountRegistry)
@@ -352,7 +395,7 @@ public abstract class CloudActivity(string kind, string name, string description
         var updated = new List<CloudDownloadTarget>();
         foreach (var target in workset.Targets)
         {
-            var next = target with {Problem = null};
+            var next = target with {Problem = null, TransferDiagnostic = null};
             if (target.Excluded) {updated.Add(next); continue;}
             try
             {
@@ -367,10 +410,10 @@ public abstract class CloudActivity(string kind, string name, string description
                 if (source == null) throw new InvalidOperationException("Choose a download source.");
                 if (source.ProviderId == "baidu" && string.IsNullOrWhiteSpace(next.AccountId))
                     next = next with {AccountId = await ctx.Services.GetRequiredService<Baidu.BaiduPcsAccountStore>().ResolveAccountIdAsync(null, ct)};
-                if (kind == "baidu.transfer" && source.ProviderId == "baidu" && source.Kind != "remote" && target.RemoteEntry == null)
+                if (this is ICloudTransferActivity transfer && transfer.Transfers(source) && target.RemoteEntry == null)
                 {
                     if (string.IsNullOrWhiteSpace(next.AccountId)) throw new InvalidOperationException("Choose a Baidu account.");
-                    var ready = await operations.Provider("baidu").CheckReadyAsync(next.AccountId, ct);
+                    var ready = await operations.Provider(source).CheckReadyAsync(next.AccountId, ct);
                     if (!ready.Available) throw new InvalidOperationException(ready.Problem);
                     var receipt = await operations.TransferAsync(checked((int)ctx.RunId), next, next.AccountId, config.RemoteDirectory, ct,
                         noRepeat: workset.NoRepeatExistingDownloads == true);
@@ -391,12 +434,28 @@ public abstract class CloudActivity(string kind, string name, string description
                 }
                 if (kind == "download.awaitCompletion")
                 {
-                    next = await Await(ctx, next, signal != null && signal.ObserveExistingOnly != true && workset.NoRepeatExistingDownloads != true, ct);
+                    CompletedCloudDownloadReceipt? receipt = null;
+                    var observed = next;
+                    if (completedDownloadReceipts != null)
+                    {
+                        var db = ctx.Services.GetRequiredService<BakabaseDbContext>();
+                        var id = next.DownloadTaskId!.Value;
+                        receipt = await CompletedCloudDownloadReceipt.ObserveAsync(db, id, completedDownloadReceipts[id], ct);
+                        if (next.DownloadArtifactId == null)
+                            observed = next with {Files = receipt.Files.ToList(), DownloadDirectory = CloudDownloadPayloadRoot.SelectLayout(
+                                receipt.Destination, receipt.Result.DownloadDirectory, receipt.Files, next)};
+                    }
+                    else
+                    {
+                        next = await Await(ctx, next, signal != null && signal.ObserveExistingOnly != true && workset.NoRepeatExistingDownloads != true, ct);
+                        observed = next;
+                    }
                     if (artifacts != null)
                     {
                         await ctx.ReportStage("verifyingFiles");
-                        next = await artifacts.RecordAsync(ctx, next, workset.OutputDirectory, ct);
+                        next = await artifacts.RecordAsync(ctx, observed, workset.OutputDirectory, ct, receipt);
                     }
+                    else if (receipt != null) throw new InvalidOperationException("RECOVERY_FILES_UNVERIFIED");
                 }
             }
             catch (OperationCanceledException)
@@ -414,7 +473,7 @@ public abstract class CloudActivity(string kind, string name, string description
                 throw;
             }
             catch (Exception error) when (error is InvalidOperationException or ArgumentException or IOException or InvalidDataException)
-            { next = next with {Problem = error.Message}; }
+            { next = next with {Problem = TargetProblem(error), TransferDiagnostic = (error as CloudProviderException)?.TransferDiagnostic}; }
             updated.Add(next);
         }
         workset = workset with {Targets = updated};
@@ -440,61 +499,101 @@ public abstract class CloudActivity(string kind, string name, string description
         DownloadWorkset workset, IReadOnlySet<string> selected, CancellationToken ct, bool revalidate = false, bool verifyExisting = false)
     {
         var artifacts = ctx.Services.GetService<DownloadArtifactCoordinator>();
-        var updated = new List<CloudDownloadTarget>();
-        foreach (var target in workset.Targets)
+        var recovery = revalidate ? ctx.Services.GetRequiredService<CloudDownloadRecoveryService>() : null;
+        var equivalentOwners = new Dictionary<string, CloudDownloadTarget>(StringComparer.Ordinal);
+        var equivalentResults = new Dictionary<int, CloudDownloadTarget>();
+        var groupedNativeIds = workset.Targets.Where(t => t.DownloadTaskId != null)
+            .GroupBy(t => t.DownloadTaskId!.Value).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet();
+        if (recovery != null)
         {
-            // Preserve every unselected checkpoint, including its failure and files. In particular,
-            // do not pass it to Await(retry: true), which can restart an unrelated failed download.
-            if (!selected.Contains(target.Id)) {updated.Add(target); continue;}
-            var next = target with {Problem = null};
-            try
+            foreach (var selection in workset.Targets.Where(t => selected.Contains(t.Id) && t.DownloadTaskId is { } id && groupedNativeIds.Contains(id)))
             {
-                ct.ThrowIfCancellationRequested();
-                if (next.ProcessedArtifactId == null && next.PublishedArtifactId == null)
+                CloudDownloadRecoveryService.EquivalentGroup? group;
+                try {group = await recovery.ReadEquivalentGroupAsync(checked((int)ctx.RunId), selection, workset.OutputDirectory, ct);}
+                catch (Exception error) when (error is IOException or ArgumentException or InvalidOperationException or JsonException) {continue;}
+                if (group?.Owner.Id != selection.Id || group.Members.Count(t => selected.Contains(t.Id)) != 1) continue;
+                foreach (var member in group.Members) equivalentOwners.Add(member.Id, group.Owner);
+            }
+            selected = selected.Concat(equivalentOwners.Keys).ToHashSet(StringComparer.Ordinal);
+        }
+        var admissionProblems = new Dictionary<string, string>(StringComparer.Ordinal);
+        var selectedTargets = workset.Targets.Where(t => selected.Contains(t.Id)).ToArray();
+        var updated = new List<CloudDownloadTarget>();
+        try
+        {
+            // Give the Download Center every selected original before observing any completion.
+            // Keep calls sequential within this workflow scope, which shares a DbContext.
+            if (!verifyExisting)
+            {
+                foreach (var target in selectedTargets)
                 {
-                    if (verifyExisting)
+                    ct.ThrowIfCancellationRequested();
+                    if (target.ProcessedArtifactId != null || target.PublishedArtifactId != null ||
+                        equivalentOwners.TryGetValue(target.Id, out var owner) && owner.Id != target.Id) continue;
+                    try
                     {
-                        await ctx.Services.GetRequiredService<CloudDownloadRecoveryService>().VerifyExistingAsync(
-                            checked((int)ctx.RunId), target, workset.OutputDirectory,
-                            ctx.Services.GetRequiredService<DownloadTaskService>(), ct);
+                        if (recovery != null)
+                        {
+                            var grouped = owner != null;
+                            if (!grouped && groupedNativeIds.Contains(target.DownloadTaskId.GetValueOrDefault()))
+                                throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
+                            await StartRevalidatedDownload(ctx, recovery, target, workset.OutputDirectory, grouped, ct);
+                        }
+                        else if (target.DownloadArtifactId == null)
+                        {
+                            // A human-selected retry still requires the unchanged original dispatch.
+                            var manual = ActivatorUtilities.GetServiceOrCreateInstance<CloudManualDownloadResume>(ctx.Services);
+                            await manual.ResumeAsync(checked((int)ctx.RunId), target, workset.OutputDirectory,
+                                ctx.Services.GetRequiredService<DownloadTaskService>(), ct);
+                        }
                     }
-                    else if (revalidate)
-                    {
-                        var recovery = ctx.Services.GetRequiredService<CloudDownloadRecoveryService>();
-                        var check = await recovery.CheckAsync(
-                            checked((int)ctx.RunId), target, workset.OutputDirectory, true, ct);
-                        if (!check.CanRetry || check.VerifyExistingOnly) throw new InvalidOperationException(check.ReasonCode == "RECOVERY_SOURCE_STILL_BLOCKED"
-                            ? check.FailureCode ?? check.ReasonCode : check.ReasonCode);
-                        var response = await ctx.Services.GetRequiredService<DownloadTaskService>().StartConditionally(
-                            target.DownloadTaskId!.Value, async token =>
-                            {
-                                var local = await recovery.CheckAsync(checked((int)ctx.RunId), target,
-                                    workset.OutputDirectory, false, token);
-                                if (!local.Candidate || local.VerifyExistingOnly) throw new InvalidOperationException(local.ReasonCode);
-                            }, ct);
-                        if (response.Code != 0) throw new InvalidOperationException(response.Message ?? "RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
-                    }
-                    else if (next.DownloadArtifactId == null)
-                    {
-                        // Human-selected retries may address failures that automatic diagnostics
-                        // cannot classify. They still require an unchanged original dispatch.
-                        var manual = ActivatorUtilities.GetServiceOrCreateInstance<CloudManualDownloadResume>(ctx.Services);
-                        await manual.ResumeAsync(checked((int)ctx.RunId), target, workset.OutputDirectory,
-                            ctx.Services.GetRequiredService<DownloadTaskService>(), ct);
-                    }
-                    next = await Await(ctx, next, retry: false, ct);
-                    if (artifacts != null)
-                        next = await artifacts.RecordAsync(ctx, next, workset.OutputDirectory, ct);
+                    catch (Exception error) when (error is InvalidOperationException or ArgumentException or IOException or InvalidDataException)
+                    { admissionProblems.Add(target.Id, TargetProblem(error)); }
                 }
             }
-            catch (OperationCanceledException)
+
+            foreach (var target in workset.Targets)
             {
-                await StopTargets(ctx, workset.Targets.Where(t => selected.Contains(t.Id)), CancellationToken.None);
-                throw;
+                // Preserve each unselected target's checkpoint, files and original problem.
+                if (!selected.Contains(target.Id)) {updated.Add(target); continue;}
+                var next = target with {Problem = null, TransferDiagnostic = null};
+                var nativeId = target.DownloadTaskId.GetValueOrDefault();
+                var grouped = equivalentOwners.TryGetValue(target.Id, out var owner);
+                try
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (admissionProblems.TryGetValue(owner?.Id ?? target.Id, out var problem))
+                        next = next with {Problem = problem};
+                    else if (next.ProcessedArtifactId == null && next.PublishedArtifactId == null)
+                    {
+                        if (grouped && equivalentResults.TryGetValue(nativeId, out var observed))
+                        {
+                            if (observed.Problem != null) throw new InvalidOperationException(observed.Problem);
+                            next = next with {DownloadDirectory = observed.DownloadDirectory, Files = observed.Files,
+                                DownloadOperationId = observed.DownloadOperationId, DownloadArtifactId = observed.DownloadArtifactId,
+                                ExecutionStatus = observed.ExecutionStatus};
+                        }
+                        else if (verifyExisting)
+                        {
+                            await ctx.Services.GetRequiredService<CloudDownloadRecoveryService>().VerifyExistingAsync(
+                                checked((int)ctx.RunId), target, workset.OutputDirectory,
+                                ctx.Services.GetRequiredService<DownloadTaskService>(), ct);
+                        }
+                        if (!grouped || !equivalentResults.ContainsKey(nativeId)) next = await Await(ctx, next, retry: false, ct);
+                        if (artifacts != null)
+                            next = await artifacts.RecordAsync(ctx, next, workset.OutputDirectory, ct);
+                    }
+                }
+                catch (Exception error) when (error is InvalidOperationException or ArgumentException or IOException or InvalidDataException)
+                { next = next with {Problem = TargetProblem(error), TransferDiagnostic = (error as CloudProviderException)?.TransferDiagnostic}; }
+                if (grouped) equivalentResults.TryAdd(nativeId, next);
+                updated.Add(next);
             }
-            catch (Exception error) when (error is InvalidOperationException or ArgumentException or IOException or InvalidDataException)
-            { next = next with {Problem = error.Message}; }
-            updated.Add(next);
+        }
+        catch (OperationCanceledException)
+        {
+            await StopTargets(ctx, selectedTargets, CancellationToken.None);
+            throw;
         }
         workset = workset with {Targets = updated};
         // A partial resume does not certify other unfinished targets or advance past their wait.
@@ -502,6 +601,29 @@ public abstract class CloudActivity(string kind, string name, string description
             t.DownloadArtifactId == null && t.ProcessedArtifactId == null && t.PublishedArtifactId == null)
             ? Wait(workset, "cloudAttention") : WorkflowItemOutcome.ReplaceWith(workset);
     }
+
+    private static async Task StartRevalidatedDownload(WorkflowExecutionContext ctx, CloudDownloadRecoveryService recovery,
+        CloudDownloadTarget target, string outputDirectory, bool grouped, CancellationToken ct)
+    {
+        var runId = checked((int)ctx.RunId);
+        var check = await recovery.CheckAsync(runId, target, outputDirectory, true, ct, requireEquivalentGroup: grouped);
+        if (!check.CanRetry || check.VerifyExistingOnly) throw new InvalidOperationException(check.ReasonCode == "RECOVERY_SOURCE_STILL_BLOCKED"
+            ? check.FailureCode ?? check.ReasonCode : check.ReasonCode);
+        var response = await ctx.Services.GetRequiredService<DownloadTaskService>().StartConditionally(
+            target.DownloadTaskId!.Value, async token =>
+            {
+                var local = await recovery.CheckAsync(runId, target, outputDirectory, false, token, requireEquivalentGroup: grouped);
+                if (!local.Candidate || local.VerifyExistingOnly) throw new InvalidOperationException(local.ReasonCode);
+            }, ct, grouped ? async token =>
+            {
+                if ((await recovery.ReadEquivalentGroupAsync(runId, target, outputDirectory, token))?.Owner.Id != target.Id)
+                    throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
+            } : null);
+        if (response.Code != 0) throw new InvalidOperationException(response.Message ?? "RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+    }
+
+    private static string TargetProblem(Exception error) => error is UserStoragePathException {MountUnavailable: true}
+        ? "LOCAL_STORAGE_UNAVAILABLE" : error.Message;
 
     internal static async Task<CloudDownloadTarget> QueueNative(WorkflowExecutionContext ctx, DownloadWorkset item, CloudDownloadTarget target, CancellationToken ct)
     {
@@ -622,7 +744,14 @@ public abstract class CloudActivity(string kind, string name, string description
     }
 }
 public sealed class SelectCloudSourcesActivity() : CloudActivity("download.selectSources", "Select download sources", "workflow.activity.cloudSelect.description");
-public sealed class BaiduTransferActivity() : CloudActivity("baidu.transfer", "Transfer Baidu share", "workflow.activity.baiduTransfer.description");
+public interface ICloudTransferActivity : IWorkflowActivity
+{
+    bool Transfers(CloudSource source);
+}
+public sealed class BaiduTransferActivity() : CloudActivity("baidu.transfer", "Transfer Baidu share", "workflow.activity.baiduTransfer.description"), ICloudTransferActivity
+{
+    public bool Transfers(CloudSource source) => source.ProviderId == "baidu" && source.Kind != "remote";
+}
 public sealed class BaiduDownloadActivity() : CloudActivity("baidu.download", "Download Baidu files", "workflow.activity.baiduDownload.description");
 public sealed class EnqueueCloudSourcesActivity() : CloudActivity("download.enqueueSupported", "Route selected downloads", "workflow.activity.cloudEnqueue.description");
 public sealed class AwaitCloudDownloadsActivity() : CloudActivity("download.awaitCompletion", "Wait for downloads", "workflow.activity.cloudAwait.description");

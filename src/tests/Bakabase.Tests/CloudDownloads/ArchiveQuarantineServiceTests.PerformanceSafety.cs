@@ -28,6 +28,7 @@ public sealed partial class ArchiveQuarantineServiceTests
         Assert.AreEqual(ArtifactLocationState.Quarantined, _store.Records[source.Id].State);
         Assert.IsFalse(File.Exists(source.Files.Single()));
         Assert.AreEqual("original", await File.ReadAllTextAsync(Path.Combine(receipt.QuarantineRoot, "archive.zip")));
+        Assert.AreEqual((1, 8L), await Service.PendingDeletionSizeAsync(receipt, source.Manifest, default));
         _store.OnMaintenance = null;
         var completed = await Service.DeleteManagedAncestorAfterDeliveryAsync(source.Id, [output.Id],
             (_, _) => Task.FromResult(true), default, authorization);

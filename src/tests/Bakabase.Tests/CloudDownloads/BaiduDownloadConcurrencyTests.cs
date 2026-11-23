@@ -235,6 +235,18 @@ public sealed class BaiduDownloadConcurrencyTests
     }
 
     [TestMethod]
+    public void ProtectedMembersAreRequestLocalAndMustMatchUniquePinnedNonDirectoryIds()
+    {
+        var request = Request("""[{"id":1,"path":"/remote","size":0,"isDirectory":true},{"id":2,"path":"/remote/a","size":100,"isDirectory":false},{"id":3,"path":"/remote/b","size":30,"isDirectory":false}]""");
+        var retained = request with {ReadOnlyProviderFileKeys = ["2"]};
+        Assert.AreEqual(30L, BaiduCloudDownloadProvider.EstimateWriteBudget(retained)!.Single().MaximumAdditionalBytes);
+        Assert.IsNull(JsonSerializer.Deserialize<CloudDownloadRequest>(JsonSerializer.Serialize(retained))!.ReadOnlyProviderFileKeys);
+        foreach (var invalid in new string[][] {["2", "2"], ["1"], ["4"], [""]})
+            Assert.ThrowsExactly<CloudProviderException>(() => BaiduCloudDownloadProvider.EstimateWriteBudget(
+                request with {ReadOnlyProviderFileKeys = invalid}));
+    }
+
+    [TestMethod]
     public async Task PinnedLegacyRequestKeepsItsRemoteAccountWhenOuterAccountIsAbsent()
     {
         var original = Request("""[{"id":1,"path":"/remote/a","size":100,"isDirectory":false}]""") with { AccountId = null };

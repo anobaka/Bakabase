@@ -6,6 +6,7 @@ using System.IO;
 using System.Text.Json;
 using System.Security.Cryptography;
 using System.Text;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
@@ -22,6 +23,7 @@ using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.FileProcessing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
@@ -47,8 +49,11 @@ public sealed record AcquisitionAdaptiveMigrationResult(IReadOnlyList<int> Migra
 /// invalidate its cursor and checkpoint identities.
 /// </summary>
 public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
-    IWorkflowRunResumer resumer, AcquisitionPlanService? plans = null)
+    IWorkflowRunResumer resumer, AcquisitionPlanService? plans = null,
+    IServiceScopeFactory? scopeFactory = null)
 {
+    private const int PreviewConcurrency = 4;
+
     private static readonly HashSet<string> ArtifactAssessmentReasons = new(StringComparer.Ordinal)
     {
         "FILE_DELIVERY_RESULT_UNCERTAIN", "FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED",
@@ -59,6 +64,8 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
         IReadOnlyList<AcquisitionAdaptiveMigrationRow> Rows, Dictionary<int, string> Pins, int MaxIterations,
         Dictionary<int, AcquisitionPlanReplanInput> LocalInputs)> Previews = [];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private sealed record CheckedResult(AcquisitionAdaptiveMigrationRow Row, string? Pin,
+        AcquisitionPlanReplanInput? LocalInput);
 
     public async Task<AcquisitionAdaptiveMigrationPreview> PreviewAsync(
         AcquisitionAdaptiveMigrationInput input, CancellationToken ct = default)
@@ -70,50 +77,40 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
         var query = db.Set<AcquisitionTaskDbModel>().AsNoTracking().Where(t => t.DeletedAt == null);
         if (ids != null) query = query.Where(t => ids.Contains(t.Id));
         var tasks = await query.OrderBy(t => t.Id).Take(500).ToListAsync(ct);
-        var rows = new List<AcquisitionAdaptiveMigrationRow>(tasks.Count);
+        var results = new CheckedResult[tasks.Count];
+        var next = -1;
+        var workers = Enumerable.Range(0, scopeFactory == null ? 1 : Math.Min(PreviewConcurrency, tasks.Count))
+            .Select(_ => PreviewWorkerAsync()).ToArray();
+        await Task.WhenAll(workers);
+
+        var rows = results.Select(x => x.Row).ToList();
         var pins = new Dictionary<int, string>();
         var localInputs = new Dictionary<int, AcquisitionPlanReplanInput>();
-        foreach (var task in tasks)
+        foreach (var result in results)
         {
-            var run = task.WorkflowRunId is { } runId
-                ? await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct)
-                : null;
-            var row = Inspect(task, run);
-            // A local attempt uses the same directory eligibility as the single-task form.
-            // It does not depend on the old activity's reason or an existing AI node.
-            if (plans != null && run != null && task.BuilderId != null &&
-                run.Status is WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted)
-            {
-                try
-                {
-                    var detail = await plans.GetAsync(task.Id, ct);
-                    if (detail != null && CurrentDirectoryInput(detail, maxIterations) is { } localInput)
-                    {
-                        localInputs[task.Id] = localInput;
-                        row = row with {CanMigrate = true, ReasonCode = "ADAPTIVE_MIGRATION_READY", Reason = null};
-                    }
-                    else if (detail?.ReplanArtifacts.Count > 0)
-                        row = row with {CanMigrate = false, Reason = detail.ReplanArtifacts.Any(a => a.CanReadCurrentDirectory == true)
-                            ? "PLAN_CURRENT_DIRECTORY_SELECTION_REQUIRED" : "PLAN_CURRENT_DIRECTORY_UNAVAILABLE"};
-                }
-                catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
-                {
-                    row = row with {CanMigrate = false, Reason = "PLAN_CURRENT_DIRECTORY_UNAVAILABLE"};
-                }
-            }
-            if (plans != null && run == null && task.WorkflowRunId == null && task.Phase == "ready")
-            {
-                try
-                {
-                    if (await plans.CanAnalyzePreparedFilesAsync(task, ct))
-                        row = row with {CanMigrate = true, ReasonCode = "ADAPTIVE_MIGRATION_PREPARED_LOCAL_READY"};
-                }
-                catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
-                { row = row with {Reason = "PLAN_REPLAN_EVIDENCE_UNAVAILABLE"}; }
-            }
-            rows.Add(row);
-            if (row.CanMigrate) pins[task.Id] = PreviewPin(task, run);
+            if (result.Row.CanMigrate && result.Pin != null) pins[result.Row.TaskId] = result.Pin;
+            if (result.LocalInput != null) localInputs[result.Row.TaskId] = result.LocalInput;
         }
+
+        async Task PreviewWorkerAsync()
+        {
+            while (true)
+            {
+                var index = Interlocked.Increment(ref next);
+                if (index >= tasks.Count) return;
+                var task = tasks[index];
+                if (scopeFactory == null)
+                {
+                    results[index] = await PreviewTaskAsync(task, maxIterations, ct);
+                    continue;
+                }
+
+                await using var scope = scopeFactory.CreateAsyncScope();
+                var worker = scope.ServiceProvider.GetRequiredService<AcquisitionAdaptiveMigrationService>();
+                results[index] = await worker.PreviewTaskAsync(task, maxIterations, ct);
+            }
+        }
+
         var token = Guid.NewGuid().ToString("N");
         var expires = DateTimeOffset.UtcNow.AddMinutes(10);
         Previews[token] = (expires, rows, pins, maxIterations, localInputs);
@@ -122,22 +119,130 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
         return new(token, expires, rows);
     }
 
+    private async Task<CheckedResult> PreviewTaskAsync(AcquisitionTaskDbModel task, int maxIterations,
+        CancellationToken ct)
+    {
+        var run = task.WorkflowRunId is { } runId
+            ? await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct)
+            : null;
+        return await InspectInputsAsync(task, run, maxIterations, ct);
+    }
+
+    private async Task<CheckedResult> InspectInputsAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
+        int maxIterations, CancellationToken ct)
+    {
+        var row = Inspect(task, run);
+        AcquisitionPlanReplanInput? localInput = null;
+        // A local attempt uses the same directory eligibility as the single-task form.
+        // It does not depend on the old activity's reason or an existing AI node.
+        var owner = run?.Id.ToString(CultureInfo.InvariantCulture);
+        if (plans != null && run != null && task.BuilderId != null &&
+            run.Status is WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted &&
+            await (from binding in db.ArtifactOperationBindings
+                   join operation in db.ArtifactOperations on binding.OperationId equals operation.Id
+                   where binding.OwnerKind == "workflow" && binding.OwnerId == owner && operation.OutputArtifactId != null
+                   select binding.OperationId).AnyAsync(ct))
+        {
+            try
+            {
+                var detail = await plans.GetAsync(task.Id, ct);
+                if (detail != null && CurrentDirectoryInput(detail, maxIterations) is { } input)
+                {
+                    localInput = input;
+                    row = row with {CanMigrate = true, ReasonCode = "ADAPTIVE_MIGRATION_READY", Reason = null};
+                }
+                else if (detail?.ReplanArtifacts.Count > 0)
+                    row = row with {CanMigrate = false, Reason = detail.ReplanArtifacts.Any(a => a.CanReadCurrentDirectory == true)
+                        ? "PLAN_CURRENT_DIRECTORY_SELECTION_REQUIRED" : "PLAN_CURRENT_DIRECTORY_UNAVAILABLE"};
+            }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
+            {
+                row = row with {CanMigrate = false, Reason = "PLAN_CURRENT_DIRECTORY_UNAVAILABLE"};
+            }
+        }
+        if (plans != null && run == null && task.WorkflowRunId == null && task.Phase == "ready")
+        {
+            try
+            {
+                if (await plans.CanAnalyzePreparedFilesAsync(task, ct))
+                    row = row with {CanMigrate = true, ReasonCode = "ADAPTIVE_MIGRATION_PREPARED_LOCAL_READY"};
+            }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
+            { row = row with {Reason = "PLAN_REPLAN_EVIDENCE_UNAVAILABLE"}; }
+        }
+        return new(row, row.CanMigrate ? PreviewPin(task, run) : null, localInput);
+    }
+
     public async Task<AcquisitionAdaptiveMigrationResult> ApplyAsync(string token,
         IReadOnlyList<int>? taskIds = null, CancellationToken ct = default)
     {
         if (!Previews.TryRemove(token, out var preview) || preview.ExpiresAt <= DateTimeOffset.UtcNow)
             throw new ArgumentException("ADAPTIVE_MIGRATION_PREVIEW_EXPIRED");
-        var selected = (taskIds ?? preview.Rows.Where(x => x.CanMigrate).Select(x => x.TaskId).ToArray())
+        var applied = await ApplyReviewedAsync(preview.Rows, preview.Pins, preview.MaxIterations, preview.LocalInputs, taskIds, ct);
+        return new(applied.Executions.Keys.ToArray(), applied.Skipped);
+    }
+
+    internal async Task<(string Fingerprint, bool UseCurrentStorage)?> PreviewForBatchAsync(AcquisitionTaskDbModel task,
+        WorkflowRunDbModel? run, int maxIterations, CancellationToken ct)
+    {
+        var result = await InspectForBatchAsync(task, run, maxIterations, ct);
+        return result == null ? null : (result.Value.Fingerprint, result.Value.Checked.LocalInput?.UseCurrentStorageDefaults == true);
+    }
+
+    private async Task<(CheckedResult Checked, string Fingerprint)?> InspectForBatchAsync(AcquisitionTaskDbModel task,
+        WorkflowRunDbModel? run, int maxIterations, CancellationToken ct)
+    {
+        if (maxIterations is < 1 or > 5) throw new ArgumentException("RECOVERY_ANALYSIS_OPTIONS_INVALID");
+        if (task.DeletedAt != null || task.WorkflowRunId != run?.Id ||
+            task.Status is AcquisitionStatus.Cancelled or AcquisitionStatus.Completed) return null;
+        var check = await InspectInputsAsync(task, run, maxIterations, ct);
+        if (!check.Row.CanMigrate || check.Pin == null) return null;
+        var storage = check.LocalInput?.UseCurrentStorageDefaults == true ? plans!.CaptureLocalFilesStorage(task) : null;
+        var fingerprint = AcquisitionLocalFilesRecoveryReceipt.Hash(new
+        {
+            TaskVersion = AcquisitionLocalRecoveryQueueEntry.ActionInputVersion(task, run),
+            check.LocalInput, Storage = storage, MaxIterations = maxIterations
+        });
+        return (check, fingerprint);
+    }
+
+    internal async Task<(int WorkflowRunId, int PlanRevision)> ApplyForBatchAsync(int taskId, string fingerprint,
+        int maxIterations, CancellationToken ct, Func<string?, Task>? guardDirectory = null)
+    {
+        var task = await db.AcquisitionTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == taskId && t.DeletedAt == null, ct);
+        var run = task?.WorkflowRunId is { } runId
+            ? await db.WorkflowRuns.AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct) : null;
+        var checkedInput = task == null ? null : await InspectForBatchAsync(task, run, maxIterations, ct);
+        if (checkedInput == null || checkedInput.Value.Fingerprint != fingerprint)
+            throw new InvalidOperationException("ADAPTIVE_MIGRATION_CHANGED");
+        var check = checkedInput.Value.Checked;
+        var inputs = new Dictionary<int, AcquisitionPlanReplanInput>();
+        if (check.LocalInput != null) inputs.Add(taskId, check.LocalInput);
+        var result = await ApplyReviewedAsync([check.Row], new Dictionary<int, string> {[taskId] = check.Pin!},
+            maxIterations, inputs, [taskId], ct, guardDirectory);
+        if (result.Executions.TryGetValue(taskId, out var started)) return started;
+        var skipped = result.Skipped.FirstOrDefault();
+        throw new InvalidOperationException(skipped?.Reason ?? skipped?.ReasonCode ?? "ADAPTIVE_MIGRATION_FAILED");
+    }
+
+    private sealed record AppliedAnalysis(Dictionary<int, (int WorkflowRunId, int PlanRevision)> Executions,
+        IReadOnlyList<AcquisitionAdaptiveMigrationRow> Skipped);
+
+    private async Task<AppliedAnalysis> ApplyReviewedAsync(IReadOnlyList<AcquisitionAdaptiveMigrationRow> rows,
+        IReadOnlyDictionary<int, string> pins, int maxIterations, IReadOnlyDictionary<int, AcquisitionPlanReplanInput> localInputs,
+        IReadOnlyList<int>? taskIds, CancellationToken ct, Func<string?, Task>? guardDirectory = null)
+    {
+        var selected = (taskIds ?? rows.Where(x => x.CanMigrate).Select(x => x.TaskId).ToArray())
             .Distinct().ToHashSet();
-        if (selected.Count == 0 || selected.Any(id => !preview.Pins.ContainsKey(id)))
+        if (selected.Count == 0 || selected.Any(id => !pins.ContainsKey(id)))
             throw new ArgumentException("ADAPTIVE_MIGRATION_SELECTION_INVALID");
 
-        var migrated = new List<int>();
+        var executions = new Dictionary<int, (int, int)>();
         var skipped = new List<AcquisitionAdaptiveMigrationRow>();
         foreach (var id in selected.Order())
         {
             ct.ThrowIfCancellationRequested();
-            if (preview.LocalInputs.TryGetValue(id, out var input))
+            if (localInputs.TryGetValue(id, out var input))
             {
                 // Replan and Run own their task/run gates and optimistic revisions. Never
                 // call them under the legacy migration gate or mutate the previous snapshot.
@@ -148,19 +253,19 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
                     var currentRun = currentTask?.WorkflowRunId is { } runId
                         ? await db.Set<WorkflowRunDbModel>().AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct) : null;
                     if (plans == null || currentTask == null || currentRun == null ||
-                        preview.Pins[id] != PreviewPin(currentTask, currentRun))
+                        pins[id] != PreviewPin(currentTask, currentRun))
                         throw new InvalidOperationException("ADAPTIVE_MIGRATION_CHANGED");
-                    var revised = await plans.ReplanAsync(id, input, ct);
+                    var revised = await plans.ReplanAsync(id, input, ct, guardDirectory);
                     var started = await plans.RunAsync(id, revised.Task.PlanRevision, ct);
                     if (started.Task.WorkflowRunId == null || started.Task.WorkflowRunId == input.ExpectedRunId ||
                         started.Task.PlanRevision != revised.Task.PlanRevision)
                         throw new InvalidOperationException(started.Issues.FirstOrDefault(i => i.Blocking)?.Code ??
                             "ADAPTIVE_MIGRATION_PREPARED_NOT_STARTED");
-                    migrated.Add(id);
+                    executions.Add(id, (started.Task.WorkflowRunId.Value, started.Task.PlanRevision));
                 }
                 catch (Exception e) when (e is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
                 {
-                    skipped.Add(preview.Rows.Single(r => r.TaskId == id) with
+                    skipped.Add(rows.Single(r => r.TaskId == id) with
                         {CanMigrate = false, ReasonCode = "ADAPTIVE_MIGRATION_FAILED", Reason = e.Message});
                 }
                 continue;
@@ -169,19 +274,19 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
             await gate.WaitAsync(ct);
             try
             {
-                var reviewed = preview.Rows.Single(r => r.TaskId == id);
+                var reviewed = rows.Single(r => r.TaskId == id);
                 if (reviewed.WorkflowRunId == null)
                 {
                     var prepared = await db.Set<AcquisitionTaskDbModel>().AsNoTracking()
                         .SingleOrDefaultAsync(t => t.Id == id && t.DeletedAt == null, ct);
                     if (plans == null || prepared == null || prepared.WorkflowRunId != null ||
-                        preview.Pins[id] != PreviewPin(prepared, null))
+                        pins[id] != PreviewPin(prepared, null))
                     { skipped.Add(reviewed with {CanMigrate = false, ReasonCode = "ADAPTIVE_MIGRATION_CHANGED"}); continue; }
-                    var started = await plans.RunPreparedAnalysisWhileLockedAsync(prepared, preview.MaxIterations, ct);
+                    var started = await plans.RunPreparedAnalysisWhileLockedAsync(prepared, maxIterations, ct);
                     if (started.Task.WorkflowRunId == null)
                         throw new InvalidOperationException(started.Issues.FirstOrDefault(i => i.Blocking)?.Code ??
                             "ADAPTIVE_MIGRATION_PREPARED_NOT_STARTED");
-                    migrated.Add(id);
+                    executions.Add(id, (started.Task.WorkflowRunId.Value, started.Task.PlanRevision));
                     continue;
                 }
                 var task = await db.Set<AcquisitionTaskDbModel>().SingleOrDefaultAsync(t => t.Id == id && t.DeletedAt == null, ct);
@@ -191,11 +296,11 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
                 var current = task == null ? null : Inspect(task, run);
                 if (current == null || !current.CanMigrate)
                 {
-                    skipped.Add(current ?? preview.Rows.Single(r => r.TaskId == id) with
+                    skipped.Add(current ?? rows.Single(r => r.TaskId == id) with
                         {CanMigrate = false, ReasonCode = "ADAPTIVE_MIGRATION_CHANGED"});
                     continue;
                 }
-                if (preview.Pins[id] != PreviewPin(task!, run!))
+                if (pins[id] != PreviewPin(task!, run!))
                 {
                     skipped.Add(current with {CanMigrate = false, ReasonCode = "ADAPTIVE_MIGRATION_CHANGED"});
                     continue;
@@ -203,27 +308,17 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
                 var plan = WorkflowRunPlans.Read(run!.PlanSnapshotJson)
                     ?? throw new InvalidOperationException("ADAPTIVE_MIGRATION_PLAN_MISSING");
                 var nodes = plan.Nodes.ToArray();
-                var changed = false;
-                for (var index = 0; index < nodes.Length; index++)
+                var cursor = run.CurrentStepIndex!.Value;
+                var reviewedNode = nodes[cursor];
+                var config = JsonSerializer.Deserialize<FileArtifactDeliveryAssessmentConfig>(reviewedNode.ConfigJson,
+                    WorkflowJson.Options) ?? throw new InvalidOperationException("ADAPTIVE_MIGRATION_CONFIG_INVALID");
+                var upgraded = config with
                 {
-                    if (nodes[index].Kind != AssessFileArtifactDeliveryActivity.ActivityKind) continue;
-                    var config = JsonSerializer.Deserialize<FileArtifactDeliveryAssessmentConfig>(nodes[index].ConfigJson,
-                        WorkflowJson.Options) ?? throw new InvalidOperationException("ADAPTIVE_MIGRATION_CONFIG_INVALID");
-                    var upgraded = config with
-                    {
-                        EnableAdaptiveAssessment = true,
-                        MaxAdaptiveIterations = preview.MaxIterations,
-                        AdaptiveContext = string.IsNullOrWhiteSpace(config.AdaptiveContext) ? task.Title : config.AdaptiveContext
-                    };
-                    var json = JsonSerializer.Serialize(upgraded, WorkflowJson.Options);
-                    if (json != nodes[index].ConfigJson)
-                    {
-                        nodes[index] = nodes[index] with {ConfigJson = json};
-                        changed = true;
-                    }
-                }
-                if (!changed && run.Status is not (WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted))
-                    throw new InvalidOperationException("ADAPTIVE_MIGRATION_RUN_ACTIVE");
+                    EnableAdaptiveAssessment = true,
+                    MaxAdaptiveIterations = maxIterations,
+                    AdaptiveContext = string.IsNullOrWhiteSpace(config.AdaptiveContext) ? task!.Title : config.AdaptiveContext
+                };
+                nodes[cursor] = reviewedNode with {ConfigJson = JsonSerializer.Serialize(upgraded, WorkflowJson.Options)};
                 run.PlanSnapshotJson = WorkflowRunPlans.Serialize(plan with {Nodes = nodes});
                 run.PendingSignalJson = null;
                 run.ErrorMessage = null;
@@ -238,7 +333,7 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
                     await resumer.ReprocessWaitingAsync(run.Id, ct);
                 else if (run.Status is WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted)
                     await resumer.RequeueAsync(run.Id, ct);
-                migrated.Add(id);
+                executions.Add(id, (run.Id, task.PlanRevision));
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or IOException or InvalidDataException or UnauthorizedAccessException or JsonException)
             {
@@ -251,7 +346,7 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
             }
             finally { gate.Release(); }
         }
-        return new(migrated, skipped);
+        return new(executions, skipped);
     }
 
     internal static AcquisitionPlanReplanInput? CurrentDirectoryInput(AcquisitionPlanTaskDetail detail, int maxIterations)
@@ -357,15 +452,15 @@ public sealed class AcquisitionAdaptiveMigrationService(BakabaseDbContext db,
             return new(task.Id, task.Title, run.Id, run.Status, run.CurrentStepIndex, false, false,
                 "ADAPTIVE_MIGRATION_CURSOR_NOT_DELIVERY_ASSESSMENT",
                 "当前检查点尚未进入下载后文件评估节点，继续可能重复下载或转存。");
-        var enabled = false;
-        foreach (var node in assessment)
+        bool enabled;
+        try
         {
-            try
-            {
-                var config = JsonSerializer.Deserialize<FileArtifactDeliveryAssessmentConfig>(node.ConfigJson, WorkflowJson.Options);
-                enabled |= config?.EnableAdaptiveAssessment == true;
-            }
-            catch (JsonException) { }
+            var config = JsonSerializer.Deserialize<FileArtifactDeliveryAssessmentConfig>(plan.Nodes[cursor].ConfigJson, WorkflowJson.Options);
+            enabled = config?.EnableAdaptiveAssessment == true;
+        }
+        catch (JsonException)
+        {
+            return new(task.Id, task.Title, run.Id, run.Status, cursor, false, false, "ADAPTIVE_MIGRATION_PLAN_INVALID");
         }
         if (run.Status is not (WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted))
             return new(task.Id, task.Title, run.Id, run.Status, run.CurrentStepIndex, false, enabled,

@@ -1,5 +1,4 @@
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -11,7 +10,6 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.Modules.Workflow.Artifacts;
-using SharpCompress.Compressors.Deflate;
 
 namespace Bakabase.Service.Components.FileProcessing;
 
@@ -82,7 +80,7 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
                 ArtifactManifestFiles.RejectLinks(file);
                 var after = new FileInfo(file);
                 if (after.Length != entries[index].Length || after.LastWriteTimeUtc != modified) return null;
-                if (index == entry.index) declared = SevenZipDeclaredExtent(bytes);
+                if (index == entry.index) declared = SevenZipVolumeSet.DeclaredExtent(bytes);
                 else if (ArchiveSignature.Detect(bytes) != null) return null; // Another container's start is contradictory.
             }
             if (declared != total || declared <= entry.entry.Length) return null;
@@ -94,20 +92,6 @@ public sealed partial class AdaptiveFileProcessingAssessmentService
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or ArgumentException)
         { return null; }
-    }
-
-    // https://github.com/ip7z/7zip/blob/main/DOC/7zFormat.txt (SignatureHeader), reviewed 2026-11-12.
-    // CRC proves this small structural header only. The selected extractor still verifies the
-    // complete volume set, payload and password after any explicitly proposed rename.
-    internal static long? SevenZipDeclaredExtent(byte[] header)
-    {
-        if (header.Length != 32 || ArchiveSignature.Detect(header) != ".7z" || header[6] != 0) return null;
-        var crc = new CRC32(); crc.SlurpBlock(header, 12, 20);
-        if ((uint)crc.Crc32Result != BinaryPrimitives.ReadUInt32LittleEndian(header.AsSpan(8))) return null;
-        var offset = BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(12));
-        var size = BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(20));
-        if (size == 0 || offset > (ulong)long.MaxValue - 32UL || size > (ulong)long.MaxValue - 32UL - offset) return null;
-        return checked((long)(32UL + offset + size));
     }
 
     private static string DescribeMultipartNamingEvidence(AdaptiveMultipartNamingEvidence? evidence) =>

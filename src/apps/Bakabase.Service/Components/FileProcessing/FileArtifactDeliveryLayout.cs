@@ -265,7 +265,7 @@ public static class FileArtifactDeliveryLayout
             // Verified download metadata may already identify provider-created containers.
             // Carry that evidence into new processing checkpoints without changing the
             // download root, manifest or operation identity. Names alone remain insufficient.
-            if (artifact.Kind is not ("download" or "processedFiles" or "publishedFiles" or "currentFiles")) return null;
+            if (artifact.Kind is not ("download" or "processedFiles" or "publishedFiles" or "currentFiles" or ConfirmedDeliverySelection.Kind)) return null;
             using var metadata = JsonDocument.Parse(artifact.MetadataJson);
             if (metadata.RootElement.ValueKind != JsonValueKind.Object ||
                 !metadata.RootElement.TryGetProperty("directoryProvenance", out var member)) return null;

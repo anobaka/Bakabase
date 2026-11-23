@@ -32,6 +32,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<int, IDownloader> _downloaders = new();
         private readonly ConcurrentDictionary<int, SemaphoreSlim> _taskActionLocks = new();
+        private readonly ConcurrentDictionary<int, DownloadFileVerification> _fileVerifications = new();
         private readonly ConcurrentDictionary<ThirdPartyId, SemaphoreSlim> _sourceStartLocks = new();
         // Keep the partition selected at admission even if the account's default later changes.
         private readonly ConcurrentDictionary<int, DownloadTaskConcurrencyLimits> _taskConcurrencyLimits = new();
@@ -368,6 +369,18 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             {
                 await downloader.StopAndWait(stopBy);
             }
+        }
+
+        internal DownloadFileVerification? GetFileVerification(int taskId) => _fileVerifications.GetValueOrDefault(taskId);
+
+        // Begin, update and clear under the same task action lock. No other confirmation for
+        // this task can install a new activity before the first writer clears its own.
+        internal Task SetFileVerificationAsync(int taskId, DownloadFileVerification? verification)
+        {
+            if (verification == null) _fileVerifications.TryRemove(taskId, out _);
+            else _fileVerifications[taskId] = verification;
+            return GuardAsync(() => WithScopedService<DownloadTaskService>(s => s.OnCurrentChanged(taskId)),
+                "publish existing file verification");
         }
 
         /// <summary>Serializes explicit per-task actions across scoped task services.</summary>

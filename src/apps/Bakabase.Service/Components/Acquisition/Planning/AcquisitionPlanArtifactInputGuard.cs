@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
@@ -21,7 +22,7 @@ internal static class AcquisitionPlanArtifactInputGuard
 {
     public static async Task<ArtifactRecord> RequireAsync(BakabaseDbContext db, IArtifactOperationStore store,
         int taskId, string partId, AcquisitionPlanArtifactInput input, CancellationToken ct, bool publishedOutputOnly = false,
-        bool publicationInputOnly = false, bool currentDirectorySource = false)
+        bool publicationInputOnly = false, bool currentDirectorySource = false, AcquisitionStageDirectory? capturedDelivery = null)
     {
         var previous = input.PreviousRunId.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var run = await db.Set<WorkflowRunDbModel>().AsNoTracking()
@@ -45,7 +46,9 @@ internal static class AcquisitionPlanArtifactInputGuard
             JsonSerializer.Deserialize<AcquisitionStageDirectoryCaptureReceipt>(artifact.MetadataJson, WorkflowJson.Options) is {Version: 2} &&
             run is {Status: WorkflowRunStatus.Waiting, PendingSignalJson: null} &&
             await AcquisitionCurrentDirectoryFiles.IsOwnedAsync(db, store, artifact, taskId, input.PreviousRunId, partId, ct);
-        if (publicationInputOnly && (run == null || !AcquisitionPublicationStorageWait.CanRetryDelivery(run)))
+        var requiresStoppedPublication = publicationInputOnly &&
+            (capturedDelivery == null || !AcquisitionCurrentDirectoryFiles.IsDeliveryOnlyStageCapture(artifact, capturedDelivery));
+        if (requiresStoppedPublication && (run == null || !AcquisitionPublicationStorageWait.CanRetryDelivery(run)))
             throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
         if (input.TaskId != taskId || !ownsRun || run == null ||
             run.Status is not (WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Success) &&
@@ -53,7 +56,7 @@ internal static class AcquisitionPlanArtifactInputGuard
             throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
         if (artifact?.Kind == AcquisitionCurrentDirectoryFiles.Kind)
         {
-            if (publishedOutputOnly || publicationInputOnly ||
+            if (publishedOutputOnly || requiresStoppedPublication ||
                 !await AcquisitionCurrentDirectoryFiles.IsOwnedAsync(db, store, artifact, taskId, input.PreviousRunId, partId, ct) ||
                 artifact.OperationId != input.OperationId || artifact.Fingerprint != input.Fingerprint ||
                 (currentDirectorySource ? artifact.State is ArtifactLocationState.Quarantined or ArtifactLocationState.Retired :
@@ -176,6 +179,39 @@ internal static class AcquisitionPlanArtifactInputGuard
             s.Module == "acquisition" && s.EntityKind == "task").Select(s => s.EntityId).Distinct().ToArrayAsync(ct);
         // A local continuation may not silently borrow a run shared with another acquisition.
         return owners is {Length: 1} && owners[0] == task;
+    }
+
+    // This request only presents a choice to the user. A later command must still validate
+    // content before processing, publishing or registering any files.
+    internal static bool HasExpectedFileLayout(ArtifactRecord artifact, IUserStoragePolicy storage, CancellationToken ct)
+    {
+        storage.EnsurePathAllowed(artifact.RootDirectory);
+        ArtifactManifestFiles.RejectLinks(artifact.RootDirectory);
+        ArtifactManifestFiles.VerifyDirectories(artifact.RootDirectory, artifact.Manifest);
+        if (artifact.Files.Count == 0 || artifact.Files.Count != artifact.Manifest.Entries.Count ||
+            artifact.Fingerprint != artifact.Manifest.Fingerprint ||
+            ArtifactManifestFiles.Fingerprint(artifact.Manifest.Entries, artifact.Manifest.Directories) != artifact.Fingerprint)
+            return false;
+        for (var i = 0; i < artifact.Files.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var file = artifact.Files[i];
+            storage.EnsurePathAllowed(file);
+            ArtifactManifestFiles.RejectLinks(file);
+            if (!File.Exists(file) || new FileInfo(file).Length != artifact.Manifest.Entries[i].Length) return false;
+        }
+        return true;
+    }
+
+    internal static async Task<bool> HasPinnedContinuationAsync(BakabaseDbContext db, int runId, string partId,
+        string operationId, CancellationToken ct)
+    {
+        var owner = runId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var consumer = Consumer(runId, partId);
+        return await db.Set<WorkflowRunDbModel>().AnyAsync(r => r.Id == runId && r.Status == WorkflowRunStatus.Running, ct) &&
+            await db.Set<ArtifactConsumerDbModel>().AnyAsync(c => c.OperationId == operationId && c.ConsumerKey == consumer &&
+                c.OwnerKind == "workflow" && c.OwnerId == owner && c.ReleasedAt == null, ct) &&
+            await HasContinuationBindingAsync(db, runId, partId, operationId, ct);
     }
 
     internal static Task<bool> HasContinuationBindingAsync(BakabaseDbContext db, int runId, string partId,

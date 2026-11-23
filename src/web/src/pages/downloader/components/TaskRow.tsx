@@ -1,6 +1,6 @@
 "use client";
 
-import type { CenterTask } from "../downloadCenter";
+import { isFileVerificationStage, type CenterTask } from "../downloadCenter";
 import type { BakabaseModulesDownloaderModelsTasksDownloadTaskExecution as DownloadTaskExecution } from "@/sdk/Api";
 import type { SyntheticEvent } from "react";
 import type { ChipProps, CircularProgressProps } from "@/components/bakaui";
@@ -27,6 +27,7 @@ import { TbMagnet, TbMagnetOff } from "react-icons/tb";
 import { DownloadTaskTypeIconMap } from "./TaskDetailModal/models";
 import { useEstimatedRemainingLabel } from "./EstimatedRemainingTime";
 import TaskLinkCopyButton from "./TaskLinkCopyButton";
+import { VerifyExistingFilesButton } from "./VerifyExistingDownloadFiles";
 
 import { humanFileSize } from "@/components/utils";
 import {
@@ -117,6 +118,8 @@ const TaskRow = memo(function TaskRow({
   onContextMenu,
 }: TaskRowProps) {
   const { t } = useTranslation();
+  const verificationStage = task.fileVerification?.stage ??
+    (isFileVerificationStage(centerTask?.stage) ? centerTask?.stage : undefined);
   const hasErrorMessage = task.status === DownloadTaskStatus.Failed && !!task.message;
   const errorSummary = exHentaiDownloadProblemSummary(task.message, t) ?? task.message;
   // A task can complete and still leave notes behind (e.g. items it skipped). The message is a
@@ -136,7 +139,7 @@ const TaskRow = memo(function TaskRow({
   const executionActive =
     execution &&
     ["running", "queued", "waiting", "processing", "preparing"].includes(execution.status);
-  const actions = centerTask
+  const actions = verificationStage ? [] : centerTask
     ? (centerTask.availableActions ?? []).flatMap((action) =>
         action === "start"
           ? [DownloadTaskAction.StartManually]
@@ -247,8 +250,10 @@ const TaskRow = memo(function TaskRow({
             <TaskLinkCopyButton value={task.key} />
           </div>
         </div>
-        <Chip className="h-6 shrink-0" color={statusColor} size="sm" variant="flat">
-          {centerTask
+        <Chip className="h-6 shrink-0" color={verificationStage ? "primary" : statusColor} size="sm" variant="flat">
+          {verificationStage
+            ? t("downloadCenter.status.running")
+            : centerTask
             ? t(`downloadCenter.status.${centerTask.status}`)
             : execution
               ? t(`downloader.execution.status.${execution.status}`)
@@ -258,7 +263,11 @@ const TaskRow = memo(function TaskRow({
       <div className="flex h-8 min-w-0 shrink-0 items-center gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex min-w-0 items-center gap-2 text-xs leading-4">
-            {executionSummary ? (
+            {verificationStage ? (
+              <span className="min-w-0 flex-1 truncate text-default-500">
+                {t(`downloadCenter.stage.${verificationStage}`, { defaultValue: verificationStage })}
+              </span>
+            ) : executionSummary ? (
               <span
                 data-task-action
                 className="min-w-0 flex-1"
@@ -330,7 +339,7 @@ const TaskRow = memo(function TaskRow({
             )}
             {/* Keep the percentage last so it aligns across rows. Each optional value owns the
                 separator before the next value, leaving no orphan when a value is unavailable. */}
-            {downloadedSize && (
+            {!verificationStage && downloadedSize && (
               <>
                 <span
                   aria-label={`${t<string>("downloader.label.downloadedFileSize")}: ${downloadedSize}`}
@@ -344,7 +353,7 @@ const TaskRow = memo(function TaskRow({
                 </span>
               </>
             )}
-            {downloadSpeed && (
+            {!verificationStage && downloadSpeed && (
               <>
                 <span
                   aria-label={`${t<string>("downloader.label.downloadSpeed")}: ${downloadSpeed}`}
@@ -358,7 +367,7 @@ const TaskRow = memo(function TaskRow({
                 </span>
               </>
             )}
-            {!execution && estimatedRemaining && (
+            {!verificationStage && !execution && estimatedRemaining && (
               <>
                 <span className="shrink-0 tabular-nums text-default-500" title={estimatedRemaining}>
                   {estimatedRemaining}
@@ -368,9 +377,11 @@ const TaskRow = memo(function TaskRow({
                 </span>
               </>
             )}
-            <span className="shrink-0 tabular-nums text-default-500">
-              {progress == null ? "—" : `${Math.round(progress)}%`}
-            </span>
+            {!verificationStage && (
+              <span className="shrink-0 tabular-nums text-default-500">
+                {progress == null ? "—" : `${Math.round(progress)}%`}
+              </span>
+            )}
           </div>
           <Progress
             disableAnimation
@@ -379,9 +390,9 @@ const TaskRow = memo(function TaskRow({
             color={progressColor}
             size="sm"
             isIndeterminate={
-              progress == null && !!executionActive && execution?.status !== "waiting"
+              !!verificationStage || (progress == null && !!executionActive && execution?.status !== "waiting")
             }
-            value={progress ?? 0}
+            value={verificationStage ? undefined : progress ?? 0}
           />
         </div>
         <div
@@ -392,6 +403,9 @@ const TaskRow = memo(function TaskRow({
           onContextMenu={stopPropagation}
           onKeyDown={stopPropagation}
         >
+          {!verificationStage && centerTask?.availableActions?.includes("verifyExistingFiles") && (
+            <VerifyExistingFilesButton task={centerTask} />
+          )}
           {actions?.map((action) => {
             switch (action) {
               case DownloadTaskAction.StartManually:

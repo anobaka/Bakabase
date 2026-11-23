@@ -40,13 +40,17 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
         IReadOnlyList<DeliveredCandidate>? DeliveredFiles = null,
         IReadOnlyList<AbandonedInputCandidate>? AbandonedInputs = null,
         IReadOnlyList<CapturedInputCandidate>? CapturedInputs = null,
-        IReadOnlyList<StageDirectoryCandidate>? StageDirectories = null);
+        IReadOnlyList<StageDirectoryCandidate>? StageDirectories = null)
+    {
+        internal IReadOnlyList<string> UnselectedDirectories { get; init; } = [];
+        internal AcquisitionCleanupScopes UnselectedScopes { get; init; }
+    }
     internal sealed record AbsentCandidate(string ArtifactId, string OperationId, string RootDirectory,
         string Fingerprint, string PublishedArtifactId, IReadOnlyList<string> Files);
 
     internal async Task<Plan> PreviewAsync(AcquisitionTaskDbModel task, IReadOnlyList<int> owners,
         bool acceptDelivery, bool skipFileVerification, CancellationToken ct, Func<string, Task>? guardDirectory = null, bool retryRetainedFiles = false,
-        bool cleanupIntermediates = true, bool deleteDeliveredFiles = false, bool directDirectoryDeletion = false)
+        bool cleanupIntermediates = true, bool deleteDeliveredFiles = false, bool directDirectoryDeletion = false, bool reviewDeletedWaits = false)
     {
         Plan Block(string reason) => new(new(0, 0, [], reason, SizeIncomplete: true), Version(task), null, []);
         if ((task.DeletedAt != null) != retryRetainedFiles)
@@ -70,8 +74,10 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
         if (await db.WorkflowRuns.AnyAsync(r => owners.Contains(r.Id) &&
                 (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running || r.Status == WorkflowRunStatus.Waiting), ct))
         {
-            if (retryRetainedFiles) return Block("CLEANUP_OLD_EXECUTION_REQUIRES_REVIEW");
-            superseded = supersededRuns == null ? null : await supersededRuns.PreviewAsync(task, owners, ct, abandonUnfinishedFiles: wholeTask);
+            // Only a previously displayed, selection-bound preview can abandon a deleted task's waits.
+            // A direct retry or file-options-only confirmation cannot silently close a workflow.
+            if (retryRetainedFiles && (!reviewDeletedWaits || !wholeTask)) return Block("CLEANUP_OLD_EXECUTION_REQUIRES_REVIEW");
+            superseded = supersededRuns == null ? null : await supersededRuns.PreviewAsync(task, owners, ct, abandonUnfinishedFiles: wholeTask, reviewDeletedWaits: retryRetainedFiles);
             if (superseded == null) return Block("CLEANUP_OLD_EXECUTION_REQUIRES_REVIEW");
         }
         if (wholeTask) return await PreviewWholeTaskFilesAsync(task, owners, superseded, cleanupIntermediates, deleteDeliveredFiles,
@@ -285,7 +291,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
             groups.Add(new(artifact.Id, candidate.PublishedArtifactId == null ? "intermediate" : artifact.Kind,
                 actualDirectory, !sizeUnknown && (candidate.Eligible || alreadyAbsent), candidateReason, nodes, files,
                 files.Count, files.Sum(f => f.Bytes), candidate.Reason is "SharedOwner" or "ReferencedArtifact" or "ReferencedPath" or "ReferencedDescendant",
-                SizeUnknown: sizeUnknown || candidateReason == "CLEANUP_RETIRED_WORKSPACE_REQUIRES_REVIEW"));
+                SizeUnknown: sizeUnknown || candidateReason == "CLEANUP_RETIRED_WORKSPACE_REQUIRES_REVIEW")
+                {Scopes = AcquisitionCleanupScopes.Intermediate});
         }
         if (deleteDeliveredFiles)
             foreach (var id in outputIds)
@@ -318,7 +325,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
 
     internal async Task EnsureAuthorizedAsync(Plan plan, Func<string, Task>? guardDirectory, CancellationToken ct)
     {
-        foreach (var path in (plan.AuthorizedDirectories ?? []).Concat(plan.Summary.Groups.SelectMany(g =>
+        foreach (var path in (plan.AuthorizedDirectories ?? []).Concat(plan.UnselectedDirectories).Concat(plan.Summary.Groups.SelectMany(g =>
                      g.Files.Select(f => f.Path).Prepend(g.Directory)))
                  .Concat((plan.AlreadyAbsent ?? []).SelectMany(a => a.Files.Prepend(a.RootDirectory)))
                  .Distinct(ArtifactManifestFiles.PathComparer))
@@ -356,12 +363,24 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
         authorization.RestoreRetirementDependencies(plan.RetirementDependencies);
         var removed = 0; long bytes = 0; var reasons = new HashSet<string>(StringComparer.Ordinal);
         var retained = new HashSet<string>(ArtifactManifestFiles.PathComparer);
+        var unconfirmed = AcquisitionCleanupScopes.None;
+        var manualReview = AcquisitionCleanupScopes.None;
+        var deferred = new List<(string, AcquisitionCleanupScopes)>();
         var removedDirectories = new List<string>();
         var fileStatisticsIncomplete = false;
-        void Keep(string artifactId, string reason)
+        void Keep(string artifactId, string reason, string? deferredReceipt = null)
         {
             reasons.Add(reason);
-            foreach (var group in plan.Summary.Groups.Where(g => g.ArtifactId == artifactId)) retained.Add(group.Directory);
+            var scopes = AcquisitionCleanupScopes.None;
+            foreach (var group in plan.Summary.Groups.Where(g => g.ArtifactId == artifactId))
+            {
+                retained.Add(group.Directory);
+                scopes |= group.Scopes;
+            }
+            if (scopes == AcquisitionCleanupScopes.None) scopes = AcquisitionCleanupScopes.Both;
+            unconfirmed |= scopes;
+            if (deferredReceipt == null) manualReview |= scopes;
+            else deferred.Add((deferredReceipt, scopes));
         }
         foreach (var group in plan.Summary.Groups.Where(g => !g.Eligible))
             Keep(group.ArtifactId, group.ReasonCode ?? "CLEANUP_FILES_RETAINED");
@@ -394,7 +413,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
                 // which appeared after preview. Other owners/consumers/locations stay unchanged.
                 await maintenance.RecordAlreadyAbsentForDeletionAsync(current, expected.Files, authorization.Consent, ct);
             }
-            catch (UserStoragePathException) { reasons.Add("CLEANUP_PATH_NOT_AUTHORIZED"); }
+            catch (UserStoragePathException) { Keep(expected.ArtifactId, "CLEANUP_PATH_NOT_AUTHORIZED"); }
             catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or JsonException)
             { Keep(expected.ArtifactId, "WorkspaceUnavailable"); }
         }
@@ -417,15 +436,15 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
         foreach (var stageDirectory in plan.StageDirectories ?? [])
         {
             if (!plan.Summary.Groups.Any(g => g.ArtifactId == stageDirectory.Id && g.Eligible)) continue;
-            var outcome = await DeleteStageDirectoryAsync(stageDirectory, authorization, ct);
+            string? deferredReceipt = null;
+            var outcome = await DeleteStageDirectoryAsync(stageDirectory, authorization, ct, id => deferredReceipt = id);
             removed += outcome.RemovedFiles; bytes += outcome.RemovedBytes;
             reportProgress?.Invoke(removed, bytes);
-            if (!outcome.Completed) Keep(stageDirectory.Id, outcome.Reason ?? "CLEANUP_FILES_RETAINED");
-            if (stageDirectory.DirectDeletion)
+            if (!outcome.Completed) Keep(stageDirectory.Id, outcome.Reason ?? "CLEANUP_FILES_RETAINED", deferredReceipt);
+            if (stageDirectory.DirectDeletion && stageDirectory.ManifestArtifactId == null && outcome.Reason != "AlreadyAbsent")
             {
                 fileStatisticsIncomplete = true;
-                if (outcome.Completed && stageDirectory.ManifestArtifactId == null)
-                    removedDirectories.Add(stageDirectory.RootDirectory);
+                if (outcome.Completed) removedDirectories.Add(stageDirectory.RootDirectory);
             }
         }
         foreach (var candidate in plan.Candidates)
@@ -445,7 +464,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
                 reportProgress?.Invoke(removed, bytes);
                 if (!result.Completed) Keep(candidate.ArtifactId, result.Reason ?? "CLEANUP_FILES_RETAINED");
             }
-            catch (UserStoragePathException) { reasons.Add("CLEANUP_PATH_NOT_AUTHORIZED"); }
+            catch (UserStoragePathException) { Keep(candidate.ArtifactId, "CLEANUP_PATH_NOT_AUTHORIZED"); }
             catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or JsonException)
             { Keep(candidate.ArtifactId, "CLEANUP_FILES_RETAINED"); }
             finally
@@ -463,7 +482,9 @@ public sealed partial class AcquisitionTaskDeletionCleanupService(BakabaseDbCont
             if (!outcome.Completed) Keep(delivery.ArtifactId, outcome.Reason ?? "CLEANUP_FILES_RETAINED");
         }
         return new(task.Id, reasons.Count == 0, removed, bytes, reasons.ToArray(), closed,
-            reasons.Contains("CLEANUP_PATH_NOT_AUTHORIZED") ? [] : retained.ToArray(), removedDirectories, fileStatisticsIncomplete);
+            reasons.Contains("CLEANUP_PATH_NOT_AUTHORIZED") ? [] : retained.ToArray(), removedDirectories, fileStatisticsIncomplete)
+            {UnconfirmedScopes = unconfirmed | plan.UnselectedScopes, ManualReviewScopes = manualReview | plan.UnselectedScopes,
+                DeferredReceipts = deferred, UnselectedDirectories = plan.UnselectedDirectories};
     }
 
     private ArtifactDeliveryCleanupAuthorization Authorization(AcquisitionTaskDbModel task, ArtifactDeliveryCleanupConsent consent,

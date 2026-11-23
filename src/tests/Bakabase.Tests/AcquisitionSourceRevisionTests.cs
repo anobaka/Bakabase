@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
@@ -10,7 +12,9 @@ using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.Service.Components.CloudDownloads.WebProviders;
 using Bakabase.Service.Components.DownloadIntents;
+using Bakabase.Tests.CloudDownloads;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -200,5 +204,55 @@ public sealed partial class AcquisitionRecoveryTests
         await _db.SaveChangesAsync(); var options = await f.Service.GetAsync(f.TaskId);
         Assert.IsFalse(options.CanRevise); Assert.IsNotNull(options.ReasonCode);
         Assert.AreEqual(1, await _db.WorkflowRuns.CountAsync());
+    }
+
+    [DataTestMethod]
+    [DataRow("absent", true)]
+    [DataRow("lock-only", true)]
+    [DataRow("active", false)]
+    [DataRow("partial", false)]
+    [DataRow("registered", false)]
+    [DataRow("manifest.json", false)]
+    [DataRow("completed.json", false)]
+    [DataRow("manifest.json.fixture.tmp", false)]
+    public async Task SharePoint_source_revision_requires_a_stopped_download_without_retained_state(string scenario, bool expected)
+    {
+        var source = new CloudSource {Id = "source", ProviderId = "oneDrive", MethodId = "oneDrive.sharePoint",
+            Url = "https://tenant.sharepoint.com/:f:/g/personal/user/fixture"};
+        var (_, run, workset, download, operation, _, _) = await SeedRecoverableProvider(source, "PUBLIC_SHARE_NETWORK_ERROR");
+        var appData = Directory.CreateDirectory(Path.Combine(_root, "app-data")).FullName;
+        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(operation.Id))).ToLowerInvariant();
+        var state = Path.Combine(appData, "cloud-downloads", "resolved", "oneDrive", key);
+        string? retained = null;
+        if (scenario != "absent")
+        {
+            Directory.CreateDirectory(state);
+            await File.WriteAllBytesAsync(Path.Combine(state, "operation.lock"), []);
+        }
+        switch (scenario)
+        {
+            case "active": download.Status = DownloadTaskDbModelStatus.InProgress; break;
+            case "registered": _db.DownloadResults.Add(new() {DownloadTaskId = download.Id, FilesJson = "[]"}); break;
+            case "partial":
+                Directory.CreateDirectory(download.DownloadPath);
+                retained = Path.Combine(download.DownloadPath, ".partial");
+                break;
+            case "manifest.json" or "completed.json" or "manifest.json.fixture.tmp":
+                retained = Path.Combine(state, scenario);
+                break;
+        }
+        if (retained != null) await File.WriteAllTextAsync(retained, "retained");
+        await _db.SaveChangesAsync();
+        using var handler = new PublicShareResolverTests.Reply(_ => throw new AssertFailedException("Source revision must not contact the original share."));
+        var provider = new SharePointCloudProvider(appData, null!, new PublicShareResolverTests.Clients(handler));
+        var recovery = new CloudDownloadRecoveryService(_db, [provider], new UserStoragePolicy(false));
+        var safety = new AcquisitionSourceRevisionSafety(_db, recovery, [provider]);
+
+        var proof = await safety.CheckAsync(run.Id, workset.Targets.Single(), workset.OutputDirectory, default);
+
+        Assert.AreEqual(expected, proof.Safe, proof.ReasonCode);
+        Assert.AreEqual(scenario != "absent", Directory.Exists(state));
+        if (Directory.Exists(state)) Assert.AreEqual(0, new FileInfo(Path.Combine(state, "operation.lock")).Length);
+        if (retained != null) Assert.AreEqual("retained", await File.ReadAllTextAsync(retained));
     }
 }

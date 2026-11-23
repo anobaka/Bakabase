@@ -108,6 +108,10 @@ public sealed class PostSourceCorrectionTests
         var first = await Adapter.CreateAsync(input, Path.GetTempPath(), default);
         var again = await Adapter.CreateAsync(input, Path.GetTempPath(), default);
         Assert.AreEqual(first.AcquisitionTaskIds.Single(), again.AcquisitionTaskIds.Single());
+        var otherDirectory = Path.Combine(Path.GetTempPath(), "another-target");
+        var differentDestination = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            Adapter.CreateAsync(input, otherDirectory, default));
+        StringAssert.Contains(differentDestination.Message, "SOURCE_CORRECTION_EXISTING_ACQUISITION");
         var changed = input with {CandidateSourceCorrections = new() {{"0", input.CandidateSourceCorrections["0"] with {ImageSha256 = Hash("different image")}}}};
         var error = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => Adapter.CreateAsync(changed, Path.GetTempPath(), default));
         StringAssert.Contains(error.Message, "SOURCE_CORRECTION_EXISTING_ACQUISITION");

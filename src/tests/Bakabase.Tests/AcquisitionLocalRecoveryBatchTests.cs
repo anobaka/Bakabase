@@ -60,24 +60,79 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
     }
 
     [TestMethod]
-    public async Task OneActiveTaskRemainsSerialUntilSuccessIncludingPendingSignal()
+    public async Task ActiveTaskDoesNotBlockAnotherTaskAndPendingSignalIsNotDispatchedTwice()
     {
         using var f = await Fixture.CreateAsync();
         var preview = await f.Service.PreviewAsync(new([1, 2]));
         var batch = await f.Service.ApplyAsync(new(preview.PreviewToken, [1, 2]));
         await f.Service.TickAsync();
         CollectionAssert.AreEqual(new[] {22}, f.Host.Calls.ToArray());
-        await f.Service.TickAsync();
-        Assert.AreEqual(1, f.Host.Calls.Count);
         await f.Db.WorkflowRuns.Where(r => r.Id == 22).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Waiting)
             .SetProperty(r => r.PendingSignalJson, "{}"));
         await f.Service.TickAsync();
-        Assert.AreEqual(1, f.Host.Calls.Count, "Waiting with a persisted answer is still pending execution.");
+        CollectionAssert.AreEqual(new[] {22, 11}, f.Host.Calls.ToArray(), "Another task can run while the first awaits its capability slot.");
+        Assert.IsTrue((await f.Service.GetAsync(batch.BatchId)).Rows.All(r => r.Status == "running"));
+        await f.Service.TickAsync();
+        Assert.AreEqual(2, f.Host.Calls.Count, "A persisted answer remains accepted work and must not be submitted again.");
         await f.CompleteAsync(2);
         await f.Service.TickAsync();
         await f.Service.TickAsync();
         CollectionAssert.AreEqual(new[] {22, 11}, f.Host.Calls.ToArray());
         Assert.AreEqual("running", (await f.Service.GetAsync(batch.BatchId)).Status);
+    }
+
+    [TestMethod]
+    public async Task LocalFilesVerificationDoesNotBlockAnotherQueueAdmissionOrGetReconciledWhileActive()
+    {
+        using var f = await Fixture.CreateAsync();
+        var firstPreview = await f.Service.PreviewAsync(new([1]));
+        var first = await f.Service.ApplyAsync(new(firstPreview.PreviewToken, [1]));
+        var task = await f.TaskAsync(1);
+        var entry = AcquisitionLocalRecoveryQueueEntry.Read(task)! with {RecoveryScope = "localFiles"};
+        var queued = AcquisitionLocalRecoveryQueueEntry.Write(task.BuilderStateJson, entry);
+        await f.Db.AcquisitionTasks.Where(t => t.Id == 1).ExecuteUpdateAsync(s => s.SetProperty(t => t.BuilderStateJson, queued));
+
+        var scheduled = new HashSet<int>();
+        await f.Service.TickAsync(scheduled, id => Assert.IsTrue(scheduled.Add(id)), null, default);
+        CollectionAssert.AreEquivalent(new[] {1}, scheduled.ToArray());
+
+        var checking = AcquisitionLocalRecoveryQueueEntry.Write(queued, entry with {Status = "starting", AttemptVersion = entry.Version});
+        await f.Db.AcquisitionTasks.Where(t => t.Id == 1).ExecuteUpdateAsync(s => s.SetProperty(t => t.BuilderStateJson, checking));
+        var nextPreview = await f.Service.PreviewAsync(new([2]));
+        var next = await f.Service.ApplyAsync(new(nextPreview.PreviewToken, [2]));
+        var workflow = new HashSet<int>();
+        await f.Service.TickAsync(scheduled, null, id => Assert.IsTrue(workflow.Add(id)), default);
+        CollectionAssert.AreEquivalent(new[] {2}, workflow.ToArray());
+        Assert.HasCount(0, f.Host.Calls);
+        // A fresh poll can overlap both admissions. It must not submit or prematurely reconcile either.
+        await f.Service.TickAsync(scheduled.Concat(workflow).ToHashSet(), null, id => Assert.Fail("duplicate admission"), default);
+        await f.Service.DispatchAsync(2, default);
+        CollectionAssert.AreEqual(new[] {22}, f.Host.Calls.ToArray());
+        Assert.AreEqual("running", (await f.Service.GetAsync(next.BatchId)).Rows.Single().Status);
+        Assert.AreEqual("starting", (await f.Service.GetAsync(first.BatchId)).Rows.Single().Status);
+    }
+
+    [DataTestMethod]
+    [DataRow("acquisition.plan.process")]
+    [DataRow("download.awaitCompletion")]
+    public async Task AnotherBatchCanProgressWhileAnAcceptedTaskUsesItsProcessingOrDownloadCapability(string kind)
+    {
+        using var f = await Fixture.CreateAsync();
+        var firstPreview = await f.Service.PreviewAsync(new([1]));
+        var first = await f.Service.ApplyAsync(new(firstPreview.PreviewToken, [1]));
+        await f.Service.TickAsync();
+        var runningPlan = WorkflowRunPlans.Serialize(new() {Name = "active capability", TriggerKind = "cloud.downloadRequested",
+            Nodes = [new() {NodeId = "active", Kind = kind}]});
+        await f.Db.WorkflowRuns.Where(r => r.Id == 11).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Running)
+            .SetProperty(r => r.PendingSignalJson, (string?)null).SetProperty(r => r.PlanSnapshotJson, runningPlan));
+        var nextPreview = await f.Service.PreviewAsync(new([2]));
+        var next = await f.Service.ApplyAsync(new(nextPreview.PreviewToken, [2]));
+        await f.Service.TickAsync();
+        CollectionAssert.AreEqual(new[] {11, 22}, f.Host.Calls.ToArray());
+        Assert.AreEqual("running", (await f.Service.GetAsync(first.BatchId)).Status);
+        Assert.AreEqual("running", (await f.Service.GetAsync(next.BatchId)).Status);
+        await f.Service.TickAsync();
+        Assert.AreEqual(2, f.Host.Calls.Count);
     }
 
     [TestMethod]
@@ -201,7 +256,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
         await f.Service.TickAsync();
         var restarted = f.NewService();
         await restarted.TickAsync(); await restarted.TickAsync();
-        Assert.AreEqual(1, f.Host.Calls.Count);
+        CollectionAssert.AreEqual(new[] {22, 11}, f.Host.Calls.ToArray(), "Restart adopts each accepted run without blocking other tasks or repeating either call.");
     }
 
     [TestMethod]
@@ -270,7 +325,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
     }
 
     [TestMethod]
-    public async Task LostLocalAdoptionResponseAtContinueFilesRemainsSerialAndBindsOnlyMatchingReceipt()
+    public async Task LostLocalAdoptionResponseBindsOnlyMatchingReceiptAndAllowsOtherTasks()
     {
         using var f = await Fixture.CreateAsync();
         var p = await f.Service.PreviewAsync(new([1, 2]));
@@ -280,7 +335,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
         var row = (await f.Service.GetAsync(b.BatchId)).Rows.Single(r => r.TaskId == 2);
         Assert.AreEqual("running", row.Status);
         Assert.AreEqual(222, row.WorkflowRunId);
-        Assert.AreEqual(0, f.Host.Calls.Count);
+        CollectionAssert.AreEqual(new[] {11}, f.Host.Calls.ToArray());
         Assert.IsNull(AcquisitionStorageOverrideGrant.Read(await f.TaskAsync(2)), "Continue-files observation does not grant a new writer.");
         await f.Db.WorkflowRuns.Where(r => r.Id == 222).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Success)
             .SetProperty(r => r.PendingSignalJson, (string?)null));
@@ -289,7 +344,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
     }
 
     [TestMethod]
-    public async Task UnrelatedAdoptionCannotInheritApprovalOrOverlapAnotherRunningLocalTask()
+    public async Task UnrelatedAdoptionCannotInheritApprovalButDoesNotBlockAnotherTask()
     {
         using var f = await Fixture.CreateAsync();
         var p = await f.Service.PreviewAsync(new([1, 2]));
@@ -300,7 +355,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
         Assert.AreEqual("running", row.Status);
         Assert.AreEqual(22, row.WorkflowRunId, "Do not bind the unrelated new revision.");
         Assert.IsNull(AcquisitionStorageOverrideGrant.Read(await f.TaskAsync(2)));
-        Assert.AreEqual(0, f.Host.Calls.Count);
+        CollectionAssert.AreEqual(new[] {11}, f.Host.Calls.ToArray());
         await f.Db.WorkflowRuns.Where(r => r.Id == 222).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Interrupted));
         await f.Service.TickAsync();
         Assert.AreEqual("attention", (await f.Service.GetAsync(b.BatchId)).Rows.Single(r => r.TaskId == 2).Status);
@@ -312,7 +367,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
     public async Task AcceptedResponseCannotBindAnUnrelatedRevisionInstalledBeforeItsReceiptIsSaved()
     {
         using var f = await Fixture.CreateAsync();
-        f.Host.AfterAccept = () => f.InstallAdoptionAsync(2, matching: false);
+        f.Host.AfterAccept = async () => {f.Host.AfterAccept = null; await f.InstallAdoptionAsync(2, matching: false);};
         var p = await f.Service.PreviewAsync(new([1, 2]));
         var b = await f.Service.ApplyAsync(new(p.PreviewToken, [1, 2], true));
         await f.Service.TickAsync(); await f.Service.TickAsync();
@@ -320,11 +375,11 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
         Assert.AreEqual("running", row.Status);
         Assert.AreEqual(22, row.WorkflowRunId);
         Assert.AreEqual(22, AcquisitionStorageOverrideGrant.Read(await f.TaskAsync(2))!.WorkflowRunId);
-        Assert.AreEqual(1, f.Host.Calls.Count);
+        CollectionAssert.AreEqual(new[] {22, 11}, f.Host.Calls.ToArray());
     }
 
     [TestMethod]
-    public async Task RejectedResponseWhileRunAlreadyPendingCannotReleaseTheSerialQueue()
+    public async Task RejectedResponseWhileRunAlreadyPendingDoesNotRepeatItOrBlockAnotherTask()
     {
         using var f = await Fixture.CreateAsync();
         f.Host.RejectAfterAccept = true;
@@ -333,7 +388,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
         await f.Service.TickAsync(); await f.Service.TickAsync();
         Assert.AreEqual("running", (await f.Service.GetAsync(b.BatchId)).Rows.Single(r => r.TaskId == 2).Status);
         Assert.AreEqual("applied", AcquisitionStorageOverrideGrant.Read(await f.TaskAsync(2))!.Status);
-        Assert.AreEqual(1, f.Host.Calls.Count);
+        CollectionAssert.AreEqual(new[] {22, 11}, f.Host.Calls.ToArray());
     }
 
     [TestMethod]
@@ -468,9 +523,15 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
     private sealed class Diagnostics : IAcquisitionRecoveryDiagnostics
     {
         internal bool RequireVerification;
+        internal int? OptionalTransferTask;
+        public Task<AcquisitionRecoveryDiagnosis> DiagnoseTransferRetryAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
+            CancellationToken ct) => Task.FromResult(new AcquisitionRecoveryDiagnosis(new(task.Id, task.Title, run?.Id,
+                task.Id == OptionalTransferTask, "resume", task.Id == OptionalTransferTask
+                    ? AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired : "RECOVERY_CHECKPOINT_UNSUPPORTED"), "{}"));
         internal List<bool> Verifications { get; } = [];
         public Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
-            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
+            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false,
+            bool includeStoppedVerification = false, bool deferCompletedDownloadVerification = false)
         {
             Verifications.Add(verifyFiles);
             return Task.FromResult(new AcquisitionRecoveryDiagnosis(new(task.Id, task.Title, run?.Id,
@@ -481,6 +542,12 @@ public sealed partial class AcquisitionLocalRecoveryBatchTests
     private sealed class Host(BakabaseDbContext db) : IWorkflowRunResumer
     {
         internal readonly List<int> Calls = [];
+        internal readonly List<int> Reassessments = [];
+        public async Task ReprocessWaitingAsync(int runId, CancellationToken ct = default)
+        {
+            Reassessments.Add(runId);
+            await db.WorkflowRuns.Where(r => r.Id == runId).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Pending), ct);
+        }
         internal bool ThrowAfterAccept;
         internal bool RejectBeforeAccept;
         internal bool RejectAfterAccept;

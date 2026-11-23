@@ -45,7 +45,9 @@ instructions together, recording a new plan revision. Once a transfer/download m
 have occurred, existing execution and artifact-reuse rules take precedence; later
 source observations/disabling never cancel or switch that execution.
 
-Current probes cover Baidu public share metadata, GoFile anonymous content metadata, Pixeldrain `/u` and `/l`, public
+Current probes cover Baidu public share metadata, GoFile anonymous content metadata, Google Drive public folder listings, Pixeldrain `/u` and `/l`, public
 SharePoint folder root metadata and HTTP HEAD. Existing MEGA parsing metadata checks
 remain available at the parser boundary. Unsupported providers and account-remote
 paths stay unknown/unsupported rather than being labeled expired.
+
+Google Drive folder checks read the public listing used by gdown. Visible entries confirm access to folder metadata. A Google 404 can also indicate missing permission. That response keeps the share selectable with unknown availability.

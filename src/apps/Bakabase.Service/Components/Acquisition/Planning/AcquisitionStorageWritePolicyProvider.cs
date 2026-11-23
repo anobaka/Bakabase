@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -60,7 +61,7 @@ public sealed class AcquisitionStorageWritePolicyProvider(IServiceScopeFactory s
         else if (context.OwnerKind == "downloadTask" && int.TryParse(context.OwnerId, out var downloadId))
         {
             foreach (var owner in await db.Set<DownloadResultOwnerDbModel>().AsNoTracking()
-                         .Where(o => o.DownloadTaskId == downloadId).ToListAsync(ct))
+                         .Where(o => o.DownloadTaskId == downloadId).Select(o => new {o.AcquisitionTaskId, o.WorkflowRunId}).ToListAsync(ct))
             {
                 owned = true; taskIds.Add(owner.AcquisitionTaskId); runs.Add(owner.WorkflowRunId);
             }
@@ -94,7 +95,8 @@ public sealed class AcquisitionStorageWritePolicyProvider(IServiceScopeFactory s
         }
         if (runs.Count == 0) return (owned, owned ? settings.MinimumFreeSpaceBytes : 0);
         var sources = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking().Where(s => runs.Contains(s.WorkflowRunId) &&
-            s.Module == "acquisition" && s.EntityKind == "task").ToListAsync(ct);
+            s.Module == "acquisition" && s.EntityKind == "task")
+            .Select(s => new {s.WorkflowRunId, s.EntityId, s.Revision}).ToListAsync(ct);
         owned |= sources.Count > 0;
         foreach (var source in sources)
         {
@@ -102,10 +104,18 @@ public sealed class AcquisitionStorageWritePolicyProvider(IServiceScopeFactory s
             else unknown = true;
         }
         var owners = await db.AcquisitionTasks.AsNoTracking().Where(t => taskIds.Contains(t.Id) ||
-            t.WorkflowRunId != null && runs.Contains(t.WorkflowRunId.Value)).ToListAsync(ct);
+            t.WorkflowRunId != null && runs.Contains(t.WorkflowRunId.Value))
+            .Select(t => new AcquisitionTaskDbModel
+            {
+                Id = t.Id, WorkflowRunId = t.WorkflowRunId, PlanRevision = t.PlanRevision,
+                DeletedAt = t.DeletedAt, Status = t.Status, BuilderStateJson = t.BuilderStateJson
+            }).ToListAsync(ct);
         owned |= owners.Count > 0;
         if (!owned || unknown || owners.Count == 0 || taskIds.Any(id => owners.All(t => t.Id != id))) return (owned, owned ? settings.MinimumFreeSpaceBytes : 0);
-        var runRows = await db.WorkflowRuns.AsNoTracking().Where(r => runs.Contains(r.Id)).ToDictionaryAsync(r => r.Id, ct);
+        // These live checks run for every write. Materializing a file workflow's current item
+        // would load megabytes of unrelated manifest text for each small file.
+        var runRows = await db.WorkflowRuns.AsNoTracking().Where(r => runs.Contains(r.Id))
+            .Select(r => new WorkflowRunDbModel {Id = r.Id, Status = r.Status}).ToDictionaryAsync(r => r.Id, ct);
         var now = DateTimeOffset.UtcNow;
         long minimum = 0;
         foreach (var runId in runs)
@@ -135,10 +145,9 @@ public sealed class AcquisitionStorageWritePolicyProvider(IServiceScopeFactory s
                 }
                 // Shared operations must satisfy the strictest of their current owners.
                 minimum = Math.Max(minimum, AcquisitionSpaceReserve.Minimum(settings, mode));
-                // Local adoption may start the new run before its new run-bound grant can
-                // be recorded. A confirmed stricter reserve also covers that handoff.
-                if (AcquisitionLocalRecoveryQueueEntry.Read(owner) is {ReserveMode: AcquisitionSpaceReserve.Configured,
-                        RecoveryScope: "localFiles", Status: "starting"} queue && queue.OverrideValid(now))
+                // A file action can start or adopt a run before its new run-bound grant is saved.
+                // Polling a lost response may move the owning queue to running before adoption is reconciled.
+                if (AcquisitionLocalRecoveryQueueEntry.Read(owner) is {UsesConfiguredReserve: true, Status: "starting" or "running"})
                     minimum = Math.Max(minimum, settings.MinimumFreeSpaceBytes);
             }
         }

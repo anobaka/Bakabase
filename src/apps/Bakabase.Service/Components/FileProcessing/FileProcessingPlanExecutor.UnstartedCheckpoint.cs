@@ -16,9 +16,7 @@ internal sealed class FileProcessingCheckpointPlacementException() : InvalidOper
 
 public sealed partial class FileProcessingPlanExecutor
 {
-    internal static async Task<T> WithUnstartedCheckpointAsync<T>(string root, FileProcessingPlan plan,
-        ArtifactRecord input, Func<string, string> identityPath, Func<Task<T>> create, CancellationToken ct,
-        Func<Task>? validateEmptyOwner = null)
+    internal static string InputCheckpointIdentity(FileProcessingPlan plan, ArtifactRecord input, Func<string, string> identityPath)
     {
         var normalized = input.Files.OrderBy(p => p, FileProcessingFiles.PathComparer).ToArray();
         var identity = CheckpointIdentity(plan, normalized, identityPath);
@@ -26,7 +24,14 @@ public sealed partial class FileProcessingPlanExecutor
             identity = ArtifactManifestFiles.Hash(identity + "\ndirectories-v1\n" + JsonSerializer.Serialize(
                 directories.OrderBy(p => FileProcessingFiles.Within(Path.Combine(input.RootDirectory, p), input.RootDirectory), StringComparer.Ordinal)
                     .Select(p => p.Replace('\\', '/')).ToArray()));
-        var directory = Path.Combine(root, identity);
+        return identity;
+    }
+
+    internal static async Task<T> WithUnstartedCheckpointAsync<T>(string root, FileProcessingPlan plan,
+        ArtifactRecord input, Func<string, string> identityPath, Func<Task<T>> create, CancellationToken ct,
+        Func<Task>? validateEmptyOwner = null)
+    {
+        var directory = Path.Combine(root, InputCheckpointIdentity(plan, input, identityPath));
         var gate = Gates.GetOrAdd(directory, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try

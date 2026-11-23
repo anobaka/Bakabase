@@ -58,57 +58,39 @@ public sealed partial class CloudOperationService(BakabaseDbContext db, IEnumera
         string accountId, string remoteDirectory, CancellationToken ct, bool noRepeat = false)
     {
         var source = target.SelectedSource ?? throw new ArgumentException("Choose a source first.");
-        var id = Key("transfer.v2", CloudSourceIdentity.Key(source, accountId), remoteDirectory);
-        if (!await new ArtifactOperationBindingService(db).BindAsync("workflow", runId.ToString(), OperationSlot(target, "transfer"), id, ct))
-            throw new InvalidOperationException("The operation input changed. Start another run to use another account or remote directory.");
+        var expected = TransferRequest(source, accountId, remoteDirectory);
+        var id = expected.OperationId;
         var gate = Gates.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try
         {
-            if (noRepeat && await db.CloudDownloadOperations.AsNoTracking().AnyAsync(o => o.Id == id && o.State != "succeeded", ct))
-                throw new InvalidOperationException("RECOVERY_TRANSFER_REVIEW_REQUIRED");
-            var request = new CloudTransferRequest(id, source, accountId, remoteDirectory.TrimEnd('/') + "/" + id);
-            var operation = await GetOrCreate(id, runId, target.Id, "transfer", request, ct);
-            request = JsonSerializer.Deserialize<CloudTransferRequest>(operation.RequestJson, Json)!;
+            // Recovery must read the frozen request without GetOrCreate's ordinary failed-attempt
+            // update, which may change an expiring URL during an explicit source correction.
+            var previous = noRepeat ? await db.CloudDownloadOperations.SingleOrDefaultAsync(o => o.Id == id, ct) : null;
+            var provider = noRepeat && previous == null ? Provider(source) : null;
+            if (provider is ICloudTransferRecoveryProvider &&
+                !await IsFirstTransferAttemptAsync(runId, target, accountId, remoteDirectory, ct))
+                throw new InvalidOperationException(TransferRecoveryBlocked);
+            if (!await new ArtifactOperationBindingService(db).BindAsync("workflow", runId.ToString(), OperationSlot(target, "transfer"), id, ct))
+                throw new InvalidOperationException("The operation input changed. Start another run to use another account or remote directory.");
+            var operation = previous ?? await GetOrCreate(id, runId, target.Id, "transfer", expected, ct);
+            var request = JsonSerializer.Deserialize<CloudTransferRequest>(operation.RequestJson, Json)!;
             if (operation.State == "succeeded")
-                return JsonSerializer.Deserialize<CloudTransferReceipt>(operation.ReceiptJson!, Json)!;
-            // The remote side may have committed before this process saved its receipt. Never repeat it blindly.
-            if (operation.State is "running" or "unknown")
+                return ReadTransferReceipt(operation, request);
+            provider ??= Provider(source);
+            if (operation.Error is {} rejection && provider is ICloudTransferRecoveryProvider recovery &&
+                recovery.IsTerminalTransferProblem(rejection)) throw new InvalidOperationException(rejection);
+            if (previous != null || operation.State is "running" or "unknown")
             {
-                var recovered = await Provider(source).ReconcileTransferAsync(request, ct);
-                if (recovered != null)
-                {
-                    if (recovered.OperationId != id || recovered.Entry.ProviderId != source.ProviderId || recovered.Entry.AccountId != accountId)
-                        throw new InvalidOperationException("The recovered transfer receipt belongs to another operation.");
-                    operation.ReceiptJson = JsonSerializer.Serialize(recovered, Json);
-                    operation.State = "succeeded";
-                    await db.SaveChangesAsync(ct);
-                    return recovered;
-                }
-                throw new InvalidOperationException($"The previous transfer outcome is unknown. Inspect the cloud directory {request.RemoteDirectory} before choosing another source or starting a new transfer.");
+                // An unknown prior attempt can only be reconciled by provider evidence or an
+                // approved isolated replacement. A workflow signal alone cannot authorize it.
+                if (operation is not {Kind: "transfer", DownloadTaskId: null} ||
+                    !MatchesTransferRequest(operation, expected, out request))
+                    throw new InvalidOperationException(TransferRecoveryBlocked);
+                return await RecoverTransferWhileLockedAsync(runId, target.Id, operation, request, provider, ct)
+                    ?? throw new InvalidOperationException(TransferRecoveryBlocked);
             }
-            operation.State = "running";
-            operation.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync(ct);
-            try
-            {
-                var receipt = await Provider(source).TransferAsync(request, ct);
-                if (receipt.OperationId != id || receipt.Entry.ProviderId != source.ProviderId || receipt.Entry.AccountId != accountId)
-                    throw new InvalidOperationException("The transfer receipt does not match this operation.");
-                operation.ReceiptJson = JsonSerializer.Serialize(receipt, Json);
-                operation.State = "succeeded";
-                await db.SaveChangesAsync(CancellationToken.None);
-                return receipt;
-            }
-            catch (Exception error)
-            {
-                operation.State = error is CloudProviderException {MayHaveSideEffects: false} ? "failed" : "unknown";
-                // Only retain a reviewed pre-write access error, never an upstream exception or secret.
-                operation.Error = operation.State == "failed" && Provider(source).CanCorrectAccessCodeAfterFailure(error.Message)
-                    ? error.Message : null;
-                await db.SaveChangesAsync(CancellationToken.None);
-                throw;
-            }
+            return await ExecuteTransferAsync(operation, request, provider, ct);
         }
         finally { gate.Release(); }
     }
@@ -276,7 +258,9 @@ public sealed partial class CloudOperationService(BakabaseDbContext db, IEnumera
                 (transfer.Source.AccessCodeRevisions?.Count > 0 || frozen.Source.AccessCodeRevisions?.Count > 0) &&
                 operation.RequestJson != json)
                 throw new InvalidOperationException("This existing transfer belongs to another credential decision. Its saved request is preserved.");
-            if (operation.State == "failed" && operation.Kind == "transfer" && operation.DownloadTaskId == null)
+            if (operation.State == "failed" && operation.Kind == "transfer" && operation.DownloadTaskId == null &&
+                !(request is CloudTransferRequest rejected && operation.Error is {} issue &&
+                  Provider(rejected.Source) is ICloudTransferRecoveryProvider recovery && recovery.IsTerminalTransferProblem(issue)))
             {
                 operation.RequestJson = json;
                 await db.SaveChangesAsync(ct);

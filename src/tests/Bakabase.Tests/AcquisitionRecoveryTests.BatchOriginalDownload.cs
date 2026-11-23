@@ -159,8 +159,10 @@ public sealed partial class AcquisitionRecoveryTests
         CollectionAssert.AreEquivalent(new[] {operation.Id, transfer.Id}, await _db.CloudDownloadOperations.Select(o => o.Id).ToArrayAsync());
     }
 
-    [TestMethod]
-    public async Task Batch_completed_original_download_still_uses_current_storage_adoption()
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Batch_completed_original_download_uses_current_storage_with_exact_approved_receipt(bool changed)
     {
         var f = await LocalFilesFixture();
         var continuation = new AcquisitionContinuationService(_db, f.Recovery, new(), null!, null!, null!);
@@ -175,5 +177,31 @@ public sealed partial class AcquisitionRecoveryTests
         StringAssert.StartsWith(row.DeliveryDirectory!, f.Options.Value.DeliveryRootDirectory!);
         Assert.AreEqual(before, JsonSerializer.Serialize(await _db.DownloadTasks.AsNoTracking().ToArrayAsync()));
         Assert.AreEqual(0, f.Host.Calls);
+
+        var batch = await service.ApplyAsync(new(preview.PreviewToken, [f.TaskId]));
+        var scheduled = new List<int>();
+        await service.TickAsync(new HashSet<int>(), scheduled.Add, null, default);
+        CollectionAssert.AreEqual(new[] {f.TaskId}, scheduled);
+        Assert.AreEqual(0, f.Host.Calls);
+        await service.TickAsync(scheduled.ToHashSet(), scheduled.Add, null, default);
+        Assert.AreEqual(1, scheduled.Count);
+
+        if (changed)
+            await _db.DownloadResults.ExecuteUpdateAsync(s => s.SetProperty(r => r.Fingerprint, "changed"));
+        await service.DispatchAsync(f.TaskId, default);
+        if (changed)
+        {
+            var blocked = (await service.GetAsync(batch.BatchId)).Rows.Single();
+            Assert.AreEqual("attention", blocked.Status);
+            Assert.AreEqual("ACQUISITION_TASK_CHANGED", blocked.ReasonCode);
+            Assert.AreEqual(0, f.Host.Calls);
+            Assert.AreEqual(0, await _db.Artifacts.CountAsync());
+            return;
+        }
+        Assert.AreEqual(1, f.Host.Calls, (await service.GetAsync(batch.BatchId)).Rows.Single().ReasonCode);
+        Assert.AreEqual("running", (await service.GetAsync(batch.BatchId)).Rows.Single().Status);
+        await service.DispatchAsync(f.TaskId, default);
+        Assert.AreEqual(1, f.Host.Calls);
+        Assert.AreEqual(before, JsonSerializer.Serialize(await _db.DownloadTasks.AsNoTracking().ToArrayAsync()));
     }
 }

@@ -53,6 +53,52 @@ public sealed class ArtifactManifestFilesTests
     }
 
     [TestMethod]
+    [DataRow("stable", null, 1)]
+    [DataRow("timestamp", null, 2)]
+    [DataRow("content", "content", 2)]
+    [DataRow("replaced", "identity", 1)]
+    [DataRow("replaced-preserving-mtime", "identity", 1)]
+    [DataRow("size", "length", 1)]
+    [DataRow("unstable", "mtime", 2)]
+    public async Task Private_extraction_can_recheck_only_stable_identical_bytes_after_a_timestamp_change(
+        string scenario, string? reason, int expectedReads)
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var reads = 0;
+        var timestamps = File.GetLastWriteTimeUtc(_file);
+        var capture = ArtifactManifestFiles.CaptureAsync(_root, [_file], path => new FileInfo(path), async (stream, ct) =>
+        {
+            var hash = await SHA256.HashDataAsync(stream, ct);
+            reads++;
+            if (reads == 1 && scenario == "content") await File.WriteAllTextAsync(_file, "modified-content", ct);
+            if (reads == 1 && scenario is "replaced" or "replaced-preserving-mtime")
+            {
+                File.Move(_file, _file + ".old");
+                await File.WriteAllTextAsync(_file, "verified-content", ct);
+            }
+            if (reads == 1 && scenario == "size") await File.AppendAllTextAsync(_file, "extra", ct);
+            if (scenario == "replaced-preserving-mtime")
+                File.SetLastWriteTimeUtc(_file, timestamps);
+            else if ((reads == 1 && scenario != "stable") || scenario == "unstable")
+                File.SetLastWriteTimeUtc(_file, timestamps.AddMinutes(reads));
+            return hash;
+        }, verifyTimestampChange: true);
+        if (reason == null)
+        {
+            var result = await capture;
+            Assert.AreEqual(Convert.ToHexString(SHA256.HashData("verified-content"u8.ToArray())).ToLowerInvariant(),
+                result.Entries.Single().Sha256);
+        }
+        else
+        {
+            var failure = await Assert.ThrowsExactlyAsync<IOException>(() => capture);
+            StringAssert.EndsWith(failure.Message, "(" + reason + ")");
+            Assert.IsFalse(failure.Message.Contains(_root));
+        }
+        Assert.AreEqual(expectedReads, reads);
+    }
+
+    [TestMethod]
     public async Task Actual_size_change_after_open_is_still_rejected()
     {
         await Assert.ThrowsExceptionAsync<IOException>(() => ArtifactManifestFiles.CaptureAsync(_root, [_file],

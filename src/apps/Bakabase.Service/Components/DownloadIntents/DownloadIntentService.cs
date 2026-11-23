@@ -27,6 +27,7 @@ using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Modules.Workflow.Extensions;
 using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.SourceAvailability;
+using Bakabase.Service.Components.Acquisition.Planning;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.DownloadIntents;
@@ -146,10 +147,15 @@ public sealed class DownloadIntentService(DownloadMethodRegistry registry, Downl
                 else if (observation is {Status: SourceAvailabilityStatuses.AccessRequired} && observation.ExpiresAt > DateTimeOffset.UtcNow &&
                          observation.ReasonCode is "SOURCE_ACCESS_CODE_REQUIRED" or "SOURCE_ACCESS_CODE_REJECTED" or "SOURCE_VERIFICATION_REQUIRED")
                     sourceIssues.Add(new("SOURCE_ACCESS_VERIFICATION_REQUIRED", "source", "Confirm the share access code or required verification, then check this source again.", Actions: ["configure", "checkAgain"]));
+                var canSelectManually = (input.Mode == "lead" || method.Ready) && !planCheck.BlocksSubmission &&
+                    sourceIssues.All(issue => issue.Code == "SOURCE_CONFIRMED_UNAVAILABLE");
+                if (canSelectManually && input.AllowedUnavailableSourceFingerprints.TryGetValue(candidate.Id, out var permittedFingerprint) &&
+                    permittedFingerprint == CloudSourceIdentity.Fingerprint(source))
+                    sourceIssues.RemoveAll(issue => issue.Code == "SOURCE_CONFIRMED_UNAVAILABLE");
                 views.Add(new(candidate, available, (input.Mode == "lead" || method.Ready) && !planCheck.BlocksSubmission && sourceIssues.Count == 0,
                     sourceIssues.Count > 0 ? "unavailable" : planCheck.BlocksSubmission ? "needsSetup" : method.State,
                     method.Requirements.Concat(planCheck.Issues).Concat(sourceIssues).ToList(), source, selectedMethodId, planCheck,
-                    observation, disabled));
+                    observation, disabled, canSelectManually));
             }
             catch (CloudSourceNetworkException error)
             {

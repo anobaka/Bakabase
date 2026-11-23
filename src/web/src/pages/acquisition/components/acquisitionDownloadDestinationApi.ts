@@ -30,6 +30,22 @@ export const acquisitionDownloadDestinationApi = {
         options,
       ),
     ),
+  previewReuse: (
+    taskId: number,
+    downloadTaskId: number,
+    targetRootDirectory: string,
+  ): Promise<DownloadDestinationPreview> =>
+    unwrap(
+      BApi.acquisition.previewAcquisitionDownloadDestinationRevision(
+        {
+          taskIds: [taskId],
+          targetRootDirectory,
+          reuseExistingFiles: true,
+          downloadTaskIds: [downloadTaskId],
+        },
+        options,
+      ),
+    ),
   apply: (previewToken: string, taskIds: number[]): Promise<DownloadDestinationResult> =>
     unwrap(
       BApi.acquisition.applyAcquisitionDownloadDestinationRevision(

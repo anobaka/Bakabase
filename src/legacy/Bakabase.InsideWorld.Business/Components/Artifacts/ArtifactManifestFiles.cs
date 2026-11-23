@@ -21,10 +21,16 @@ public static class ArtifactManifestFiles
         CancellationToken ct = default, IReadOnlyCollection<string>? directories = null) =>
         CaptureAsync(rootDirectory, files, path => new FileInfo(path), ct: ct, directories: directories);
 
+    // Only use immediately after an extractor successfully closes a private output tree.
+    public static Task<ArtifactManifest> CaptureExtractedAsync(string rootDirectory, IReadOnlyCollection<string> files,
+        CancellationToken ct, IReadOnlyCollection<string>? directories = null) =>
+        CaptureAsync(rootDirectory, files, path => new FileInfo(path), ct: ct, directories: directories, verifyTimestampChange: true);
+
     internal static async Task<ArtifactManifest> CaptureAsync(string rootDirectory, IReadOnlyCollection<string> files,
         Func<string, FileInfo> fileInformation,
         Func<Stream, CancellationToken, ValueTask<byte[]>>? hashData = null, CancellationToken ct = default,
-        IReadOnlyCollection<string>? directories = null)
+        IReadOnlyCollection<string>? directories = null, bool verifyTimestampChange = false,
+        Func<CancellationToken, ValueTask>? onEmptyFileVerified = null)
     {
         var root = Absolute(rootDirectory);
         if (files.Count == 0) throw new InvalidDataException("An artifact must contain at least one file.");
@@ -42,38 +48,91 @@ public static class ArtifactManifestFiles
             // share or denied read cannot masquerade as a confirmed missing download.
             // ArtifactContentHash supplies its own bounded, full-size sequential buffer.
             // Avoid runtime HashDataAsync's small reads on network-mounted files.
-            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
-                1, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            await using var stream = OpenForHash(path);
             // SMB can expose a cached directory timestamp until this read handle opens,
             // even after the writer has flushed and closed. Take the baseline from the
             // opened file, then require both that handle and its path to remain stable.
             var size = RandomAccess.GetLength(stream.SafeFileHandle);
             var written = File.GetLastWriteTimeUtc(stream.SafeFileHandle);
-            var hash = Convert.ToHexString(await (hashData?.Invoke(stream, ct) ?? ArtifactContentHash.ComputeAsync(stream, ct)))
-                .ToLowerInvariant();
-            information.Refresh();
-            RejectLinks(path);
-            if (!information.Exists || size != information.Length || written != information.LastWriteTimeUtc ||
-                size != RandomAccess.GetLength(stream.SafeFileHandle) ||
-                written != File.GetLastWriteTimeUtc(stream.SafeFileHandle))
-                throw new IOException("An artifact file changed while its manifest was being recorded.");
-            entries.Add(new(relative, size, hash));
+            var hash = await ReadHashAsync(stream);
+            var difference = Changed(path, information, stream, size, written);
+            if (verifyTimestampChange && !OperatingSystem.IsWindows() && difference != "path" &&
+                ArtifactFileIdentity.MatchesPath(stream, path) == false) throw ManifestChanged("identity");
+            if (difference != null)
+            {
+                // SMB may publish a timestamp after the producing writer closes. A different object, length or content is never accepted.
+                if (!verifyTimestampChange || difference != "mtime" || OperatingSystem.IsWindows()) throw ManifestChanged(difference);
+                await using var second = OpenForHash(path);
+                if (!ArtifactFileIdentity.SameRegularFile(stream, second, path)) throw ManifestChanged("identity");
+                if (RandomAccess.GetLength(second.SafeFileHandle) != size) throw ManifestChanged("length");
+                var secondWritten = File.GetLastWriteTimeUtc(second.SafeFileHandle);
+                var verified = await ReadHashAsync(second);
+                difference = Changed(path, information, second, size, secondWritten);
+                if (difference != null) throw ManifestChanged(difference);
+                if (!ArtifactFileIdentity.SameRegularFile(stream, second, path)) throw ManifestChanged("identity");
+                if (!hash.AsSpan().SequenceEqual(verified)) throw ManifestChanged("content");
+            }
+            entries.Add(new(relative, size, Convert.ToHexString(hash).ToLowerInvariant()));
+            // An empty file cannot report a byte read. Finishing this distinct entry is progress
+            // only after its opened handle and on-disk metadata have passed the same checks.
+            if (size == 0 && onEmptyFileVerified != null) await onEmptyFileVerified(ct);
         }
         var relativeDirectories = directories?.Select(path => RelativeFile(root, Absolute(path)))
             .OrderBy(path => path, StringComparer.Ordinal).ToArray();
         var manifest = new ArtifactManifest(entries, Fingerprint(entries, relativeDirectories), relativeDirectories);
         VerifyDirectories(root, manifest);
         return manifest;
+
+        ValueTask<byte[]> ReadHashAsync(Stream input) => hashData?.Invoke(input, ct) ?? ArtifactContentHash.ComputeAsync(input, ct);
     }
+
+    private static FileStream OpenForHash(string path) => new(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+        1, FileOptions.Asynchronous | FileOptions.SequentialScan);
+
+    private static string? Changed(string path, FileInfo information, FileStream stream, long size, DateTime written)
+    {
+        information.Refresh();
+        RejectLinks(path);
+        if (!information.Exists) return "path";
+        if (size != information.Length || size != RandomAccess.GetLength(stream.SafeFileHandle)) return "length";
+        return written != information.LastWriteTimeUtc || written != File.GetLastWriteTimeUtc(stream.SafeFileHandle) ? "mtime" : null;
+    }
+
+    private static IOException ManifestChanged(string difference) =>
+        new($"An artifact file changed while its manifest was being recorded. ({difference})");
 
     /// <summary>Preserves the historical DownloadResultService relative-path/SHA256 fingerprint format.</summary>
     public static string Fingerprint(IEnumerable<ArtifactManifestEntry> entries) =>
-        Hash(JsonSerializer.Serialize(entries.Select(e => new[] {e.RelativePath, e.Sha256}).ToArray()));
+        Fingerprint(entries, null);
 
-    public static string Fingerprint(IEnumerable<ArtifactManifestEntry> entries, IReadOnlyList<string>? directories) =>
-        directories is not {Count: > 0} ? Fingerprint(entries) : Hash("artifact-directories-v1\n" +
-            JsonSerializer.Serialize(entries.Select(e => new[] {e.RelativePath, e.Sha256}).ToArray()) + "\n" +
-            JsonSerializer.Serialize(directories.OrderBy(path => path, StringComparer.Ordinal).ToArray()));
+    public static string Fingerprint(IEnumerable<ArtifactManifestEntry> entries, IReadOnlyList<string>? directories)
+    {
+        using var sha256 = SHA256.Create();
+        using var stream = new CryptoStream(Stream.Null, sha256, CryptoStreamMode.Write);
+        if (directories is {Count: > 0}) stream.Write("artifact-directories-v1\n"u8);
+        // The original format is an ordered JSON array of [path, checksum] pairs.
+        // Stream the same UTF-8 bytes into SHA-256 without retaining the serialized manifest.
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartArray();
+            foreach (var entry in entries)
+            {
+                writer.WriteStartArray();
+                writer.WriteStringValue(entry.RelativePath);
+                writer.WriteStringValue(entry.Sha256);
+                writer.WriteEndArray();
+                if (writer.BytesPending >= 16 * 1024) writer.Flush();
+            }
+            writer.WriteEndArray();
+        }
+        if (directories is {Count: > 0})
+        {
+            stream.WriteByte((byte)'\n');
+            JsonSerializer.Serialize(stream, directories.OrderBy(path => path, StringComparer.Ordinal));
+        }
+        stream.FlushFinalBlock();
+        return Convert.ToHexString(sha256.Hash!).ToLowerInvariant();
+    }
 
     public static string Hash(string value) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();

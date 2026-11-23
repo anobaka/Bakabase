@@ -166,6 +166,17 @@ afterEach(async () => {
 });
 
 describe("download task details", () => {
+  it("renders both live verification stages and clears the label on completion", async () => {
+    for (const stage of ["VerifyingSource", "VerifyingLocalFiles"]) {
+      mocks.tasks[0] = { ...mocks.tasks[0], fileVerification: { stage, observedAt: "2026-11-20T04:00:00Z" } };
+      await show(17);
+      expect(container).toHaveTextContent(`downloadCenter.stage.${stage}`);
+    }
+    mocks.tasks[0] = { ...mocks.tasks[0], status: DownloadTaskStatus.Complete, fileVerification: undefined };
+    await show(17);
+    expect(container.textContent).not.toContain("VerifyingLocalFiles");
+  });
+
   it("displays the server's last successful completion independently of the current status", async () => {
     await show(17);
 

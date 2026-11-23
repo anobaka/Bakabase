@@ -9,8 +9,10 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 
 /// <param name="OutputDirectory">Null keeps each task's download root; empty captures the current acquisition default; nonempty selects a root.</param>
 /// <param name="ApplyCurrentSettings">Omitted/null or true captures the current processing, cleanup and delivery defaults. Only explicit false changes solely the requested download root.</param>
+/// <param name="PreserveOriginalDownloads">Explicit cleanup still respects original downloads when true.</param>
 public sealed record AcquisitionStoragePolicyPreviewInput(IReadOnlyList<int> TaskIds,
-    string? OutputDirectory = null, bool? ApplyCurrentSettings = null, bool OverrideRetention = false);
+    string? OutputDirectory = null, bool? ApplyCurrentSettings = null, bool OverrideRetention = false,
+    bool PreserveOriginalDownloads = false);
 public sealed record AcquisitionStoragePolicyApplyInput(string PreviewId, IReadOnlyList<int> TaskIds);
 public sealed record AcquisitionStoragePolicyRow(int TaskId, string? Title, bool Eligible, string? ReasonCode,
     int Revision, string? DownloadPreview = null, string? ProcessingPreview = null, string? DeliveryPreview = null);
@@ -19,7 +21,12 @@ public sealed record AcquisitionStoragePolicyPreview(string PreviewId, DateTimeO
 public sealed record AcquisitionStoragePolicySkip(int TaskId, string ReasonCode);
 public sealed record AcquisitionStoragePolicyApplyResult(IReadOnlyList<int> AppliedTaskIds, IReadOnlyList<AcquisitionStoragePolicySkip> Skipped);
 public sealed record AcquisitionWorkspaceCleanupRow(int TaskId, string? Title, bool Eligible, string? ReasonCode,
-    IReadOnlyList<string> ArtifactIds, int FileCount, long Bytes);
+    IReadOnlyList<string> ArtifactIds, int FileCount, long Bytes)
+{
+    public AcquisitionProcessedCheckpointCleanup? ProcessedCheckpointCleanup { get; init; }
+}
+public sealed record AcquisitionProcessedCheckpointCleanup(IReadOnlyList<string> VerifiedResultArtifactIds,
+    IReadOnlyList<string> RetainedDownloadArtifactIds, IReadOnlyList<string> IntermediateArtifactIds);
 public sealed record AcquisitionWorkspaceCleanupPreview(string PreviewId, DateTimeOffset ExpiresAt,
     IReadOnlyList<AcquisitionWorkspaceCleanupRow> Rows, int EligibleCount);
 public sealed record AcquisitionWorkspaceCleanupResult(IReadOnlyList<int> CompletedTaskIds, int RemovedFiles,
@@ -38,9 +45,12 @@ public sealed class AcquisitionStoragePolicyPreviewStore
         internal bool TracksDownloadDefault { get; init; }
         internal bool ApplyCurrentSettings { get; init; }
         internal Dictionary<int, IReadOnlyList<ArtifactWorkspaceCleanupPreview>> Artifacts { get; init; } = [];
+        internal Dictionary<int, IReadOnlyList<AcquisitionProcessingWorkspaceCandidate>> ProcessingWorkspaces { get; init; } = [];
         internal Dictionary<int, IReadOnlyList<int>> CleanupOwnerRuns { get; init; } = [];
         internal Dictionary<int, ArtifactDeliveryCleanupConsent> CleanupConsents { get; init; } = [];
         internal Dictionary<int, IReadOnlyDictionary<string, IReadOnlyList<ArtifactCleanupRetirementDependency>>> CleanupDependencies { get; init; } = [];
+        internal bool PreserveOriginalDownloads { get; init; }
+        internal Dictionary<int, ReviewedCheckpointSelection> ReviewedCheckpoints { get; init; } = [];
         internal string? DefaultsVersion { get; init; }
         internal bool Claimed { get; set; }
         internal object? Result { get; set; }

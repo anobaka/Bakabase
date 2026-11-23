@@ -16,9 +16,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services;
 public sealed partial class DownloadResultService
 {
     internal async Task RecordVerifiedExistingFilesAsync(DownloadTaskDbModel original,
-        CloudExistingDownloadVerification proof, Func<CancellationToken, Task> validate, CancellationToken ct)
+        CloudExistingDownloadVerification proof, Func<CancellationToken, Task> validate, CancellationToken ct,
+        Func<Func<Task>, Task>? guardRegistration = null)
     {
-        if (original.Status != DownloadTaskDbModelStatus.Failed || original.CompletedAt != null ||
+        if (original.Status is not (DownloadTaskDbModelStatus.Failed or DownloadTaskDbModelStatus.Disabled) || original.CompletedAt != null ||
             proof.Files.Count is 0 or > 10000 || proof.Files.Any(f => f.Length < 0 || f.Sha256?.Length != 64))
             throw new InvalidOperationException("RECOVERY_EXISTING_FILES_UNVERIFIED");
         var root = Path.GetFullPath(proof.PayloadRootDirectory ?? original.DownloadPath);
@@ -27,7 +28,10 @@ public sealed partial class DownloadResultService
         if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar))
             throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
         var files = proof.Files.Select(f => Path.GetFullPath(f.Path)).ToArray();
-        var manifest = await ArtifactManifestFiles.CaptureAsync(root, files, ct);
+        // The provider has already checked every member against its own remote checksums.
+        // The local receipt independently reopens and rehashes a timestamp-only change.
+        var manifest = await ArtifactManifestFiles.CaptureAsync(root, files, path => new FileInfo(path),
+            ct: ct, verifyTimestampChange: true);
         var expected = proof.Files.ToDictionary(f => Path.GetFullPath(f.Path), ArtifactManifestFiles.PathComparer);
         foreach (var item in manifest.Entries)
         {
@@ -36,6 +40,14 @@ public sealed partial class DownloadResultService
                 throw new InvalidOperationException("RECOVERY_EXISTING_FILES_UNVERIFIED");
         }
         await validate(ct);
+        Task Register() => CommitVerifiedExistingFilesAsync(original, root, files, manifest.Fingerprint, ct);
+        if (guardRegistration == null) await Register();
+        else await guardRegistration(Register);
+    }
+
+    private async Task CommitVerifiedExistingFilesAsync(DownloadTaskDbModel original, string root, string[] files,
+        string fingerprint, CancellationToken ct)
+    {
         await using var transaction = await _db.Database.BeginTransactionAsync(ct);
         DownloadResultDbModel? result = null;
         try
@@ -46,15 +58,16 @@ public sealed partial class DownloadResultService
                 await _db.DownloadResultOwners.AnyAsync(r => r.DownloadTaskId == original.Id, ct))
                 throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
             // All files and the original request were verified; register the result and status
-            // together. Rollback leaves the failed task and its historical message untouched.
+            // together. Rollback leaves the original status and historical message untouched.
             result = await RecordAsync(original.Id, original.ThirdPartyId, original.Key,
                 original.Name ?? original.Key, DownloadResultKind.LocalFiles, root, root, files,
-                manifest.Fingerprint, null, ct);
+                fingerprint, null, ct);
             var changed = await _db.DownloadTasks.Where(t => t.Id == original.Id &&
-                t.Status == DownloadTaskDbModelStatus.Failed && t.CompletedAt == null &&
+                t.Status == original.Status && t.CompletedAt == null &&
                 t.Options == original.Options && t.DownloadPath == original.DownloadPath &&
                 t.Checkpoint == original.Checkpoint && t.Progress == original.Progress && t.Message == original.Message)
                 .ExecuteUpdateAsync(s => s.SetProperty(t => t.Status, DownloadTaskDbModelStatus.Complete)
+                    .SetProperty(t => t.LastFileVerificationJson, (string?)null)
                     .SetProperty(t => t.Progress, 100).SetProperty(t => t.CompletedAt, DateTime.UtcNow)
                     .SetProperty(t => t.DownloadStatusUpdateDt, DateTime.Now), ct);
             if (changed != 1) throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");

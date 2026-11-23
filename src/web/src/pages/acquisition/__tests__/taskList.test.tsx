@@ -54,10 +54,20 @@ vi.mock("@/components/SourceAvailability/SourceAvailabilityReviewModal", () => (
 }));
 vi.mock("@/components/Acquire/PlanTask/PlanTaskDetailModal", () => ({ default: () => null }));
 vi.mock("@/components/Acquire/PlanTask/PlanTaskRow", () => ({
-  default: ({ task, onDelete }: any) => <div><p>{task.title}</p><button onClick={onDelete}>delete row #{task.id}</button></div>,
+  default: ({ task, onDelete }: any) => (
+    <div>
+      <p>{task.title}</p>
+      <button onClick={onDelete}>delete row #{task.id}</button>
+    </div>
+  ),
 }));
 vi.mock("../components/AcquisitionRow", () => ({
-  default: ({ task, onDelete }: any) => <div><p>{task.resourceName}</p><button onClick={onDelete}>delete row #{task.id}</button></div>,
+  default: ({ task, onDelete }: any) => (
+    <div>
+      <p>{task.resourceName}</p>
+      <button onClick={onDelete}>delete row #{task.id}</button>
+    </div>
+  ),
 }));
 vi.mock("@heroui/react", () => ({
   Drawer: () => null,
@@ -83,7 +93,12 @@ vi.mock("@/components/bakaui", () => ({
     </button>
   ),
   Tooltip: ({ children, content }: any) => <div data-tooltip={content}>{children}</div>,
-  Badge: ({ children, content, isInvisible }: any) => <span>{children}{!isInvisible && <span data-testid="queue-count">{content}</span>}</span>,
+  Badge: ({ children, content, isInvisible }: any) => (
+    <span>
+      {children}
+      {!isInvisible && <span data-testid="queue-count">{content}</span>}
+    </span>
+  ),
   Checkbox: ({
     children,
     isSelected,
@@ -189,7 +204,10 @@ const tags = {
   accessRequired: 3,
   networkIssue: 5,
   dependencyMissing: 1,
-  planNeedsInput: 2,
+  downloadInfoMissing: 1,
+  downloadSourceUnsupported: 2,
+  sourceSelectionRequired: 1,
+  configurationRequired: 0,
   fileProcessing: 1,
   other: 0,
 };
@@ -230,26 +248,49 @@ const stageButton = (stage: string, count: number) =>
   screen.getByRole("button", { name: `acquisition.stage.${stage} ${count}` });
 const actions = () => screen.getByRole("button", { name: "acquisition.continueEntry.open" });
 const selectAll = () => {
-  fireEvent.click(screen.getByRole("button", { name: "acquisition.selection.allFiltered" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.selection.page" }));
+  const crossPage = screen.queryByRole("button", { name: "acquisition.selection.allFiltered" });
+  if (crossPage) fireEvent.click(crossPage);
 };
 const reviewSources = () => {
   selectAll();
   fireEvent.click(screen.getByRole("button", { name: "acquisition.actionbar.checkSources" }));
 };
 
-it.each([true, false])("uses the same deletion confirmation for one row (planned=%s), independent of bulk selection", async planned => {
-  mocks.search.mockResolvedValue(response({ items: [{ id: 60, title: "Current page task", resourceName: "Legacy task",
-    builderId: planned ? "post" : undefined, status: Status.Waiting }] }));
-  show();
-  fireEvent.click(await screen.findByRole("button", { name: "delete row #60" }));
-  expect(mocks.portal).toHaveBeenLastCalledWith(DeleteAcquisitionTasksModal,
-    expect.objectContaining({ taskIds: [60], onChanged: expect.any(Function) }));
-});
+it.each([true, false])(
+  "uses the same deletion confirmation for one row (planned=%s), independent of bulk selection",
+  async (planned) => {
+    mocks.search.mockResolvedValue(
+      response({
+        items: [
+          {
+            id: 60,
+            title: "Current page task",
+            resourceName: "Legacy task",
+            builderId: planned ? "post" : undefined,
+            status: Status.Waiting,
+          },
+        ],
+      }),
+    );
+    show();
+    fireEvent.click(await screen.findByRole("button", { name: "delete row #60" }));
+    expect(mocks.portal).toHaveBeenLastCalledWith(
+      DeleteAcquisitionTasksModal,
+      expect.objectContaining({ taskIds: [60], onChanged: expect.any(Function) }),
+    );
+  },
+);
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
   mocks.search.mockReset().mockResolvedValue(response());
-  mocks.getOptions.mockReset().mockResolvedValue({ code: 0, data: { useEmergencySpaceReserve: false, minimumFreeSpaceBytes: 50 * 1024 ** 3 } });
+  mocks.getOptions
+    .mockReset()
+    .mockResolvedValue({
+      code: 0,
+      data: { useEmergencySpaceReserve: false, minimumFreeSpaceBytes: 50 * 1024 ** 3 },
+    });
   mocks.setUp.mockReset();
   mocks.get.mockReset();
   mocks.recipes.mockReset().mockResolvedValue({ code: 0, data: [] });
@@ -261,18 +302,50 @@ afterEach(() => {
 });
 
 it("restores search, filters and sorting without restoring selected tasks or the saved page", async () => {
-  localStorage.setItem(acquisitionListPreferencesKey(), JSON.stringify({ version: 1, stage: "attention",
-    keyword: "saved name", sort: "sizeAsc", attentionTags: ["localStorage"], facts: ["downloadedPending"],
-    page: 9, selectedTaskIds: [60] }));
+  localStorage.setItem(
+    acquisitionListPreferencesKey(),
+    JSON.stringify({
+      version: 1,
+      stage: "attention",
+      keyword: "saved name",
+      sort: "sizeAsc",
+      attentionTags: ["localStorage"],
+      facts: ["downloadedPending"],
+      page: 9,
+      selectedTaskIds: [60],
+    }),
+  );
   show();
-  await waitFor(() => expect(mocks.search).toHaveBeenCalledWith(expect.objectContaining({ keyword: "saved name",
-    stage: "attention", sort: "sizeAsc", attentionTags: ["localStorage"], facts: ["downloadedPending"], page: 1 }), expect.anything()));
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keyword: "saved name",
+        stage: "attention",
+        sort: "sizeAsc",
+        attentionTags: ["localStorage"],
+        facts: ["downloadedPending"],
+        page: 1,
+      }),
+      expect.anything(),
+    ),
+  );
   expect(screen.getByRole("combobox", { name: "acquisition.sort.label" })).toHaveValue("sizeAsc");
-  expect(screen.queryAllByRole("checkbox").every(input => !(input as HTMLInputElement).checked)).toBe(true);
-  fireEvent.change(screen.getByRole("combobox", { name: "acquisition.sort.label" }), { target: { value: "sizeDesc" } });
-  await waitFor(() => expect(JSON.parse(localStorage.getItem(acquisitionListPreferencesKey())!)).toEqual({
-    version: 1, stage: "attention", keyword: "saved name", sort: "sizeDesc", attentionTags: ["localStorage"], facts: ["downloadedPending"],
-  }));
+  expect(
+    screen.queryAllByRole("checkbox").every((input) => !(input as HTMLInputElement).checked),
+  ).toBe(true);
+  fireEvent.change(screen.getByRole("combobox", { name: "acquisition.sort.label" }), {
+    target: { value: "sizeDesc" },
+  });
+  await waitFor(() =>
+    expect(JSON.parse(localStorage.getItem(acquisitionListPreferencesKey())!)).toEqual({
+      version: 1,
+      stage: "attention",
+      keyword: "saved name",
+      sort: "sizeDesc",
+      attentionTags: ["localStorage"],
+      facts: ["downloadedPending"],
+    }),
+  );
 });
 
 it("shows unfinished queue task counts from the existing search response, independently of the current list count", async () => {
@@ -280,9 +353,15 @@ it("shows unfinished queue task counts from the existing search response, indepe
   show();
   expect(await screen.findByTestId("queue-count")).toHaveTextContent("17");
   const queue = screen.getByRole("button", { name: "acquisition.continueEntry.queue" });
-  expect(queue.closest("[data-tooltip]")).toHaveAttribute("data-tooltip", "acquisition.continueEntry.queueCountHint");
+  expect(queue.closest("[data-tooltip]")).toHaveAttribute(
+    "data-tooltip",
+    "acquisition.continueEntry.queueCountHint",
+  );
   fireEvent.click(queue);
-  expect(mocks.portal).toHaveBeenCalledWith(AcquisitionContinueModal, expect.objectContaining({ onChanged: expect.any(Function) }));
+  expect(mocks.portal).toHaveBeenCalledWith(
+    AcquisitionContinueModal,
+    expect.objectContaining({ onChanged: expect.any(Function) }),
+  );
 });
 
 it("keeps the queue entry usable without a badge before the server supplies a count", async () => {
@@ -292,13 +371,37 @@ it("keeps the queue entry usable without a badge before the server supplies a co
 });
 
 it("honors the explicit URL stage and taskId when restoring browser preferences", async () => {
-  localStorage.setItem(acquisitionListPreferencesKey(), JSON.stringify({ version: 1, stage: "attention",
-    keyword: "previous search", sort: "sizeAsc", attentionTags: ["localStorage"], facts: ["spaceInsufficient"] }));
+  localStorage.setItem(
+    acquisitionListPreferencesKey(),
+    JSON.stringify({
+      version: 1,
+      stage: "attention",
+      keyword: "previous search",
+      sort: "sizeAsc",
+      attentionTags: ["localStorage"],
+      facts: ["spaceInsufficient"],
+    }),
+  );
   mocks.get.mockResolvedValue({ code: 0, data: { id: 987, builderId: "post" } });
   show("/acquisitions?stage=completed&taskId=987");
-  await waitFor(() => expect(mocks.search).toHaveBeenCalledWith(expect.objectContaining({ stage: "completed",
-    keyword: "previous search", attentionTags: [], facts: [], sort: "sizeAsc" }), expect.anything()));
-  await waitFor(() => expect(mocks.portal).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ taskId: 987 })));
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stage: "completed",
+        keyword: "previous search",
+        attentionTags: [],
+        facts: [],
+        sort: "sizeAsc",
+      }),
+      expect.anything(),
+    ),
+  );
+  await waitFor(() =>
+    expect(mocks.portal).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ taskId: 987 }),
+    ),
+  );
 });
 
 it("keeps waiting workflow rows in the server's running facet when their downloads are active", async () => {
@@ -343,7 +446,15 @@ it("uses server pagination and one acquisition settings entry without cancelled 
   show();
   await screen.findByText("Current page task");
   expect(mocks.search).toHaveBeenCalledWith(
-    { keyword: "", stage: "all", attentionTags: [], facts: [], page: 1, pageSize: 24, sort: "newest" },
+    {
+      keyword: "",
+      stage: "all",
+      attentionTags: [],
+      facts: [],
+      page: 1,
+      pageSize: 24,
+      sort: "newest",
+    },
     expect.any(Object),
   );
   expect(mocks.legacySearch).not.toHaveBeenCalled();
@@ -423,9 +534,13 @@ it("requests last processing order from the first page", async () => {
     target: { value: "lastProcessed" },
   });
   await waitFor(() =>
-    expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({
-      sort: "lastProcessed", page: 1,
-    }), expect.any(Object)),
+    expect(mocks.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        sort: "lastProcessed",
+        page: 1,
+      }),
+      expect.any(Object),
+    ),
   );
 });
 
@@ -496,17 +611,26 @@ it("keeps every action explicitly scoped to selected tasks instead of silently u
   show();
   await screen.findByText("Current page task");
   expect(screen.queryByRole("button", { name: "acquisition.tasks.filteredActions" })).toBeNull();
-  for (const label of ["acquisition.continueEntry.open", "acquisition.actionbar.checkSources",
-    "acquisition.actionbar.downloadDestination", "acquisition.actionbar.storagePolicy",
-    "acquisition.actionbar.workspaceCleanup", "acquisition.actionbar.delete"])
+  for (const label of [
+    "acquisition.continueEntry.open",
+    "acquisition.actionbar.checkSources",
+    "acquisition.actionbar.downloadDestination",
+    "acquisition.actionbar.storagePolicy",
+    "acquisition.actionbar.workspaceCleanup",
+    "acquisition.actionbar.delete",
+  ])
     expect(screen.getByRole("button", { name: label })).toBeDisabled();
   fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.selection.task" }));
   fireEvent.click(screen.getByRole("button", { name: "acquisition.actionbar.delete" }));
-  expect(mocks.portal).toHaveBeenLastCalledWith(DeleteAcquisitionTasksModal,
-    expect.objectContaining({ taskIds: [60] }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    DeleteAcquisitionTasksModal,
+    expect.objectContaining({ taskIds: [60] }),
+  );
   fireEvent.click(screen.getByRole("button", { name: "acquisition.actionbar.checkSources" }));
-  expect(mocks.portal).toHaveBeenLastCalledWith(SourceAvailabilityReviewModal,
-    expect.objectContaining({ taskIds: [60] }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    SourceAvailabilityReviewModal,
+    expect.objectContaining({ taskIds: [60] }),
+  );
 });
 
 it("offers cross-page selection directly and can replace it with just the current page", async () => {
@@ -518,40 +642,73 @@ it("offers cross-page selection directly and can replace it with just the curren
   fireEvent.click(screen.getByRole("button", { name: "acquisition.selection.onlyPage" }));
   expect(screen.queryByRole("button", { name: "acquisition.selection.onlyPage" })).toBeNull();
   fireEvent.click(actions());
-  expect(mocks.portal).toHaveBeenLastCalledWith(AcquisitionContinueModal, expect.objectContaining({ taskIds: [60] }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    AcquisitionContinueModal,
+    expect.objectContaining({ taskIds: [60] }),
+  );
+});
+
+it("does not show cross-page select when the filtered result fits on one page", async () => {
+  mocks.search.mockResolvedValue(
+    response({ totalCount: 1, totalTasks: 1, filteredTaskIds: [60], checkableTaskIds: [60] }),
+  );
+  show();
+  await screen.findByText("Current page task");
+  expect(screen.queryByRole("button", { name: "acquisition.selection.allFiltered" })).toBeNull();
+  fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.selection.page" }));
+  expect(screen.queryByRole("button", { name: "acquisition.selection.allFiltered" })).toBeNull();
 });
 
 it("supports selections beyond 100 and enforces each operation's own limit without truncation", async () => {
   const ids = Array.from({ length: 2001 }, (_, i) => 2001 - i);
-  mocks.search.mockResolvedValue(response({ totalCount: ids.length, filteredTaskIds: ids, checkableTaskIds: ids }));
+  mocks.search.mockResolvedValue(
+    response({ totalCount: ids.length, filteredTaskIds: ids, checkableTaskIds: ids }),
+  );
   show();
   await screen.findByText("Current page task");
   selectAll();
-  for (const key of ["acquisition.continueEntry.open", "acquisition.actionbar.downloadDestination", "acquisition.actionbar.checkSources"]) {
+  for (const key of [
+    "acquisition.continueEntry.open",
+    "acquisition.actionbar.downloadDestination",
+    "acquisition.actionbar.checkSources",
+  ]) {
     const button = screen.getByRole("button", { name: key });
     expect(button).toBeDisabled();
-    expect(button.closest("[data-tooltip]")).toHaveAttribute("data-tooltip", "acquisition.actionbar.limit");
+    expect(button.closest("[data-tooltip]")).toHaveAttribute(
+      "data-tooltip",
+      "acquisition.actionbar.limit",
+    );
     fireEvent.click(button);
   }
   expect(mocks.portal).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "acquisition.actionbar.delete" }));
-  expect(mocks.portal).toHaveBeenLastCalledWith(DeleteAcquisitionTasksModal,
-    expect.objectContaining({ taskIds: ids }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    DeleteAcquisitionTasksModal,
+    expect.objectContaining({ taskIds: ids }),
+  );
   fireEvent.click(screen.getByRole("button", { name: "acquisition.selection.firstByOrder" }));
   fireEvent.click(actions());
-  expect(mocks.portal).toHaveBeenLastCalledWith(AcquisitionContinueModal,
-    expect.objectContaining({ taskIds: ids.slice(0, 100) }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    AcquisitionContinueModal,
+    expect.objectContaining({ taskIds: ids.slice(0, 100) }),
+  );
 });
 
 it("captures cross-page selection once instead of automatically adding later matches", async () => {
   vi.useFakeTimers();
-  await act(async () => { show(); });
+  await act(async () => {
+    show();
+  });
   selectAll();
   mocks.search.mockResolvedValue(response({ filteredTaskIds: [60, 59, 58, 57] }));
-  await act(async () => { vi.advanceTimersByTime(5000); });
+  await act(async () => {
+    vi.advanceTimersByTime(5000);
+  });
   fireEvent.click(screen.getByRole("button", { name: "acquisition.actionbar.delete" }));
-  expect(mocks.portal).toHaveBeenLastCalledWith(DeleteAcquisitionTasksModal,
-    expect.objectContaining({ taskIds: [60, 59, 58] }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    DeleteAcquisitionTasksModal,
+    expect.objectContaining({ taskIds: [60, 59, 58] }),
+  );
 });
 
 it("drops selections removed by a refreshed filter snapshot instead of retaining invisible targets", async () => {
@@ -573,6 +730,15 @@ it("drops selections removed by a refreshed filter snapshot instead of retaining
 it("uses server attention facets and combines filters without deriving tags from translated text", async () => {
   show();
   await screen.findByText("Current page task");
+  expect(
+    screen.queryByRole("button", { name: /acquisition\.attention\.tag\.planNeedsInput/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "acquisition.attention.tag.downloadSourceUnsupported 2" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "acquisition.attention.tag.downloadInfoMissing 1" }),
+  ).toBeVisible();
   fireEvent.click(stageButton("attention", 30));
   await waitFor(() =>
     expect(mocks.search).toHaveBeenLastCalledWith(
@@ -645,34 +811,51 @@ it("filters local storage problems independently before diagnosing the fixed mat
 it("selects multiple reasons with AND semantics and clears conditions without changing the stage", async () => {
   show("/acquisitions?stage=attention");
   await screen.findByText("Current page task");
-  fireEvent.click(screen.getByRole("button", { name: "acquisition.attention.tag.sourceUnavailable 20" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "acquisition.attention.tag.sourceUnavailable 20" }),
+  );
   fireEvent.click(screen.getByRole("button", { name: "acquisition.attention.tag.networkIssue 5" }));
-  await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(
-    expect.objectContaining({ stage: "attention", attentionTags: ["networkIssue", "sourceUnavailable"], facts: [] }),
-    expect.any(Object),
-  ));
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        stage: "attention",
+        attentionTags: ["networkIssue", "sourceUnavailable"],
+        facts: [],
+      }),
+      expect.any(Object),
+    ),
+  );
   await screen.findByText("Current page task");
-  expect(screen.getByRole("button", { name: "acquisition.attention.tag.sourceUnavailable 20" })).toHaveAttribute("aria-pressed", "true");
-  expect(screen.getByRole("button", { name: "acquisition.attention.tag.networkIssue 5" })).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByRole("button", { name: "acquisition.attention.tag.sourceUnavailable 20" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByRole("button", { name: "acquisition.attention.tag.networkIssue 5" }),
+  ).toHaveAttribute("aria-pressed", "true");
   expect(screen.getByText("acquisition.filters.matchAll")).toBeVisible();
   selectAll();
   fireEvent.click(screen.getByRole("button", { name: "acquisition.filters.clear" }));
   expect(actions()).toBeDisabled();
-  await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(
-    expect.objectContaining({ stage: "attention", attentionTags: [], facts: [], page: 1 }), expect.any(Object),
-  ));
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ stage: "attention", attentionTags: [], facts: [], page: 1 }),
+      expect.any(Object),
+    ),
+  );
   expect(screen.queryByRole("button", { name: "acquisition.filters.clear" })).toBeNull();
 });
 
 it("uses the server's full cross-page intersection for downloaded and space-blocked continuation", async () => {
-  mocks.search.mockImplementation(async query => response({
-    page: query.page,
-    totalCount: query.facts?.length === 2 ? 2 : 60,
-    filteredTaskIds: query.facts?.length === 2 ? [72, 31] : [60, 59, 58],
-    checkableTaskIds: [],
-    // A task fact is display evidence, not an alternative source of matching IDs.
-    taskFacts: { 60: ["downloadedPending", "spaceInsufficient"] },
-  }));
+  mocks.search.mockImplementation(async (query) =>
+    response({
+      page: query.page,
+      totalCount: query.facts?.length === 2 ? 2 : 60,
+      filteredTaskIds: query.facts?.length === 2 ? [72, 31] : [60, 59, 58],
+      checkableTaskIds: [],
+      // A task fact is display evidence, not an alternative source of matching IDs.
+      taskFacts: { 60: ["downloadedPending", "spaceInsufficient"] },
+    }),
+  );
   show();
   await screen.findByText("Current page task");
   fireEvent.click(screen.getByText("page 1/3"));
@@ -680,23 +863,38 @@ it("uses the server's full cross-page intersection for downloaded and space-bloc
   selectAll();
   const tags = within(screen.getByRole("group", { name: "acquisition.filters.title" }));
   expect(tags.queryByRole("group")).toBeNull();
-  expect(tags.getByRole("button", { name: "acquisition.attention.tag.localStorage 4" })).toBeVisible();
-  fireEvent.click(tags.getByRole("button", { name: "acquisition.filters.fact.spaceInsufficient 8" }));
+  expect(
+    tags.getByRole("button", { name: "acquisition.attention.tag.localStorage 4" }),
+  ).toBeVisible();
+  fireEvent.click(
+    tags.getByRole("button", { name: "acquisition.filters.fact.spaceInsufficient 8" }),
+  );
   expect(actions()).toBeDisabled();
-  fireEvent.click(screen.getByRole("button", { name: "acquisition.filters.fact.downloadedPending 12" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "acquisition.filters.fact.downloadedPending 12" }),
+  );
   fireEvent.click(screen.getByRole("button", { name: "acquisition.attention.tag.localStorage 4" }));
-  await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(
-    expect.objectContaining({ attentionTags: ["localStorage"], facts: ["downloadedPending", "spaceInsufficient"], page: 1 }),
-    expect.any(Object),
-  ));
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        attentionTags: ["localStorage"],
+        facts: ["downloadedPending", "spaceInsufficient"],
+        page: 1,
+      }),
+      expect.any(Object),
+    ),
+  );
   await screen.findByText("Current page task");
   expect(screen.queryByText("page 2/3")).toBeNull();
   selectAll();
   fireEvent.click(actions());
-  expect(mocks.portal).toHaveBeenLastCalledWith(AcquisitionContinueModal, expect.objectContaining({
-    taskIds: [72, 31],
-    scopeLabel: expect.stringContaining("acquisition.filters.matchAll"),
-  }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    AcquisitionContinueModal,
+    expect.objectContaining({
+      taskIds: [60],
+      scopeLabel: expect.stringContaining("acquisition.filters.matchAll"),
+    }),
+  );
   const props = mocks.portal.mock.calls.at(-1)?.[1];
   expect(props.scopeLabel).toContain("acquisition.filters.fact.downloadedPending");
   expect(props.scopeLabel).toContain("acquisition.filters.fact.spaceInsufficient");
@@ -708,14 +906,25 @@ it("can add a condition while another is loading and aborts the old request with
   await screen.findByText("Current page task");
   selectAll();
   let finishOld!: (value: unknown) => void;
-  mocks.search.mockReturnValueOnce(new Promise(resolve => { finishOld = resolve; }));
-  fireEvent.click(screen.getByRole("button", { name: "acquisition.filters.fact.downloadedPending 12" }));
-  await waitFor(() => expect(mocks.search).toHaveBeenLastCalledWith(
-    expect.objectContaining({ facts: ["downloadedPending"] }), expect.any(Object),
-  ));
+  mocks.search.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finishOld = resolve;
+    }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "acquisition.filters.fact.downloadedPending 12" }),
+  );
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ facts: ["downloadedPending"] }),
+      expect.any(Object),
+    ),
+  );
   const first = mocks.search.mock.calls.at(-1)?.[1].signal;
   expect(actions()).toBeDisabled();
-  const secondCondition = screen.getByRole("button", { name: "acquisition.filters.fact.spaceInsufficient 8" });
+  const secondCondition = screen.getByRole("button", {
+    name: "acquisition.filters.fact.spaceInsufficient 8",
+  });
   expect(secondCondition).toBeEnabled();
   mocks.search.mockResolvedValueOnce(response({ filteredTaskIds: [42], checkableTaskIds: [] }));
   fireEvent.click(secondCondition);
@@ -723,12 +932,17 @@ it("can add a condition while another is loading and aborts the old request with
   expect(first.aborted).toBe(true);
   expect(actions()).toBeEnabled();
   fireEvent.click(actions());
-  expect(mocks.portal).toHaveBeenLastCalledWith(AcquisitionContinueModal,
-    expect.objectContaining({taskIds: [42], filteredAnalysis: true}));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    AcquisitionContinueModal,
+    expect.objectContaining({ taskIds: [42], filteredAnalysis: true }),
+  );
   await act(async () => finishOld(response({ filteredTaskIds: [999], checkableTaskIds: [999] })));
   selectAll();
   fireEvent.click(actions());
-  expect(mocks.portal).toHaveBeenLastCalledWith(AcquisitionContinueModal, expect.objectContaining({ taskIds: [42] }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    AcquisitionContinueModal,
+    expect.objectContaining({ taskIds: [42] }),
+  );
 });
 
 it("captures all filtered checkable IDs for batch review, not only the visible page", async () => {
@@ -758,7 +972,9 @@ it("opens destination revision for the entire fixed filter, not just visible dow
   show();
   await screen.findByText("Current page task");
   selectAll();
-  fireEvent.click(screen.getByRole("button", { name: "acquisition.actionbar.downloadDestination" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "acquisition.actionbar.downloadDestination" }),
+  );
   expect(mocks.portal).toHaveBeenCalledWith(
     AcquisitionDownloadDestinationModal,
     expect.objectContaining({ taskIds: [60, 59, 58], onChanged: expect.any(Function) }),
@@ -800,11 +1016,14 @@ it("never calls a truncated ID list all results but permits explicitly selecting
   show();
   await screen.findByText("Current page task");
   expect(actions()).toBeDisabled();
-  expect(screen.getByRole("button", { name: "acquisition.selection.allFiltered" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "acquisition.selection.allFiltered" })).toBeNull();
   expect(screen.getAllByText("acquisition.selection.truncated").length).toBeGreaterThan(0);
   fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.selection.page" }));
   fireEvent.click(screen.getByRole("button", { name: "acquisition.actionbar.delete" }));
-  expect(mocks.portal).toHaveBeenLastCalledWith(DeleteAcquisitionTasksModal, expect.objectContaining({ taskIds: [60] }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    DeleteAcquisitionTasksModal,
+    expect.objectContaining({ taskIds: [60] }),
+  );
 });
 
 it("ignores a superseded response so stale task IDs never become batch targets", async () => {
@@ -862,7 +1081,11 @@ it("keeps selected checkboxes stable and editable while a background refresh is 
   expect(taskCheckbox).toBeChecked();
   expect(pageCheckbox).toBeChecked();
   let finish!: (value: unknown) => void;
-  mocks.search.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+  mocks.search.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
   const scroller = screen.getByTestId("scroll");
   scroller.scrollTop = 320;
   await act(async () => {
@@ -882,8 +1105,10 @@ it("keeps selected checkboxes stable and editable while a background refresh is 
   expect(taskCheckbox).not.toBeChecked();
   fireEvent.click(taskCheckbox);
   fireEvent.click(screen.getByRole("button", { name: "acquisition.continueEntry.open" }));
-  expect(mocks.portal).toHaveBeenLastCalledWith(AcquisitionContinueModal,
-    expect.objectContaining({ taskIds: [60] }));
+  expect(mocks.portal).toHaveBeenLastCalledWith(
+    AcquisitionContinueModal,
+    expect.objectContaining({ taskIds: [60] }),
+  );
   await act(async () => finish(response()));
   expect(screen.getByRole("checkbox", { name: "acquisition.selection.task" })).toBe(taskCheckbox);
   expect(taskCheckbox).toBeChecked();
@@ -895,23 +1120,37 @@ it("keeps selected checkboxes stable and editable while a background refresh is 
 
 it("protects a failed background refresh and reconciles selections only after a valid replacement", async () => {
   vi.useFakeTimers();
-  await act(async () => { show(); });
+  await act(async () => {
+    show();
+  });
   const taskCheckbox = screen.getByRole("checkbox", { name: "acquisition.selection.task" });
   fireEvent.click(taskCheckbox);
   mocks.search.mockRejectedValueOnce(new Error("offline"));
-  await act(async () => { vi.advanceTimersByTime(5000); });
+  await act(async () => {
+    vi.advanceTimersByTime(5000);
+  });
   expect(taskCheckbox).toBeChecked();
   expect(taskCheckbox).toBeDisabled();
   expect(screen.getByRole("button", { name: "acquisition.continueEntry.open" })).toBeDisabled();
   let finish!: (value: unknown) => void;
-  mocks.search.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
-  await act(async () => { vi.advanceTimersByTime(5000); });
+  mocks.search.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  await act(async () => {
+    vi.advanceTimersByTime(5000);
+  });
   expect(taskCheckbox).toBeChecked();
   expect(taskCheckbox).toBeDisabled();
-  await act(async () => finish(response({
-    items: [{ id: 36, title: "Current replacement", builderId: "post" }],
-    filteredTaskIds: [36],
-  })));
+  await act(async () =>
+    finish(
+      response({
+        items: [{ id: 36, title: "Current replacement", builderId: "post" }],
+        filteredTaskIds: [36],
+      }),
+    ),
+  );
   expect(screen.getByText("Current replacement")).toBeVisible();
   expect(screen.getByRole("checkbox", { name: "acquisition.selection.task" })).not.toBeChecked();
   expect(screen.getByRole("button", { name: "acquisition.continueEntry.open" })).toBeDisabled();
@@ -969,7 +1208,12 @@ it.each(["policy", "cleanup"])(
     await screen.findByText("Current page task");
     selectAll();
     fireEvent.click(
-      screen.getByRole("button", { name: mode === "policy" ? "acquisition.actionbar.storagePolicy" : "acquisition.actionbar.workspaceCleanup" }),
+      screen.getByRole("button", {
+        name:
+          mode === "policy"
+            ? "acquisition.actionbar.storagePolicy"
+            : "acquisition.actionbar.workspaceCleanup",
+      }),
     );
     expect(mocks.portal).toHaveBeenCalledWith(
       AcquisitionStorageMaintenanceModal,
@@ -984,8 +1228,14 @@ it.each(["policy", "cleanup"])(
 it("persists the acquisition reserve preference separately from directory and capacity settings", async () => {
   const original = 50 * 1024 ** 3;
   let stored = false;
-  mocks.getOptions.mockImplementation(async () => ({ code: 0, data: { useEmergencySpaceReserve: stored, minimumFreeSpaceBytes: original } }));
-  mocks.setUp.mockImplementation(async ({ useEmergencySpaceReserve }) => { stored = useEmergencySpaceReserve; return { code: 0 }; });
+  mocks.getOptions.mockImplementation(async () => ({
+    code: 0,
+    data: { useEmergencySpaceReserve: stored, minimumFreeSpaceBytes: original },
+  }));
+  mocks.setUp.mockImplementation(async ({ useEmergencySpaceReserve }) => {
+    stored = useEmergencySpaceReserve;
+    return { code: 0 };
+  });
   const first = show();
   const choice = await screen.findByRole("checkbox", { name: "acquisition.reserve.global.label" });
   expect(choice).not.toBeChecked();
@@ -994,9 +1244,101 @@ it("persists the acquisition reserve preference separately from directory and ca
   expect(mocks.setUp.mock.calls[0][0]).toEqual({ useEmergencySpaceReserve: true });
   first.unmount();
   show();
-  const reopened = await screen.findByRole("checkbox", { name: "acquisition.reserve.global.label" });
+  const reopened = await screen.findByRole("checkbox", {
+    name: "acquisition.reserve.global.label",
+  });
   expect(reopened).toBeChecked();
   fireEvent.click(reopened);
   await waitFor(() => expect(reopened).not.toBeChecked());
   expect(mocks.setUp.mock.calls[1][0]).toEqual({ useEmergencySpaceReserve: false });
+});
+
+it("combines a persisted download source with stages and tags, resets page and selection, and includes it in bulk scope", async () => {
+  localStorage.setItem(
+    acquisitionListPreferencesKey(),
+    JSON.stringify({
+      version: 1,
+      stage: "all",
+      keyword: "archive",
+      sort: "newest",
+      downloadSource: "http",
+      attentionTags: [],
+      facts: [],
+    }),
+  );
+  show();
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenCalledWith(
+      expect.objectContaining({ downloadSource: "http", keyword: "archive" }),
+      expect.anything(),
+    ),
+  );
+  const source = screen.getByRole("button", { name: "downloadCenter.provider.http" });
+  expect(source).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(stageButton("attention", 30));
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ stage: "attention", downloadSource: "http" }),
+      expect.anything(),
+    ),
+  );
+  selectAll();
+  fireEvent.click(screen.getByRole("button", { name: "page 1/3" }));
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2 }),
+      expect.anything(),
+    ),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "enum.thirdPartyId.baiduNetdisk" }));
+  await waitFor(() =>
+    expect(mocks.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        downloadSource: "site:14",
+        stage: "attention",
+        keyword: "archive",
+        page: 1,
+      }),
+      expect.anything(),
+    ),
+  );
+  expect(
+    screen.queryAllByRole("checkbox").every((input) => !(input as HTMLInputElement).checked),
+  ).toBe(true);
+  expect(JSON.parse(localStorage.getItem(acquisitionListPreferencesKey())!).downloadSource).toBe(
+    "site:14",
+  );
+  fireEvent.click(actions());
+  const continuation = mocks.portal.mock.calls.find(
+    ([component]) => component === AcquisitionContinueModal,
+  )?.[1];
+  expect(continuation.scopeLabel).toContain("enum.thirdPartyId.baiduNetdisk");
+  fireEvent.click(screen.getByRole("button", { name: "downloader.filter.allSources" }));
+  await waitFor(() => expect(mocks.search.mock.lastCall?.[0].downloadSource).toBeUndefined());
+  expect(mocks.search.mock.lastCall?.[0].keyword).toBe("archive");
+});
+
+it("clears the download source when a newly created task resets the list scope", async () => {
+  localStorage.setItem(
+    acquisitionListPreferencesKey(),
+    JSON.stringify({
+      version: 1,
+      stage: "all",
+      keyword: "",
+      sort: "newest",
+      downloadSource: "bt",
+      attentionTags: [],
+      facts: [],
+    }),
+  );
+  show();
+  await screen.findByText("Current page task");
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.start" }));
+  const create = mocks.portal.mock.lastCall?.[1];
+  act(() => create.onStarted(42));
+  await waitFor(() => expect(mocks.search.mock.lastCall?.[0].downloadSource).toBeUndefined());
+  expect(screen.getByRole("button", { name: "downloader.filter.allSources" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });

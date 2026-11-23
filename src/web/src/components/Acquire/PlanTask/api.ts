@@ -38,6 +38,12 @@ export const planTaskApi = {
   create: (body: CreationInput) => requireResult(BApi.acquisition.createAcquisitionPlanTask(body)),
   get: (id: number) =>
     requireResult(BApi.acquisition.getAcquisitionPlanTask(id, { sensitiveResponse: true })),
+  previewPreparation: (id: number, body: Parameters<typeof BApi.acquisition.previewAcquisitionPreparation>[1], signal?: AbortSignal) =>
+    requireResult(BApi.acquisition.previewAcquisitionPreparation(id, body,
+      { signal, sensitiveResponse: true, showErrorToast: false })),
+  confirmPreparation: (id: number, body: Parameters<typeof BApi.acquisition.confirmAcquisitionPreparation>[1]) =>
+    requireResult(BApi.acquisition.confirmAcquisitionPreparation(id, body,
+      { sensitiveResponse: true, showErrorToast: false })),
   registeredDownloads: (id: number, expectedRevision: number, signal: AbortSignal) =>
     requireResult(BApi.acquisition.previewAcquisitionRegisteredDownloads(id, { expectedRevision },
       { signal, sensitiveResponse: true, showErrorToast: false })),
@@ -46,6 +52,9 @@ export const planTaskApi = {
       { sensitiveResponse: true, showErrorToast: false })),
   keepPreparedFiles: (id: number, expectedRevision: number, reason?: string) =>
     requireResult(BApi.acquisition.keepPreparedAcquisitionFiles(id, { expectedRevision, reason },
+      { sensitiveResponse: true, showErrorToast: false })),
+  deferPreparedProcessing: (id: number, expectedRevision: number) =>
+    requireResult(BApi.acquisition.deferPreparedAcquisitionProcessing(id, { expectedRevision },
       { sensitiveResponse: true, showErrorToast: false })),
   sourceCorrections: (id: number, signal?: AbortSignal) =>
     requireResult(

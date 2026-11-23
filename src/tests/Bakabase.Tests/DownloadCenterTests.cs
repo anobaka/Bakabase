@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Security.Cryptography;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -9,6 +10,9 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
+using Bakabase.Modules.Downloader.Cloud;
+using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.Bittorrent.Models;
@@ -79,6 +83,126 @@ public sealed class DownloadCenterTests
         Assert.AreEqual(698, await _db.DownloadTasks.CountAsync(t => t.Status == DownloadTaskDbModelStatus.Disabled));
         Assert.AreEqual(0, (await _bt.ListAsync()).Count);
         Assert.AreEqual(0, (await _http.ListAsync()).Count);
+    }
+
+    [DataTestMethod]
+    [DataRow("complete")]
+    [DataRow("providerFailure")]
+    [DataRow("localMismatch")]
+    [DataRow("cancel")]
+    public async Task ExistingFileVerificationIsVisibleOnlyWhileActiveAndDoesNotCountAsDownloading(string outcome)
+    {
+        var source = NewSource("existing", DownloadTaskDbModelStatus.Failed);
+        source.CompletedAt = null;
+        source.Progress = 100;
+        source.Message = "Previous download error";
+        source.DownloadPath = Directory.CreateDirectory(Path.Combine(_root, "existing")).FullName;
+        var other = NewSource("unrelated", DownloadTaskDbModelStatus.Disabled);
+        other.CompletedAt = null;
+        _db.DownloadTasks.AddRange(source, other);
+        await _db.SaveChangesAsync();
+        var path = Path.Combine(source.DownloadPath, "payload");
+        var content = "verified input"u8.ToArray();
+        await File.WriteAllBytesAsync(path, content);
+        var tasks = _services.GetRequiredService<DownloadTaskService>();
+        var runtime = new AcquisitionRuntimeDownloadReader(_db, tasks, _bt, _http);
+        var sourceEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var localEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseLocal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cancel = new CancellationTokenSource();
+        var verification = tasks.VerifyAndCompleteExistingFilesAsync(source.Id, async ct =>
+        {
+            sourceEntered.SetResult();
+            await releaseSource.Task.WaitAsync(ct);
+            if (outcome == "providerFailure") throw new InvalidOperationException("TEST_PROVIDER_REFUSED");
+            var hash = Convert.ToHexString(SHA256.HashData(content));
+            return new([new(path, content.Length, outcome == "localMismatch" ? new string('0', 64) : hash)]);
+        }, _ => Task.CompletedTask, cancel.Token, guardRegistration: async register =>
+        {
+            localEntered.SetResult();
+            await releaseLocal.Task;
+            await register();
+        }, workflowRunId: 42);
+        async Task CheckStage(string stage)
+        {
+            var center = await _center.GetAsync($"site:{source.Id}");
+            Assert.IsNotNull(center);
+            Assert.AreEqual("running", center.Status);
+            Assert.AreEqual(stage, center.Stage);
+            Assert.IsNull(center.Error);
+            Assert.IsNull(center.Progress);
+            Assert.IsNull(center.SpeedBytesPerSecond);
+            Assert.IsNull(center.CompletedBytes);
+            Assert.IsNull(center.TotalBytes);
+            Assert.AreEqual(0, center.AvailableActions.Count);
+            var seen = (await runtime.ReadAsync([source.Id, other.Id], [], [42], default))
+                .ToDictionary(x => x.Id);
+            var current = seen[$"site:{source.Id}"];
+            Assert.AreEqual(42, current.WorkflowRunId);
+            Assert.AreEqual(stage, current.Stage);
+            Assert.AreEqual("running", current.Status);
+            Assert.IsNull(current.ProblemCode);
+            Assert.IsNull(current.Progress);
+            Assert.IsNull(current.SpeedBytesPerSecond);
+            Assert.AreEqual("stopped", seen[$"site:{other.Id}"].Status);
+            var native = await tasks.GetDto(source.Id);
+            Assert.AreEqual(stage, native.FileVerification?.Stage);
+            Assert.AreEqual(DownloadTaskStatus.Failed, native.Status);
+            Assert.AreEqual(source.Message, native.Message);
+            Assert.IsFalse(await _db.DownloadResults.AnyAsync());
+        }
+        try
+        {
+            await sourceEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await CheckStage(DownloadFileVerification.Source);
+            Task? duplicate = null;
+            if (outcome == "complete")
+            {
+                // A second confirmation for this site waits on the original action lock;
+                // an unrelated verification acquires its own lock immediately.
+                duplicate = tasks.VerifyAndCompleteExistingFilesAsync(source.Id, _ =>
+                    throw new AssertFailedException("Original file was unnecessarily reverified"),
+                    _ => Task.CompletedTask, default);
+                Assert.IsFalse(duplicate.IsCompleted);
+                var rejected = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                    tasks.VerifyAndCompleteExistingFilesAsync(other.Id, _ => throw new InvalidOperationException("OTHER_SOURCE"),
+                        _ => Task.CompletedTask, default, allowStopped: true).WaitAsync(TimeSpan.FromSeconds(5)));
+                Assert.AreEqual("OTHER_SOURCE", rejected.Message);
+                await CheckStage(DownloadFileVerification.Source);
+            }
+            if (outcome == "cancel")
+                cancel.Cancel();
+            else
+                releaseSource.SetResult();
+            if (outcome == "complete")
+            {
+                await localEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                await CheckStage(DownloadFileVerification.Local);
+                releaseLocal.SetResult();
+                await verification;
+                var rejected = await Assert.ThrowsAsync<InvalidOperationException>(() => duplicate!);
+                Assert.AreEqual("RECOVERY_DOWNLOAD_REVIEW_REQUIRED", rejected.Message);
+            }
+            else if (outcome == "cancel")
+                await Assert.ThrowsAsync<OperationCanceledException>(async () => await verification);
+            else
+                await Assert.ThrowsAsync<InvalidOperationException>(async () => await verification);
+        }
+        finally
+        {
+            releaseSource.TrySetResult();
+            releaseLocal.TrySetResult();
+        }
+        var after = await tasks.GetDto(source.Id);
+        Assert.IsNull(after.FileVerification);
+        var persisted = await _db.DownloadTasks.AsNoTracking().SingleAsync(d => d.Id == source.Id);
+        Assert.AreEqual(source.Message, persisted.Message);
+        Assert.AreEqual(outcome == "complete" ? DownloadTaskDbModelStatus.Complete : DownloadTaskDbModelStatus.Failed, persisted.Status);
+        Assert.AreEqual(outcome == "complete" ? 1 : 0, await _db.DownloadResults.CountAsync());
+        var finished = await _center.GetAsync($"site:{source.Id}");
+        Assert.IsNotNull(finished);
+        Assert.AreEqual(outcome == "complete" ? "completed" : "failed", finished.Status);
     }
 
     [TestMethod]

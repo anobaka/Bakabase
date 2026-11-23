@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.Service.Components.FileProcessing;
@@ -226,9 +227,33 @@ public sealed class RecursiveArchiveExecutorTests
         Assert.AreEqual("payload", await File.ReadAllTextAsync(result.Files.Single()));
     }
 
+    [TestMethod]
+    public async Task KnownExpansionOverRecursiveLimitWaitsBeforeWritingAndAcceptsAnExactLimitOnRetry()
+    {
+        var archive = await Input("large.zip", "large");
+        _archives.DeclaredBytes = 100;
+        var guard = new StorageWriteGuard(new NoAdditionalFloor(), _ => ("fixture", 200L << 20), TimeSpan.FromMilliseconds(50));
+        var executor = new RecursiveArchiveExecutor(_archives, writeGuard: guard);
+        var low = await executor.ExecuteAsync(_input, [archive], _state, Limits with {MaxExpandedBytes = 99});
+        Assert.AreEqual("ExpandedBytesLimit", low.WaitReason);
+        Assert.AreEqual(0, _archives.Calls.Count);
+        var ready = await executor.ExecuteAsync(_input, [archive], _state, Limits with {MaxExpandedBytes = 100});
+        Assert.IsTrue(ready.Completed, ready.Message);
+        Assert.AreEqual(1, _archives.Calls.Count);
+    }
+
+    private sealed class NoAdditionalFloor : IStorageWritePolicyProvider
+    {
+        public Task<long> GetMinimumFreeBytesAsync(StorageWriteContext? context, CancellationToken ct = default) =>
+            Task.FromResult(0L);
+    }
+
     private sealed class Archives : IArchiveExtractionService
     {
         public List<string> Calls { get; } = [];
+        public long? DeclaredBytes { get; set; }
+        public Task<long?> TryGetExpandedBytesAsync(ArchiveExtractionRequest request, CancellationToken ct) =>
+            Task.FromResult(DeclaredBytes);
         public async Task<ArchivePasswordProbe> ProbePasswordAsync(string entry, IReadOnlyList<string?> candidates,
             Action<string>? output, CancellationToken ct)
         {

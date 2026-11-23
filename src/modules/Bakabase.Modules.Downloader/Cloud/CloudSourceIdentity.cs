@@ -8,6 +8,14 @@ namespace Bakabase.Modules.Downloader.Cloud;
 /// <summary>Provider adapter identity; UI grouping and workflow origin are deliberately excluded.</summary>
 public static class CloudSourceIdentity
 {
+    /// <summary>Exact resolved locator, credentials and account generation. Callers own the
+    /// scope and authorization of any decision attached to this fingerprint.</summary>
+    public static string Fingerprint(CloudSource source) => Hash(JsonSerializer.Serialize(new[] {JsonSerializer.Serialize(new
+    {
+        source.Url, source.Kind, source.ProviderId, source.MethodId, source.AccountId, source.AccountVersion,
+        source.AccessCode, source.ArchivePassword
+    })}));
+
     public static string Key(CloudSource source, string? accountId = null)
     {
         var locator = CanonicalLocator(source);

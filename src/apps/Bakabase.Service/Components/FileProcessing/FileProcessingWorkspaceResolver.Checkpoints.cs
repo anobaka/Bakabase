@@ -11,13 +11,13 @@ namespace Bakabase.Service.Components.FileProcessing;
 
 public sealed partial class FileProcessingWorkspaceResolver
 {
-    private sealed record CheckpointChoice(string Key, string? UnstartedRoot = null, string? PinnedRoot = null);
+    private sealed record CheckpointChoice(string Key, string? UnstartedRoot = null, string? PinnedRoot = null, bool SeparateInput = false, bool UnprovenOwnership = false);
     internal sealed record CheckpointInspection(string Directory, string StorageRoot);
 
     private async Task<CheckpointChoice> ChooseCheckpointAsync(string key, string operationKey, int attempt,
-        string? explicitlyConfiguredRoot, CancellationToken ct)
+        string? explicitlyConfiguredRoot, CancellationToken ct,
+        ArtifactRecord? input = null, FileProcessingPlan? plan = null, string? boundInputDirectory = null)
     {
-        if (string.IsNullOrWhiteSpace(explicitlyConfiguredRoot)) return new(key);
         var operation = await ReadLocationAsync("operations", operationKey, attempt, ct);
         // Legacy attempts without an operation locator retain their original checkpoint.
         if (operation == null) return new(key);
@@ -38,6 +38,22 @@ public sealed partial class FileProcessingWorkspaceResolver
                 throw new InvalidDataException("The processing checkpoint placement belongs to another storage root.");
             return new(placed, PinnedRoot: destination);
         }
+        var boundInput = boundInputDirectory != null && input != null && plan != null &&
+            ArtifactManifestFiles.PathComparer.Equals(boundInputDirectory, input.RootDirectory) &&
+            ArtifactManifestFiles.PathComparer.Equals(destination, Path.TrimEndingDirectorySeparator(Path.GetFullPath(Relocate(boundInputDirectory))));
+        if (boundInput)
+        {
+            var prior = Relocate(previous.Directory);
+            await ValidateEmptyCheckpointOwnerAsync(key, attempt, prior, ct);
+            var inner = FileProcessingPlanExecutor.InputCheckpointIdentity(plan!, input!, IdentityPath);
+            // Equal bytes may belong to different physical inputs. Only a positively absent inner
+            // checkpoint proves that switching this binding leaves all applicable progress intact.
+            if (ArtifactCleanupAbsence.Probe(prior, Path.Combine(prior, inner), ct) == ArtifactCleanupPathPresence.ConfirmedAbsent)
+                return new(placed, prior, destination, SeparateInput: true);
+        }
+        // Legacy execution may have read this shared family from another root. Matching its bytes
+        // alone never establishes ownership of that root for recursive stage deletion.
+        if (!boundInput && string.IsNullOrWhiteSpace(explicitlyConfiguredRoot)) return new(key, UnprovenOwnership: true);
         return new(placed, Relocate(previous.Directory), destination);
     }
 
@@ -46,6 +62,14 @@ public sealed partial class FileProcessingWorkspaceResolver
     {
         var choice = await ChooseCheckpointAsync(key, operationKey, attempt, configuredRoot, ct);
         return choice.UnstartedRoot == null ? await InspectExistingAsync("checkpoints", choice.Key, attempt, ct) : null;
+    }
+
+    internal async Task<Location?> InspectOwnedCheckpointForStageCleanupAsync(string key, string operationKey, int attempt,
+        string? configuredRoot, CancellationToken ct)
+    {
+        var choice = await ChooseCheckpointAsync(key, operationKey, attempt, configuredRoot, ct);
+        return choice.UnstartedRoot == null && !choice.UnprovenOwnership
+            ? await InspectOwnedLocationForStageCleanupAsync("checkpoints", choice.Key, attempt, ct) : null;
     }
 
     internal async Task<string?> ReadCheckpointAsync(string key, string operationKey, int attempt,
@@ -58,24 +82,25 @@ public sealed partial class FileProcessingWorkspaceResolver
 
     internal async Task<string> ResolveCheckpointAsync(string key, string operationKey, int attempt,
         ArtifactRecord input, FileProcessingPlan plan, string? explicitlyConfiguredRoot, string? selectedRoot,
-        ArtifactStoragePolicy? policy, string? title, CancellationToken ct)
+        ArtifactStoragePolicy? policy, string? title, CancellationToken ct, string? boundInputDirectory = null)
     {
-        var choice = await ChooseCheckpointAsync(key, operationKey, attempt, explicitlyConfiguredRoot, ct);
+        var choice = await ChooseCheckpointAsync(key, operationKey, attempt, explicitlyConfiguredRoot, ct, input, plan, boundInputDirectory);
         // Only a positively recorded modern operation allocation may skip unbound legacy
         // discovery. Existing checkpoint locators still win, including offline ones.
         var allocatedOperation = await ReadAllocationAsync("operations", operationKey, attempt, ct);
         Task<string> Resolve() => ResolveAsync("checkpoints", choice.Key, attempt, input.RootDirectory,
             choice.PinnedRoot ?? selectedRoot, ct, policy, title, newAttempt: allocatedOperation != null);
-        return choice.UnstartedRoot == null ? await Resolve() :
+        return choice.UnstartedRoot == null || choice.SeparateInput ? await Resolve() :
             await FileProcessingPlanExecutor.WithUnstartedCheckpointAsync(choice.UnstartedRoot, plan, input,
                 IdentityPath, Resolve, ct, () => ValidateEmptyCheckpointOwnerAsync(key, attempt, choice.UnstartedRoot, ct));
     }
 
     /// <summary>Read-only recovery may inspect the untouched predecessor before the new location exists.</summary>
     internal async Task<CheckpointInspection?> InspectCheckpointAsync(string key, string operationKey, int attempt,
-        ArtifactRecord input, FileProcessingPlan plan, string? explicitlyConfiguredRoot, CancellationToken ct)
+        ArtifactRecord input, FileProcessingPlan plan, string? explicitlyConfiguredRoot, CancellationToken ct, string? boundInputDirectory = null)
     {
-        var choice = await ChooseCheckpointAsync(key, operationKey, attempt, explicitlyConfiguredRoot, ct);
+        var choice = await ChooseCheckpointAsync(key, operationKey, attempt, explicitlyConfiguredRoot, ct, input, plan, boundInputDirectory);
+        if (choice.SeparateInput) return new(choice.UnstartedRoot!, choice.PinnedRoot!);
         if (choice.UnstartedRoot != null)
             return await FileProcessingPlanExecutor.WithUnstartedCheckpointAsync(choice.UnstartedRoot, plan, input,
                 IdentityPath, () => Task.FromResult(new CheckpointInspection(choice.UnstartedRoot, choice.PinnedRoot!)), ct,
@@ -87,7 +112,7 @@ public sealed partial class FileProcessingWorkspaceResolver
     /// <summary>Known-size admission may stop before the executor creates its first state file.
     /// Only an empty, installation-owned directory with its durable exact locator proves this case.</summary>
     internal async Task<bool> IsUnstartedCheckpointAsync(string key, string operationKey, int attempt,
-        ArtifactRecord input, FileProcessingPlan plan, string? explicitlyConfiguredRoot, bool entirePlan, CancellationToken ct)
+        ArtifactRecord input, FileProcessingPlan plan, string? explicitlyConfiguredRoot, bool entirePlan, CancellationToken ct, string? boundInputDirectory = null)
     {
         try
         {
@@ -98,7 +123,8 @@ public sealed partial class FileProcessingWorkspaceResolver
                 await ValidateEmptyCheckpointOwnerAsync(operationKey, attempt, operation, ct, "operations");
                 return Directory.Exists(operation) && !Directory.EnumerateFileSystemEntries(operation).Any();
             }
-            var choice = await ChooseCheckpointAsync(key, operationKey, attempt, explicitlyConfiguredRoot, ct);
+            var choice = await ChooseCheckpointAsync(key, operationKey, attempt, explicitlyConfiguredRoot, ct, input, plan, boundInputDirectory);
+            if (choice.SeparateInput) return true;
             var root = choice.UnstartedRoot ?? await ReadExistingAsync("checkpoints", choice.Key, attempt, ct);
             if (root == null || Directory.EnumerateFileSystemEntries(root).Any()) return false;
             return await FileProcessingPlanExecutor.WithUnstartedCheckpointAsync(root, plan, input, IdentityPath,
@@ -114,7 +140,15 @@ public sealed partial class FileProcessingWorkspaceResolver
         var location = await ReadLocationAsync(kind, key, attempt, ct);
         if (location == null || !ArtifactManifestFiles.PathComparer.Equals(Relocate(location.Directory), directory))
             throw new FileProcessingCheckpointPlacementException();
-        RequireExisting(Relocate(location.StorageRoot)); RequireExisting(directory);
+        await RequireWorkspaceOwnerAsync(Relocate(location.StorageRoot), directory, kind, ct);
+    }
+
+    private async Task RequireWorkspaceOwnerAsync(string storageRoot, string directory, string kind, CancellationToken ct,
+        bool requireExistingDirectory = true)
+    {
+        RequireExisting(storageRoot);
+        if (requireExistingDirectory) RequireExisting(directory);
+        else ArtifactManifestFiles.RejectLinks(directory);
         var ownerFile = Path.Combine(MetadataRoot, "owner.json"); ArtifactManifestFiles.RejectLinks(ownerFile);
         if (!File.Exists(ownerFile) || new FileInfo(ownerFile).Length > 128)
             throw new FileProcessingCheckpointPlacementException();
@@ -123,7 +157,7 @@ public sealed partial class FileProcessingWorkspaceResolver
         catch (JsonException) { throw new FileProcessingCheckpointPlacementException(); }
         if (owner is not {Length: 32} || owner.Any(c => !Uri.IsHexDigit(c)))
             throw new FileProcessingCheckpointPlacementException();
-        var ownedRoot = Path.Combine(Relocate(location.StorageRoot), ".bakabase-work", owner);
+        var ownedRoot = Path.Combine(storageRoot, ".bakabase-work", owner);
         var checkpointRoot = Path.Combine(ownedRoot, kind);
         FileProcessingFiles.Within(directory, checkpointRoot);
         var marker = Path.Combine(ownedRoot, "workspace-owner.json"); ArtifactManifestFiles.RejectLinks(marker);

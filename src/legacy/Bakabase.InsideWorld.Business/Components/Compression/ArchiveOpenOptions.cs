@@ -9,6 +9,23 @@ namespace Bakabase.InsideWorld.Business.Components.Compression;
 public sealed record ArchiveOpenOptions
 {
     private readonly string? _archiveType;
+
+    // Only the exact temporary link supplied by the executor may be used to read a
+    // verified single-disk ZIP. Metadata checks still operate on the original regular file.
+    private string? StandaloneZipAlias { get; init; }
+    private string? StandaloneZipSource { get; init; }
+    public static ArchiveOpenOptions ForStandaloneZipAlias(string alias, string source) =>
+        new ArchiveOpenOptions("zip") {StandaloneZipAlias = Path.GetFullPath(alias), StandaloneZipSource = Path.GetFullPath(source)};
+
+    internal string InspectionPath(string path)
+    {
+        if (StandaloneZipAlias == null) return path;
+        if (Path.GetFullPath(path) != StandaloneZipAlias || new FileInfo(path).LinkTarget != StandaloneZipSource)
+            throw new InvalidDataException("The private ZIP input no longer matches its registered source.");
+        Bakabase.InsideWorld.Business.Components.Artifacts.ArtifactManifestFiles.RejectLinks(StandaloneZipSource!);
+        return StandaloneZipSource!;
+    }
+
     internal long? ExpectedPrefixOffset { get; }
     internal string? ExpectedPrefixType => ExpectedPrefixOffset.HasValue ? _archiveType : null;
     private ArchiveOpenOptions(string? archiveType) => _archiveType = archiveType;
@@ -29,6 +46,9 @@ public sealed record ArchiveOpenOptions
     internal bool UsesZipCompatibilityReader => ZipPasswordCodePage != null || ZipStructure != null;
     internal long? ExpectedZipOffset => _archiveType == "zip" ? ExpectedPrefixOffset : null;
     public static ArchiveOpenOptions BoundedPrefix { get; } = new("*");
+    // 7-Zip opens the numbered volumes through its Split handler, then opens the joined 7z payload.
+    public static ArchiveOpenOptions VerifiedSevenZipVolumes { get; } = new("7z.split");
+    internal bool OpensSevenZipVolumes => _archiveType == "7z.split";
 
     public ZipFileNameCodePage? ZipFileNameCodePage { get; private init; }
     public ZipPasswordCodePage? ZipPasswordCodePage { get; private init; }
@@ -73,7 +93,8 @@ public sealed record ArchiveOpenOptions
     // A validated container may have another format appended to it. Open exactly that type,
     // without :r descending into another container. The bound comes from its structure,
     // not caller-supplied switches, a filename suffix or an unrestricted media scan.
-    internal string? TypeArgument => Mode == ArchiveOpenMode.SevenZipParser ? "-t#" : ExpectedPrefixOffset is { } prefix
+    internal string? TypeArgument => Mode == ArchiveOpenMode.SevenZipParser ? "-t#" :
+        OpensSevenZipVolumes ? "-t7z.split" : StandaloneZipAlias != null ? "-tzip" : ExpectedPrefixOffset is { } prefix
         ? "-t" + _archiveType + ":s" + (prefix + 1).ToString(CultureInfo.InvariantCulture) + "b"
         : _archiveType == null ? null : $"-t{_archiveType}:s32m:r";
 }

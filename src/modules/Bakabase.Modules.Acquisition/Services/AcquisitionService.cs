@@ -17,6 +17,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Modules.Workflow.Components;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -45,7 +46,7 @@ public class AcquisitionService<TDbContext>(
     private DbSet<WorkflowRunDbModel> Runs => db.Set<WorkflowRunDbModel>();
     private DbSet<WorkflowDefinitionDbModel> Defs => db.Set<WorkflowDefinitionDbModel>();
 
-    /// <summary>A task that has not reached an end and therefore still counts against the limit.</summary>
+    /// <summary>An unfinished task still owns acquisition of its resource.</summary>
     private static readonly AcquisitionStatus[] Live =
         [AcquisitionStatus.Pending, AcquisitionStatus.Running, AcquisitionStatus.Waiting];
 
@@ -103,11 +104,7 @@ public class AcquisitionService<TDbContext>(
         Tasks.Add(task);
         await db.SaveChangesAsync(ct);
 
-        // The common case is that there is room, so the user sees it start rather than queue.
-        if (await CountLiveRunning(ct) < Concurrency)
-        {
-            await StartRun(task, await ResolveName(resourceId), ct);
-        }
+        await StartRun(task, await ResolveName(resourceId), ct);
 
         await Publish(task, ct);
 
@@ -246,13 +243,19 @@ public class AcquisitionService<TDbContext>(
 
         if (task.WorkflowRunId is { } runId)
         {
-            // Mark the queued run as cancelled and signal an already executing step's token too.
-            // Updating the row alone cannot interrupt a live HTTP or torrent transfer.
-            await Runs.Where(r => r.Id == runId && r.Status != WorkflowRunStatus.Success)
-                .ExecuteUpdateAsync(s => s
-                    .SetProperty(r => r.Status, _ => WorkflowRunStatus.Cancelled)
-                    .SetProperty(r => r.CompletedAt, _ => DateTime.Now)
-                    .SetProperty(r => r.ErrorMessage, _ => "Cancelled: the acquisition was cancelled"), ct);
+            // Serialize revocation with a resume that might otherwise persist its answer after cancellation.
+            var runGate = WorkflowRunMutationGate.For(runId);
+            await runGate.WaitAsync(ct);
+            try
+            {
+                await Runs.Where(r => r.Id == runId && r.Status != WorkflowRunStatus.Success)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(r => r.Status, _ => WorkflowRunStatus.Cancelled)
+                        .SetProperty(r => r.CompletedAt, _ => DateTime.Now)
+                        .SetProperty(r => r.PendingSignalJson, (string?)null)
+                        .SetProperty(r => r.ErrorMessage, _ => "Cancelled: the acquisition was cancelled"), ct);
+            }
+            finally { runGate.Release(); }
             await taskManager.Stop($"workflow.run.{runId}");
         }
 
@@ -339,31 +342,13 @@ public class AcquisitionService<TDbContext>(
 
     // ------- the queue -------
 
-    private int Concurrency => Math.Max(1, options.Value.Concurrency);
-
-    /// <summary>
-    /// Started work only. A task waiting on a person holds no slot: it may wait for days, and
-    /// letting it block the queue would make the limit mean "how many things can be half-done",
-    /// which is not a resource anyone is protecting.
-    /// </summary>
-    private Task<int> CountLiveRunning(CancellationToken ct) =>
-        Tasks.CountAsync(t => t.DeletedAt == null && t.Status == AcquisitionStatus.Running, ct);
-
-    /// <summary>
-    /// Starts queued tasks while there is room. Called by the queue task, so a task that could not
-    /// start when it was created is not forgotten, and a Pending task that outlived a restart is
-    /// picked up.
-    /// </summary>
+    /// <summary>Dispatch pending tasks left by earlier versions or an interrupted start.
+    /// Individual activities own their resource queues once the workflow starts.</summary>
     public async Task PumpAsync(CancellationToken ct = default)
     {
-        var room = Concurrency - await CountLiveRunning(ct);
-
-        if (room <= 0) return;
-
         var queued = await Tasks
             .Where(t => t.DeletedAt == null && t.Status == AcquisitionStatus.Pending && t.WorkflowRunId == null && t.BuilderId == null)
             .OrderBy(t => t.Id)
-            .Take(room)
             .ToListAsync(ct);
 
         foreach (var task in queued)
@@ -441,8 +426,7 @@ public class AcquisitionService<TDbContext>(
 
     private static AcquisitionStatus FromRunStatus(WorkflowRunStatus status) => status switch
     {
-        // A workflow that has been enqueued already owns an acquisition slot, even before the
-        // task daemon starts executing it. Only acquisitions without a run are still queued.
+        // An enqueued workflow owns execution. Only acquisitions without a run are pending dispatch.
         WorkflowRunStatus.Pending => AcquisitionStatus.Running,
         WorkflowRunStatus.Running => AcquisitionStatus.Running,
         WorkflowRunStatus.Waiting => AcquisitionStatus.Waiting,

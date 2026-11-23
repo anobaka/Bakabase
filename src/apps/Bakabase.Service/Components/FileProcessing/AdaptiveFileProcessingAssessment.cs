@@ -355,7 +355,8 @@ public sealed partial class AdaptiveFileProcessingAssessmentService(
             var user = $"File inventory:\n{manifest.Json}\n\nBounded format evidence:\n{formats}\n\nfilenamePasswordEvidence:\n{filenamePasswords}\n\nmultipartNamingEvidence:\n{DescribeMultipartNamingEvidence(multipart)}{imageHint}\n\nContext evidence:\n{context ?? "(none)"}\n\nAssessment iteration: {iteration}";
             submittedInput = $"[system] {SystemPrompt}\n\n[user] {user}";
             var response = await llm.CompleteForFeatureAsync(AiFeature.FileProcessor,
-                [new(ChatRole.System, SystemPrompt), new(ChatRole.User, user)], JsonParameters with {OnUsageRecorded = id => usageId = id}, ct);
+                [new(ChatRole.System, SystemPrompt), new(ChatRole.User, user)],
+                JsonParameters with {OnUsageRecorded = id => usageId = id}, ct);
             var decision = RequireMultipartNaming(ParseAndValidate(response, artifact, manifest.Paths, manifest.Truncated, context),
                 multipart, manifest.Paths);
             if (decision.ShouldContinue && decision.Operations.Any(op =>

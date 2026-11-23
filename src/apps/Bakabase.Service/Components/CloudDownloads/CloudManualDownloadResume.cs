@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
@@ -23,11 +25,21 @@ namespace Bakabase.Service.Components.CloudDownloads;
 /// A user's selection can restart that same transfer only. It neither diagnoses its content
 /// nor grants permission to change a source, request or download generation.</summary>
 public sealed class CloudManualDownloadResume(BakabaseDbContext db, IBtDownloadManager? bt = null,
-    IHttpDownloadManager? http = null, FileProcessingWorkspaceResolver? workspaces = null)
+    IHttpDownloadManager? http = null, FileProcessingWorkspaceResolver? workspaces = null,
+    IArtifactOperationStore? artifacts = null, IUserStoragePolicy? storage = null)
 {
+    private readonly CloudLegacyBitTorrentResume? _legacyBitTorrent =
+        bt != null && artifacts != null && storage != null ? new(db, bt, http, artifacts, storage, workspaces) : null;
+
     internal async Task ResumeAsync(int runId, CloudDownloadTarget target, string outputRoot, DownloadTaskService sites, CancellationToken ct)
     {
-        var state = await ReadAsync(runId, target, outputRoot, ct);
+        var state = await ReadAsync(runId, target, outputRoot, ct, includeLegacy: false);
+        if (state.Status == "unavailable" && target.TransportTaskId?.StartsWith("bt:", StringComparison.Ordinal) == true &&
+            _legacyBitTorrent != null)
+        {
+            await _legacyBitTorrent.ResumeAsync(runId, target, outputRoot, ct);
+            return;
+        }
         if (state.Status == "unavailable") throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
         if (!state.CanRetry) return;
         if (target.DownloadTaskId is {} id)
@@ -54,14 +66,21 @@ public sealed class CloudManualDownloadResume(BakabaseDbContext db, IBtDownloadM
 
     internal async Task<IReadOnlyList<CloudDownloadResumeTarget>?> ReadMultipleAsync(int runId, DownloadWorkset? workset, CancellationToken ct)
     {
-        if (workset == null || workset.Targets.Count < 2) return null;
+        if (workset is not {Targets.Count: > 0} || workset.Targets is [var single] &&
+            (workset.NoRepeatExistingDownloads != true ||
+             single.TransportTaskId?.StartsWith("bt:", StringComparison.Ordinal) != true)) return null;
         var bound = workset.Targets.Where(t => !t.Excluded && (t.DownloadTaskId.HasValue || t.TransportTaskId != null)).ToList();
         var rows = new List<CloudDownloadResumeTarget>(bound.Count);
         foreach (var target in bound) rows.Add(await ReadAsync(runId, target, workset.OutputDirectory, ct));
         return rows;
     }
 
-    internal async Task<CloudDownloadResumeTarget> ReadAsync(int runId, CloudDownloadTarget target, string outputRoot, CancellationToken ct)
+    internal Task<CloudLegacyBitTorrentResume.Dispatch?> InspectLegacyBitTorrentAsync(int runId, CloudDownloadTarget target,
+        string outputRoot, CancellationToken ct) =>
+        _legacyBitTorrent?.InspectAsync(runId, target, outputRoot, ct) ?? Task.FromResult<CloudLegacyBitTorrentResume.Dispatch?>(null);
+
+    internal async Task<CloudDownloadResumeTarget> ReadAsync(int runId, CloudDownloadTarget target, string outputRoot, CancellationToken ct,
+        bool includeLegacy = true)
     {
         var downloadId = target.TransportTaskId ?? $"site:{target.DownloadTaskId}";
         CloudDownloadResumeTarget Row(string status, string? problem = null) =>
@@ -127,6 +146,15 @@ public sealed class CloudManualDownloadResume(BakabaseDbContext db, IBtDownloadM
         if (downloadId.StartsWith("http:", StringComparison.Ordinal) && http != null &&
             (await http.ReadSnapshotAsync(ct)).FirstOrDefault(j => j.Id == downloadId[5..]) is {} requestJob && Matches(requestJob.SourceKind, requestJob.SourceId, requestJob.WorkflowRunId))
             return Row(requestJob.Status.ToString().ToLowerInvariant(), AcquisitionRuntimeProblems.Code(requestJob.Error));
+        try
+        {
+            if (includeLegacy && await InspectLegacyBitTorrentAsync(runId, target, outputRoot, ct) is { } legacy)
+                return Row(legacy.Job.Status.ToString().ToLowerInvariant(), AcquisitionRuntimeProblems.Code(legacy.Job.Error));
+        }
+        catch (UserStoragePathException error) when (error.MountUnavailable)
+        { return Row("unavailable", "LOCAL_STORAGE_UNAVAILABLE"); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or JsonException)
+        { return unavailable; }
         return unavailable;
     }
 }

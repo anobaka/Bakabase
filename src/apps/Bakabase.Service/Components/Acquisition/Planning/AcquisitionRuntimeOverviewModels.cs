@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
@@ -9,11 +10,13 @@ public sealed record AcquisitionRuntimeOverviewInput(IReadOnlyList<int> TaskIds)
 public sealed record AcquisitionRuntimeOverview
 {
     public int TaskId { get; init; }
+    public int PlanRevision { get; init; }
     public int? WorkflowRunId { get; init; }
     public string? WorkflowStatus { get; init; }
     public int? CurrentStepIndex { get; init; }
     public int? StepCount { get; init; }
     public string? CurrentNodeKind { get; init; }
+    public WorkflowCapabilityRuntime? Capability { get; init; }
     public string? Stage { get; init; }
     public double? Progress { get; init; }
     public string? ProgressScope { get; init; }

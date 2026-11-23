@@ -9,6 +9,7 @@ using Bakabase.Modules.DataSync.Runtime;
 using Bakabase.Modules.DataSync.Wire;
 using Bakabase.TestKit.DataSync;
 using Bakabase.TestKit.Utils;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -64,7 +65,14 @@ public class DataSyncStateFilesTests
         Assert.IsInstanceOfType<FixedDataSyncDataDirectory>(dirA, "the TestKit's folders win over the default");
         Assert.AreNotEqual(dirA.Path, dirB.Path);
         Assert.AreNotEqual(dirA.BackupsPath, dirB.BackupsPath);
-        StringAssert.StartsWith(dirA.Path, Path.GetFullPath(Path.GetTempPath()));
+        var fixtureRoot = Environment.GetEnvironmentVariable("BAKABASE_TEST_FIXTURE_ROOT");
+        var expectedRoot = Path.GetFullPath(string.IsNullOrEmpty(fixtureRoot) ? Path.GetTempPath() : fixtureRoot);
+        foreach (var (provider, directory) in new[] {(a, dirA), (b, dirB)})
+        {
+            var databasePath = provider.GetRequiredService<BakabaseDbContext>().Database.GetDbConnection().DataSource;
+            Assert.AreEqual(Path.GetDirectoryName(databasePath), Path.GetDirectoryName(directory.Path));
+            StringAssert.StartsWith(directory.Path, Path.TrimEndingDirectorySeparator(expectedRoot) + Path.DirectorySeparatorChar);
+        }
         Assert.AreEqual(Path.GetDirectoryName(dirA.Path), Path.GetDirectoryName(dirA.BackupsPath));
         Assert.AreEqual("data-sync", Path.GetFileName(dirA.Path));
         Assert.AreEqual("backups", Path.GetFileName(dirA.BackupsPath));

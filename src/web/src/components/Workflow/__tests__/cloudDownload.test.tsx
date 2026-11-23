@@ -17,7 +17,11 @@ import WorksetResults from "@/components/CloudDownload/WorksetResults";
 import cn from "@/locales/cn/pages/cloudDownload.json";
 import en from "@/locales/en/pages/cloudDownload.json";
 
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({
+  t: (key: string, values?: Record<string, unknown>) => key.startsWith("cloudDownload.transferReport.")
+    ? (cn[key as keyof typeof cn] as string).replace(/{{(\w+)}}/g, (_, field) => String(values?.[field]))
+    : key,
+}) }));
 vi.mock("@/i18n", () => ({
   default: { t: (key: string) => key },
   getEnumKey: (type: string, name: string) =>
@@ -185,6 +189,28 @@ describe("cloud source workflow UI", () => {
     expect(submit).not.toHaveBeenCalled();
   });
 
+  it("selects the verified original when an acquisition has a single stopped BT download", () => {
+    const submit = vi.fn();
+    const promptJson = JSON.stringify({ reason: "cloudAttention", targets: [
+      { id: "torrent", title: "Torrent", transportTaskId: "bt:original", sources: [] },
+    ] });
+    render(
+      <ResumeSubmissionContext.Provider value={{ runId: 12, submit: vi.fn(), downloadTargets: [
+        { targetId: "torrent", downloadId: "bt:original", status: "stopped", canRetry: true },
+      ] }}>
+        <ResumeActivityContext.Provider value="download.awaitCompletion">
+          <GroupForm runId={12} promptJson={promptJson} fileTask submitting={false} onSubmit={submit} />
+        </ResumeActivityContext.Provider>
+      </ResumeSubmissionContext.Provider>,
+    );
+    const button = screen.getByRole("button", { name: "cloudDownload.resumeGuide.retryDownload" });
+    expect(button).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Torrent" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "cloudDownload.resumeGuide.confirmSelectedDownloads" }));
+    fireEvent.click(button);
+    expect(submit).toHaveBeenCalledExactlyOnceWith(JSON.stringify({ observeExistingOnly: true, resumeTargetIds: ["torrent"] }));
+  });
+
   it("only observes pending or completed downloads when all target identities are accounted for", () => {
     const submit = vi.fn();
     render(groupForm(submit, groups.map(row => ({ ...row, status: "queued", canRetry: false }))));
@@ -229,6 +255,21 @@ describe("cloud source workflow UI", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "cloudDownload.resumeGuide.confirmDownloadRetry" }));
     fireEvent.click(retry);
     expect(submit).toHaveBeenCalledExactlyOnceWith("{}");
+  });
+  it("shows the numeric Baidu receipt on the interrupted transfer target", () => {
+    const Form = cloudDownloadActivities.find(activity => activity.kind === "baidu.transfer")!.ResumeForm!;
+    const problem = "BAIDU_TRANSFER_COUNT_LIMIT_CONFIRM_TARGET";
+    render(<Form submitting={false} onSubmit={vi.fn()} promptJson={JSON.stringify({
+      reason: "cloudAttention", targets: [{ id: "one", title: "Selection", sources: [], problem,
+        transferDiagnostic: { code: problem, providerCode: 12, itemCodes: [-30], fileCount: 901, fileLimit: 500, raw: "PRIVATE_PROVIDER_FILE" } }]
+    })} />);
+    expect(screen.getByText("百度返回码 12")).toBeVisible();
+    expect(screen.getByText("单项返回码 -30")).toBeVisible();
+    expect(screen.getByText("转存文件数 901，单次上限 500")).toBeVisible();
+    expect(screen.queryByText(/PRIVATE_PROVIDER_FILE/)).toBeNull();
+    expect(cn["cloudDownload.problemCode.BAIDU_TRANSFER_FILE_COUNT_LIMIT"]).toContain("全部转存项");
+    expect(cn["cloudDownload.problemCode.BAIDU_TRANSFER_COUNT_LIMIT_CONFIRM_TARGET"]).toContain("仍待核实");
+    expect(en["cloudDownload.problemCode.BAIDU_TRANSFER_PARTIAL_OR_PENDING"]).toContain("partial result");
   });
   it("replaces a mirror choice while preserving independent content and submits explicit source IDs", () => {
     const ResumeForm = cloudDownloadActivities.find(

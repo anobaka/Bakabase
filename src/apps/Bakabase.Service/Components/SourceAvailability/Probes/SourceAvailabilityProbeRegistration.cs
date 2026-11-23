@@ -28,6 +28,10 @@ public static class SourceAvailabilityProbeRegistration
             sp.GetRequiredService<BakabaseWebProxy>().ForDownloadTool(DownloadToolProxyTargets.GalleryDl, ThirdPartyId.Pixeldrain),
             uri => uri.Scheme == "https" && uri.IdnHost == "pixeldrain.com" && uri.IsDefaultPort &&
                    uri.UserInfo.Length == 0 && uri.AbsolutePath.StartsWith("/api/", StringComparison.Ordinal), followRedirects: false));
+        services.AddHttpClient(GoogleDriveFolderAvailabilityProbe.ClientName, client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(sp => ProxyAwarePublicHttpHandler.ForFixedMetadataEndpoints(
+                sp.GetRequiredService<BakabaseWebProxy>().ForDownloadTool(DownloadToolProxyTargets.Gdown, ThirdPartyId.GoogleDrive),
+                GoogleDriveFolderAvailabilityProbe.AllowedEndpoint));
         services.AddHttpClient(MegaAvailabilityProbe.ClientName, client => client.Timeout = Timeout.InfiniteTimeSpan)
             .RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(sp => ProxyAwarePublicHttpHandler.ForFixedMetadataEndpoints(
                 sp.GetRequiredService<BakabaseWebProxy>().ForDownloadTool(DownloadToolProxyTargets.MegaCmd, ThirdPartyId.Mega),
@@ -41,6 +45,7 @@ public static class SourceAvailabilityProbeRegistration
         services.AddSingleton<ISourceAvailabilityProbe, GoFileAvailabilityProbe>();
         services.AddSingleton<PixeldrainAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe>(sp => sp.GetRequiredService<PixeldrainAvailabilityProbe>());
+        services.AddSingleton<ISourceAvailabilityProbe, GoogleDriveFolderAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, MegaAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, SharePointAvailabilityProbe>();
         services.AddSingleton<ISourceAvailabilityProbe, CloudDownloads.TeraBox.TeraBoxSourceAvailabilityProbe>();

@@ -56,3 +56,24 @@ it("does not present another keyword or stage's facet counts as current", async 
   expect(result.current.attentionCounts).toBeUndefined();
   expect(result.current.factCounts).toBeUndefined();
 });
+
+it("invalidates source-scoped facet counts and stale batch IDs when the download source changes", async () => {
+  const initial = { stage: "attention", keyword: "archive", downloadSource: "http", page: 1, pageSize: 24 };
+  const { result, rerender } = renderHook(query => useAcquisitionTasks(query), { initialProps: initial });
+  await waitFor(() => expect(result.current.data?.filteredTaskIds).toEqual([12]));
+  let completeOld!: (value: unknown) => void;
+  search.mockReturnValueOnce(new Promise(resolve => { completeOld = resolve; }));
+  rerender({ ...initial, downloadSource: "bt" });
+  await waitFor(() => expect(search).toHaveBeenCalledTimes(2));
+  const oldSignal = search.mock.lastCall![1].signal;
+  expect(result.current.data).toBeUndefined();
+  expect(result.current.attentionCounts).toBeUndefined();
+  expect(result.current.factCounts).toBeUndefined();
+  search.mockResolvedValueOnce(page([6]));
+  rerender({ ...initial, downloadSource: "site:14" });
+  await waitFor(() => expect(result.current.data?.filteredTaskIds).toEqual([6]));
+  expect(oldSignal.aborted).toBe(true);
+  await act(async () => completeOld(page([999])));
+  expect(result.current.data?.filteredTaskIds).toEqual([6]);
+  expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ downloadSource: "site:14" }), expect.anything());
+});

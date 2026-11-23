@@ -27,6 +27,8 @@ using Bakabase.Service.Components.DownloadIntents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.Modules.Acquisition.Models.Domain;
+using Bootstrap.Components.Configuration.Abstractions;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
@@ -39,7 +41,8 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
     AcquisitionStoragePolicyDefaults? storageDefaults = null, AcquisitionDeliveryRetirementQueue? deliveryRetirements = null,
     IEnumerable<IDependentComponentService>? processingDependencies = null,
     AcquisitionDownloadActivityProjection? downloadActivity = null, IStorageWriteGuard? stageWriteGuard = null,
-    IServiceScopeFactory? stageScopeFactory = null)
+    IServiceScopeFactory? stageScopeFactory = null, IBOptions<AcquisitionOptions>? acquisitionOptions = null,
+    AcquisitionConfirmationRuntime? confirmations = null)
 {
     private static readonly JsonSerializerOptions Json = WorkflowJson.Options;
     private AcquisitionDeliveryDirectoryResolver DeliveryDirectories => deliveryDirectories ?? new(storage);
@@ -390,6 +393,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                 (currentDirectoryRevision && !string.IsNullOrWhiteSpace(plan.StoragePolicy?.ProcessingWorkspaceDirectory)
                     ? plan.StoragePolicy.ProcessingWorkspaceDirectory : plan.OutputDirectory), allowEmpty: false);
             var evidence = new List<AcquisitionPlanArtifactEvidence>();
+            var referenceOnlyDeliveryEvidence = new HashSet<(string PartId, string ArtifactId)>();
             var evidenceRuns = new Dictionary<(string PartId, string ArtifactId), int>();
             var continuations = new List<(string PartId, AcquisitionPlanArtifactInput Input)>();
             var layoutChanged = false;
@@ -442,11 +446,15 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                     storage.EnsurePathAllowed(artifact.RootDirectory);
                     if (guardDirectory != null) await guardDirectory(artifact.RootDirectory);
                     foreach (var file in artifact.Files) storage.EnsurePathAllowed(file);
+                    var referenceOnlyDelivery = deliveryOnly && stageRevision && artifactId == item.ContinueFromArtifactId &&
+                        AcquisitionCurrentDirectoryFiles.IsDeliveryOnlyStageCapture(artifact);
                     if (artifact.State != ArtifactLocationState.Available || artifact.Manifest.Entries.Count == 0 ||
-                        (!referenceOnlyReview && input.DeliveryContentLayout == null && artifact.Manifest.Entries.Count > 10000) ||
+                        (!referenceOnlyReview && !referenceOnlyDelivery && input.DeliveryContentLayout == null &&
+                            artifact.Manifest.Entries.Count > AcquisitionCurrentDirectoryFiles.MaximumEntries) ||
                         !(item.InputMode == "currentDirectory" && artifact.Kind == AcquisitionCurrentDirectoryFiles.Kind) &&
                         !(await ArtifactManifestFiles.ValidateAsync(artifact.RootDirectory, artifact.Manifest, ct)).Available)
                         throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
+                    if (referenceOnlyDelivery) referenceOnlyDeliveryEvidence.Add((item.PartId, artifact.Id));
                     evidence.Add(new(item.PartId, artifact.Id, artifact.OperationId, artifact.Kind, artifact.RootDirectory,
                         artifact.Fingerprint, artifact.Manifest));
                     evidenceRuns.Add((item.PartId, artifact.Id), evidenceRun);
@@ -507,14 +515,24 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             }
             foreach (var continuation in continuations)
                 await AcquisitionPlanArtifactInputGuard.RequireAsync(db, artifacts, row.Id, continuation.PartId, continuation.Input, ct,
-                    publishedOutputOnly: input.DeliveryContentLayout != null, publicationInputOnly: deliveryOnly && !completedRevision);
-            try { SavePlan(row, plan, Sources(row), input.Reason.Trim(), input.ExpectedRunId, referenceOnlyReview || input.DeliveryContentLayout != null ? null : evidence,
+                    publishedOutputOnly: input.DeliveryContentLayout != null,
+                    publicationInputOnly: deliveryOnly && !completedRevision,
+                    capturedDelivery: referenceOnlyDeliveryEvidence.Contains((continuation.PartId, continuation.Input.ArtifactId))
+                        ? plan.StageDirectories?.Parts.GetValueOrDefault(continuation.PartId)?.Delivery : null);
+            var historyEvidence = evidence.Where(e => !referenceOnlyDeliveryEvidence.Contains((e.PartId, e.ArtifactId))).ToArray();
+            // Use the continuation's pinned manifest reference to keep plan history bounded.
+            try { SavePlan(row, plan, Sources(row), input.Reason.Trim(), input.ExpectedRunId,
+                referenceOnlyReview || input.DeliveryContentLayout != null || historyEvidence.Length == 0 ? null : historyEvidence,
                 preserveStorageOverrides: !input.UseCurrentStorageDefaults,
                 currentDirectoryBindings: currentDirectoryRevision ? await CurrentStageDirectoriesAsync(row, Plan(row), ct) : null); }
             catch (ArgumentException) { throw new ArgumentException("PLAN_REPLAN_INVALID"); }
             var revisedState = State(row);
             row.BuilderStateJson = Serialize(revisedState with {Issues = [], LocalFilesRecovery = localFilesStorage == null
                 ? revisedState.LocalFilesRecovery : revisedState.LocalFilesRecovery! with {ResultingRevision = row.PlanRevision}});
+            if (AcquisitionLocalRecoveryQueueEntry.Read(current) is {IsParked: true} parked &&
+                parked.PlanRevision == input.ExpectedRevision && parked.WorkflowRunId == input.ExpectedRunId)
+                row.BuilderStateJson = AcquisitionLocalRecoveryQueueEntry.Write(row.BuilderStateJson,
+                    parked.Superseded() with {UpdatedAt = DateTimeOffset.UtcNow});
             // Keep the old run, attempts, outputs and frozen snapshot. Only the task's current association changes.
             // The transaction plus predicates fences cross-scope retry; the shared gate also covers the legacy retry API.
             var changed = await Tasks.Where(t => t.Id == id && t.DeletedAt == null && t.PlanRevision == input.ExpectedRevision &&
@@ -706,7 +724,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             var row = await Editable(id, ct); Revision(row, expectedRevision);
             if (State(row).DirectoryChange != null) throw new InvalidOperationException("STAGE_DIRECTORY_CHANGE_PENDING");
             var plan = Plan(row); AcquisitionPlanCompiler.Validate(plan);
-            await ValidateContinuationInputsAsync(row.Id, plan, ct, verifyContents: true);
+            using (plan.Parts.Any(p => p.ContinueFrom != null)
+                       ? confirmations?.Observe(row, FileProcessingActivityRuntimeProvider.ConfirmingExistingFiles, ct) : null)
+                await ValidateContinuationInputsAsync(row.Id, plan, ct, verifyContents: true);
             var dependencyIssues = await FileProcessingDependencyPreflight.InspectAsync(plan.Parts.Select(AcquisitionPlanCompiler.Processing),
                 processingDependencies ?? [], ct);
             if (dependencyIssues.Count > 0)
@@ -1112,6 +1132,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
     private static DownloadIntentRequest Request(AcquisitionPlan plan, string? contextKey = null, bool includeMirrors = false) => new()
     {
         Mode = "files", Title = plan.Title, AvailabilityContextKey = contextKey,
+        AllowedUnavailableSourceFingerprints = AcquisitionSourceAvailabilityOverrides.ForRequest(plan, contextKey),
         Candidates = plan.Parts.Where(p => p.ContinueFrom == null).SelectMany(p => p.Sources.Where(s => includeMirrors || s.Id == p.SelectedSourceId).Select(s => new DownloadCandidate
         {
             Id = s.Id, Url = s.Url, Kind = s.Kind, ProviderId = s.ProviderId, MethodId = s.MethodId, AccountId = s.AccountId,

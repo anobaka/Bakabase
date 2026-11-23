@@ -56,6 +56,36 @@ public sealed class FileProcessingArchiveGroupRecoveryTests
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Retry_rejects_changed_extraction_bytes_or_conflicting_lineage(bool changeLineage)
+    {
+        var files = await Inputs("a.zip", "z.zip");
+        var archives = new Archives();
+        var executor = new FileProcessingPlanExecutor(archives);
+        Assert.IsTrue((await executor.ExecuteAsync(Plan(), input, files, checkpoint)).NeedsPassword);
+        var (path, saved) = await State();
+        var completed = saved.Operations.Values.Single(o => o.Completed);
+        var output = Path.Combine(completed.OutputDirectory!, completed.OutputManifest!.Entries.Single().RelativePath);
+        if (changeLineage)
+        {
+            var key = Path.GetRelativePath(Path.GetDirectoryName(path)!, output).Replace('\\', '/');
+            saved.FileContents[key] = saved.FileContents[key] with {Sha256 = new string('0', 64)};
+            await Save(path, saved);
+        }
+        else await File.WriteAllTextAsync(output, "b.zip"); // Same length as the committed content.
+
+        var before = await File.ReadAllBytesAsync(path);
+        var error = await Assert.ThrowsExactlyAsync<InvalidDataException>(() =>
+            executor.ExecuteAsync(Plan(), input, files, checkpoint));
+        StringAssert.Contains(error.Message, changeLineage ? "execution receipt" : "committed content receipt");
+        CollectionAssert.AreEqual(before, await File.ReadAllBytesAsync(path));
+        CollectionAssert.AreEqual(new[] {"a.zip"}, archives.Extracted.ToArray());
+        Assert.AreEqual(changeLineage ? "a.zip" : "b.zip", await File.ReadAllTextAsync(output));
+        Assert.IsTrue(files.All(File.Exists));
+    }
+
+    [TestMethod]
     public async Task Legacy_completed_group_with_exact_transition_proof_reuses_its_output()
     {
         var files = await Inputs("a.zip", "z.zip"); var archives = new Archives();
@@ -177,6 +207,61 @@ public sealed class FileProcessingArchiveGroupRecoveryTests
         var result = await executor.ExecuteAsync(Plan(), input, files, checkpoint, password: "ok");
         Assert.AreEqual("ArchiveGroupInputChanged", result.FailureCode);
         Assert.AreEqual(1, archives.Extracted.Count);
+    }
+
+    [TestMethod]
+    [DataRow(".smbdeleteAAA12345.4", true)]
+    [DataRow("stale/subfolder/.smbdeleteJAA12345.4", true)]
+    [DataRow(".smbdelete-not-a-marker", false)]
+    public async Task Unpublished_extraction_can_resume_with_an_open_SMB_delete_marker(string name, bool marker)
+    {
+        var files = await Inputs("z.zip");
+        var archives = new Archives();
+        var executor = new FileProcessingPlanExecutor(archives);
+        Assert.IsTrue((await executor.ExecuteAsync(Plan(), input, files, checkpoint)).NeedsPassword);
+        var operation = (await State()).State.Operations.Values.Single();
+        var pending = operation.OutputDirectory + ".pending";
+        Directory.CreateDirectory(pending);
+        var oldFile = Path.Combine(pending, name);
+        Directory.CreateDirectory(Path.GetDirectoryName(oldFile)!);
+        await File.WriteAllTextAsync(oldFile, "old partial extraction");
+        var resumed = await executor.ExecuteAsync(Plan(), input, files, checkpoint, password: "ok");
+        Assert.IsTrue(resumed.Completed, resumed.Message);
+        var saved = (await State()).State.Operations.Values.Single();
+        Assert.AreEqual(marker, saved.ExtractionStagingId.HasValue);
+        Assert.AreEqual(marker, File.Exists(oldFile));
+        CollectionAssert.DoesNotContain(saved.OutputManifest!.Entries.Select(entry => entry.RelativePath).ToArray(), name);
+        CollectionAssert.AreEqual(new[] {"z.zip"}, archives.Extracted);
+    }
+
+    [TestMethod]
+    public async Task Verified_alternate_staging_is_published_after_interruption_without_extracting_again()
+    {
+        var files = await Inputs("a.zip", "z.zip");
+        var locked = new FileProcessingPlanExecutor(new Archives {LockedName = "a.zip"});
+        Assert.IsTrue((await locked.ExecuteAsync(Plan(), input, files, checkpoint)).NeedsPassword);
+        var (path, beforeExtracting) = await State();
+        var first = beforeExtracting.Operations.Values.Single();
+        var destination = first.OutputDirectory!;
+        var abandoned = Directory.CreateDirectory(destination + ".pending");
+        var marker = Path.Combine(abandoned.FullName, ".smbdeleteAAA12345.4");
+        await File.WriteAllTextAsync(marker, "SMB is releasing this file");
+
+        var archives = new Archives();
+        var executor = new FileProcessingPlanExecutor(archives);
+        Assert.IsTrue((await executor.ExecuteAsync(Plan(), input, files, checkpoint)).NeedsPassword);
+        var completed = (await State()).State.Operations.Values.Single(o => o.Completed);
+        Assert.IsNotNull(completed.ExtractionStagingId);
+        Assert.IsNotNull(completed.OutputManifest);
+        first.ExtractionStagingId = completed.ExtractionStagingId;
+        first.OutputManifest = completed.OutputManifest;
+        Directory.Move(destination, $"{destination}.pending.{first.ExtractionStagingId:N}");
+        await Save(path, beforeExtracting);
+
+        Assert.IsTrue((await executor.ExecuteAsync(Plan(), input, files, checkpoint)).NeedsPassword);
+        CollectionAssert.AreEqual(new[] {"a.zip"}, archives.Extracted);
+        Assert.IsTrue(File.Exists(marker));
+        Assert.IsTrue(Directory.Exists(destination));
     }
 
     private sealed class Archives : IArchiveExtractionService

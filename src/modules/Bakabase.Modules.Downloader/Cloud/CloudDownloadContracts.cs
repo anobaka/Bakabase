@@ -51,6 +51,16 @@ public sealed record CloudTransferReceipt(string OperationId, CloudRemoteEntry E
 public sealed record CloudDownloadRequest(string OperationId, CloudSource Source, string? AccountId,
     CloudRemoteEntry? RemoteEntry, string OutputDirectory)
 {
+    /// <summary>Provider keys proven reusable during admission. Only this invocation can supply them.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public IReadOnlyList<string>? ReadOnlyProviderFileKeys { get; init; }
+    /// <summary>Execution-only provider map identity. The workflow and storage reservation retain OperationId.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? ProviderLayoutId { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string LayoutOperationId => ProviderLayoutId ?? OperationId;
+    [System.Text.Json.Serialization.JsonIgnore]
+    public CloudDownloadReuseSource? ReuseSource { get; init; }
     /// <summary>Frozen caller placement for owned transport staging; null uses destination storage.</summary>
     public string? WorkspaceDirectory { get; init; }
     /// <summary>Reviewed physical placement revisions. OutputDirectory remains the frozen semantic input.</summary>
@@ -64,9 +74,13 @@ public sealed record CloudDownloadResult(IReadOnlyList<string> Files)
     /// <summary>Optional content root after proving ownership of a transport wrapper. Physical files and checkpoints stay put.</summary>
     public string? PayloadRootDirectory { get; init; }
 }
+public sealed record CloudTransferDiagnostic(string Code, int? ProviderCode, int[] ItemCodes, int? FileCount, int? FileLimit);
+
 public sealed class CloudProviderException(string message, bool mayHaveSideEffects = false) : InvalidOperationException(message)
 {
     public bool MayHaveSideEffects { get; } = mayHaveSideEffects;
+    public CloudVerificationLocation? VerificationLocation { get; init; }
+    public CloudTransferDiagnostic? TransferDiagnostic { get; init; }
 }
 
 /// <summary>Provider identity describes the service; implementations own their optional execution tool.</summary>

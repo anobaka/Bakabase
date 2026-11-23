@@ -94,8 +94,12 @@ public sealed partial class AcquisitionPlanService
             await RepairUninitializedProcessingInputAsync(row, plan, item.PartId, binding, guardDirectory, ct);
         ArtifactRecord captured;
         if (binding.BindingId != null)
+        {
+            var deliveryOnly = input.RetryDeliveryOnly == true && item.InputStage == "delivery" &&
+                input.Items.All(i => i.InputMode == "stageDirectory");
             captured = await AcquisitionCurrentDirectoryFiles.CaptureStageAsync(db, artifacts!, storage, workspaces,
-                row.Id, row.PlanRevision + 1, input.ExpectedRunId, item.PartId, item.InputStage!, binding, Guard, ct);
+                row.Id, row.PlanRevision + 1, input.ExpectedRunId, item.PartId, item.InputStage!, binding, Guard, ct, deliveryOnly);
+        }
         else
         {
             // Legacy locations remain usable only through the server's recorded exact-root

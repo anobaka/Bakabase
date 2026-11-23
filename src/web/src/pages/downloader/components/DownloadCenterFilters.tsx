@@ -1,15 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { FiGlobe } from "react-icons/fi";
-import { TbMagnet } from "react-icons/tb";
 import { Button, Input } from "@/components/bakaui";
-import ThirdPartyIcon from "@/components/ThirdPartyIcon";
+import { DownloadSourceIcon, downloadSourceLabel } from "@/components/DownloadSource";
 import {
   buildCenterRows,
   centerStatuses,
   type CenterFilter,
   type CenterTask,
 } from "../downloadCenter";
-import { ThirdPartyId } from "@/sdk/constants";
 
 export default function DownloadCenterFilters({
   value,
@@ -35,15 +32,15 @@ export default function DownloadCenterFilters({
     { value: undefined, label: t("downloader.filter.allSources"), icon: undefined },
     ...(value.category !== "site"
       ? [
-          { value: "bt", label: t("downloadCenter.provider.bt"), icon: <TbMagnet size={17} /> },
-          { value: "http", label: t("downloadCenter.provider.http"), icon: <FiGlobe size={17} /> },
+          { value: "bt", label: downloadSourceLabel("bt", t), icon: <DownloadSourceIcon source="bt" /> },
+          { value: "http", label: downloadSourceLabel("http", t), icon: <DownloadSourceIcon source="http" /> },
         ]
       : []),
     ...(value.category !== "general"
       ? sites.map((id) => ({
           value: `site:${id}`,
-          label: t(ThirdPartyId[id]),
-          icon: <ThirdPartyIcon thirdPartyId={id} />,
+          label: downloadSourceLabel(`site:${id}`, t),
+          icon: <DownloadSourceIcon source={`site:${id}`} />,
         }))
       : []),
   ];

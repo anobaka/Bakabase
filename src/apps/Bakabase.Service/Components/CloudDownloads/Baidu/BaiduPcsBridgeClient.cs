@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BaiduPcsGo;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
 using Bakabase.Abstractions.Components.Network;
@@ -13,7 +14,7 @@ using Bakabase.Abstractions.Components.FileSystem;
 
 namespace Bakabase.Service.Components.CloudDownloads.Baidu;
 
-public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseWebProxy proxy)
+public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseWebProxy proxy, ILogger<BaiduPcsBridgeClient>? logger = null)
 {
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     public async Task<JsonElement> ExecuteAsync(string configDirectory, object request,
@@ -37,6 +38,8 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
             JsonElement? result = null;
             string? error = null;
             string? storageCode = null;
+            CloudVerificationLocation? location = null;
+            CloudTransferDiagnostic? transfer = null;
             var mayHaveSideEffects = true;
             while (await process.StandardOutput.ReadLineAsync(ct) is { } line)
             {
@@ -49,7 +52,16 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
                     case "error":
                         error = value.GetProperty("code").GetString();
                         storageCode = StorageCode(value);
+                        location = VerificationLocation(value, error);
+                        if (RecheckedManifestFile(value) is { } member)
+                            logger?.LogWarning("Baidu verification failed for manifest file {FileNumber} with {Problem}", member, storageCode ?? error);
                         mayHaveSideEffects = !value.TryGetProperty("mayHaveSideEffects", out var effects) || effects.GetBoolean();
+                        if (BaiduTransferDiagnostics.IsKnown(error))
+                        {
+                            transfer = value.TryGetProperty("transferDiagnostic", out var detail) ? BaiduTransferDiagnostics.Read(detail, error) : null;
+                            if (transfer == null) error = "BAIDU_TRANSFER_RESPONSE_INVALID";
+                            if (!BaiduTransferDiagnostics.IsTerminal(error)) mayHaveSideEffects = true;
+                        }
                         break;
                 }
             }
@@ -59,7 +71,7 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
                 if (storageCode != null) throw new LocalStorageException(storageCode);
                 var code = error is { } safe && safe.StartsWith("BAIDU_", StringComparison.Ordinal) && safe.Length < 100
                     ? safe : "BAIDU_BRIDGE_FAILED";
-                throw new CloudProviderException(code, mayHaveSideEffects);
+                throw new CloudProviderException(code, mayHaveSideEffects) {VerificationLocation = location, TransferDiagnostic = transfer};
             }
             return result.Value;
         }
@@ -70,6 +82,39 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
         }
     }
 
+    internal static CloudVerificationLocation? VerificationLocation(JsonElement error, string? code)
+    {
+        if (code is not ("BAIDU_DOWNLOAD_CHECKSUM_MISMATCH" or "BAIDU_EXISTING_CHECKSUM_UNAVAILABLE" or
+            "BAIDU_VERIFIED_FILE_MISSING" or "BAIDU_VERIFIED_FILE_REPLACED" or "BAIDU_VERIFIED_FILE_SIZE_CHANGED" or
+            "BAIDU_VERIFIED_FILE_TIME_CHANGED" or "BAIDU_LOCAL_FILE_CHANGED" or "BAIDU_REMOTE_MANIFEST_CHANGED" or
+            "BAIDU_OUTPUT_FILE_READ_FAILED")) return null;
+
+        int Positive(string key) => error.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.Number &&
+            value.TryGetInt32(out var number) && number > 0 ? number : 0;
+        var count = Positive("manifestFileCount");
+        var file = Positive("manifestFileNumber");
+        if (count > 10_000 || file == 0 || file > count) return null;
+        var member = new CloudVerificationLocation(file, count);
+        if (code != "BAIDU_DOWNLOAD_CHECKSUM_MISMATCH") return member;
+        var blocks = Positive("checksumBlockCount");
+        var mismatches = Positive("mismatchedBlockCount");
+        var first = Positive("firstMismatchedBlockNumber");
+        if (first == 0 || first > blocks || mismatches == 0 || mismatches > blocks - first + 1 ||
+            !error.TryGetProperty("firstMismatchedBlockBytes", out var length) || length.ValueKind != JsonValueKind.Number ||
+            !length.TryGetInt64(out var bytes) || bytes < 0 || bytes == 0 && blocks != 1) return member;
+        return member with {ChecksumMismatch = new(blocks, mismatches, first, bytes)};
+    }
+
+    // Keep the ordinal of the first failed check. File names and paths may contain private data.
+    internal static int? RecheckedManifestFile(JsonElement error) =>
+        error.TryGetProperty("manifestFileNumber", out var number) && number.ValueKind == JsonValueKind.Number &&
+        number.TryGetInt32(out var member) && member is > 0 and <= 2_000_000 &&
+        error.TryGetProperty("code", out var code) && code.ValueKind == JsonValueKind.String &&
+        code.GetString() is "BAIDU_VERIFIED_FILE_MISSING" or "BAIDU_VERIFIED_FILE_REPLACED" or
+            "BAIDU_VERIFIED_FILE_SIZE_CHANGED" or "BAIDU_VERIFIED_FILE_TIME_CHANGED" or
+            "BAIDU_OUTPUT_FILE_READ_FAILED" or "BAIDU_DOWNLOAD_CHECKSUM_MISMATCH" or "BAIDU_LOCAL_FILE_CHANGED"
+            ? member : null;
+
     internal static string? StorageCode(JsonElement error) =>
         error.TryGetProperty("storage", out var storage) && storage.ValueKind == JsonValueKind.Object &&
         storage.TryGetProperty("kind", out var kind) && kind.ValueKind == JsonValueKind.String
@@ -78,6 +123,8 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
                 "diskFull" or "quota" => "LOCAL_STORAGE_FULL",
                 "permission" => "LOCAL_STORAGE_ACCESS_DENIED",
                 "unavailable" => "LOCAL_STORAGE_UNAVAILABLE",
+                "unknown" when storage.TryGetProperty("operation", out var operation) && operation.ValueKind == JsonValueKind.String &&
+                    operation.GetString() is "recheckVerifiedFile" or "inspectVerifiedHandle" => null,
                 "unknown" => "LOCAL_STORAGE_WRITE_FAILED",
                 _ => null
             } : null;

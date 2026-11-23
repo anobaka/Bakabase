@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
@@ -61,6 +62,10 @@ public sealed partial class AcquisitionReplanTests
         Assert.AreEqual("original bytes", await File.ReadAllTextAsync(input.Files.Single()));
         Assert.AreEqual("original bytes", await File.ReadAllTextAsync(result.Files.Single()));
         Assert.AreEqual(1, materializer.Copies.Values.Sum(), "Initialization makes one independent payload copy, then moves it into the visible stage.");
+        var target = new CloudDownloadTarget {Id = "main", StageDirectories = task.Plan.StageDirectories.Parts["main"]};
+        var prepared = await AcquisitionProcessingStageInput.ReadPreparedAsync(Db, Artifacts, _services.GetRequiredService<FileProcessingWorkspaceResolver>(), task.Id, run.Id, target, input, default);
+        Assert.AreEqual(result.Id, prepared?.Id);
+        Assert.IsNull(await AcquisitionProcessingStageInput.ReadPreparedAsync(Db, Artifacts, _services.GetRequiredService<FileProcessingWorkspaceResolver>(), task.Id, run.Id + 1, target, input, default));
         Assert.AreEqual(result.Id, (await Prepare()).Id);
         Assert.AreEqual(1, materializer.Copies.Values.Sum());
         var saved = JsonNode.Parse((await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id)).BuilderStateJson!);
@@ -69,8 +74,11 @@ public sealed partial class AcquisitionReplanTests
         Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
     }
 
-    [TestMethod]
-    public async Task Original_processing_retry_rechecks_private_snapshot_and_foreign_references_before_dispatch()
+    [DataTestMethod]
+    [DataRow(false, false)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task Original_processing_retry_rechecks_private_snapshot_and_foreign_references_before_dispatch(bool siblingQueue, bool replan)
     {
         var (task, run, input) = await Failed();
         var destination = Directory.CreateDirectory(Path.Combine(_root, "processing-retry")).FullName;
@@ -87,6 +95,7 @@ public sealed partial class AcquisitionReplanTests
         var related = new WorkflowRunDbModel {Status = WorkflowRunStatus.Running,
             CurrentItemJson = JsonSerializer.Serialize(new {input = destination})};
         Db.Add(related); await Db.SaveChangesAsync();
+        var sibling = siblingQueue ? await AddCancelledSiblingQueue(destination) : null;
         var workspaces = _services.GetRequiredService<FileProcessingWorkspaceResolver>();
         var storage = new CompositeStorage();
         var fault = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
@@ -99,13 +108,77 @@ public sealed partial class AcquisitionReplanTests
         async Task<AcquisitionRecoveryDiagnosis> Check() => await diagnostics.DiagnoseAsync(row, run, default);
         Assert.AreEqual("RECOVERY_PROCESSING_FILES_REFERENCED", (await Check()).Row.ReasonCode);
         Db.Remove(related); await Db.SaveChangesAsync();
+        if (sibling != null)
+        {
+            // Although admission ended, the same sibling also saved a concrete input.
+            Assert.AreEqual("RECOVERY_PROCESSING_FILES_REFERENCED", (await Check()).Row.ReasonCode);
+            if (replan)
+            {
+                var error = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+                    Plans.ReplanAsync(task.Id, Input(task, run, input.Id), default));
+                Assert.AreEqual("STAGE_COMMIT_REFERENCED", error.Message);
+            }
+            var builder = JsonNode.Parse(sibling.BuilderStateJson!)!.AsObject();
+            Assert.IsTrue(builder.Remove("input"));
+            sibling.BuilderStateJson = builder.ToJsonString(); await Db.SaveChangesAsync();
+        }
         var ready = await Check();
         Assert.AreEqual("RECOVERY_STAGE_INPUT_READY", ready.Row.ReasonCode);
         Assert.AreEqual("retry", ready.Row.Action);
         Assert.AreEqual(run.Id, ready.Row.WorkflowRunId);
         Assert.AreEqual("main", JsonSerializer.Deserialize<CloudFileProcessingSignal>(ready.SignalJson, WorkflowJson.Options)!.TargetId);
-        File.Delete(input.Files.Single());
-        Assert.AreEqual("RECOVERY_FILES_UNVERIFIED", (await Check()).Row.ReasonCode);
+        if (sibling == null)
+        {
+            File.Delete(input.Files.Single());
+            Assert.AreEqual("RECOVERY_FILES_UNVERIFIED", (await Check()).Row.ReasonCode);
+        }
+        else if (replan)
+        {
+            var revised = await Plans.ReplanAsync(task.Id, Input(task, run, input.Id), default);
+            Assert.AreEqual(task.Task.PlanRevision + 1, revised.Task.PlanRevision);
+            Assert.AreEqual("original bytes", await File.ReadAllTextAsync(Path.Combine(destination, "original.bin")));
+            Assert.AreEqual("original bytes", await File.ReadAllTextAsync(input.Files.Single()));
+        }
+        else
+        {
+            var retry = new StageInputMaterializer();
+            var committed = await AcquisitionProcessingStageInput.PrepareCoreAsync(Db, Artifacts, storage, workspaces,
+                task.Id, run.Id, "main", target.StageDirectories!.Processing!, input, retry,
+                _services.GetRequiredService<IServiceScopeFactory>(), default);
+            Assert.AreEqual(destination, committed.RootDirectory);
+            Assert.AreEqual(input.Fingerprint, committed.Fingerprint);
+            Assert.AreEqual(0, retry.Copies.Count, "The original completed snapshot is committed on retry.");
+            Assert.AreEqual("original bytes", await File.ReadAllTextAsync(input.Files.Single()));
+        }
+    }
+
+    private async Task<AcquisitionTaskDbModel> AddCancelledSiblingQueue(string stage)
+    {
+        var sibling = new AcquisitionTaskDbModel {Title = "Other acquisition", PlanRevision = 2};
+        Db.Add(sibling); await Db.SaveChangesAsync();
+        WorkflowRunDbModel Owner(string revision, WorkflowRunStatus status) => new() {Status = status, Sources =
+            [new() {Module = "acquisition", EntityKind = "task", EntityId = sibling.Id.ToString(), Revision = revision}]};
+        var original = Owner("1", WorkflowRunStatus.Cancelled); var current = Owner("2", WorkflowRunStatus.Success);
+        Db.AddRange(original, current); await Db.SaveChangesAsync();
+        var legacy = new AcquisitionPlan {Title = sibling.Title, OutputDirectory = Path.Combine(_root, "other-download"),
+            Parts = [new() {Id = "part"}]};
+        var working = Path.GetDirectoryName(stage)!;
+        var settings = new AcquisitionDeliverySettings {RootDirectory = Path.Combine(_root, "sibling-deliveries")};
+        var destination = Path.Combine(settings.RootDirectory, "sibling");
+        var frozen = legacy with {StoragePolicy = new() {ProcessingWorkspaceDirectory = working}, DeliveryLayout = new()
+            {TaskId = sibling.Id, Settings = settings, RootDirectory = settings.RootDirectory, TaskDirectory = destination,
+                PartDirectories = new() {["part"] = destination}}};
+        var queue = new AcquisitionLocalRecoveryQueueEntry {BatchId = Guid.NewGuid().ToString("N"), Signal = new string('a', 64),
+            Version = new string('b', 64), RecoveryScope = "localFiles", ActionCategory = "localProcessing", WorkflowRunId = original.Id,
+            PlanRevision = 1, WorkingDirectories = [working], DeliveryDirectories = [destination], Status = "cancelled",
+            StorageStamp = AcquisitionLocalFilesRecoveryReceipt.Hash(new AcquisitionLocalFilesStorage(frozen.StoragePolicy, settings))};
+        sibling.WorkflowRunId = current.Id;
+        sibling.PlanJson = JsonSerializer.Serialize(frozen, WorkflowJson.Options);
+        sibling.PlanHistoryJson = JsonSerializer.Serialize(new[] {new AcquisitionPlanRevision(1, legacy, [], DateTime.UtcNow.AddDays(-1)),
+            new AcquisitionPlanRevision(2, frozen, [], DateTime.UtcNow, "continueFiles", original.Id)}, WorkflowJson.Options);
+        sibling.BuilderStateJson = AcquisitionLocalRecoveryQueueEntry.Write(JsonSerializer.Serialize(new {input = stage}), queue);
+        await Db.SaveChangesAsync();
+        return sibling;
     }
 
     [TestMethod]
@@ -133,14 +206,19 @@ public sealed partial class AcquisitionReplanTests
         Assert.AreEqual(0, materializer.Copies.Count);
     }
 
-    [TestMethod]
-    public async Task Stage_input_keeps_explicit_download_selection_across_boundaries_instead_of_switching_to_processing()
+    [DataTestMethod]
+    [DataRow(true, false)]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    public async Task Selected_download_reuses_its_first_boundary_input_with_a_new_or_populated_processing_stage(
+        bool manuallyPopulated, bool interruptedOnOriginal)
     {
         var (task, old, original) = await Failed();
         var download = Directory.CreateDirectory(Path.Combine(_root, "explicit-download")).FullName;
         var archive = Path.Combine(download, "package.bin"); await File.WriteAllTextAsync(archive, "original bytes");
         var processing = Directory.CreateDirectory(Path.Combine(_root, "explicit-processing")).FullName;
-        var unrelated = Path.Combine(processing, "manual.key"); await File.WriteAllTextAsync(unrelated, "other stage contents");
+        var unrelated = Path.Combine(processing, "manual.key");
+        if (manuallyPopulated) await File.WriteAllTextAsync(unrelated, "other stage contents");
         task = await BindCurrentStage(task, "download", download);
         task = await BindCurrentStage(task, "processing", processing);
         var request = new AcquisitionPlanReplanInput(task.Task.PlanRevision, old.Id, "Two explicit remaining instructions.",
@@ -156,9 +234,9 @@ public sealed partial class AcquisitionReplanTests
                 Revision = revised.Task.PlanRevision.ToString(System.Globalization.CultureInfo.InvariantCulture)}]};
         Db.Add(run); await Db.SaveChangesAsync();
         await Db.AcquisitionTasks.Where(t => t.Id == task.Id).ExecuteUpdateAsync(s => s.SetProperty(t => t.WorkflowRunId, run.Id));
-        WorkflowExecutionContext Context(int node) => new() {RunId = run.Id, WorkflowDefinitionId = 0,
+        WorkflowExecutionContext Context(int node, string? wait = null) => new() {RunId = run.Id, WorkflowDefinitionId = 0,
             TriggerKind = CloudWorkflow.Trigger, Payload = payload, ActivityConfigJson = compiled.Nodes[node].ConfigJson,
-            Services = _services, Logger = NullLogger.Instance};
+            ResumePromptJson = wait, Services = _services, Logger = NullLogger.Instance};
         _continuationArchives.ExpectedInput = "original bytes";
         var continued = await new AcquisitionPlanContinueFilesActivity().ProcessItemAsync(Context(0), payload, default);
         var first = await new AcquisitionPlanProcessingActivity().ProcessItemAsync(Context(1), continued.Replacement!, default);
@@ -166,25 +244,96 @@ public sealed partial class AcquisitionReplanTests
         var selected = (await Artifacts.GetArtifactAsync(revised.Plan!.Parts.Single().ContinueFrom!.ArtifactId))!;
         var retained = await AcquisitionProcessingStageInput.PrepareAsync(Context(1),
             ((DownloadWorkset)first.Replacement!).Targets.Single(), selected, default);
-        Assert.AreEqual(selected.Id, retained.Id); Assert.AreEqual(download, retained.RootDirectory);
+        if (manuallyPopulated) Assert.AreEqual(selected.Id, retained.Id);
+        else Assert.AreNotEqual(selected.Id, retained.Id);
+        Assert.AreEqual(manuallyPopulated ? download : processing, retained.RootDirectory);
         var firstOutput = (await Artifacts.GetArtifactAsync(((DownloadWorkset)first.Replacement!).Targets.Single().ProcessedArtifactId!))!;
-        Assert.AreEqual(selected.Id, JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(firstOutput.MetadataJson!, WorkflowJson.Options)!.InputArtifactId);
+        Assert.AreEqual(retained.Id, JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(firstOutput.MetadataJson!, WorkflowJson.Options)!.InputArtifactId);
         // Explicit stage selection keeps its identity across boundaries, including
         // recovery from the verified private input after the selected source disappears.
-        File.Delete(archive);
-        var second = await new AcquisitionPlanProcessingActivity().ProcessItemAsync(Context(2), first.Replacement!, default);
+        WorkflowItemOutcome second;
+        if (interruptedOnOriginal)
+        {
+            // Reproduce a legacy later boundary which opened the original instead of
+            // the prepared copy, then suspended while the operation still owned its checkpoint.
+            var workset = (DownloadWorkset)first.Replacement!;
+            var target = workset.Targets.Single();
+            var config = JsonSerializer.Deserialize<AcquisitionPlanProcessingConfig>(compiled.Nodes[2].ConfigJson!, WorkflowJson.Options)!;
+            var plan = AcquisitionPlanProcessingActivity.EffectivePlan(config, target);
+            var placement = new FileArtifactProcessingConfig {StoragePolicy = config.StoragePolicy ?? target.StoragePolicy,
+                StorageTitle = target.Title, WorkspaceDirectoryScope = target.ProcessingDirectoryScope};
+            var intent = AcquisitionPlanProcessingActivity.Intent(workset, target, plan, "rename",
+                _services.GetRequiredService<FileProcessingWorkspaceResolver>(), config.ContinueFrom);
+            var processor = _services.GetRequiredService<IFileArtifactProcessor>();
+            var stopped = await processor.ExecuteAsync(intent, selected, JsonSerializer.Serialize(plan, WorkflowJson.Options),
+                target.SelectedSource?.ArchivePassword, placement, $"workflow:{run.Id}:{target.Id}", null, null, null,
+                default, stopAfterStepId: "rename", reportStage: stage => stage == "checkingArchive"
+                    ? throw new Bakabase.Abstractions.Components.FileSystem.LocalStorageException("LOCAL_STORAGE_RESERVE_LOW")
+                    : Task.CompletedTask);
+            Assert.AreEqual("StorageUnavailable", stopped.WaitReason);
+            var operation = FileArtifactProcessor.OperationKey(intent, selected,
+                FileArtifactProcessor.WithDefaultPasswords(plan, target.SelectedSource?.ArchivePassword), target.SelectedSource?.ArchivePassword, placement);
+            var saved = new JsonObject {["reason"] = "StorageUnavailable", ["targetId"] = target.Id, ["knownStepId"] = "rename",
+                ["artifactId"] = selected.Id, ["fingerprint"] = selected.Fingerprint};
+            saved["message"] = "LOCAL_STORAGE_RESERVE_LOW";
+            saved["extractionPlanJson"] = JsonSerializer.Serialize(plan, WorkflowJson.Options);
+            var suspendedWorkset = workset with {Targets = [target with {ProcessingWaitReason = "StorageUnavailable", Problem = "StorageUnavailable"}],
+                SourceRefs = [new("acquisition", "task", task.Id.ToString(), revised.Task.PlanRevision.ToString())]};
+            run.Status = WorkflowRunStatus.Waiting; run.WaitReason = "cloud.fileProcessing";
+            run.WaitingSince = DateTime.UtcNow; run.CurrentStepIndex = 2;
+            run.CurrentItemJson = WorkflowItemSnapshot.Capture(suspendedWorkset); run.WaitPromptJson = saved.ToJsonString();
+            run.PlanSnapshotJson = WorkflowRunPlans.Serialize(compiled);
+            await Db.SaveChangesAsync();
+            var row = await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
+            row.Status = Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus.Waiting;
+            var diagnostics = new AcquisitionRecoveryDiagnostics(Db, new CompositeStorage(), Artifacts,
+                workspaces: _services.GetRequiredService<FileProcessingWorkspaceResolver>());
+            var diagnosis = await diagnostics.DiagnoseAsync(row, run, default);
+            Assert.IsTrue(diagnosis.Row.CanContinue, diagnosis.Row.ReasonCode);
+            var signal = diagnosis.SignalJson;
+            Assert.AreEqual(new FileArtifactProcessingRecovery(operation, 1) {SelectedInputArtifactId = selected.Id},
+                JsonSerializer.Deserialize<CloudFileProcessingSignal>(signal, WorkflowJson.Options)!.StorageRecovery);
+            foreach (var artifactId in new[] {retained.Id, "unrelated", null})
+            {
+                var fallback = saved.DeepClone(); fallback["artifactId"] = artifactId;
+                run.WaitPromptJson = fallback.ToJsonString();
+                var fallbackDiagnosis = await diagnostics.DiagnoseAsync(row, run, default);
+                Assert.IsNull(JsonSerializer.Deserialize<CloudFileProcessingSignal>(fallbackDiagnosis.SignalJson, WorkflowJson.Options)?.StorageRecovery?.SelectedInputArtifactId);
+            }
+            run.WaitPromptJson = saved.ToJsonString(); run.Status = WorkflowRunStatus.Running; await Db.SaveChangesAsync();
+            foreach (var field in new[] {"artifactId", "fingerprint", "targetId", "knownStepId", "reason"})
+            {
+                var changed = saved.DeepClone(); changed[field] = null;
+                Assert.IsFalse(AcquisitionProcessingStageInput.WaitUsedSelectedInput(target, selected, retained, "rename", changed.ToJsonString()));
+                changed[field] = "other";
+                await Assert.ThrowsExactlyAsync<ArgumentException>(() => new AcquisitionPlanProcessingActivity()
+                    .ResumeAsync(Context(2, changed.ToJsonString()), workset, signal, default));
+            }
+            var canonical = saved.DeepClone(); canonical["artifactId"] = retained.Id;
+            Assert.IsFalse(AcquisitionProcessingStageInput.WaitUsedSelectedInput(target, selected, retained, "rename", canonical.ToJsonString()));
+            Assert.AreEqual(1, _continuationArchives.Extractions);
+            second = await new AcquisitionPlanProcessingActivity().ResumeAsync(Context(2, saved.ToJsonString()), workset, signal, default);
+        }
+        else
+        {
+            File.Delete(archive);
+            second = await new AcquisitionPlanProcessingActivity().ProcessItemAsync(Context(2), first.Replacement!, default);
+        }
         Assert.IsNull(second.Suspension, second.Suspension?.PromptJson);
         var output = ((DownloadWorkset)second.Replacement!).Targets.Single();
         Assert.AreEqual(processing, output.ProcessedDirectory);
         Assert.AreEqual("renamed.txt", Path.GetFileName(output.ProcessedFiles!.Single()));
         Assert.AreEqual("remaining extraction", await File.ReadAllTextAsync(output.ProcessedFiles.Single()));
-        Assert.AreEqual(1, _continuationArchives.Extractions); Assert.AreEqual(2, output.ProcessingStepArtifacts.Count);
+        Assert.AreEqual(interruptedOnOriginal ? 2 : 1, _continuationArchives.Extractions);
+        Assert.AreEqual(2, output.ProcessingStepArtifacts.Count);
         Assert.AreEqual(0, await Db.DownloadTasks.CountAsync()); Assert.IsTrue(File.Exists(original.Files.Single()));
-        Assert.AreEqual("other stage contents", await File.ReadAllTextAsync(unrelated));
+        if (manuallyPopulated) Assert.AreEqual("other stage contents", await File.ReadAllTextAsync(unrelated));
     }
 
-    [TestMethod]
-    public async Task Stage_input_resumes_an_owned_partial_copy_without_recopying_complete_members()
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Stage_input_resumes_an_owned_partial_copy_without_recopying_complete_members(bool waitingForInstructions)
     {
         var (task, run, _) = await Failed();
         var original = Directory.CreateDirectory(Path.Combine(_root, "two-downloads")).FullName;
@@ -203,8 +352,13 @@ public sealed partial class AcquisitionReplanTests
         var pending = JsonNode.Parse((await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id)).BuilderStateJson!);
         Assert.IsNotNull(pending!["processingStageInputId"]);
         Assert.IsFalse(File.Exists(Path.Combine(directory, "one.bin")), "A partial initialization is not exposed as the current input.");
-        await AcquisitionProcessingStageInput.RecoverAsync(Db, Artifacts, new CompositeStorage(), workspaces,
-            task.Id, materializer, _services.GetRequiredService<IServiceScopeFactory>(), default);
+        if (waitingForInstructions)
+            await AcquisitionProcessingStageInput.PrepareCoreAsync(Db, Artifacts, new CompositeStorage(), workspaces,
+                task.Id, run.Id, "main", task.Plan.StageDirectories.Parts["main"].Processing!, input, materializer,
+                _services.GetRequiredService<IServiceScopeFactory>(), default, waitForInstructions: true);
+        else
+            await AcquisitionProcessingStageInput.RecoverAsync(Db, Artifacts, new CompositeStorage(), workspaces,
+                task.Id, materializer, _services.GetRequiredService<IServiceScopeFactory>(), default);
         Assert.AreEqual("one original payload", await File.ReadAllTextAsync(Path.Combine(directory, "one.bin")));
         Assert.AreEqual("two original payload", await File.ReadAllTextAsync(Path.Combine(directory, "two.bin")));
         Assert.AreEqual(1, materializer.Copies["one.bin"]); Assert.AreEqual(2, materializer.Copies["two.bin"]);

@@ -67,3 +67,17 @@ it("treats application failures and missing results as failures rather than succ
   mocks.apply.mockResolvedValue({ code: 0, data: null });
   await expect(api.apply("token", [7])).rejects.toThrow("DOWNLOAD_DESTINATION_REQUEST_FAILED");
 });
+
+it("binds reuse to the requested site download and acquisition", async () => {
+  await api.previewReuse(7, 24, "/ssd/new");
+  expect(mocks.preview).toHaveBeenCalledExactlyOnceWith(
+    {
+      taskIds: [7],
+      downloadTaskIds: [24],
+      targetRootDirectory: "/ssd/new",
+      reuseExistingFiles: true,
+    },
+    { sensitiveResponse: true, showErrorToast: false },
+  );
+  expect(mocks.apply).not.toHaveBeenCalled();
+});

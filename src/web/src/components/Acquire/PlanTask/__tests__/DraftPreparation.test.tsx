@@ -85,7 +85,7 @@ beforeEach(() => {
   mocks.prepare.mockResolvedValue({ ...detail, plan: { parts: [] } });
 });
 it("saves edits then searches using the same task and current revision, without creating another task", async () => {
-  render(<DraftPreparation detail={detail} busy={false} onAction={action} />);
+  render(<DraftPreparation detail={{...detail, draftSources: []}} busy={false} onAction={action} />);
   await screen.findByRole("combobox");
   fireEvent.change(screen.getByLabelText("acquisition.plan.titleLabel"), {
     target: { value: "New query" },
@@ -99,33 +99,10 @@ it("saves edits then searches using the same task and current revision, without 
   expect(mocks.setBuilder).toHaveBeenCalledWith(42, 1, "search");
   expect(mocks.portal).not.toHaveBeenCalled();
 });
-it("reuses source preflight but saves a direct plan to the same draft without running it", async () => {
+it("hides title-search builders when download sources already exist", async () => {
   render(<DraftPreparation detail={detail} busy={false} onAction={action} />);
-  await screen.findByRole("combobox");
-  fireEvent.click(screen.getByText("acquisition.draft.direct"));
-  await waitFor(() => expect(mocks.portal).toHaveBeenCalledTimes(1));
-  const props = mocks.portal.mock.calls[0][1];
-  expect(props.initialOutputDirectory).toBe("/saved");
-  expect(props.adapter.preflight).toBe(mocks.preflight);
-  expect(props.candidates[0]).toMatchObject({ id: "source", archivePassword: "saved-password" });
-  const result = await props.adapter.submit(
-    {
-      mode: "files",
-      title: "Confirmed",
-      candidates: props.candidates,
-      selectedCandidateIds: ["source"],
-    },
-    "/reviewed",
-  );
-  expect(mocks.prepare).toHaveBeenCalledWith(
-    42,
-    1,
-    expect.objectContaining({
-      title: "Confirmed",
-      outputDirectory: "/reviewed",
-      delivery: "files",
-    }),
-  );
-  expect(result).toEqual({ mode: "files", runs: [], resourceIds: [], acquisitionTaskIds: [42] });
-  expect(mocks.search).not.toHaveBeenCalled();
+  await waitFor(() => expect(mocks.builders).toHaveBeenCalled());
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.queryByRole("button", { name: "acquisition.draft.search" })).toBeNull();
+  expect(mocks.setBuilder).not.toHaveBeenCalled();
 });

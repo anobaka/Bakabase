@@ -509,6 +509,7 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                 SaveMetadata();
             }
             run.Status = WorkflowRunStatus.Cancelled;
+            run.PendingSignalJson = null;
             run.CompletedAt = DateTime.Now;
             run.FailedItemCount = failedTotal;
             run.StepStatsJson = JsonSerializer.Serialize(stepStats, WorkflowJson.Options);

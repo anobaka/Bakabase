@@ -280,35 +280,23 @@ public sealed class AcquisitionPipelineTests
         Assert.IsNotNull((await Task_(created.Id)).CompletedAt);
     }
 
-    /// <summary>
-    /// The limit is about work in flight, so a queued task waits its turn and starts when one
-    /// finishes — without anyone asking again.
-    /// </summary>
     [TestMethod]
-    public async Task TheConcurrencyLimitQueuesTheSecondTask_AndTheTickStartsItLater()
+    public async Task TasksAreSubmittedIndependentlyAndTheWorkflowSchedulerOwnsAdmission()
     {
         _sp.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.Concurrency = 1;
-
         var recipeId = await CreateRecipe(FetchStep.StepKind, PlaceStep.StepKind);
         var first = await Create(await CreateMissingResource("First"), recipeId);
         var second = await Create(await CreateMissingResource("Second"), recipeId);
-
         Assert.AreEqual(AcquisitionStatus.Running, first.Status);
-        Assert.AreEqual(AcquisitionStatus.Pending, second.Status, "one at a time");
-        Assert.IsNull(second.WorkflowRunId, "a queued task has not started a run at all");
-
-        // Still no room, so the tick changes nothing.
+        Assert.AreEqual(AcquisitionStatus.Running, second.Status);
+        Assert.IsNotNull(second.WorkflowRunId);
+        Assert.AreNotEqual(first.WorkflowRunId, second.WorkflowRunId);
         await Pump();
-        Assert.IsNull((await Task_(second.Id)).WorkflowRunId);
-
-        await Execute(first.WorkflowRunId!.Value);
+        Assert.AreEqual(second.WorkflowRunId, (await Task_(second.Id)).WorkflowRunId);
+        await Execute(second.WorkflowRunId.Value);
         await Reconcile();
-        Assert.AreEqual(AcquisitionStatus.Completed, (await Task_(first.Id)).Status);
-
-        await Pump();
-        var started = await Task_(second.Id);
-        Assert.AreEqual(AcquisitionStatus.Running, started.Status);
-        Assert.IsNotNull(started.WorkflowRunId);
+        Assert.AreEqual(AcquisitionStatus.Completed, (await Task_(second.Id)).Status);
+        Assert.AreEqual(AcquisitionStatus.Running, (await Task_(first.Id)).Status);
     }
 
     /// <summary>
@@ -398,13 +386,20 @@ public sealed class AcquisitionPipelineTests
 
         await using (var scope = _sp.CreateAsyncScope())
         {
+            var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+            await db.WorkflowRuns.Where(r => r.Id == runId).ExecuteUpdateAsync(update => update
+                .SetProperty(r => r.Status, WorkflowRunStatus.Pending).SetProperty(r => r.PendingSignalJson, "\"obsolete-answer\""));
             await scope.ServiceProvider.GetRequiredService<IAcquisitionService>().CancelAsync(task.Id);
         }
 
+        Assert.IsNull((await Run(runId)).PendingSignalJson);
         Assert.AreEqual(AcquisitionStatus.Cancelled, (await Task_(task.Id)).Status);
 
         await using (var scope = _sp.CreateAsyncScope())
         {
+            // A historical cancelled row can also be retried explicitly before startup normalization.
+            await scope.ServiceProvider.GetRequiredService<BakabaseDbContext>().WorkflowRuns.Where(r => r.Id == runId)
+                .ExecuteUpdateAsync(update => update.SetProperty(r => r.PendingSignalJson, "revoked"));
             await scope.ServiceProvider.GetRequiredService<IAcquisitionService>().RetryAsync(task.Id);
         }
 

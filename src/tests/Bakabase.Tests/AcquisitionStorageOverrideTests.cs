@@ -23,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bakabase.Tests;
 
 [TestClass]
+[DoNotParallelize] // Independent database fixtures reuse IDs guarded by process-wide task/run gates.
 public sealed partial class AcquisitionStorageOverrideTests
 {
     private const long Floor = 1024L * 1024 * 1024;
@@ -38,7 +39,8 @@ public sealed partial class AcquisitionStorageOverrideTests
         var preview = await fixture.Service.PreviewAsync(1);
         Assert.IsTrue(preview.UseEmergencySpaceReserve);
         Assert.AreEqual("emergency", preview.EffectiveReserveMode);
-        Assert.IsTrue((await fixture.Service.ApplyAsync(1, new(preview.Token, true, "configured"))).ContinuationAccepted);
+        var result = await fixture.Service.ApplyAsync(1, new(preview.Token, true, "configured"));
+        Assert.IsTrue(result.ContinuationAccepted, result.ReasonCode);
         Assert.AreEqual(normal, await fixture.Provider.GetMinimumFreeBytesAsync(new("workflow", "11")));
         Assert.AreEqual(Floor, await fixture.Provider.GetMinimumFreeBytesAsync(new("workflow", "22")));
         Assert.AreEqual("configured", (await fixture.Service.PreviewAsync(1)).EffectiveReserveMode);
@@ -318,7 +320,8 @@ public sealed partial class AcquisitionStorageOverrideTests
         internal int HashCount;
         internal TaskCompletionSource HashStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public async Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
-            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
+            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false,
+            bool includeStoppedVerification = false, bool deferCompletedDownloadVerification = false)
         {
             if (LocalStep != null)
             {

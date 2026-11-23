@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,6 +47,26 @@ public sealed partial class FileProcessingWorkspaceResolver
         if (await ReadLocationAsync("operations", key, attempt, ct) == null && scope != null)
             await EnsureScopedDirectoryAsync(scope, ct);
         return await ResolveAsync("operations", key, attempt, inputRoot, configuredRoot, ct, policy, title);
+    }
+
+    // The first operation has no DB row yet. An older checkpoint may still be shared
+    // by another operation for this input/recipe. Inspect both placements without allocation.
+    internal async Task<IReadOnlyList<string>> InspectFirstInputWorkspaceRootsAsync(string operationKey,
+        string? checkpointKey, string inputRoot, CancellationToken ct)
+    {
+        const int attempt = 1;
+        ValidateConfiguredRoot(inputRoot, storage);
+        var location = await InspectExistingAsync("operations", operationKey, attempt, ct);
+        var allocation = location == null ? await ReadAllocationAsync("operations", operationKey, attempt, ct) : null;
+        var operationRoot = location?.StorageRoot ?? (allocation == null ? DefaultRoot(inputRoot) : Relocate(allocation.StorageRoot));
+        ValidateConfiguredRoot(operationRoot, storage);
+        if (checkpointKey == null) return [operationRoot];
+        // With no scoped/configured root ChooseCheckpointAsync keeps the original key.
+        var checkpoint = await InspectExistingAsync("checkpoints", checkpointKey, attempt, ct);
+        var pending = checkpoint == null ? await ReadAllocationAsync("checkpoints", checkpointKey, attempt, ct) : null;
+        var checkpointRoot = checkpoint?.StorageRoot ?? (pending == null ? operationRoot : Relocate(pending.StorageRoot));
+        ValidateConfiguredRoot(checkpointRoot, storage);
+        return new[] {operationRoot, checkpointRoot}.Distinct(ArtifactManifestFiles.PathComparer).ToArray();
     }
 
     private string AllocationFile(string kind, string key, int attempt) =>

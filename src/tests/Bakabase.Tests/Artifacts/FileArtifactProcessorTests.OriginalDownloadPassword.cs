@@ -17,13 +17,14 @@ public sealed partial class FileArtifactProcessorTests
         var target = new CloudDownloadTarget {Id = "part", SelectedSourceId = "selected", DownloadArtifactId = raw.Id,
             Sources = [new() {Id = "selected", Url = "https://example.org/s", ArchivePassword = "source-password"}]};
         var evidence = new AcquisitionFileProcessingEvidence.BoundEvidence(null, "selected", "https://example.org/s",
-            "source-password", raw.Id);
+            "source-password", raw.Id, "part");
         Task<string?> Candidate(ArtifactRecord input, AcquisitionFileProcessingEvidence.BoundEvidence selected) =>
             AcquisitionFileProcessingEvidence.OriginalDownloadPasswordAsync(selected, target, input, _store, default);
         Assert.AreEqual("source-password", await Candidate(snapshot, evidence));
         Assert.AreEqual("source-password", await Candidate(raw, evidence with {ContinuedArtifactId = null}));
         Assert.IsNull(await Candidate(snapshot, evidence with {Url = "https://example.org/mirror"}));
         Assert.IsNull(await Candidate(snapshot, evidence with {SourceId = "alternative"}));
+        Assert.IsNull(await Candidate(raw, evidence with {PartId = "another-part"}));
         Assert.IsNull(await Candidate(snapshot, evidence with {ArchivePassword = "unrelated"}));
         Assert.IsNull(await Candidate(snapshot, evidence with {ContinuedArtifactId = snapshot.Id}));
         Assert.IsNull(await Candidate(snapshot with {Fingerprint = "different-files"}, evidence));

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
@@ -20,7 +21,8 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 internal sealed record AcquisitionStageDirectoryCaptureReceipt(int Version, int TaskId, string PartId,
     int Revision, int PreviousRunId, string CaptureId, string Stage, string BindingId, string Directory,
     string InputFingerprint, string Fingerprint, IReadOnlyList<OwnedWorkspaceDirectory> ExcludedWorkspaces,
-    ArtifactDirectoryProvenance? DirectoryProvenance = null);
+    ArtifactDirectoryProvenance? DirectoryProvenance = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool DeliveryOnly = false);
 
 internal static partial class AcquisitionCurrentDirectoryFiles
 {
@@ -33,19 +35,23 @@ internal static partial class AcquisitionCurrentDirectoryFiles
 
     internal static async Task<ArtifactRecord> CaptureStageAsync(BakabaseDbContext db, IArtifactOperationStore store,
         IUserStoragePolicy storage, FileProcessingWorkspaceResolver? workspaces, int taskId, int revision,
-        int runId, string partId, string stage, AcquisitionStageDirectory binding, Func<Task> guard, CancellationToken ct)
+        int runId, string partId, string stage, AcquisitionStageDirectory binding, Func<Task> guard, CancellationToken ct,
+        bool deliveryOnly = false)
     {
-        if (!ValidStage(stage) || !Guid.TryParseExact(binding.BindingId, "N", out _) || revision < 1)
+        if (!ValidStage(stage) || !Guid.TryParseExact(binding.BindingId, "N", out _) || revision < 1 ||
+            deliveryOnly && stage != "delivery")
             throw new ArgumentException("PLAN_STAGE_DIRECTORY_INVALID");
         await guard();
         storage.EnsurePathAllowed(binding.Directory); ArtifactManifestFiles.RejectLinks(binding.Directory);
         if (!Directory.Exists(binding.Directory)) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_UNAVAILABLE");
         var excluded = workspaces == null ? [] : await workspaces.OwnedDirectoriesUnderAsync(binding.Directory, ct);
-        var selection = await EnumerateAsync(binding.Directory, excluded, workspaces, ct);
+        var selection = await EnumerateAsync(binding.Directory, excluded, workspaces, ct,
+            deliveryOnly ? MaximumDeliveryEntries : MaximumEntries);
         foreach (var file in selection.Files.Concat(selection.Directories)) storage.EnsurePathAllowed(file);
         var provenance = await AcquisitionStageDirectoryProvenance.ReadAsync(db, store, taskId, partId, binding.Directory, ct);
         var receipt = new AcquisitionStageDirectoryCaptureReceipt(2, taskId, partId, revision, runId,
-            Guid.NewGuid().ToString("N"), stage, binding.BindingId!, binding.Directory, "", "", excluded);
+            Guid.NewGuid().ToString("N"), stage, binding.BindingId!, binding.Directory, "", "", excluded,
+            DeliveryOnly: deliveryOnly);
         receipt = receipt with {InputFingerprint = StageSeed(receipt)};
         var captured = await store.AdoptAsync(new(ArtifactManifestFiles.Hash("current-stage:" + receipt.InputFingerprint),
                 "acquisition.current-stage:" + receipt.InputFingerprint, OperationKind, receipt.InputFingerprint),
@@ -62,17 +68,29 @@ internal static partial class AcquisitionCurrentDirectoryFiles
 
     private static string StageSlot(AcquisitionStageDirectoryCaptureReceipt receipt) =>
         $"{receipt.PartId}:current-files:{receipt.Revision}:{receipt.CaptureId}";
-    private static string StageSeed(AcquisitionStageDirectoryCaptureReceipt receipt) => ArtifactManifestFiles.Hash(
-        JsonSerializer.Serialize(new {receipt.Version, receipt.TaskId, receipt.PartId, receipt.Revision,
+    internal static bool IsDeliveryOnlyStageCapture(ArtifactRecord? artifact, AcquisitionStageDirectory? binding = null) =>
+        artifact?.Kind == Kind &&
+        JsonSerializer.Deserialize<AcquisitionStageDirectoryCaptureReceipt>(artifact.MetadataJson ?? "null", Json)
+            is {Version: 2, Stage: "delivery", DeliveryOnly: true} receipt &&
+        (binding == null || binding.BindingId == receipt.BindingId &&
+            ArtifactManifestFiles.PathComparer.Equals(binding.Directory, receipt.Directory));
+
+    private static string StageSeed(AcquisitionStageDirectoryCaptureReceipt receipt)
+    {
+        var identity = JsonSerializer.Serialize(new {receipt.Version, receipt.TaskId, receipt.PartId, receipt.Revision,
             receipt.PreviousRunId, receipt.CaptureId, receipt.Stage, receipt.BindingId, receipt.Directory,
-            receipt.ExcludedWorkspaces}, Json));
+            receipt.ExcludedWorkspaces}, Json);
+        // Existing capture receipts must retain their original fingerprints.
+        return ArtifactManifestFiles.Hash(receipt.DeliveryOnly ? identity + "\ndelivery-only" : identity);
+    }
 
     private static async Task<bool> IsStageOwnedAsync(BakabaseDbContext db, IArtifactOperationStore store,
         ArtifactRecord artifact, AcquisitionStageDirectoryCaptureReceipt receipt, int taskId, int runId,
         string partId, CancellationToken ct)
     {
         if (receipt.Version != 2 || receipt.TaskId != taskId || receipt.PartId != partId || receipt.Revision < 1 ||
-            !ValidStage(receipt.Stage) || !Guid.TryParseExact(receipt.BindingId, "N", out _) ||
+            !ValidStage(receipt.Stage) || receipt.DeliveryOnly && receipt.Stage != "delivery" ||
+            !Guid.TryParseExact(receipt.BindingId, "N", out _) ||
             !Guid.TryParseExact(receipt.CaptureId, "N", out _) || receipt.ExcludedWorkspaces == null ||
             artifact.ParentArtifactIds.Count != 0 || artifact.Fingerprint != receipt.Fingerprint ||
             artifact.Manifest.Fingerprint != artifact.Fingerprint ||

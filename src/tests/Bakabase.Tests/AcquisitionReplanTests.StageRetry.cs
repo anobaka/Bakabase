@@ -94,4 +94,56 @@ public sealed partial class AcquisitionReplanTests
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => Plans.ReplanAsync(task.Id, input, default));
         Assert.AreEqual(run.Id, (await Plans.GetAsync(task.Id, default))!.Task.WorkflowRunId);
     }
+
+    [TestMethod]
+    public async Task Delivery_only_retry_publishes_large_bound_delivery_directory_in_place()
+    {
+        var (task, run, download) = await CurrentDirectoryInput();
+        var directory = Directory.CreateDirectory(Path.Combine(_root, "large-delivery")).FullName;
+        var fileCount = AcquisitionCurrentDirectoryFiles.MaximumEntries + 1;
+        for (var i = 0; i < fileCount; i++)
+            File.Create(Path.Combine(directory, $"entry-{i:D5}.txt")).Dispose();
+        task = await BindCurrentStage(task, "delivery", directory);
+
+        var tooLarge = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            Plans.ReplanAsync(task.Id, StageRequest(task, run.Id, "delivery"), default));
+        Assert.AreEqual("PLAN_CURRENT_DIRECTORY_TOO_LARGE", tooLarge.Message);
+
+        var request = new AcquisitionPlanReplanInput(task.Task.PlanRevision, run.Id, "Register manually delivered files.",
+            [new("main", new() {Requirement = "notRequired"}, [], InputMode: "stageDirectory", InputStage: "delivery")],
+            RetryDeliveryOnly: true);
+        var revised = await Plans.ReplanAsync(task.Id, request, default);
+        var input = revised.Plan!.Parts.Single().ContinueFrom!;
+        var capture = (await Artifacts.GetArtifactAsync(input.ArtifactId))!;
+        Assert.AreEqual(fileCount, capture.Manifest.Entries.Count);
+        Assert.IsTrue(AcquisitionCurrentDirectoryFiles.IsDeliveryOnlyStageCapture(capture));
+        Assert.IsNull(revised.PlanHistory.Last().ArtifactEvidence);
+        Assert.AreEqual(capture.Fingerprint, input.Fingerprint);
+        var delivery = revised.StageDirectories!.Parts["main"].Delivery!;
+        Assert.AreEqual(directory, delivery.Directory);
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => AcquisitionPlanArtifactInputGuard.RequireAsync(
+            Db, Artifacts, task.Id, "main", input, default, publicationInputOnly: true,
+            capturedDelivery: delivery with {BindingId = Guid.NewGuid().ToString("N")}));
+
+        var compiled = AcquisitionPlanCompiler.Compile(revised.Plan);
+        CollectionAssert.AreEqual(new[] {AcquisitionPlanContinueFilesActivity.ActivityKind, "fs.publishArtifacts"},
+            compiled.Nodes.Select(node => node.Kind).ToArray());
+        var payload = AcquisitionPlanCompiler.Workset(task.Id, revised.Task.PlanRevision, revised.Plan, revised.SourceRefs);
+        var next = new WorkflowRunDbModel {StartedAt = DateTime.UtcNow, Status = WorkflowRunStatus.Running,
+            Sources = [new() {Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString()}]};
+        Db.WorkflowRuns.Add(next);
+        await Db.SaveChangesAsync();
+        WorkflowExecutionContext Context(int index) => new() {RunId = next.Id, WorkflowDefinitionId = 0,
+            TriggerKind = CloudWorkflow.Trigger, Payload = payload, ActivityConfigJson = compiled.Nodes[index].ConfigJson,
+            Services = _services, Logger = NullLogger.Instance};
+        var attached = await new AcquisitionPlanContinueFilesActivity().ProcessItemAsync(Context(0), payload, default);
+        var delivered = await new PublishFileArtifactsActivity().ProcessItemAsync(Context(1), attached.Replacement!, default);
+        Assert.IsNull(delivered.Suspension, delivered.Suspension?.PromptJson);
+        var output = ((DownloadWorkset)delivered.Replacement!).Targets.Single();
+        Assert.AreEqual(directory, output.PublishedDirectory);
+        Assert.AreEqual(fileCount, output.PublishedFiles!.Count);
+        Assert.IsTrue(download.Files.All(File.Exists));
+        Assert.AreEqual(0, _continuationArchives.Extractions);
+        Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
+    }
 }

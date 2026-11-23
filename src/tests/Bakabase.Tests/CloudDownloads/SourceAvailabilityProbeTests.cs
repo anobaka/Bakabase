@@ -119,6 +119,23 @@ public sealed class SourceAvailabilityProbeTests
     }
 
     [TestMethod]
+    public void PixeldrainFreeQuotaErrorsRemainDistinctFromTransientRateLimits()
+    {
+        using var quota = JsonDocument.Parse("{\"success\":false,\"value\":\"transfer_limit_exceeded\"}");
+        var quotaResult = PixeldrainAvailabilityProbe.Classify(HttpStatusCode.Forbidden, quota.RootElement, "file", false);
+        Assert.AreEqual(SourceAvailabilityStatuses.TemporarilyUnavailable, quotaResult.Status);
+        Assert.AreEqual("SOURCE_DOWNLOAD_QUOTA_EXCEEDED", quotaResult.ReasonCode);
+
+        using var concurrent = JsonDocument.Parse("{\"success\":false,\"value\":\"max_concurrent_downloads\"}");
+        var concurrentResult = PixeldrainAvailabilityProbe.Classify(HttpStatusCode.Forbidden, concurrent.RootElement, "file", false);
+        Assert.AreEqual("SOURCE_RATE_OR_SERVICE_LIMIT", concurrentResult.ReasonCode);
+
+        using var list = JsonDocument.Parse("{\"success\":true,\"id\":\"list\",\"file_count\":1,\"files\":[{\"id\":\"file\",\"size\":12,\"availability\":\"transfer_limit_exceeded\"}]}");
+        var listResult = PixeldrainAvailabilityProbe.Classify(HttpStatusCode.OK, list.RootElement, "list", true);
+        Assert.AreEqual("SOURCE_DOWNLOAD_QUOTA_EXCEEDED", listResult.ReasonCode);
+    }
+
+    [TestMethod]
     public void PixeldrainListCannotPassWithMissingEntriesOrWrongSelectedItem()
     {
         using var partial = JsonDocument.Parse("""{"success":true,"id":"list","file_count":2,"files":[{"id":"file","size":12,"can_download":true}]}""");

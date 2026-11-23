@@ -69,4 +69,9 @@ public record AcquisitionTaskDbModel
 
     /// <summary>UTC tombstone. The task identity, source deduplication and execution history are retained.</summary>
     public DateTime? DeletedAt { get; set; }
+    /// <summary>Null means this scope predates persistent cleanup receipts.</summary>
+    public string? DeletedIntermediateCleanup { get; set; }
+    public string? DeletedDeliveryCleanup { get; set; }
+    /// <summary>Only machine reason codes from the latest cleanup attempt. Contains no file paths.</summary>
+    public string? DeletedCleanupReasons { get; set; }
 }

@@ -12,6 +12,7 @@ public partial class CompressedFileService
     private static async Task<ArchiveOpenOptions?> ResolveAutomaticOpeningAsync(string path,
         ArchiveOpenOptions? opening, CancellationToken ct)
     {
+        path = opening?.InspectionPath(path) ?? path;
         if (opening?.Mode != null || opening?.TypeArgument != null || opening?.ZipStructure != null)
             return opening; // Explicit parser/format decisions remain authoritative.
         ct.ThrowIfCancellationRequested();

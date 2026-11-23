@@ -267,9 +267,7 @@ public class BTaskManager : IAsyncDisposable
         if (task.Task.ConcurrencyGroup == null || task.Task.GetConcurrencyLimit == null) return false;
         var active = GetActiveGroupTasks(task);
         var limit = Math.Max(1, task.Task.GetConcurrencyLimit());
-        if (active.Length != limit) return active.Length > limit;
-        // Check and start under the scheduling gate. At most one extra task can enter.
-        return task.Task.CanShareConcurrencySlotWith is not { } canShare || !active.All(t => canShare(t.Task));
+        return active.Length >= limit;
     }
 
     /// <summary>

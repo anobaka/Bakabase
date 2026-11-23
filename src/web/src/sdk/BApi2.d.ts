@@ -772,6 +772,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/acquisition/plans/{id}/preparation/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewAcquisitionPreparation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/plans/{id}/preparation/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ConfirmAcquisitionPreparation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition/plans/legacy-overview/import": {
         parameters: {
             query?: never;
@@ -910,6 +942,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["KeepPreparedAcquisitionFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/plans/{id}/prepared-files/defer-processing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DeferPreparedAcquisitionProcessing"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1278,6 +1326,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["RetireSupersededAcquisitionDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/acquisition/tasks/delete/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDeletedAcquisitionTasks"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4916,6 +4980,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["UploadDownloadCenterTorrent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-center/tasks/{id}/existing-files/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewDownloadCenterExistingFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-center/tasks/{id}/existing-files/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["VerifyDownloadCenterExistingFiles"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14801,6 +14897,13 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskStatus": 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadFileVerification": {
+            stage: string;
+            /** Format: int32 */
+            workflowRunId?: number;
+            /** Format: date-time */
+            observedAt: string;
+        };
         /**
          * Format: int32
          * @description [1: TorrentMetadata, 2: LocalFiles]
@@ -14842,6 +14945,7 @@ export interface components {
             status: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskStatus"];
             downloadPath: string;
             current?: string;
+            fileVerification?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadFileVerification"];
             /** Format: int32 */
             failureTimes: number;
             autoRetry: boolean;
@@ -16561,6 +16665,7 @@ export interface components {
             sourceRevision?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionPlanSourceRevisionEvidence"];
         };
         "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionPlanSource": {
+            manualAvailabilityOverride?: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionSourceAvailabilityOverride"];
             id: string;
             url: string;
             originalUrl?: string;
@@ -16586,6 +16691,14 @@ export interface components {
             evidence: string;
             evidenceVersion: string;
             selectedExecutionIdentity?: string;
+        };
+        "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionSourceAvailabilityOverride": {
+            /** Format: int32 */
+            taskId: number;
+            sourceFingerprint: string;
+            resolvedSourceFingerprint: string;
+            /** Format: date-time */
+            confirmedAt: string;
         };
         "Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionStageDirectories": {
             /** Format: int32 */
@@ -17870,6 +17983,28 @@ export interface components {
             /** Format: date-time */
             appliedAt: string;
         };
+        "Bakabase.Modules.Downloader.Cloud.CloudChecksumMismatch": {
+            /** Format: int32 */
+            blockCount: number;
+            /** Format: int32 */
+            mismatchedBlockCount: number;
+            /** Format: int32 */
+            firstBlockNumber: number;
+            /** Format: int64 */
+            firstBlockBytes: number;
+        };
+        "Bakabase.Modules.Downloader.Cloud.CloudDownloadReuseEstimate": {
+            /** Format: int32 */
+            fileCount: number;
+            /** Format: int64 */
+            totalBytes: number;
+            /** Format: int32 */
+            candidateFileCount: number;
+            /** Format: int64 */
+            candidateBytes: number;
+            /** Format: int64 */
+            readonly requiredDownloadBytes: number;
+        };
         "Bakabase.Modules.Downloader.Cloud.CloudSource": {
             id: string;
             url: string;
@@ -17887,6 +18022,13 @@ export interface components {
             extractionPlanJson?: string;
             groupId?: string;
             version?: string;
+        };
+        "Bakabase.Modules.Downloader.Cloud.CloudVerificationLocation": {
+            /** Format: int32 */
+            fileNumber: number;
+            /** Format: int32 */
+            fileCount: number;
+            checksumMismatch?: components["schemas"]["Bakabase.Modules.Downloader.Cloud.CloudChecksumMismatch"];
         };
         "Bakabase.Modules.Downloader.Cloud.SourceAvailabilityResult": {
             status: string;
@@ -18738,6 +18880,16 @@ export interface components {
             /** Format: int32 */
             mediaCount: number;
         };
+        "Bakabase.Modules.Workflow.Abstractions.Components.WorkflowCapabilityRuntime": {
+            id: string;
+            displayName: string;
+            displayNameKey?: string;
+            status?: string;
+            waitReason?: string;
+            executionPolicy?: string;
+            /** Format: int32 */
+            maximumParallelism?: number;
+        };
         /**
          * Format: int32
          * @description [0: Unknown, 1: Manual, 2: Module, 3: SystemEvent, 4: Schedule, 5: Watch]
@@ -19314,6 +19466,11 @@ export interface components {
             availability: string;
             redacted: boolean;
         };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionBatchActionSelection": {
+            /** Format: int32 */
+            taskId: number;
+            action: string;
+        };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionContinuation": {
             batchId: string;
             scope: string;
@@ -19365,6 +19522,31 @@ export interface components {
             workflowRunId?: number;
             reasonCode?: string;
         };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeferPreparedProcessingInput": {
+            /** Format: int32 */
+            expectedRevision: number;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeletedTaskPage": {
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            items: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeletedTaskRow"][];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeletedTaskRow": {
+            /** Format: int32 */
+            taskId: number;
+            title?: string;
+            /** Format: date-time */
+            deletedAt: string;
+            intermediateCleanup: string;
+            deliveryCleanup: string;
+            lastReasonCodes: string[];
+            awaitingFileReleaseScopes: string[];
+            waitingRunIds: number[];
+        };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionDownloadDestinationApplyInput": {
             previewToken: string;
             taskIds: number[];
@@ -19376,6 +19558,8 @@ export interface components {
             newDirectory?: string;
             canApply: boolean;
             reasonCode: string;
+            canPreviewReuse: boolean;
+            reuseEstimate?: components["schemas"]["Bakabase.Modules.Downloader.Cloud.CloudDownloadReuseEstimate"];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionDownloadDestinationPreview": {
             previewToken: string;
@@ -19390,6 +19574,8 @@ export interface components {
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionDownloadDestinationPreviewInput": {
             taskIds: number[];
             targetRootDirectory: string;
+            reuseExistingFiles?: boolean;
+            downloadTaskIds?: number[];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionDownloadDestinationResult": {
             appliedTaskIds: number[];
@@ -19416,6 +19602,7 @@ export interface components {
             startedDownloadTaskIds: number[];
             indeterminateDownloadTaskIds: number[];
             reasonCode?: string;
+            verifiedDownloadTaskIds?: number[];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionDraftBuilderInput": {
             /** Format: int32 */
@@ -19455,6 +19642,7 @@ export interface components {
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionDraftSource": {
             id: string;
             title?: string;
+            groupId?: string;
             url: string;
             kind: string;
             providerId?: string;
@@ -19542,14 +19730,17 @@ export interface components {
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalRecoveryBatchApplyInput": {
             previewToken: string;
-            taskIds: number[];
+            taskIds?: number[];
             allowStorageOverride: boolean;
             reserveMode?: string;
+            confirmTransferRetry?: boolean;
+            selections?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionBatchActionSelection"][];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalRecoveryBatchCapacityInput": {
             previewToken: string;
-            taskIds: number[];
+            taskIds?: number[];
             reserveMode?: string;
+            selections?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionBatchActionSelection"][];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalRecoveryBatchCapacityPreview": {
             previewToken: string;
@@ -19557,6 +19748,7 @@ export interface components {
             volumes: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalRecoveryBatchVolume"][];
             requiresSpaceConfirmation: boolean;
             estimateIncomplete: boolean;
+            selections?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionBatchActionSelection"][];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalRecoveryBatchPreview": {
             previewToken: string;
@@ -19574,6 +19766,8 @@ export interface components {
             taskIds: number[];
             mode: string;
             order: string;
+            /** Format: int32 */
+            maxAdaptiveIterations?: number;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalRecoveryBatchPreviewRow": {
             /** Format: int32 */
@@ -19594,6 +19788,8 @@ export interface components {
             canOverrideStorage: boolean;
             currentStepKind?: string;
             recoveryAction?: string;
+            availableActions?: string[];
+            defaultAction?: string;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionLocalRecoveryBatchRow": {
             /** Format: int32 */
@@ -19623,6 +19819,7 @@ export interface components {
             estimatedAdditionalBytes?: number;
             estimateIncomplete: boolean;
             exceedsUsable: boolean;
+            currentWritesExceedUsable?: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanArtifactCandidate": {
             partId: string;
@@ -19764,6 +19961,7 @@ export interface components {
             storagePolicy?: components["schemas"]["Bakabase.Modules.Workflow.Artifacts.ArtifactStoragePolicy"];
             canEditStoragePolicy: boolean;
             canKeepPreparedFiles?: boolean;
+            readonly canDeferPreparedProcessing?: boolean;
             planHistory: components["schemas"]["Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionPlanRevision"][];
             preparationAttempts: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanPreparationAttempt"][];
             replanArtifacts: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanArtifactCandidate"][];
@@ -19780,6 +19978,41 @@ export interface components {
             storagePolicy?: components["schemas"]["Bakabase.Modules.Workflow.Artifacts.ArtifactStoragePolicy"];
             storagePolicyOverrides?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionStoragePolicyOverrideInput"][];
             sourceReplacement?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanSourceReplacement"];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationGroup": {
+            id: string;
+            title?: string;
+            required: boolean;
+            selectionMode: string;
+            selectedSourceIds: string[];
+            recommendedSourceIds: string[];
+            sources: components["schemas"]["Bakabase.Service.Components.DownloadIntents.DownloadCandidateView"][];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationInput": {
+            /** Format: int32 */
+            expectedRevision: number;
+            sources?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionDraftSource"][];
+            relationship?: string;
+            selectedSourceIds?: string[];
+            checkAvailability?: boolean;
+            allowUnavailableSourceIds?: string[];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationPreview": {
+            /** Format: int32 */
+            expectedRevision: number;
+            title: string;
+            providerPriority: string[];
+            requiresRelationshipChoice: boolean;
+            relationship?: string;
+            groups: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationGroup"][];
+            requirements: components["schemas"]["Bakabase.Service.Components.DownloadIntents.DownloadRequirement"][];
+            canConfirm: boolean;
+            allowUnavailableSourceIds: string[];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessedCheckpointCleanup": {
+            verifiedResultArtifactIds: string[];
+            retainedDownloadArtifactIds: string[];
+            intermediateArtifactIds: string[];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionRecoveryApplyInput": {
             previewToken: string;
@@ -19878,6 +20111,8 @@ export interface components {
             /** Format: int32 */
             taskId: number;
             /** Format: int32 */
+            planRevision: number;
+            /** Format: int32 */
             workflowRunId?: number;
             workflowStatus?: string;
             /** Format: int32 */
@@ -19885,6 +20120,7 @@ export interface components {
             /** Format: int32 */
             stepCount?: number;
             currentNodeKind?: string;
+            capability?: components["schemas"]["Bakabase.Modules.Workflow.Abstractions.Components.WorkflowCapabilityRuntime"];
             stage?: string;
             /** Format: double */
             progress?: number;
@@ -20200,6 +20436,7 @@ export interface components {
             outputDirectory?: string;
             applyCurrentSettings?: boolean;
             overrideRetention: boolean;
+            preserveOriginalDownloads: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionStoragePolicyRow": {
             /** Format: int32 */
@@ -20269,6 +20506,7 @@ export interface components {
             shared: boolean;
             filesTruncated: boolean;
             sizeUnknown: boolean;
+            registeredFilesOnly: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskDeleteCleanupNode": {
             /** Format: int32 */
@@ -20289,6 +20527,7 @@ export interface components {
             retainedDirectories?: string[];
             removedDirectories?: string[];
             fileStatisticsIncomplete: boolean;
+            unselectedDirectories: string[];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskDeleteInput": {
             previewId: string;
@@ -20299,6 +20538,9 @@ export interface components {
             retryRetainedFiles?: boolean;
             deleteDeliveredFiles?: boolean;
             taskIds?: number[];
+            selectedCleanupDirectories?: {
+                [key: string]: string[];
+            };
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskDeletePreview": {
             previewId: string;
@@ -20411,6 +20653,16 @@ export interface components {
             factCounts: {
                 [key: string]: number;
             };
+            runtimeCapabilityCounts: {
+                [key: string]: number;
+            };
+            runtimeExecutionStateCounts: {
+                [key: string]: number;
+            };
+            runtimeCapabilities: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskRuntimeFacet"][];
+            taskRuntimeFacets: {
+                [key: string]: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskRuntimeFacet"];
+            };
             taskFacts: {
                 [key: string]: string[];
             };
@@ -20420,6 +20672,17 @@ export interface components {
             sizeEstimates: {
                 [key: string]: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionSizeEstimate"];
             };
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskRuntimeFacet": {
+            activityKind: string;
+            capabilityId?: string;
+            capabilityName?: string;
+            capabilityNameKey?: string;
+            executionState?: string;
+            waitReason?: string;
+            executionPolicy?: string;
+            /** Format: int32 */
+            maximumParallelism?: number;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskSearchInput": {
             keyword?: string;
@@ -20432,6 +20695,9 @@ export interface components {
             sort?: string;
             attentionTags?: string[];
             facts?: string[];
+            downloadSource?: string;
+            capabilityId?: string;
+            executionState?: string;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionWorkspaceCleanupPreview": {
             previewId: string;
@@ -20460,6 +20726,7 @@ export interface components {
             fileCount: number;
             /** Format: int64 */
             bytes: number;
+            processedCheckpointCleanup?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessedCheckpointCleanup"];
         };
         "Bakabase.Service.Components.Acquisition.PostParserAcquisitionResult": {
             /** Format: int32 */
@@ -20782,6 +21049,7 @@ export interface components {
             processingPlan?: components["schemas"]["Bakabase.Service.Components.DownloadIntents.ProcessingPlanPreflightResult"];
             availability?: components["schemas"]["Bakabase.Modules.Downloader.Cloud.SourceAvailabilityResult"];
             sourceDisabled?: boolean;
+            canSelectManually?: boolean;
         };
         "Bakabase.Service.Components.DownloadIntents.DownloadIntentPreflight": {
             mode: string;
@@ -20891,6 +21159,38 @@ export interface components {
             stepCount: number;
             issues: components["schemas"]["Bakabase.Service.Components.DownloadIntents.DownloadRequirement"][];
             blocksSubmission: boolean;
+        };
+        "Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesInput": {
+            previewToken: string;
+        };
+        "Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesPreview": {
+            /** Format: int32 */
+            siteTaskId: number;
+            /** Format: int32 */
+            workflowRunId?: number;
+            providerId?: string;
+            outputDirectory?: string;
+            /** Format: int32 */
+            fileCount?: number;
+            /** Format: int64 */
+            totalBytes?: number;
+            canVerify: boolean;
+            reasonCode?: string;
+            previewToken?: string;
+            verificationProblem?: components["schemas"]["Bakabase.Service.Components.Downloader.DownloadVerificationProblem"];
+        };
+        "Bakabase.Service.Components.Downloader.DownloadCenterVerifiedFiles": {
+            /** Format: int32 */
+            siteTaskId: number;
+            /** Format: int32 */
+            downloadResultId?: number;
+            verificationProblem?: components["schemas"]["Bakabase.Service.Components.Downloader.DownloadVerificationProblem"];
+        };
+        "Bakabase.Service.Components.Downloader.DownloadVerificationProblem": {
+            reasonCode: string;
+            /** Format: date-time */
+            checkedAt: string;
+            location: components["schemas"]["Bakabase.Modules.Downloader.Cloud.CloudVerificationLocation"];
         };
         "Bakabase.Service.Components.Federation.ManagedLibraryInfo": {
             serverId: string;
@@ -24501,6 +24801,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionContinuation"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeletedTaskPage]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeletedTaskPage"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionDownloadDestinationPreview]": {
             /** Format: int32 */
             code: number;
@@ -24542,6 +24848,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationPreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationPreview"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionRecoveryDiagnosisCancellation]": {
             /** Format: int32 */
@@ -24764,6 +25076,18 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.DownloadIntents.DownloadIntentSubmission"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesPreview]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesPreview"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Downloader.DownloadCenterVerifiedFiles]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Downloader.DownloadCenterVerifiedFiles"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.FileProcessing.ArchiveQuarantineResult]": {
             /** Format: int32 */
@@ -27152,6 +27476,68 @@ export interface operations {
             };
         };
     };
+    PreviewAcquisitionPreparation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationPreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationPreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationPreview]"];
+                };
+            };
+        };
+    };
+    ConfirmAcquisitionPreparation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                };
+            };
+        };
+    };
     ImportLegacyAcquisitionOverview: {
         parameters: {
             query?: never;
@@ -27433,6 +27819,37 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
                 "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
                 "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionKeepPreparedFilesInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanTaskDetail]"];
+                };
+            };
+        };
+    };
+    DeferPreparedAcquisitionProcessing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeferPreparedProcessingInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeferPreparedProcessingInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeferPreparedProcessingInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeferPreparedProcessingInput"];
             };
         };
         responses: {
@@ -28133,6 +28550,32 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionSupersededDeliveryResult]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionSupersededDeliveryResult]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionSupersededDeliveryResult]"];
+                };
+            };
+        };
+    };
+    GetDeletedAcquisitionTasks: {
+        parameters: {
+            query?: {
+                pageIndex?: number;
+                pageSize?: number;
+                filter?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeletedTaskPage]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeletedTaskPage]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionDeletedTaskPage]"];
                 };
             };
         };
@@ -35003,6 +35446,61 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]"];
+                };
+            };
+        };
+    };
+    PreviewDownloadCenterExistingFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesPreview]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesPreview]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesPreview]"];
+                };
+            };
+        };
+    };
+    VerifyDownloadCenterExistingFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesInput"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesInput"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesInput"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.Downloader.DownloadCenterExistingFilesInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Downloader.DownloadCenterVerifiedFiles]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Downloader.DownloadCenterVerifiedFiles]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Downloader.DownloadCenterVerifiedFiles]"];
                 };
             };
         };

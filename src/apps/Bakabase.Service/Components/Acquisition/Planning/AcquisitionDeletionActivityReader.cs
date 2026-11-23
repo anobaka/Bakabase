@@ -27,8 +27,8 @@ public sealed record AcquisitionDeletionActivity(IReadOnlyList<int> RunIds, stri
 {
     internal AcquisitionDeletionWriters? Writers { get; init; }
     internal IReadOnlyList<AcquisitionDeletionRun>? ObservedRuns { get; init; }
-    internal bool CanAbandon(AcquisitionTaskDbModel task) =>
-        task.DeletedAt == null && BlockReason == null && ObservedRuns is {Count: > 0} &&
+    internal bool CanAbandon(AcquisitionTaskDbModel task, bool reviewDeletedWaits) =>
+        (task.DeletedAt != null) == reviewDeletedWaits && BlockReason == null && ObservedRuns is {Count: > 0} &&
         ObservedRuns.All(r => r.PendingSignalJson == null && r.Status is not (WorkflowRunStatus.Running or WorkflowRunStatus.Pending)) &&
         (task.WorkflowRunId == null || ObservedRuns.Any(r => r.Id == task.WorkflowRunId)) &&
         AcquisitionLocalRecoveryQueueEntry.Read(task) is not {IsOpen: true} && AcquisitionContinuationEntry.Read(task) is not {IsOpen: true};

@@ -8,13 +8,13 @@ import GeneralTaskDetailModal from "../GeneralTaskDetailModal";
 import GeneralTaskRow from "../GeneralTaskRow";
 import type { CenterTask } from "../../downloadCenter";
 
-const mocks = vi.hoisted(() => ({ get: vi.fn() }));
+const mocks = vi.hoisted(() => ({ get: vi.fn(), portal: vi.fn() }));
 
 vi.mock("@/sdk/BApi", () => ({
   default: { downloadCenter: { getDownloadCenterTask: mocks.get } },
 }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
-  useBakabaseContext: () => ({ createPortal: vi.fn() }),
+  useBakabaseContext: () => ({ createPortal: mocks.portal }),
 }));
 vi.mock("@/components/Workflow/WorkflowRunDetailModal", () => ({ default: () => null }));
 
@@ -74,6 +74,20 @@ function mount() {
 afterEach(() => vi.clearAllMocks());
 
 describe("general download task details", () => {
+  it("can review an eligible site task before its detailed site row has loaded", async () => {
+    const available = { ...task, category: "site", provider: "baidu", id: "site:18", siteTaskId: 18, availableActions: ["verifyExistingFiles"] };
+    const props = { onSelect: vi.fn(), onAction: vi.fn(), onSource: vi.fn(), onFolder: vi.fn() };
+    const row = (entry: CenterTask) => <HeroUIProvider disableAnimation><GeneralTaskRow task={entry} {...props} /></HeroUIProvider>;
+    const view = render(row(available));
+    const label = "downloadCenter.existingFiles.action";
+    fireEvent.click(screen.getByRole("button", { name: label }));
+    expect(mocks.portal).toHaveBeenCalledWith(expect.any(Function), { task: available });
+    expect(props.onAction).not.toHaveBeenCalled();
+    view.rerender(row({ ...available, stage: "VerifyingSource" }));
+    expect(screen.queryByRole("button", { name: label })).toBeNull();
+    view.rerender(row({ ...available, availableActions: ["retry"] }));
+    expect(screen.queryByRole("button", { name: label })).toBeNull();
+  });
   it("opens the actual detail dialog from a list row without selecting or changing the task", async () => {
     const callbacks = mount();
     fireEvent.click(screen.getByRole("button", { name: "downloadCenter.action.detail" }));

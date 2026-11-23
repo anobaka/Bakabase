@@ -15,6 +15,30 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 /// <summary>History remains readable; deleted owners and superseded continuations cannot be restarted.</summary>
 public sealed class AcquisitionWorkflowRunMutationGuard(BakabaseDbContext db) : IWorkflowRunMutationGuard
 {
+    public void ValidateAnswer(Bakabase.Modules.Workflow.Abstractions.Models.Domain.WorkflowActivity? activity,
+        string? waitReason, string? prompt, string signalJson)
+    {
+        // Other workflows own their signal formats. Inspect only the two group-scoped actions.
+        JsonDocument parsed;
+        try { parsed = JsonDocument.Parse(signalJson); }
+        catch (JsonException) { return; }
+        using var json = parsed;
+        if (json.RootElement.ValueKind != JsonValueKind.Object) return;
+        var action = json.RootElement.EnumerateObject().LastOrDefault(p => p.Name.Equals("action", StringComparison.OrdinalIgnoreCase)).Value;
+        if (action.ValueKind != JsonValueKind.String || action.GetString() is not
+            (FileProcessing.FileProcessingResumeActions.InspectGroup or FileProcessing.FileProcessingResumeActions.RetainGroup)) return;
+        if (activity?.Kind != AcquisitionPlanProcessingActivity.ActivityKind || waitReason != "cloud.fileProcessing")
+            throw new InvalidOperationException("FILE_PROCESSING_RECOVERY_WAIT_CHANGED");
+        try
+        {
+            var config = JsonSerializer.Deserialize<AcquisitionPlanProcessingConfig>(activity.ConfigJson, JsonSerializerOptions.Web)!;
+            var signal = json.RootElement.Deserialize<CloudDownloads.CloudFileProcessingSignal>(JsonSerializerOptions.Web)!;
+            FileProcessing.FileProcessingResumeActions.ValidateGroup(prompt, config.TargetId, "MissingVolumes", signal, config.StopAfterStepId);
+        }
+        catch (Exception error) when (error is JsonException or ArgumentException)
+        { throw new InvalidOperationException("FILE_PROCESSING_RECOVERY_WAIT_CHANGED", error); }
+    }
+
     public async Task EnsureCanMutateAsync(int runId, CancellationToken ct = default)
     {
         var ownerIds = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking().Where(s => s.WorkflowRunId == runId &&

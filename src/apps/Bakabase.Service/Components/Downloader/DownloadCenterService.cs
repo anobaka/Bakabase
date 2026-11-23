@@ -13,6 +13,7 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.Bittorrent.Models;
+using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Modules.Downloader.Models;
 using Bakabase.Modules.Downloader.Models.Tasks;
 using Bakabase.Modules.HttpDownloads.Abstractions;
@@ -31,7 +32,7 @@ namespace Bakabase.Service.Components.Downloader;
 /// <summary>One task identity and command surface; providers retain their queues, configuration and recovery.</summary>
 public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskService sites,
     IBtDownloadManager bt, IHttpDownloadManager http, DownloadTaskExecutionService executions,
-    DownloadTaskRegistry registry, BTaskManager backgroundTasks)
+    DownloadTaskRegistry registry, BTaskManager backgroundTasks, IEnumerable<CloudExistingFileVerificationCapability>? verificationCapabilities = null)
 {
     public async Task<IReadOnlyList<CommonTask>> ListAsync(CancellationToken ct = default)
     {
@@ -54,30 +55,40 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
         var summaries = (await executions.GetAsync(siteTasks.Select(t => t.Id).ToArray(), ct))
             .ToDictionary(s => s.DownloadTaskId);
         var snapshots = new List<CommonTask>(siteTasks.Length + btJobs.Count + httpJobs.Count);
+        var verificationProviders = (verificationCapabilities ?? []).Select(c => c.ProviderId).ToHashSet(StringComparer.Ordinal);
         foreach (var source in siteTasks)
         {
             var owner = owners.GetValueOrDefault(source.Id);
             var cloudOwner = cloudOwners.GetValueOrDefault(source.Id);
             var run = ownerRuns.GetValueOrDefault(owner?.WorkflowRunId ?? cloudOwner?.WorkflowRunId ?? 0);
-            var summary = summaries.GetValueOrDefault(source.Id);
-            var status = summary?.Status ?? SiteStatus(source.Status);
+            var verification = source.FileVerification;
+            var summary = verification == null ? summaries.GetValueOrDefault(source.Id) : null;
+            var status = verification != null ? "running" : summary?.Status ?? SiteStatus(source.Status);
+            IReadOnlyList<string> actions = verification != null ? [] : owner == null && (cloudOwner == null || run?.Status is
+                    WorkflowRunStatus.Success or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted)
+                    ? SiteActions(source, status)
+                    : cloudOwner != null && SiteActions(source, status).Contains("stop") ? ["stop"] : [];
+            if (verification == null && owner == null && cloudOwner is {Kind: "download", State: "started" or "starting" or "queued"} &&
+                run is {Status: WorkflowRunStatus.Failed or WorkflowRunStatus.Waiting, PendingSignalJson: null} &&
+                source.Status is DownloadTaskStatus.Failed or DownloadTaskStatus.Disabled &&
+                CloudSites.Sources.Any(site => site.ThirdPartyId == source.ThirdPartyId && verificationProviders.Contains(site.ProviderId)))
+                actions = [.. actions, "verifyExistingFiles"];
             snapshots.Add(new CommonTask
             {
                 Id = $"site:{source.Id}", Category = "site", Provider = "site", ProviderTaskId = source.Id.ToString(),
                 SiteTaskId = source.Id, ThirdPartyId = (int)source.ThirdPartyId, Key = source.Key,
                 Name = source.DisplayName, OutputDirectory = source.DownloadPath, Status = status,
-                Stage = summary?.Status ?? source.Current, Progress = summary != null ? summary.Progress : (double)source.Progress,
-                CompletedBytes = source.TransferredBytes ?? source.DownloadedBytes, TotalBytes = source.TotalBytes,
-                SpeedBytesPerSecond = summary?.SpeedBytesPerSecond ?? source.DownloadSpeedBytesPerSecond,
+                Stage = verification?.Stage ?? summary?.Status ?? source.Current,
+                Progress = verification != null ? null : summary != null ? summary.Progress : (double)source.Progress,
+                CompletedBytes = verification == null ? source.TransferredBytes ?? source.DownloadedBytes : null,
+                TotalBytes = verification == null ? source.TotalBytes : null,
+                SpeedBytesPerSecond = verification == null ? summary?.SpeedBytesPerSecond ?? source.DownloadSpeedBytesPerSecond : null,
                 Error = status is "failed" or "processingFailed" ? source.Message : null,
-                CreatedAt = source.CreatedAt.ToUniversalTime(), UpdatedAt = source.DownloadStatusUpdateDt.ToUniversalTime(),
+                CreatedAt = source.CreatedAt.ToUniversalTime(), UpdatedAt = verification?.ObservedAt.UtcDateTime ?? source.DownloadStatusUpdateDt.ToUniversalTime(),
                 CompletedAt = status == "completed" ? source.CompletedAt : null,
                 OriginKind = owner == null && cloudOwner == null ? "manual" : "workflow", OriginId = owner?.AcquisitionTaskId.ToString() ?? cloudOwner?.Id,
                 WorkflowRunId = run?.Id ?? owner?.WorkflowRunId, WorkflowDefinitionId = run?.WorkflowDefinitionId,
-                AvailableActions = owner == null && (cloudOwner == null || run?.Status is
-                    WorkflowRunStatus.Success or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted)
-                    ? SiteActions(source, status)
-                    : cloudOwner != null && SiteActions(source, status).Contains("stop") ? ["stop"] : [],
+                AvailableActions = actions,
                 Execution = summary == null ? null : new DownloadTaskExecution
                 {
                     DownloadTaskId = source.Id, Status = summary.Status, TotalCount = summary.TotalCount,

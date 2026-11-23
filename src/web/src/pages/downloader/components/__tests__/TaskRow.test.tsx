@@ -2,7 +2,7 @@ import type { DownloadTask } from "@/core/models/DownloadTask";
 import type { TaskRowProps } from "../TaskRow";
 
 import { HeroUIProvider } from "@heroui/react";
-import { act } from "react";
+import { act } from "@testing-library/react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,7 +15,10 @@ import {
   ThirdPartyId,
 } from "@/sdk/constants";
 
-const { dangerToast } = vi.hoisted(() => ({ dangerToast: vi.fn() }));
+const { dangerToast, portal } = vi.hoisted(() => ({ dangerToast: vi.fn(), portal: vi.fn() }));
+vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
+  useBakabaseContext: () => ({ createPortal: portal }),
+}));
 
 // Keep real HeroUI press handling and portalled menus: bubbling keyboard events were the bug.
 vi.mock("@/components/bakaui", async () => ({
@@ -86,10 +89,12 @@ async function show(
   execution?: TaskRowProps["execution"],
   onDownloadWithBt = vi.fn().mockResolvedValue(undefined),
   onDownloadTorrentFile = vi.fn().mockResolvedValue(undefined),
+  centerTask?: TaskRowProps["centerTask"],
 ) {
   const props: TaskRowProps = {
     task: { ...task, ...overrides },
     execution,
+    centerTask,
     statusColor: "default",
     progressColor: "primary",
     formatDateTime: (value) => String(value),
@@ -118,12 +123,30 @@ async function show(
 }
 
 beforeEach(() => {
+  portal.mockClear();
   dangerToast.mockClear();
   originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
+});
+
+it("opens a review only when the download center advertises existing-file verification", async () => {
+  const center: NonNullable<TaskRowProps["centerTask"]> = {
+    id: "site:17", siteTaskId: 17, category: "site", provider: "baidu", providerTaskId: "17", name: "Saved files",
+    status: "failed", createdAt: "2026-10-19", updatedAt: "2026-10-19", outputDirectory: "/files",
+    originKind: "workflow", files: [], availableActions: ["verifyExistingFiles"],
+  };
+  const label = "downloadCenter.existingFiles.action";
+  const callbacks = await show({}, undefined, undefined, undefined, undefined, center);
+  await click(element(label));
+  expect(portal).toHaveBeenCalledWith(expect.any(Function), { task: center });
+  expect(callbacks.onStart).not.toHaveBeenCalled();
+  await show({}, undefined, undefined, undefined, undefined, { ...center, stage: "VerifyingLocalFiles" });
+  expect(element(label)).toBeNull();
+  await show({}, undefined, undefined, undefined, undefined, { ...center, availableActions: ["retry"] });
+  expect(element(label)).toBeNull();
 });
 afterEach(async () => {
   await act(async () => root.unmount());
@@ -248,6 +271,24 @@ describe("download task row interaction", () => {
     expect(props.onClick).not.toHaveBeenCalled();
     await click(address);
     expect(props.onClick).toHaveBeenCalledExactlyOnceWith(task.id, expect.anything());
+  });
+
+  it.each(["VerifyingSource", "VerifyingLocalFiles"])("shows %s without stale transfer or failure data", async (stage) => {
+    await show({
+      status: DownloadTaskStatus.Failed,
+      downloadedBytes: 1572864,
+      downloadSpeedBytesPerSecond: 1536,
+      estimatedRemainingSeconds: 65,
+      message: "previous provider failure",
+      fileVerification: { stage, observedAt: "2026-11-20T04:00:00Z" },
+    });
+    expect(container.textContent).toContain(`downloadCenter.stage.${stage}`);
+    expect(container.textContent).toContain("downloadCenter.status.running");
+    expect(container.textContent).not.toMatch(/previous provider failure|42%|MiB|KiB|estimatedRemaining/);
+    expect(container.querySelector('[role="progressbar"]')).not.toHaveAttribute("aria-valuenow");
+    await show({ status: DownloadTaskStatus.Complete, progress: 100 });
+    expect(container.textContent).not.toContain(stage);
+    expect(container.textContent).toContain("100%");
   });
 
   it("orders size, speed, remaining time, and percent while downloading", async () => {

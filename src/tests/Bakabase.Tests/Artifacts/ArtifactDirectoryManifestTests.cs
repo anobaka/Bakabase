@@ -230,6 +230,77 @@ public sealed class ArtifactDirectoryManifestTests
         Assert.AreEqual(2, _archives.Calls);
     }
 
+    [DataTestMethod]
+    [DataRow("retired")]
+    [DataRow("noBoundary")]
+    [DataRow("otherOwner")]
+    [DataRow("priorChanged")]
+    [DataRow("wrongFinal")]
+    [DataRow("writerChanged")]
+    [DataRow("unknownArchiveInput")]
+    [DataRow("overlap")]
+    [DataRow("missingTransition")]
+    [DataRow("retained")]
+    [DataRow("explicitKeep")]
+    [DataRow("incomplete")]
+    [DataRow("outside")]
+    public async Task Reclaiming_intermediate_extraction_outputs_requires_their_registered_boundary_and_full_delivery_chain(string mutation)
+    {
+        var plan = new FileProcessingPlan {Requirement = "required", Steps = [
+            new() {Id = "outer", Op = "extractArchive"}, new() {Id = "inner", Op = "extractArchive", Input = "outer"}]};
+        var policy = new ArtifactStoragePolicy {SourceCleanup = "keep", CleanupIntermediates = true};
+        var executor = new FileProcessingPlanExecutor(_archives);
+        var workspace = Path.Combine(_root, "two-steps");
+        var raw = await ArtifactManifestFiles.CaptureAsync(_input, [_archive]);
+        var input = new ArtifactRecord("input", "read", "download", _input, [_archive], raw,
+            raw.Fingerprint, ArtifactLocationState.Available, false, [], null);
+        var outer = await executor.ExecuteAsync(plan, _input, [_archive], workspace, stopAfterStepId: "outer", storagePolicy: policy);
+        var final = await executor.ExecuteAsync(plan, _input, [_archive], workspace, stopAfterStepId: "inner", storagePolicy: policy);
+        Assert.IsTrue(outer.Completed, outer.Message); Assert.IsTrue(final.Completed, final.Message);
+        ArtifactRecord Register(string id, FileProcessingPlanResult result) => new(id, id, "processedFiles",
+            result.OutputDirectory!, result.Files, result.FileLineage!.OutputManifest!, result.FileLineage!.OutputManifest!.Fingerprint,
+            ArtifactLocationState.Retired, true, [input.Id], null);
+        var prior = Register("prior", outer);
+        var delivered = Register("final", final);
+        var file = Directory.GetFiles(workspace, "state.json", SearchOption.AllDirectories).Single();
+        var directory = Path.GetDirectoryName(file)!;
+        var state = JsonSerializer.Deserialize<FileProcessingPlanExecutor.State>(await File.ReadAllTextAsync(file), Json)!;
+        var saved = state.Outputs["outer"].Single();
+        var writer = state.Operations[FileProcessingPlanExecutor.StepKey("outer") + "-0"];
+        var checkpoint = new FileProcessingCheckpointInput(directory, raw, "inner", delivered.RootDirectory, delivered.Fingerprint);
+        var boundaries = new Dictionary<string, ArtifactRecord> {["outer"] = prior};
+        var extra = Path.Combine(Path.GetDirectoryName(saved.Path)!, "user-added.zip");
+        await File.WriteAllTextAsync(extra, "inner");
+        switch (mutation)
+        {
+            case "noBoundary": boundaries.Clear(); break;
+            case "otherOwner": boundaries["outer"] = prior with {ParentArtifactIds = ["other"]}; break;
+            case "priorChanged": boundaries["outer"] = prior with {Fingerprint = "other"}; break;
+            case "wrongFinal": delivered = delivered with {RootDirectory = workspace}; break;
+            case "writerChanged": writer.OutputManifest = delivered.Manifest; break;
+            case "unknownArchiveInput": writer.ArchiveInputs = ["inputs/foreign.zip"]; break;
+            case "overlap": state.Operations["other-0"] = new() {OutputDirectory = writer.OutputDirectory}; break;
+            case "missingTransition": state.FileTransitions.Clear(); break;
+            case "retained": state.RetainedFiles.Add(saved.Path); break;
+            case "explicitKeep": plan.Steps[0] = plan.Steps[0] with {StoragePolicy = new() {SourceCleanup = "keep"}}; break;
+            case "incomplete": state.Completed = false; break;
+            case "outside": writer.OutputDirectory = _input; break;
+        }
+        await File.WriteAllTextAsync(file, JsonSerializer.Serialize(state, Json));
+        // Registrations may already be retired; their immutable manifests remain usable.
+        Directory.Delete(prior.RootDirectory, true);
+        var result = await FileProcessingPlanExecutor.ReadReclaimableStepOutputsAsync(checkpoint, plan, input, delivered,
+            boundaries, default);
+        if (mutation == "retired")
+        {
+            var entry = result.Single();
+            Assert.AreEqual(Path.GetRelativePath(directory, saved.Path).Replace('\\', '/'), entry.RelativePath);
+            Assert.IsTrue(FileDispositionProofs.SameContent(prior.Manifest.Entries.Single(), entry));
+        }
+        else Assert.IsEmpty(result);
+        Assert.IsTrue(File.Exists(saved.Path) && File.Exists(extra) && File.Exists(_archive));
+    }
+
     private sealed class Archives : IArchiveExtractionService
     {
         public int Calls { get; private set; }

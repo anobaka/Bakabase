@@ -59,6 +59,11 @@ public class WorkflowRunRehydrator<TDbContext> where TDbContext : DbContext
 
     public async Task MarkInterruptedRunsAsync(CancellationToken ct = default)
     {
+        // Old cancellation paths could leave an accepted answer on a stopped cursor.
+        // Retain the frozen prompt, input and history, but never requeue this revoked answer.
+        await _db.Set<WorkflowRunDbModel>().Where(r => r.Status == WorkflowRunStatus.Cancelled &&
+                r.CompletedAt != null && r.PendingSignalJson != null)
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.PendingSignalJson, (string?)null), ct);
         // Attempts are history, not restart checkpoints. A process loss ends the old attempt;
         // re-entering the cursor creates another attempt rather than editing this one.
         await _db.Set<WorkflowNodeExecutionDbModel>().Where(n => n.Status == "running")

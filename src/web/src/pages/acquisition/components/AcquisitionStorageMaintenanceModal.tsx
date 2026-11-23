@@ -34,6 +34,8 @@ export default function AcquisitionStorageMaintenanceModal({
   const [submitting, setSubmitting] = useState(false);
   const [overrideRetention, setOverrideRetention] = useState(false);
   const retentionConsent = useRef(false);
+  const [includeOriginalDownloads, setIncludeOriginalDownloads] = useState(false);
+  const downloadConsent = useRef(false);
   const currentPreviewId = useRef<string>();
   const [preview, setPreview] = useState<StorageMaintenancePreview>();
   const [result, setResult] = useState<StorageMaintenanceResult>();
@@ -63,7 +65,13 @@ export default function AcquisitionStorageMaintenanceModal({
           previewController.current?.abort();
           previewController.current = new AbortController();
           initial.current = retentionConsent.current
-            ? acquisitionStorageApi.preview(mode, captured.current, previewController.current.signal, true)
+            ? acquisitionStorageApi.preview(
+                mode,
+                captured.current,
+                previewController.current.signal,
+                true,
+                downloadConsent.current,
+              )
             : acquisitionStorageApi.preview(mode, captured.current, previewController.current.signal);
         }
         const next = await initial.current;
@@ -185,6 +193,10 @@ export default function AcquisitionStorageMaintenanceModal({
             if (busy.current) return;
             retentionConsent.current = value;
             setOverrideRetention(value);
+            if (!value) {
+              downloadConsent.current = false;
+              setIncludeOriginalDownloads(false);
+            }
             void load(true);
           }}
         >
@@ -192,6 +204,23 @@ export default function AcquisitionStorageMaintenanceModal({
           <span className="block text-xs text-default-500">
             {t("acquisition.storage.batch.cleanup.overrideRetentionHint")}
           </span>
+        </Checkbox>
+      )}
+      {mode === "cleanup" && overrideRetention && !result && (
+        <Checkbox
+          className="ml-4"
+          size="sm"
+          aria-label={t("acquisition.storage.batch.cleanup.includeOriginalDownloads")}
+          isSelected={includeOriginalDownloads}
+          isDisabled={submitting}
+          onValueChange={(value) => {
+            if (busy.current) return;
+            downloadConsent.current = value;
+            setIncludeOriginalDownloads(value);
+            void load(true);
+          }}
+        >
+          {t("acquisition.storage.batch.cleanup.includeOriginalDownloads")}
         </Checkbox>
       )}
       {loading ? (
@@ -333,7 +362,9 @@ export default function AcquisitionStorageMaintenanceModal({
                           {row.title || t("acquisition.unnamed", { id: row.taskId })}
                         </p>
                         <p className="text-xs text-default-500">
-                          {reason(row.reasonCode ?? (row.eligible ? "eligible" : undefined))}
+                          {row.processedCheckpointCleanup
+                            ? t("acquisition.storage.batch.cleanup.processedCheckpoint")
+                            : reason(row.reasonCode ?? (row.eligible ? "eligible" : undefined))}
                         </p>
                         {mode === "cleanup" && row.eligible && (
                           <p className="text-xs">

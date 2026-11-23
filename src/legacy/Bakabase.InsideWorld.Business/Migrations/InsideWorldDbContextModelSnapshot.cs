@@ -1397,6 +1397,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("LastFileVerificationJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Message")
                         .HasColumnType("TEXT");
 
@@ -2300,6 +2303,15 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DeletedCleanupReasons")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletedDeliveryCleanup")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletedIntermediateCleanup")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Error")
                         .HasColumnType("TEXT");
 
@@ -2361,6 +2373,8 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("ResourceId");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("DeletedAt", "Id");
 
                     b.ToTable("AcquisitionTasks");
                 });

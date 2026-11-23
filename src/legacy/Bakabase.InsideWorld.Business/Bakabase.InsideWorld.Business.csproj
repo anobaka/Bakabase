@@ -8,7 +8,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Bakabase.Tests" />
-    <EmbeddedResource Include="../../tools/BaiduPcsBridge/main.go" LogicalName="Bakabase.BaiduPcsBridge.main.go" />
+    <EmbeddedResource Include="../../tools/BaiduPcsBridge/*.go" Exclude="../../tools/BaiduPcsBridge/*_test.go" LogicalName="Bakabase.BaiduPcsBridge.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../tools/BaiduPcsBridge/upstream-patch.json" LogicalName="Bakabase.BaiduPcsBridge.upstream-patch.json" />
     <EmbeddedResource Include="../../tools/ZipPasswordBridge/main.py" LogicalName="Bakabase.ZipPasswordBridge.main.py" />
   </ItemGroup>
 

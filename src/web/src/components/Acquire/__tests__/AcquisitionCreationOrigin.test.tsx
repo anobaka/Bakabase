@@ -1,12 +1,18 @@
 import type { ReactNode } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { expect, it, vi } from "vitest";
 import AcquisitionCreationOrigin from "../AcquisitionCreationOrigin";
 import type { PlanTask } from "../PlanTask/models";
 
-const lookup = vi.hoisted(() => vi.fn());
+const { lookup, createPortal } = vi.hoisted(() => ({
+  lookup: vi.fn(),
+  createPortal: vi.fn(),
+}));
 vi.mock("@/sdk/BApi", () => ({ default: { postParser: { searchPostParserTasks: lookup } } }));
+vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({
+  useBakabaseContext: () => ({ createPortal }),
+}));
 vi.mock("@/components/bakaui", () => ({
   Modal: ({ children, title }: { children: ReactNode; title: string }) => <div role="dialog" aria-label={title}>{children}</div>,
   Spinner: () => <span>loading</span>,
@@ -34,20 +40,32 @@ function Location() {
   return <output>{current.pathname + current.search}</output>;
 }
 
-it("opens the exact source task rather than a broad keyword search and retains the original post link", () => {
-  const close = vi.fn();
+it("opens parsed content on the acquisition page and confirms before navigating to the exact parsing task", async () => {
+  lookup.mockResolvedValue({ code: 0, data: { items: [{ id: 411, text: "Parsed post content" }] } });
+  const destroy = vi.fn();
+  createPortal.mockReturnValue({ destroy });
   render(
     <MemoryRouter initialEntries={["/acquisitions"]}>
-      <AcquisitionCreationOrigin origins={[origin]} onNavigate={close} />
+      <AcquisitionCreationOrigin origins={[origin]} compact />
       <Location />
     </MemoryRouter>,
   );
-  expect(screen.getByRole("link", { name: "acquisition.origin.openPost" })).toHaveAttribute(
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.origin.postTask" }));
+  const modal = within(await screen.findByRole("dialog", { name: "acquisition.origin.postTask" }));
+  expect(await modal.findByText("Parsed post content")).toBeVisible();
+  expect(modal.getByRole("link", { name: "acquisition.origin.openPost" })).toHaveAttribute(
     "href",
     origin.url,
   );
-  fireEvent.click(screen.getByRole("button", { name: "acquisition.origin.postTask" }));
-  expect(close).toHaveBeenCalledOnce();
+  expect(screen.getByText("/acquisitions")).toBeVisible();
+  fireEvent.click(modal.getByRole("button", { name: "acquisition.origin.openPostTask" }));
+  expect(createPortal).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    title: "common.confirm.navigateAway",
+    footer: { actions: ["cancel", "ok"] },
+  }));
+  expect(screen.getByText("/acquisitions")).toBeVisible();
+  act(() => createPortal.mock.calls[0][1].onOk());
+  expect(destroy).toHaveBeenCalledOnce();
   expect(screen.getByText("/post-parser?taskId=411")).toBeVisible();
 });
 
@@ -87,7 +105,7 @@ it("keeps the list compact while detail shows retained title and revision", () =
 
 it("inspects only the linked post, displays saved extraction passwords and preserves the acquisition route", async () => {
   lookup.mockResolvedValue({ code: 0, data: { items: [{
-    id: 411, revision: 6, text: "Text from the saved post",
+    id: 411, revision: 6, text: "Text from the saved post", link: origin.url,
     results: { DownloadInfo: { data: { resources: [
       { code: "share-code-only", password: "outer-password", extraction: { steps: [
         { op: "extractArchive", password: "inner-password" },
@@ -95,20 +113,23 @@ it("inspects only the linked post, displays saved extraction passwords and prese
     ] } } },
   }] } });
   render(<MemoryRouter initialEntries={["/acquisitions"]}>
-    <AcquisitionCreationOrigin origins={[origin]} compact inspectPosts /><Location />
+    <AcquisitionCreationOrigin origins={[{ ...origin, url: undefined }]} compact /><Location />
   </MemoryRouter>);
   fireEvent.click(screen.getByRole("button", { name: "acquisition.origin.postTask" }));
   expect(await screen.findByText("inner-password")).toBeVisible();
   expect(screen.getByText("outer-password")).toBeVisible();
   expect(screen.getByText("Text from the saved post")).toBeVisible();
   expect(screen.getByText("acquisition.origin.postRevisionChanged")).toBeVisible();
+  expect(screen.getByRole("link", { name: "acquisition.origin.openPost" })).toHaveAttribute("href", origin.url);
   expect(screen.getByText("/acquisitions")).toBeVisible();
   expect(lookup).toHaveBeenCalledWith({ locateTaskId: 411, pageIndex: 1, pageSize: 1 }, expect.objectContaining({ sensitiveResponse: true }));
 });
 
 it("does not display a nearby search result when the source post was removed", async () => {
   lookup.mockResolvedValue({ code: 0, data: { items: [{ id: 412, text: "Other post" }] } });
-  render(<AcquisitionCreationOrigin origins={[origin]} compact inspectPosts />);
+  render(<MemoryRouter>
+    <AcquisitionCreationOrigin origins={[origin]} compact />
+  </MemoryRouter>);
   fireEvent.click(screen.getByRole("button", { name: "acquisition.origin.postTask" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("acquisition.origin.postUnavailable");
   expect(screen.queryByText("Other post")).toBeNull();

@@ -14,6 +14,15 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 
 public sealed partial class AcquisitionPlanService
 {
+    private async Task<HashSet<string>> RegisteredCleanupIntermediatesAsync(
+        IReadOnlyList<ArtifactWorkspaceCleanupPreview> candidates, CancellationToken ct)
+    {
+        var ids = candidates.Select(c => c.ArtifactId).Distinct().ToArray();
+        var intermediates = await db.Set<ArtifactDbModel>().AsNoTracking()
+            .Where(a => ids.Contains(a.Id) && a.Kind == "processedFiles").Select(a => a.Id).ToListAsync(ct);
+        return intermediates.ToHashSet(StringComparer.Ordinal);
+    }
+
     private async Task<ArtifactDeliveryCleanupAuthorization?> ExplicitCleanupAuthorizationAsync(
         AcquisitionTaskDbModel row, string version, IReadOnlyList<int> owners, CancellationToken ct,
         PublishedArtifactAncestorCleanup ancestors, ArtifactDeliveryCleanupConsent? expected = null)
@@ -53,6 +62,7 @@ public sealed partial class AcquisitionPlanService
         var ownerRuns = new Dictionary<int, IReadOnlyList<int>>();
         var consents = new Dictionary<int, ArtifactDeliveryCleanupConsent>();
         var dependencies = new Dictionary<int, IReadOnlyDictionary<string, IReadOnlyList<ArtifactCleanupRetirementDependency>>>();
+        var reviewed = new Dictionary<int, ReviewedCheckpointSelection>();
         var included = new HashSet<string>(StringComparer.Ordinal);
         foreach (var id in ids)
         {
@@ -60,6 +70,32 @@ public sealed partial class AcquisitionPlanService
             var (reason, artifactIds, _, owners) = await CleanupArtifacts(row, ct);
             var candidates = new List<ArtifactWorkspaceCleanupPreview>();
             var version = row == null ? "" : StorageVersion(row);
+            if (reason == "not_completed" && ancestors != null && await ReadCheckpointReviewAsync(row, ct) is {} wait)
+            {
+                IReadOnlyList<ReviewedProcessingBoundary> sources;
+                try
+                {
+                    await GuardStoragePathsAsync(row!, guard);
+                    sources = await ancestors.ReviewedBoundariesAsync(wait, guard, ct);
+                }
+                catch (Exception error) when (PublishedArtifactAncestorCleanup.UnavailableReviewEvidence(error)) { sources = []; }
+                if (sources.Count == 0 || sources.Any(s => included.Contains(s.ArtifactId)))
+                    result.Add(new(id, row!.Title, false, "processed_checkpoint_not_reclaimable", [], 0, 0));
+                else
+                {
+                    var intermediateIds = sources.Select(s => s.ArtifactId).ToArray();
+                    reviewed[id] = new(wait, sources);
+                    versions[id] = version;
+                    ownerRuns[id] = [wait.RunId];
+                    included.UnionWith(intermediateIds);
+                    result.Add(new(id, row!.Title, true, null, intermediateIds, sources.Sum(s => s.FileCount), sources.Sum(s => s.Bytes))
+                    {
+                        ProcessedCheckpointCleanup = new(wait.Parts.Select(p => p.ResultId).ToArray(),
+                            wait.Parts.Select(p => p.DownloadId).ToArray(), intermediateIds)
+                    });
+                }
+                continue;
+            }
             var authorization = reason == null && ancestors != null
                 ? await ExplicitCleanupAuthorizationAsync(row!, version, owners, ct, ancestors) : null;
             if (reason == null && authorization == null) reason = "CLEANUP_DELIVERY_PROOF_MISSING";
@@ -72,6 +108,11 @@ public sealed partial class AcquisitionPlanService
                 candidates.AddRange(await ancestors!.PreviewForDeletionAsync(
                     authorization.Consent.Publications.Select(p => p.ArtifactId).ToArray(), owners, authorization, ct));
                 candidates = candidates.Where(c => c.Eligible && !included.Contains(c.ArtifactId)).ToList();
+                if (input.PreserveOriginalDownloads && candidates.Count > 0)
+                {
+                    var intermediates = await RegisteredCleanupIntermediatesAsync(candidates, ct);
+                    candidates.RemoveAll(c => !intermediates.Contains(c.ArtifactId));
+                }
                 foreach (var candidate in candidates) await guard(candidate.ResultDirectory);
                 if (candidates.Count == 0) reason = "nothing_to_reclaim";
                 else
@@ -87,7 +128,8 @@ public sealed partial class AcquisitionPlanService
         }
         var preview = new AcquisitionWorkspaceCleanupPreview(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddMinutes(10), result, versions.Count);
         previews.Add(preview.PreviewId, new("cleanup", preview.ExpiresAt, versions)
-            {Artifacts = captured, CleanupOwnerRuns = ownerRuns, CleanupConsents = consents, CleanupDependencies = dependencies});
+            {Artifacts = captured, CleanupOwnerRuns = ownerRuns, CleanupConsents = consents, CleanupDependencies = dependencies,
+                PreserveOriginalDownloads = input.PreserveOriginalDownloads, ReviewedCheckpoints = reviewed});
         return preview;
     }
 
@@ -112,12 +154,44 @@ public sealed partial class AcquisitionPlanService
                 }
                 if (busy) {skipped.Add(new(id, "task_busy")); continue;}
                 var row = await Tasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id, ct);
+                if (entry.ReviewedCheckpoints.TryGetValue(id, out var reviewed))
+                {
+                    async Task<bool> Current(CancellationToken token)
+                    {
+                        var current = await Tasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id, token);
+                        return current != null && StorageVersion(current) == entry.Versions[id] &&
+                            (await ReadCheckpointReviewAsync(current, token))?.Identity == reviewed.Wait.Identity;
+                    }
+                    if (ancestors == null || artifacts == null || !await Current(ct))
+                    { skipped.Add(new(id, "revision_changed")); continue; }
+                    await GuardStoragePathsAsync(row!, guard);
+                    var sources = await ancestors.ReviewedBoundariesAsync(reviewed.Wait, guard, ct);
+                    if (!sources.SequenceEqual(reviewed.Sources)) { skipped.Add(new(id, "revision_changed")); continue; }
+                    var results = new ReviewedResultValidation(artifacts, reviewed.Wait, guard);
+                    if (!await results.VerifyAsync(ct)) { skipped.Add(new(id, "processed_checkpoint_not_reclaimable")); continue; }
+                    var done = true;
+                    foreach (var source in sources)
+                    {
+                        var outcome = await ancestors.ReclaimReviewedBoundaryAsync(reviewed, source, guard, Current, results, ct);
+                        removedFiles += outcome.RemovedFiles;
+                        removedBytes += outcome.RemovedBytes;
+                        if (!outcome.Completed) { skipped.Add(new(id, "processed_checkpoint_not_reclaimable")); done = false; break; }
+                    }
+                    if (done) completed.Add(id);
+                    continue;
+                }
                 var (reason, _, _, owners) = await CleanupArtifacts(row, ct);
                 if (reason == null && StorageVersion(row!) != entry.Versions[id]) reason = "revision_changed";
                 var authorization = reason == null && ancestors != null
                     ? await ExplicitCleanupAuthorizationAsync(row!, entry.Versions[id], owners, ct, ancestors, entry.CleanupConsents[id]) : null;
                 if (reason == null && authorization == null) reason = "CLEANUP_DELIVERY_PROOF_MISSING";
                 if (reason != null) {skipped.Add(new(id, reason)); continue;}
+                if (entry.PreserveOriginalDownloads)
+                {
+                    var intermediates = await RegisteredCleanupIntermediatesAsync(entry.Artifacts[id], ct);
+                    if (entry.Artifacts[id].Any(c => !intermediates.Contains(c.ArtifactId)))
+                    {skipped.Add(new(id, "files_changed")); continue;}
+                }
                 authorization!.RestoreRetirementDependencies(entry.CleanupDependencies[id]);
                 await GuardStoragePathsAsync(row!, guard);
                 var verified = true;
@@ -144,6 +218,8 @@ public sealed partial class AcquisitionPlanService
                 }
                 if (succeeded) completed.Add(id);
             }
+            catch (Exception error) when (entry.ReviewedCheckpoints.ContainsKey(id) && PublishedArtifactAncestorCleanup.UnavailableReviewEvidence(error))
+            { skipped.Add(new(id, "processed_checkpoint_not_reclaimable")); }
             finally {foreach (var gate in runGates) gate.Release(); taskGate.Release();}
         }
         var result = new AcquisitionWorkspaceCleanupResult(completed, removedFiles, removedBytes, skipped);

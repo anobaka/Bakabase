@@ -447,7 +447,11 @@ export const SiteDownloadForm = forwardRef<
             )}
           </dl>
         )}
-        {!isAdding && task && <EstimatedRemainingTime task={task} />}
+        {!isAdding && task && (task.fileVerification ? (
+          <p role="status" className="text-sm text-default-600">
+            {t(`downloadCenter.stage.${task.fileVerification.stage}`, { defaultValue: task.fileVerification.stage })}
+          </p>
+        ) : <EstimatedRemainingTime task={task} />)}
         <div className="grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] items-center gap-2">
           {thirdPartyId == null && (
             <>

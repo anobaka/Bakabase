@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
@@ -44,7 +45,7 @@ public sealed partial class FileArtifactDeliveryAssessmentTests
         store = new(db, () => appData);
         services = new ServiceCollection().AddScoped(_ => new BakabaseDbContext(options))
             .AddScoped<IArtifactOperationStore>(sp => new ArtifactOperationStore(sp.GetRequiredService<BakabaseDbContext>(), () => appData))
-            .AddSingleton(_ => processor).BuildServiceProvider();
+            .AddSingleton(_ => processor).AddSingleton<IFileArtifactProcessor>(_ => processor).BuildServiceProvider();
         processor = new(store, new(archives), new(archives), () => appData, services.GetRequiredService<IServiceScopeFactory>());
     }
     [TestCleanup]
@@ -53,11 +54,12 @@ public sealed partial class FileArtifactDeliveryAssessmentTests
         await services.DisposeAsync(); await db.DisposeAsync();
         if (Directory.Exists(root)) Directory.Delete(root, true);
     }
-    private WorkflowExecutionContext Context(DownloadWorkset item, string? prompt = null, bool auto = false) => new()
+    private WorkflowExecutionContext Context(DownloadWorkset item, string? prompt = null, bool auto = false,
+        IServiceProvider? serviceProvider = null) => new()
     {
         RunId = 12, WorkflowDefinitionId = 1, TriggerKind = CloudWorkflow.Trigger, Payload = item,
         ActivityConfigJson = Json(new FileArtifactDeliveryAssessmentConfig("part", auto)), ResumePromptJson = prompt,
-        Services = services, Logger = NullLogger.Instance
+        Services = serviceProvider ?? services, Logger = NullLogger.Instance
     };
     private async Task<ArtifactRecord> Register(string[] names, bool extracted = true)
     {
@@ -388,6 +390,64 @@ public sealed partial class FileArtifactDeliveryAssessmentTests
         Assert.IsTrue(artifact.Files.All(File.Exists));
     }
 
+    [TestMethod]
+    public async Task Filename_encoding_wait_accepts_a_valid_revised_extraction_plan()
+    {
+        var artifact = await Register(["inner.zip"]);
+        await File.WriteAllTextAsync(artifact.Files.Single(), "legacy-name");
+        artifact = await store.AdoptAsync(new("legacy-name", "legacy-name", "files.process", "fixture"),
+            new(artifact.RootDirectory, artifact.Files, "processedFiles", true, MetadataJson: artifact.MetadataJson), "fixture");
+        var item = Workset(artifact);
+        var first = await activity.ProcessItemAsync(Context(item), item, default);
+        var waiting = (DownloadWorkset)first.Suspension!.Item;
+        var encodingWait = await activity.ResumeAsync(Context(waiting, first.Suspension.PromptJson), waiting,
+            Answer(waiting, new() {TargetId = "part", ExtractionPlanJson = Json(Extract)}), default);
+        var retained = (DownloadWorkset)encodingWait.Suspension!.Item;
+        Assert.AreEqual("ArchiveNameEncodingUnsupported", retained.Targets.Single().DeliveryReview!.WaitReason);
+        Assert.AreEqual(artifact.Id, retained.Targets.Single().DeliveryReview!.ArtifactId);
+        using var prompt = JsonDocument.Parse(encodingWait.Suspension.PromptJson!);
+        Assert.IsTrue(prompt.RootElement.GetProperty("canEditPlan").GetBoolean());
+
+        var context = Context(retained, encodingWait.Suspension.PromptJson);
+        var invalid = Extract with {Steps = [Extract.Steps[0] with {ZipFileNameCodePage = (ZipFileNameCodePage)1}]};
+        await Assert.ThrowsAsync<InvalidOperationException>(() => activity.ResumeAsync(context, retained,
+            Answer(retained, new() {TargetId = "part", ExtractionPlanJson = Json(invalid)}), default));
+
+        var revised = Extract with {Steps = [Extract.Steps[0] with {ZipFileNameCodePage = ZipFileNameCodePage.JapaneseShiftJis}]};
+        var done = await activity.ResumeAsync(context, retained,
+            Answer(retained, new() {TargetId = "part", ExtractionPlanJson = Json(revised)}), default);
+        Assert.IsNull(done.Suspension);
+        var final = ((DownloadWorkset)done.Replacement!).Targets.Single();
+        Assert.AreEqual("payload", await File.ReadAllTextAsync(final.ProcessedFiles.Single()));
+        Assert.IsTrue(artifact.Files.All(File.Exists));
+    }
+
+    [TestMethod]
+    public async Task Delivery_path_conflict_can_keep_the_exact_reviewed_artifact()
+    {
+        var artifact = await Register(["archive.zip", "archive.7z删除"]);
+        var item = Workset(artifact);
+        var first = await activity.ProcessItemAsync(Context(item), item, default);
+        var waiting = (DownloadWorkset)first.Suspension!.Item;
+        var conflicting = new FileProcessingPlan {Requirement = "required", Steps =
+            [new() {Id = "rename", Op = "renameExtension", Extension = ".zip"}]};
+        var conflict = await activity.ResumeAsync(Context(waiting, first.Suspension.PromptJson), waiting,
+            Answer(waiting, new() {TargetId = "part", ExtractionPlanJson = Json(conflicting)}), default);
+        var retained = (DownloadWorkset)conflict.Suspension!.Item;
+        Assert.AreEqual("ProcessingPathConflict", retained.Targets.Single().DeliveryReview!.WaitReason);
+
+        var context = Context(retained, conflict.Suspension.PromptJson);
+        var keep = new CloudFileProcessingSignal {TargetId = "part", ArchivePolicy = "keep"};
+        await Assert.ThrowsAsync<ArgumentException>(() => activity.ResumeAsync(context, retained,
+            Answer(retained, keep, "other-fingerprint"), default));
+        var done = await activity.ResumeAsync(context, retained, Answer(retained, keep), default);
+        var final = ((DownloadWorkset)done.Replacement!).Targets.Single();
+        Assert.IsTrue(final.DeliveryReview!.Accepted);
+        Assert.AreEqual(artifact.Id, final.ProcessedArtifactId);
+        Assert.AreEqual(0, archives.Count);
+        Assert.IsTrue(artifact.Files.All(File.Exists));
+    }
+
     [DataTestMethod]
     [DataRow(false)]
     [DataRow(true)]
@@ -414,7 +474,7 @@ public sealed partial class FileArtifactDeliveryAssessmentTests
         var processActivity = new AcquisitionPlanProcessingActivity();
         var config = Json(new AcquisitionPlanProcessingConfig("part", Extract, "open"));
         using var planningServices = new ServiceCollection().AddSingleton<IArtifactOperationStore>(store)
-            .AddSingleton(processor).AddSingleton(publisher)
+            .AddSingleton<IFileArtifactProcessor>(processor).AddSingleton(publisher)
             .AddSingleton<IWorkflowActivityRegistry>(new WorkflowActivityRegistry([processActivity, activity, new PublishFileArtifactsActivity()]))
             .BuildServiceProvider();
         var context = new WorkflowExecutionContext {RunId = 12, WorkflowDefinitionId = 1, TriggerKind = CloudWorkflow.Trigger,
@@ -484,7 +544,8 @@ public sealed partial class FileArtifactDeliveryAssessmentTests
         var changedReview = waiting.Targets.Single().DeliveryReview! with {PlanJson = "updated-plan"};
         var changed = waiting with {Targets = [waiting.Targets.Single() with {DeliveryReview = changedReview}]};
         await Assert.ThrowsAsync<ArgumentException>(() => activity.ResumeAsync(Context(changed, first.Suspension.PromptJson), changed, oldAnswer, default));
-        var pin = await db.Set<ArtifactConsumerDbModel>().AsNoTracking().SingleAsync(c => c.OperationId == artifact.OperationId && c.OwnerKind == "workflow");
+        var pin = await db.Set<ArtifactConsumerDbModel>().AsNoTracking().SingleAsync(c => c.OperationId == artifact.OperationId &&
+            c.OwnerKind == "workflow" && c.ReleasedAt == null);
         Assert.AreEqual("12", pin.OwnerId); Assert.IsNull(pin.ReleasedAt);
         Assert.IsTrue(await store.HasActiveConsumersAsync(artifact.OperationId));
         Assert.AreEqual(0, archives.Count);
@@ -588,10 +649,17 @@ public sealed partial class FileArtifactDeliveryAssessmentTests
     private sealed class Archives : IArchiveExtractionService
     {
         public int Count { get; private set; }
+        public Task<ArchivePasswordProbe> ProbePasswordAsync(string file, IReadOnlyList<string?> candidates,
+            Action<string>? output, CancellationToken ct) => ProbePasswordAsync(file, candidates, output, ct, null);
         public async Task<ArchivePasswordProbe> ProbePasswordAsync(string file, IReadOnlyList<string?> candidates,
-            Action<string>? output, CancellationToken ct) =>
-            !((await File.ReadAllTextAsync(file, ct)).Contains("locked")) || candidates.Contains("secret")
+            Action<string>? output, CancellationToken ct, ArchiveOpenOptions? openOptions)
+        {
+            var content = await File.ReadAllTextAsync(file, ct);
+            if (content == "legacy-name" && openOptions?.ZipFileNameCodePage != ZipFileNameCodePage.JapaneseShiftJis)
+                throw new ArchiveNameEncodingUnsupportedException("Confirm the ZIP filename encoding.");
+            return !content.Contains("locked") || candidates.Contains("secret")
                 ? new(true, "secret", [], "", "") : new(false, null, [], "", "");
+        }
         public async Task<ArchiveExtractionResult> ExtractAsync(ArchiveExtractionRequest request, Action<int>? progress, CancellationToken ct)
         {
             Count++; Directory.CreateDirectory(request.Directory);

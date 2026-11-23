@@ -133,7 +133,7 @@ it("binds explicit retention override to a fresh preview and clears the previous
   let finish!: (value: any) => void;
   api.preview.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
   fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.storage.batch.cleanup.overrideRetention" }));
-  expect(api.preview).toHaveBeenLastCalledWith("cleanup", [1, 2], expect.any(AbortSignal), true);
+  expect(api.preview).toHaveBeenLastCalledWith("cleanup", [1, 2], expect.any(AbortSignal), true, false);
   expect(confirm("cleanup")).toBeDisabled();
   finish(preview({ previewId: "explicit-cleanup" }));
   await screen.findByText("#1 · Never started");
@@ -160,6 +160,51 @@ it("ignores a late override preview after consent is unchecked", async () => {
   fireEvent.click(screen.getByRole("button", { name: "acquisition.storage.batch.selectAll" }));
   fireEvent.click(confirm("cleanup"));
   await waitFor(() => expect(api.apply).toHaveBeenCalledExactlyOnceWith("cleanup", "retention-restored", [1]));
+});
+
+it("shows that pre-delivery cleanup preserves the download and delivery inputs", async () => {
+  const row = { taskId: 91, title: "Awaiting review", eligible: false };
+  api.preview
+    .mockResolvedValueOnce(preview({ rows: [{ ...row, reasonCode: "processed_checkpoint_requires_confirmation" }] }))
+    .mockResolvedValueOnce(preview({
+      previewId: "processed-checkpoint",
+      rows: [{
+        ...row,
+        eligible: true,
+        fileCount: 2,
+        bytes: 1024 ** 3,
+        processedCheckpointCleanup: {
+          verifiedResultArtifactIds: ["processed-output"],
+          retainedDownloadArtifactIds: ["download"],
+          intermediateArtifactIds: ["intermediate"],
+        },
+      }],
+    }));
+  render(<AcquisitionStorageMaintenanceModal mode="cleanup" taskIds={[91]} />);
+  await screen.findByText("acquisition.storage.reason.processed_checkpoint_requires_confirmation");
+  fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.storage.batch.cleanup.overrideRetention" }));
+  await screen.findByText("acquisition.storage.batch.cleanup.processedCheckpoint");
+  expect(confirm("cleanup")).toBeDisabled();
+  fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.storage.batch.selectTask" }));
+  fireEvent.click(confirm("cleanup"));
+  await waitFor(() => expect(api.apply).toHaveBeenCalledExactlyOnceWith("cleanup", "processed-checkpoint", [91]));
+});
+
+it("requires a fresh selection before also including original downloads", async () => {
+  render(<AcquisitionStorageMaintenanceModal mode="cleanup" taskIds={[1]} />);
+  await screen.findByText("#1 · Never started");
+  fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.storage.batch.cleanup.overrideRetention" }));
+  await screen.findByText("#1 · Never started");
+  const include = screen.getByRole("checkbox", { name: "acquisition.storage.batch.cleanup.includeOriginalDownloads" });
+  expect(include).not.toBeChecked();
+  fireEvent.click(screen.getByRole("checkbox", { name: "acquisition.storage.batch.selectTask" }));
+  expect(confirm("cleanup")).toBeEnabled();
+  api.preview.mockResolvedValueOnce(preview({ previewId: "include-downloads" }));
+  fireEvent.click(include);
+  await screen.findByText("#1 · Never started");
+  expect(confirm("cleanup")).toBeDisabled();
+  expect(api.preview).toHaveBeenLastCalledWith("cleanup", [1], expect.any(AbortSignal), true, true);
+  expect(api.apply).not.toHaveBeenCalled();
 });
 
 it("requires a new preview after unknown apply outcome and blocks duplicate submissions", async () => {

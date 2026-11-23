@@ -19,13 +19,13 @@ public sealed class AcquisitionSourceSelectionTests
             ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(expired ? -1 : 5)});
 
     [TestMethod]
-    public void KnownAvailableAndReadyOutrankProviderPriorityButExpiredObservationsDoNot()
+    public void EligibilityPrecedesProviderPriorityWhilePositiveHealthDoesNotOverrideIt()
     {
         var baidu = Candidate("baidu", "baidu");
         var http = Candidate("http", "http");
         Assert.AreEqual("baidu", AcquisitionSourceSelectionPolicy.Choose([http, baidu], ["baidu", "http"]).Candidate.Id);
         Assert.AreEqual("http", AcquisitionSourceSelectionPolicy.Choose([baidu with {CanSelect = false}, http], ["baidu"]).Candidate.Id);
-        Assert.AreEqual("http", AcquisitionSourceSelectionPolicy.Choose([baidu,
+        Assert.AreEqual("baidu", AcquisitionSourceSelectionPolicy.Choose([baidu,
             Candidate("http", "http", status: SourceAvailabilityStatuses.Available)], ["baidu"]).Candidate.Id);
         Assert.AreEqual("baidu", AcquisitionSourceSelectionPolicy.Choose([baidu,
             Candidate("http", "http", status: SourceAvailabilityStatuses.Available, expired: true)], ["baidu"]).Candidate.Id);
@@ -34,14 +34,26 @@ public sealed class AcquisitionSourceSelectionTests
     [DataTestMethod]
     [DataRow(SourceAvailabilityStatuses.AccessRequired)]
     [DataRow(SourceAvailabilityStatuses.TemporarilyUnavailable)]
-    public void FreshAccessAndNetworkProblemsRankBehindUnknownMirrorsWithoutChangingDefaultForUnknown(string status)
+    public void InconclusiveAccessAndNetworkObservationsPreserveTheConfiguredPriority(string status)
     {
         var first = Candidate("baidu", "baidu", status: status);
         var unknown = Candidate("other", "http");
-        Assert.AreEqual("other", AcquisitionSourceSelectionPolicy.Choose([first, unknown], ["baidu", "http"]).Candidate.Id);
+        Assert.AreEqual("baidu", AcquisitionSourceSelectionPolicy.Choose([first, unknown], ["baidu", "http"]).Candidate.Id);
         Assert.AreEqual("baidu", AcquisitionSourceSelectionPolicy.Choose([unknown,
             Candidate("baidu", "baidu", status: status, expired: true)], ["baidu", "http"]).Candidate.Id);
         Assert.AreEqual("baidu", AcquisitionSourceSelectionPolicy.Choose([unknown, Candidate("baidu", "baidu")], ["baidu", "http"]).Candidate.Id);
+    }
+
+    [TestMethod]
+    public void ConfirmedInvalidPreferredSourceIsExcludedAndHealthOnlyBreaksPriorityTies()
+    {
+        var invalid = Candidate("primary", "pixeldrain", false, SourceAvailabilityStatuses.ConfirmedUnavailable);
+        var fallback = Candidate("fallback", "gofile");
+        Assert.AreEqual("fallback", AcquisitionSourceSelectionPolicy.Choose([invalid, fallback], ["pixeldrain", "gofile"]).Candidate.Id);
+        var checkedMirror = Candidate("checked", "gofile", status: SourceAvailabilityStatuses.Available);
+        Assert.AreEqual("checked", AcquisitionSourceSelectionPolicy.Choose([fallback, checkedMirror], ["gofile"]).Candidate.Id);
+        Assert.AreEqual("fallback", AcquisitionSourceSelectionPolicy.Choose([fallback,
+            Candidate("checked", "gofile", status: SourceAvailabilityStatuses.Available, expired: true)], ["gofile"]).Candidate.Id);
     }
 
     [TestMethod]

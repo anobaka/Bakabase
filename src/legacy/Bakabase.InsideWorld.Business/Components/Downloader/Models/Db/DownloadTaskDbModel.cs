@@ -23,6 +23,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Models.Db
         public int? EndPage { get; set; }
         public string? Message { get; set; }
         public string? Checkpoint { get; set; }
+        /// <summary>Last failed existing-file check, bound to the exact provider request and task revision.</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string? LastFileVerificationJson { get; set; }
         public DownloadTaskDbModelStatus Status { get; set; } = DownloadTaskDbModelStatus.InProgress;
         public bool AutoRetry { get; set; }
         [Required]

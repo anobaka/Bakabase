@@ -7,6 +7,12 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models
 {
+    public sealed record DownloadFileVerification(string Stage, int? WorkflowRunId, DateTimeOffset ObservedAt)
+    {
+        public const string Source = "VerifyingSource";
+        public const string Local = "VerifyingLocalFiles";
+    }
+
     public class DownloadTask
     {
         public int Id { get; set; }
@@ -46,6 +52,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public DownloadTaskStatus Status { get; set; }
         public string DownloadPath { get; set; } = null!;
         public string? Current { get; set; }
+        /// <summary>The current read-only check of an existing download, independent of its persisted status.</summary>
+        public DownloadFileVerification? FileVerification { get; set; }
         public int FailureTimes { get; set; }
         public bool AutoRetry { get; set; }
         public DateTime? NextStartDt { get; set; }

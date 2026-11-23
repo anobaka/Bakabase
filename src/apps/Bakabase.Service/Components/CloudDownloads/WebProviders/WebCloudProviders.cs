@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Abstractions.Components.Network;
@@ -28,7 +29,7 @@ public sealed class GofileCloudProvider(GalleryDlService tool, AppService appSer
     public override string ProviderId => "gofile";
 }
 
-public sealed class PixeldrainCloudProvider : WebCloudProvider, ICloudDownloadRecoveryProvider
+public sealed class PixeldrainCloudProvider : WebCloudProvider, ICloudDownloadRecoveryProvider, ICloudDownloadChecksumRetryProvider
 {
     private readonly PixeldrainAvailabilityProbe _availability;
     public PixeldrainCloudProvider(GalleryDlService tool, AppService appService, BakabaseWebProxy proxy,
@@ -38,8 +39,12 @@ public sealed class PixeldrainCloudProvider : WebCloudProvider, ICloudDownloadRe
         Func<string> appData) : base(tool, appData, proxy) => _availability = availability;
 
     public override string ProviderId => "pixeldrain";
+    public Task<CloudDownloadResult> RetryChecksumMismatchAsync(CloudDownloadRequest request, DateTime failureRecordedAt,
+        Func<CloudDownloadProgress, Task> progress, CancellationToken ct) =>
+        DownloadAsync(request, progress, ct, failureRecordedAt.Ticks.ToString(CultureInfo.InvariantCulture));
+
     public bool CanRevalidateDownloadFailure(string code) => code is "PIXELDRAIN_NETWORK_ERROR" or
-        "CLOUD_NETWORK_ERROR" or "PIXELDRAIN_ACCESS_REQUIRED";
+        "CLOUD_NETWORK_ERROR" or "PIXELDRAIN_ACCESS_REQUIRED" or "LOCAL_STORAGE_UNAVAILABLE";
 
     public Task<CloudReadiness> CheckLocalRecoveryAsync(CloudDownloadRequest request, CancellationToken ct) =>
         request.Source.Kind == "share" && request.Source.MethodId is null or "pixeldrain.galleryDl"
@@ -90,8 +95,12 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
         catch (DependencyNotInstalledException e) { return new CloudReadiness(false, e.Message); }
     }
 
-    public async Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request,
-        Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
+    public Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request,
+        Func<CloudDownloadProgress, Task> progress, CancellationToken ct) =>
+        DownloadAsync(request, progress, ct, checksumRetryKey: null);
+
+    protected async Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request,
+        Func<CloudDownloadProgress, Task> progress, CancellationToken ct, string? checksumRetryKey)
     {
         if (!string.IsNullOrWhiteSpace(request.AccountId) || request.RemoteEntry != null)
             throw new NotSupportedException("This provider accepts public share URLs only.");
@@ -131,7 +140,7 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
             try
             {
                 var input = SerializeRequest(ProviderId, request, state,
-                    ResolveDownloadProxy(proxy, ProviderId, new Uri(request.Source.Url)));
+                    ResolveDownloadProxy(proxy, ProviderId, new Uri(request.Source.Url)), checksumRetryKey);
                 await process.StandardInput.WriteAsync(input.AsMemory(), ct);
                 process.StandardInput.Close();
                 while (await process.StandardOutput.ReadLineAsync(ct) is { } line)
@@ -172,10 +181,10 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
     }
 
     internal static string SerializeRequest(string providerId, CloudDownloadRequest request, string state,
-        CloudToolProxy.Settings? settings) => JsonSerializer.Serialize(new
+        CloudToolProxy.Settings? settings, string? checksumRetryKey = null) => JsonSerializer.Serialize(new
     {
         provider = providerId, url = request.Source.Url, accessCode = request.Source.AccessCode,
-        output = Path.GetFullPath(request.OutputDirectory), state, proxy = settings
+        output = Path.GetFullPath(request.OutputDirectory), state, proxy = settings, checksumRetryKey
     }, JsonSerializerOptions.Web);
 
     internal static CloudToolProxy.Settings? ResolveDownloadProxy(BakabaseWebProxy proxy, string providerId, Uri destination)

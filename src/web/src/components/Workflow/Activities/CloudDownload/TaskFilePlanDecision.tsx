@@ -22,12 +22,13 @@ function manualInstructions(saved?: string) {
 }
 
 /** One choice maps to one of the server-authorized answers for this wait. */
-export default function TaskFilePlanDecision({ targetId, saved, policies, adaptive, pathConflict, submitting, onSubmit }: {
+export default function TaskFilePlanDecision({ targetId, saved, policies, adaptive, pathConflict, allowKeepOnPathConflict, submitting, onSubmit }: {
   targetId?: string;
   saved?: string;
   policies?: Policy[];
   adaptive: boolean;
   pathConflict: boolean;
+  allowKeepOnPathConflict: boolean;
   submitting: boolean;
   onSubmit: (signal: string) => void;
 }) {
@@ -38,7 +39,9 @@ export default function TaskFilePlanDecision({ targetId, saved, policies, adapti
     { value: "autoDetect" as const, label: t("cloudDownload.processing.policy.autoDetect"), icon: "detect" as const },
     { value: "ai" as const, label: t("acquisition.processingChoice.ai"), icon: "ai" as const },
   ].filter(({ value }) => {
-    if (pathConflict) return value === "instructions" && (!policies || policies.includes(value));
+    if (pathConflict)
+      return value === "instructions" && (!policies || policies.includes(value)) ||
+        value === "keep" && allowKeepOnPathConflict && policies?.includes(value);
     if (value === "ai") return adaptive;
     return policies ? policies.includes(value) : value !== "autoDetect";
   });

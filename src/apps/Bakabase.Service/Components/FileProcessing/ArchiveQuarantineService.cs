@@ -44,7 +44,8 @@ public sealed partial class ArchiveQuarantineService
     private async Task<ArchiveQuarantineResult> QuarantineCoreAsync(string artifactId,
         IReadOnlyList<string> verifiedOutputArtifactIds, bool allowRegisteredBoundaryProof, CancellationToken ct,
         ArtifactDeliveryCleanupAuthorization? authorization = null, ArtifactCleanupFileSnapshot? snapshot = null,
-        Func<ArtifactRecord, CancellationToken, Task<IReadOnlySet<string>>>? movedEntries = null)
+        Func<ArtifactRecord, CancellationToken, Task<IReadOnlySet<string>>>? movedEntries = null,
+        IReadOnlySet<string>? expectedMovedFiles = null, ReviewedBoundaryApproval? review = null)
     {
         var gate = Gates.GetOrAdd(artifactId, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
@@ -58,6 +59,10 @@ public sealed partial class ArchiveQuarantineService
             if (prior != null)
             {
                 receipt = prior;
+                if (receipt.ReviewedBoundaryProof != review?.Source.Proof)
+                    return new(false, "SelectionChanged", receipt.Id, "SelectionChanged");
+                if (expectedMovedFiles != null && !expectedMovedFiles.IsSubsetOf(receipt.MovedBeforeDeletion))
+                    return new(false, "SelectionChanged", receipt.Id, "SelectionChanged");
                 if (receipt.Status is "Deleting" or "Purged") return new(false, receipt.Status, receipt.Id, "This source has a permanent cleanup receipt and cannot be quarantined or restored again.");
                 if (receipt.Status == "Restoring") return new(false, "Pending", receipt.Id, "Resume restoration before quarantining this artifact again.");
                 if (receipt.Status == "Quarantined") return new(true, "Quarantined", receipt.Id);
@@ -66,26 +71,34 @@ public sealed partial class ArchiveQuarantineService
             {
                 if (artifact.State != ArtifactLocationState.Available)
                     return new(false, "Blocked", Message: "The source artifact is not available for quarantine.");
-                await VerifyOutputs(artifact, verifiedOutputArtifactIds, ct, allowRegisteredBoundaryProof, authorization);
+                await VerifyOutputs(artifact, verifiedOutputArtifactIds, ct, allowRegisteredBoundaryProof, authorization, review);
                 var moved = movedEntries == null ? new HashSet<string>(StringComparer.Ordinal) :
                     (await movedEntries(artifact, ct)).ToHashSet(StringComparer.Ordinal);
                 var absent = snapshot != null || moved.Count > 0
                     ? ConfirmAbsentEntries(artifact.RootDirectory, artifact.Manifest, ct) : [];
                 if (snapshot == null) absent.IntersectWith(moved);
-                await VerifyManifest(artifact.RootDirectory, artifact.Manifest, ct, snapshot, absent);
+                if (expectedMovedFiles != null && !expectedMovedFiles.IsSubsetOf(absent))
+                    return new(false, "SelectionChanged", Message: "SelectionChanged");
+                var absentDirectories = (artifact.Manifest.Directories ?? []).Where(relative => moved.Contains(relative) &&
+                    ArtifactCleanupAbsence.Probe(artifact.RootDirectory, Path.Combine(artifact.RootDirectory, relative), ct) ==
+                    ArtifactCleanupPathPresence.ConfirmedAbsent).ToHashSet(StringComparer.Ordinal);
+                await VerifyManifest(artifact.RootDirectory, artifact.Manifest, ct, snapshot, absent, absentDirectories);
                 EnsureAllowed(artifact.RootDirectory, artifact.Managed);
                 var id = Guid.NewGuid().ToString("N");
                 var destination = Path.Combine(artifact.RootDirectory, ".bakabase-quarantine", id);
                 receipt = new Receipt { Id = id, ArtifactId = artifact.Id, OriginalRoot = Encode(artifact.RootDirectory),
                     QuarantineRoot = Encode(destination), Manifest = artifact.Manifest,
-                    OutputIds = verifiedOutputArtifactIds.Distinct(StringComparer.Ordinal).ToList(), Managed = artifact.Managed,
-                    AbsentBeforeDeletion = absent.ToList(), MovedBeforeDeletion = absent.Intersect(moved, StringComparer.Ordinal).ToList() };
+                    OutputIds = verifiedOutputArtifactIds.Distinct(StringComparer.Ordinal).ToList(), Managed = artifact.Managed, ReviewedBoundaryProof = review?.Source.Proof,
+                    AbsentBeforeDeletion = absent.ToList(), MovedBeforeDeletion = absent.Intersect(moved, StringComparer.Ordinal).ToList(),
+                    MovedDirectoriesBeforeDeletion = absentDirectories.ToList() };
                 if (authorization != null) receipt.Consents.Add(authorization.Consent);
                 await Save(receipt, ct); // A crash after the fence still leaves a recoverable intent.
             }
-            await VerifyOutputs(artifact, receipt.OutputIds, ct, allowRegisteredBoundaryProof, authorization);
+            await VerifyOutputs(artifact, receipt.OutputIds, ct, allowRegisteredBoundaryProof, authorization, review);
             await VerifyMovedEntriesAsync(receipt, artifact, movedEntries, ct);
-            if (artifact.State != ArtifactLocationState.Quarantined && !await _store.TryQuarantineAsync(artifact.Id, ct))
+            if (artifact.State != ArtifactLocationState.Quarantined && !(review == null
+                ? await _store.TryQuarantineAsync(artifact.Id, ct)
+                : await _store.TryQuarantineProcessingBoundaryAsync(artifact.Id, review.Source.Fingerprint, review.Source.DownloadId, review.Source.RunId, ct)))
             {
                 receipt.Status = "Blocked"; receipt.Message = "This artifact or a shared input has active consumers.";
                 await Save(receipt, ct);
@@ -99,9 +112,9 @@ public sealed partial class ArchiveQuarantineService
             // TryQuarantine already fences consumers, this durable receipt records both paths,
             // and the terminal Retired commit below records the final location. Interruption
             // resumes/restores through that same receipt, never by guessing the old root.
-            if (snapshot == null && receipt.MovedBeforeDeletion.Count == 0)
+            if (review == null && snapshot == null && receipt.MovedBeforeDeletion.Count == 0 && receipt.MovedDirectoriesBeforeDeletion.Count == 0)
                 await _store.SetLocationAsync(artifact.Id, Decode(receipt.QuarantineRoot), ArtifactLocationState.Quarantined, ct);
-            await VerifyOutputs(artifact, receipt.OutputIds, ct, allowRegisteredBoundaryProof, authorization);
+            await VerifyOutputs(artifact, receipt.OutputIds, ct, allowRegisteredBoundaryProof, authorization, review);
             receipt.Status = "Quarantined"; receipt.Message = null;
             await Save(receipt, ct);
             return new(true, receipt.Status, receipt.Id);
@@ -131,15 +144,32 @@ public sealed partial class ArchiveQuarantineService
         IReadOnlyList<string> publishedArtifactIds, Func<ArtifactRecord, CancellationToken, Task<bool>> canRetire,
         CancellationToken ct, ArtifactDeliveryCleanupAuthorization? authorization = null,
         Func<ArtifactRecord, CancellationToken, Task<IReadOnlySet<string>>>? movedEntries = null,
-        Func<CancellationToken, Task<IReadOnlyList<string>>>? releasedViews = null) =>
-        DeleteAfterDeliveryCoreAsync(artifactId, publishedArtifactIds, true, canRetire, ct, authorization, movedEntries, releasedViews);
+        Func<CancellationToken, Task<IReadOnlyList<string>>>? releasedViews = null,
+        IReadOnlySet<string>? expectedMovedFiles = null) =>
+        DeleteAfterDeliveryCoreAsync(artifactId, publishedArtifactIds, true, canRetire, ct, authorization, movedEntries, releasedViews, expectedMovedFiles);
+
+    internal async Task<bool> MatchesReviewedBoundaryAsync(string id, string proof, CancellationToken ct) =>
+        (await FindPending(id, ct))?.ReviewedBoundaryProof == proof;
+
+    internal Task<ArchiveQuarantineResult> DeleteReviewedBoundaryAsync(ReviewedBoundaryApproval review,
+        Func<ArtifactRecord, CancellationToken, Task<bool>> canRetire, CancellationToken ct) =>
+        DeleteAfterDeliveryCoreAsync(review.Source.ArtifactId, [review.Source.ResultId], true, canRetire, ct, review: review);
+
+    private static async Task VerifyReviewedBoundary(ArtifactRecord source, IReadOnlyList<string> outputs,
+        ReviewedBoundaryApproval approval, CancellationToken ct)
+    {
+        if (!source.Managed || source.Kind != "processedFiles" || source.Id != approval.Source.ArtifactId ||
+            source.OperationId != approval.Source.OperationId || !outputs.SequenceEqual([approval.Source.ResultId]) ||
+            !await approval.Verify(ct)) throw new InvalidDataException("The reviewed processing result changed.");
+    }
 
     private async Task<ArchiveQuarantineResult> DeleteAfterDeliveryCoreAsync(string artifactId,
         IReadOnlyList<string> publishedArtifactIds, bool allowProcessed,
         Func<ArtifactRecord, CancellationToken, Task<bool>>? canRetire, CancellationToken ct,
         ArtifactDeliveryCleanupAuthorization? authorization = null,
         Func<ArtifactRecord, CancellationToken, Task<IReadOnlySet<string>>>? movedEntries = null,
-        Func<CancellationToken, Task<IReadOnlyList<string>>>? releasedViews = null)
+        Func<CancellationToken, Task<IReadOnlyList<string>>>? releasedViews = null,
+        IReadOnlySet<string>? expectedMovedFiles = null, ReviewedBoundaryApproval? review = null)
     {
         var snapshot = ArtifactCleanupFileSnapshot.For(authorization);
         var source = await _store.GetArtifactAsync(artifactId, ct)
@@ -147,6 +177,9 @@ public sealed partial class ArchiveQuarantineService
         if (!source.Managed || source.Kind == "publishedFiles" || source.Kind == "processedFiles" && !allowProcessed)
             return new(false, "Blocked", Message: "Only managed source files may be permanently retired.");
         var prior = await FindPending(artifactId, ct);
+        if (prior != null && prior.ReviewedBoundaryProof != review?.Source.Proof) return new(false, "SelectionChanged", prior.Id);
+        if (expectedMovedFiles != null && prior != null && !expectedMovedFiles.IsSubsetOf(prior.MovedBeforeDeletion))
+            return new(false, "SelectionChanged", prior.Id, "SelectionChanged");
         if (prior?.Status != "Purged" && canRetire != null && !await canRetire(source, ct))
             return new(false, "Blocked", prior?.Id, "The registered input is retained by its policy or another owner.");
         if (prior?.Status != "Purged")
@@ -154,7 +187,7 @@ public sealed partial class ArchiveQuarantineService
             try
             {
                 // Validate before moving anything: a processing checkpoint alone cannot authorize deletion.
-                await VerifyPublishedOutputs(source, prior?.Status == "Deleting" ? prior.OutputIds : publishedArtifactIds, ct, allowProcessed, authorization);
+                await VerifyPublishedOutputs(source, prior?.Status == "Deleting" ? prior.OutputIds : publishedArtifactIds, ct, allowProcessed, authorization, review);
                 if (source.State == ArtifactLocationState.Available &&
                     await (authorization?.HasOtherRegisteredFilesAsync(source.Files, artifactId, ct) ??
                         _store.HasOtherRegisteredFilesAsync(source.Files, artifactId, releasedViews == null ? [] : await releasedViews(ct), ct)))
@@ -165,8 +198,10 @@ public sealed partial class ArchiveQuarantineService
         }
         if (prior?.Status is not ("Deleting" or "Purged"))
         {
-            var quarantined = await QuarantineCoreAsync(artifactId, publishedArtifactIds, allowProcessed, ct, authorization, snapshot, movedEntries);
-            if (!quarantined.Completed) return quarantined;
+            var quarantined = await QuarantineCoreAsync(artifactId, publishedArtifactIds, allowProcessed, ct, authorization, snapshot, movedEntries, expectedMovedFiles, review);
+            // A concurrent deletion may have advanced the same receipt while this caller
+            // was verifying the publication. Join that deletion under the artifact gate.
+            if (!quarantined.Completed && quarantined.Status is not ("Deleting" or "Purged")) return quarantined;
         }
         var gate = Gates.GetOrAdd(artifactId, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
@@ -175,6 +210,7 @@ public sealed partial class ArchiveQuarantineService
         try
         {
             receipt = await FindPending(artifactId, ct) ?? throw new InvalidDataException("The cleanup receipt is missing.");
+            if (receipt.ReviewedBoundaryProof != review?.Source.Proof) return new(false, "SelectionChanged", receipt.Id);
             if (receipt.Status == "Purged") return new(true, "Purged", receipt.Id);
             if (receipt.Status is not ("Quarantined" or "Deleting"))
                 return new(false, "Blocked", receipt.Id, "Finish the pending source relocation before deleting it.");
@@ -197,7 +233,7 @@ public sealed partial class ArchiveQuarantineService
                     canRetire != null && !await canRetire(source, ct))
                     return new(false, "Blocked", receipt.Id, "The quarantined inputs are still referenced by another artifact or consumer.");
                 var outputs = receipt.Status == "Deleting" ? receipt.OutputIds : publishedArtifactIds;
-                await VerifyPublishedOutputs(source, outputs, ct, allowProcessed, authorization);
+                await VerifyPublishedOutputs(source, outputs, ct, allowProcessed, authorization, review);
                 if (authorization != null && receipt.Consents.All(c => c.Id != authorization.Consent.Id))
                 {
                     receipt.Consents.Add(authorization.Consent);
@@ -205,9 +241,10 @@ public sealed partial class ArchiveQuarantineService
                 }
                 await VerifyMovedEntriesAsync(receipt, source, movedEntries, ct);
                 VerifyRecordedAbsence(receipt, ct);
+                var absentBeforeDeletion = MissingDeletionEntries(receipt);
                 if (receipt.Status != "Deleting")
                 {
-                    await VerifyManifest(root, receipt.Manifest, ct, snapshot, MissingDeletionEntries(receipt));
+                    await VerifyManifest(root, receipt.Manifest, ct, snapshot, absentBeforeDeletion);
                     receipt.OutputIds = outputs.Distinct(StringComparer.Ordinal).ToList();
                     receipt.Status = "Deleting"; receipt.Message = null;
                     if (authorization != null && receipt.Consents.All(c => c.Id != authorization.Consent.Id))
@@ -217,6 +254,8 @@ public sealed partial class ArchiveQuarantineService
                 foreach (var entry in receipt.Manifest.Entries)
                 {
                     ct.ThrowIfCancellationRequested();
+                    // A file that reappears at a previously absent name was never selected for unlinking.
+                    if (absentBeforeDeletion.Contains(entry.RelativePath)) continue;
                     var file = FileProcessingFiles.Within(Path.Combine(root, entry.RelativePath), root);
                     ArtifactManifestFiles.RejectLinks(file);
                     var presence = ArtifactCleanupAbsence.Probe(root, file, ct);
@@ -256,13 +295,19 @@ public sealed partial class ArchiveQuarantineService
     }
 
     private async Task VerifyPublishedOutputs(ArtifactRecord source, IReadOnlyList<string> ids, CancellationToken ct,
-        bool allowRegisteredBoundaryProof = false, ArtifactDeliveryCleanupAuthorization? authorization = null)
+        bool allowRegisteredBoundaryProof = false, ArtifactDeliveryCleanupAuthorization? authorization = null,
+        ReviewedBoundaryApproval? review = null)
     {
+        if (review != null)
+        {
+            await VerifyReviewedBoundary(source, ids, review, ct);
+            return;
+        }
         if (ids.Count == 0) throw new InvalidOperationException("Verified final delivery is required before permanent source cleanup.");
         foreach (var id in ids)
             if ((await _store.GetArtifactAsync(id, ct))?.Kind != "publishedFiles")
                 throw new InvalidOperationException("Only a published final artifact can authorize permanent source cleanup.");
-        await VerifyOutputs(source, ids, ct, allowRegisteredBoundaryProof, authorization);
+        await VerifyOutputs(source, ids, ct, allowRegisteredBoundaryProof, authorization, review);
     }
 
     public async Task<ArchiveQuarantineResult> RestoreAsync(string receiptId, CancellationToken ct = default)
@@ -438,7 +483,7 @@ public sealed partial class ArchiveQuarantineService
         ct.ThrowIfCancellationRequested();
         ArtifactManifestFiles.CreateDirectories(destinationRoot, receipt.Manifest);
         var absent = MissingDeletionEntries(receipt);
-        if (absent.Count > 0 && restoring)
+        if ((absent.Count > 0 || receipt.MovedDirectoriesBeforeDeletion.Count > 0) && restoring)
             throw new InvalidOperationException("This permanent cleanup includes already removed files and cannot be restored.");
         if (absent.Count > 0)
         {
@@ -505,8 +550,14 @@ public sealed partial class ArchiveQuarantineService
     }
 
     private async Task VerifyOutputs(ArtifactRecord source, IReadOnlyList<string> ids, CancellationToken ct,
-        bool allowRegisteredBoundaryProof = false, ArtifactDeliveryCleanupAuthorization? authorization = null)
+        bool allowRegisteredBoundaryProof = false, ArtifactDeliveryCleanupAuthorization? authorization = null,
+        ReviewedBoundaryApproval? review = null)
     {
+        if (review != null)
+        {
+            await VerifyReviewedBoundary(source, ids, review, ct);
+            return;
+        }
         if (ids.Count == 0) throw new InvalidOperationException("A verified successful output is required before quarantining sources.");
         var boundaryProofs = new Dictionary<string, bool>(StringComparer.Ordinal);
         var sourceFiles = source.Files.ToHashSet(FileProcessingFiles.PathComparer);
@@ -562,12 +613,16 @@ public sealed partial class ArchiveQuarantineService
     }
 
     private static async Task VerifyManifest(string root, ArtifactManifest manifest, CancellationToken ct,
-        ArtifactCleanupFileSnapshot? snapshot = null, IReadOnlySet<string>? confirmedAbsent = null)
+        ArtifactCleanupFileSnapshot? snapshot = null, IReadOnlySet<string>? confirmedAbsent = null,
+        IReadOnlySet<string>? movedDirectories = null)
     {
-        if (snapshot != null || confirmedAbsent is {Count: > 0})
+        if (snapshot != null || confirmedAbsent is {Count: > 0} || movedDirectories is {Count: > 0})
         {
             var paths = ArtifactManifestFiles.ResolveFiles(root, manifest);
-            ArtifactManifestFiles.VerifyDirectories(root, manifest);
+            ArtifactManifestFiles.VerifyDirectories(root, movedDirectories is {Count: > 0}
+                ? manifest with {Directories = manifest.Directories!.Where(d => !movedDirectories.Contains(d)).ToArray()} : manifest);
+            if (movedDirectories != null)
+                foreach (var directory in movedDirectories) RequireAbsent(root, Path.Combine(root, directory), ct);
             for (var index = 0; index < paths.Count; index++)
             {
                 if (confirmedAbsent?.Contains(manifest.Entries[index].RelativePath) == true)
@@ -647,7 +702,8 @@ public sealed partial class ArchiveQuarantineService
     {
         if (!Guid.TryParseExact(id, "N", out _)) throw new ArgumentException("Invalid quarantine receipt identity.");
         var path = FileProcessingFiles.Within(Path.Combine(_receipts, id + ".json"), _receipts);
-        return JsonSerializer.Deserialize<Receipt>(await File.ReadAllTextAsync(path, ct), Json)
+        await using var stream = File.OpenRead(path);
+        return await JsonSerializer.DeserializeAsync<Receipt>(stream, Json, ct)
             ?? throw new InvalidDataException("The quarantine receipt is invalid.");
     }
     private async Task Save(Receipt receipt, CancellationToken ct)
@@ -676,8 +732,10 @@ public sealed partial class ArchiveQuarantineService
         public bool Managed { get; set; }
         public ArtifactManifest Manifest { get; set; } = null!;
         public List<string> OutputIds { get; set; } = [];
+        public string? ReviewedBoundaryProof { get; set; }
         public List<ArtifactDeliveryCleanupConsent> Consents { get; set; } = [];
         public List<string> AbsentBeforeDeletion { get; set; } = [];
         public List<string> MovedBeforeDeletion { get; set; } = [];
+        public List<string> MovedDirectoriesBeforeDeletion { get; set; } = [];
     }
 }

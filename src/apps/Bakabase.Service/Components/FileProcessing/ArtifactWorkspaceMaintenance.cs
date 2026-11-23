@@ -23,6 +23,9 @@ public sealed record ArtifactWorkspaceCleanupPreview(string ArtifactId, string O
 {
     // Request-local presentation only. Never serialized as authority or reused by execution.
     internal IReadOnlyList<(string Path, long Bytes)>? PreviewFiles { get; init; }
+    // A confirmed moved source may retire its registration, but never unlink a file
+    // which reappeared at a path the user previewed as already absent.
+    internal IReadOnlySet<string>? ExpectedMovedFiles { get; init; }
     // Request-local physical selection identity. Distinct retired boundaries can prove
     // the same private inputs; the deletion coordinator may execute that exact set once.
     // It never replaces the candidate-specific fingerprint rechecked during execution.
@@ -201,7 +204,7 @@ public sealed partial class ArtifactWorkspaceMaintenance
                 { results.Add(new(id, true, "NothingToReclaim")); continue; }
                 var unavailable = await IneligibleReason(preview, ct, authorization);
                 if (unavailable != null) { results.Add(new(id, false, unavailable)); continue; }
-                if (expectedSelectionFingerprints == null && (await Paths(preview, ct, authorization != null)).Count == 0)
+                if (expectedSelectionFingerprints == null && (await Paths(preview, ct, authorization != null, previewOnly: true)).Count == 0)
                 { results.Add(new(id, true, "NothingToReclaim")); continue; }
                 await using var exclusive = await store.AcquireMaintenanceAsync(ct);
                 var artifact = await store.GetArtifactAsync(id, ct);
@@ -331,11 +334,12 @@ public sealed partial class ArtifactWorkspaceMaintenance
         {
             // Frozen preferences belong to this artifact, not today's global configuration.
             // Step overrides may intentionally reclaim a subset while retaining the parent inputs.
-            var metadata = JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(artifact.MetadataJson, Json);
+            if (!FileArtifactRetentionMetadata.TryRead(artifact.MetadataJson, out var metadata)) return "RetentionPolicyKeep";
             if (metadata?.StoragePolicy?.CleanupIntermediates == false)
             {
-                var plan = JsonSerializer.Deserialize<FileProcessingPlan>(metadata.PlanJson, Json);
-                if (plan?.Steps.Any(s => s.StoragePolicy?.CleanupIntermediates == true) != true) return "RetentionPolicyKeep";
+                var steps = metadata.ReadPlan()?.Steps;
+                if (steps == null || steps.Any(s => s == null) || !steps.Any(s => s.StoragePolicy?.CleanupIntermediates == true))
+                    return "RetentionPolicyKeep";
             }
         }
         var operation = await store.GetOperationAsync(artifact.OperationId, ct);

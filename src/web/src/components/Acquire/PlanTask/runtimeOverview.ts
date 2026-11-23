@@ -3,12 +3,28 @@ import { downloadProblemSummary } from "@/components/CloudDownload/problemLabels
 import type { BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverview } from "@/sdk/Api";
 import { AcquisitionStatus } from "@/sdk/constants";
 import { assessmentExplanationFromWait } from "@/components/Workflow/adaptiveAssessmentDiagnostic";
-import type { PlanTaskDetail } from "./models";
+import type { PlanTask, PlanTaskDetail } from "./models";
 
 export type {
   BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverview as RuntimeOverview,
   BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeSourceObservation as RuntimeSource,
 } from "@/sdk/Api";
+
+export function isConfirmingExistingFiles(overview?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverview) {
+  return overview?.progressScope === "confirmation" && overview.stage === "verifyingFiles";
+}
+
+export function currentTaskRuntime(
+  task: Pick<PlanTask, "id" | "workflowRunId"> & { planRevision?: number | null },
+  overview?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeOverview,
+) {
+  if (!overview || overview.taskId !== task.id || (overview.workflowRunId ?? null) !== (task.workflowRunId ?? null)) return;
+  if (overview.progressScope === "confirmation") {
+    if (isConfirmingExistingFiles(overview) && task.planRevision != null && overview.planRevision === task.planRevision) return overview;
+    return;
+  }
+  if (task.workflowRunId != null) return overview;
+}
 
 /** Never revive a previous wait's model explanation after a retry or another phase has started. */
 export function currentProcessingWaitExplanation(

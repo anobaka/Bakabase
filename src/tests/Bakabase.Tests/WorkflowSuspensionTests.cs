@@ -251,6 +251,25 @@ public sealed class WorkflowSuspensionTests
     }
 
     [TestMethod]
+    public async Task Expired_archive_group_answer_cannot_consume_another_nodes_wait()
+    {
+        File.WriteAllText(Path.Combine(_root, "input.txt"), "");
+        var id = await StartRun(ScanFilterJson(), Activity(WaitForWordActivity.ActivityKind));
+        await Execute(id);
+        var before = await Run(id);
+        var signal = JsonSerializer.Serialize(new {targetId = "part", action = "retainIncompleteArchiveGroup",
+            stepId = "unpack", artifactId = "input", fingerprint = "old", archiveGroupToken = new string('b', 64)});
+        var error = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => Resume(id, signal));
+        Assert.AreEqual("FILE_PROCESSING_RECOVERY_WAIT_CHANGED", error.Message);
+        var after = await Run(id);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, after.Status);
+        Assert.AreEqual(before.WaitPromptJson, after.WaitPromptJson);
+        Assert.AreEqual(before.CurrentItemJson, after.CurrentItemJson);
+        Assert.IsNull(after.PendingSignalJson);
+        Assert.AreEqual(before.NodeExecutions.Count, after.NodeExecutions.Count);
+    }
+
+    [TestMethod]
     public async Task NodeInputProjectionIsPersistedBeforeInPlaceMutation()
     {
         File.WriteAllText(Path.Combine(_root, "input.txt"), "");

@@ -20,6 +20,7 @@ namespace Bakabase.Service.Components.FileProcessing;
 internal sealed class DetectedArchiveGroup : CompressedFileGroup
 {
     public ArchiveOpenOptions? OpenOptions { get; set; }
+    public SevenZipVolumeSet? RecoveredVolumes { get; init; }
     public static DetectedArchiveGroup From(CompressedFileGroup group) => new()
         {KeyName = group.KeyName, Extension = group.Extension, Files = group.Files, FileSizes = group.FileSizes};
 }
@@ -34,7 +35,7 @@ internal static class AuthorizedArchiveDetection
     internal static async Task<IReadOnlyList<DetectedArchiveGroup>> DetectAsync(IReadOnlyList<string> exactFiles,
         bool recursive, CancellationToken ct, IArchiveExtractionService? formatProbe = null,
         ArchiveDetectionBudget? budget = null, bool exactExtractionSelection = false,
-        IReadOnlyList<string?>? authorizedPasswords = null)
+        IReadOnlyList<string?>? authorizedPasswords = null, IReadOnlyList<SevenZipVolumeSet>? readOnlyVolumes = null)
     {
         var files = exactFiles.Distinct(FileProcessingFiles.PathComparer).ToArray();
         foreach (var file in files) { ct.ThrowIfCancellationRequested(); ArtifactManifestFiles.RejectLinks(file); }
@@ -42,6 +43,12 @@ internal static class AuthorizedArchiveDetection
         // later volume's incidental bytes as another independent archive or adopt nearby files.
         // Filename grouping is only a candidate for SFX volumes. Until the bounded probe
         // confirms their entry format, none of their later volumes is an independent RAR.
+        // Only an explicit extraction plan can authorize joining a differently named first volume.
+        var borrowedPaths = readOnlyVolumes?.SelectMany(set => set.Sources).ToHashSet(FileProcessingFiles.PathComparer);
+        var recovered = recursive ? [] : await SevenZipVolumeSet.FindAsync(borrowedPaths == null ? files : files.Where(p => !borrowedPaths.Contains(p)).ToArray(), ct);
+        if (readOnlyVolumes != null) recovered.AddRange(readOnlyVolumes);
+        var recoveredPaths = recovered.SelectMany(set => set.Sources).ToHashSet(FileProcessingFiles.PathComparer);
+        if (recoveredPaths.Count > 0) files = files.Where(file => !recoveredPaths.Contains(file)).ToArray();
         var sfxCandidates = CompressedFileHelper.DetectSfxMultipartCandidates(files);
         var sfxFiles = sfxCandidates.SelectMany(candidate => candidate.Files).ToHashSet(FileProcessingFiles.PathComparer);
         var known = CompressedFileHelper.DetectCompressedFileGroups(files.Where(file => !sfxFiles.Contains(file)).ToArray(), true);
@@ -136,6 +143,10 @@ internal static class AuthorizedArchiveDetection
                     FileSizes = candidate.Files.Select(file => new FileInfo(file).Length).ToList()});
             }
         }
+        groups.AddRange(recovered.Select(set => new DetectedArchiveGroup {
+            Files = set.Sources.ToList(), FileSizes = set.Sources.Select(file => new FileInfo(file).Length).ToList(),
+            KeyName = set.DirectoryName, Extension = ".7z", RecoveredVolumes = set, OpenOptions = ArchiveOpenOptions.VerifiedSevenZipVolumes
+        }));
         return groups;
     }
 

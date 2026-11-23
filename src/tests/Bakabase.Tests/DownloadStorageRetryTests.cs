@@ -11,6 +11,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.Downloader.Cloud;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -132,6 +133,17 @@ public sealed class DownloadStorageRetryTests
         Assert.AreEqual(task.DownloadStatusUpdateDt.AddMinutes(1), dto.NextStartDt);
         Assert.IsTrue(dto.AvailableActions.Contains(DownloadTaskAction.StartAutomatically));
     }
+
+    [DataTestMethod]
+    [DataRow("CLOUD_DOWNLOAD_CHECKSUM_MISMATCH", true)]
+    [DataRow("System.InvalidOperationException: CLOUD_DOWNLOAD_CHECKSUM_MISMATCH: Original file SHA256 mismatch", true)]
+    [DataRow("Download failed.\n ---> System.InvalidOperationException: CLOUD_DOWNLOAD_CHECKSUM_MISMATCH", true)]
+    [DataRow("System.InvalidOperationException: CLOUD_PARTIAL_IDENTITY_UNVERIFIED: Retained original", false)]
+    [DataRow("System.InvalidOperationException: Filename contains CLOUD_DOWNLOAD_CHECKSUM_MISMATCH", false)]
+    [DataRow("System.InvalidOperationException: CLOUD_DOWNLOAD_CHECKSUM_MISMATCH_OTHER: unrelated", false)]
+    [DataRow("System.InvalidOperationException: CLOUD_DOWNLOAD_CHECKSUM_MISMATCH\nSystem.InvalidOperationException: CLOUD_PARTIAL_IDENTITY_UNVERIFIED", false)]
+    public void OnlyThePersistedChecksumMismatchAuthorizesAProviderSpecificRetry(string message, bool expected) =>
+        Assert.AreEqual(expected, CloudDownloadIntegrityFailures.IsChecksumMismatch(message));
 
     private static DownloadTaskDbModel Row(string message) => new()
     {

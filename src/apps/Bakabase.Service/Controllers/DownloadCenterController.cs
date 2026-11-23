@@ -69,6 +69,32 @@ public sealed class DownloadCenterController(DownloadCenterService tasks) : Cont
             name ?? Path.GetFileNameWithoutExtension(file.FileName), ct)!);
     }
 
+    [HttpPost("{id}/existing-files/preview")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "PreviewDownloadCenterExistingFiles")]
+    public async Task<SingletonResponse<DownloadCenterExistingFilesPreview>> PreviewExistingFiles(string id,
+        [FromServices] DownloadCenterExistingFiles existing, CancellationToken ct) => new(await existing.PreviewAsync(id, ct));
+
+    [HttpPost("{id}/existing-files/verify")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "VerifyDownloadCenterExistingFiles")]
+    public async Task<SingletonResponse<DownloadCenterVerifiedFiles>> VerifyExistingFiles(string id,
+        [FromBody] DownloadCenterExistingFilesInput input, [FromServices] DownloadCenterExistingFiles existing, CancellationToken ct)
+    {
+        try
+        {
+            var result = await existing.VerifyAsync(id, input.PreviewToken, ct);
+            return result.VerificationProblem is { } problem
+                ? new((int)ResponseCode.InvalidPayloadOrOperation, problem.ReasonCode) {Data = result}
+                : new(result);
+        }
+        catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return SingletonResponseBuilder<DownloadCenterVerifiedFiles>.BuildBadRequest(
+                DownloadCenterExistingFiles.PublicReason(error.Message, "RECOVERY_EXISTING_FILES_VERIFY_FAILED"));
+        }
+    }
+
     [HttpPost("{id}/start")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "StartDownloadCenterTask")]

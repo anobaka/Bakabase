@@ -44,6 +44,7 @@ public sealed partial class CloudWorkflowTests
     private readonly FixtureProvider _baidu = new("baidu");
     private readonly FixtureProvider _google = new("googleDrive");
     private readonly FixtureProvider _gofile = new("gofile");
+    private readonly ResumeStoragePolicy _resumeStorage = new();
     private BakabaseDbContext Db => _services.GetRequiredService<BakabaseDbContext>();
     private CloudOperationService Operations => _services.GetRequiredService<CloudOperationService>();
 
@@ -57,6 +58,7 @@ public sealed partial class CloudWorkflowTests
             collection.AddSingleton<ICloudDownloadProvider>(_baidu);
             collection.AddSingleton<ICloudDownloadProvider>(_google);
             collection.AddSingleton<ICloudDownloadProvider>(_gofile);
+            collection.AddSingleton<IUserStoragePolicy>(_resumeStorage);
             collection.AddSingleton<CloudDownloaderHelper>();
             collection.AddScoped<CloudOperationService>();
             collection.AddSingleton<IDownloaderFactory>(sp => new QueueOnlyFactory(sp.GetRequiredService<CloudDownloaderHelper>()));

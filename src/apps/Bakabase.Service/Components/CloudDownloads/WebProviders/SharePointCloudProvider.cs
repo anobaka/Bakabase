@@ -18,7 +18,7 @@ namespace Bakabase.Service.Components.CloudDownloads.WebProviders;
 /// <summary>Anonymous public SharePoint folder resolver. It never mirrors, syncs, deletes, or
 /// signs in. The public page's scoped drive token stays in memory and is not forwarded to CDN hosts.
 /// </summary>
-public sealed class SharePointCloudProvider : ResolvedShareCloudProvider
+public sealed class SharePointCloudProvider : ResolvedShareCloudProvider, ICloudDownloadAbandonmentProvider
 {
     public SharePointCloudProvider(AppService app, IHttpDownloader downloader, IHttpClientFactory clients) : base(app, downloader, clients) { }
     internal SharePointCloudProvider(string appData, IHttpDownloader downloader, IHttpClientFactory clients) : base(() => appData, downloader, clients) { }
@@ -27,6 +27,11 @@ public sealed class SharePointCloudProvider : ResolvedShareCloudProvider
     // Only transport failures before any output are eligible. The common recovery guard pins
     // the original operation and the resolver rechecks every original without downloading it.
     public override bool CanRevalidateDownloadFailure(string exactCode) => exactCode == "PUBLIC_SHARE_NETWORK_ERROR";
+
+    public Task<CloudReadiness> CheckCanAbandonAsync(CloudDownloadRequest request, CancellationToken ct) =>
+        request.Source.MethodId is null or "oneDrive.sharePoint"
+            ? CheckNoRetainedOperationStateAsync(request, ct)
+            : Task.FromResult(new CloudReadiness(false, "SOURCE_REVISION_PROVIDER_REVIEW_REQUIRED"));
 
     /// <summary>Public sharing metadata only: one page and one root lookup, without redemption,
     /// OAuth, recursive enumeration, obtaining file URLs or opening an acquisition operation.</summary>

@@ -29,7 +29,7 @@ public sealed partial class AcquisitionPlanService
 
         var reviewed = selected with {Id = Guid.NewGuid().ToString("N"), Url = input.Url, Kind = "auto",
             AccessCode = input.AccessCode ?? selected.AccessCode, AccountId = null, MethodId = null, ProviderId = null,
-            OriginalUrl = null, ResolutionChain = null, SourceCorrection = null};
+            OriginalUrl = null, ResolutionChain = null, SourceCorrection = null, ManualAvailabilityOverride = null};
         var revisedPart = part with {Sources = [..part.Sources, reviewed], SelectedSourceId = reviewed.Id, SelectionMode = "manual"};
         var revisedPlan = plan with {Parts = plan.Parts.Select(p => p.Id == part.Id ? revisedPart : p).ToList()};
         AcquisitionPlanCompiler.Validate(revisedPlan);

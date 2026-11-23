@@ -121,7 +121,7 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
         foreach (var target in workset.Targets)
         {
             if (target.Excluded || target.SelectedSource == null || target.AcquisitionNonce != null) { targets.Add(target); continue; }
-            var sourceIntent = config.Source == "processed" ? target.ProcessingIntentKey : DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory, context.Services.GetService<FileProcessingWorkspaceResolver>());
+            var sourceIntent = config.Source == "processed" ? ConfirmedSelection(target)?.Intent ?? target.ProcessingIntentKey : DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory, context.Services.GetService<FileProcessingWorkspaceResolver>());
             if (sourceIntent == null) { targets.Add(target); continue; }
             var directory = CloudTargetDirectory(workset, target, config);
             var artifact = await publisher.ResolveAsync(sourceIntent, directory, ct, config.ContentLayout, CurrentStageBinding(target, config, directory));
@@ -144,7 +144,7 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
                 if (config.Source != "processed" || config.ReusePolicy == "force") return null;
                 var directory = CloudTargetDirectory(item, target, config);
                 return await context.Services.GetRequiredService<FileArtifactPublisher>()
-                    .ResolveAsync(processingIntent, directory, ct, config.ContentLayout, CurrentStageBinding(target, config, directory));
+                    .ResolveAsync(ConfirmedSelection(target)?.Intent ?? processingIntent, directory, ct, config.ContentLayout, CurrentStageBinding(target, config, directory));
             }
             // This explicit review still executes later, against the published artifact's
             // verified manifest and source-processing metadata. Looking through it here only
@@ -154,6 +154,15 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
                 !transparent.PreservesArtifactDemand(next.ConfigJson)) return null;
         }
         return null;
+    }
+
+    private static ConfirmedDeliverySelection? ConfirmedSelection(CloudDownloadTarget target)
+    {
+        var review = target.DeliveryReview;
+        if (review?.Selection == null) return null;
+        if (!review.Accepted || review.ArtifactId != target.ProcessedArtifactId || string.IsNullOrEmpty(review.Selection.Intent) ||
+            string.IsNullOrEmpty(review.Selection.ArtifactId)) throw new InvalidOperationException("FILE_DELIVERY_REVIEW_CHANGED");
+        return review.Selection;
     }
 
     private static string? LocalSourceIntent(IReadOnlyDictionary<string, string> variables, string source) =>
@@ -212,7 +221,7 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
                 if (target.Excluded) continue;
                 var targetConfig = answer?.TargetId == target.Id && answer.TargetDirectory != null
                     ? config with {TargetDirectory = answer.TargetDirectory} : config;
-                var sourceIntent = config.Source == "processed" ? target.ProcessingIntentKey : DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory, ctx.Services.GetService<FileProcessingWorkspaceResolver>());
+                var sourceIntent = config.Source == "processed" ? ConfirmedSelection(target)?.Intent ?? target.ProcessingIntentKey : DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory, ctx.Services.GetService<FileProcessingWorkspaceResolver>());
                 // Older adaptive runs may have persisted the processed artifact while the
                 // assessment node still left ProcessingIntentKey empty. Recover the exact
                 // intent from that artifact's completed operation instead of reacquiring or
@@ -233,7 +242,7 @@ public sealed class PublishFileArtifactsActivity : IResumableWorkflowActivity, I
                 if (reusable != null) result = new(reusable);
                 else
                 {
-                    var id = config.Source == "processed" ? target.ProcessedArtifactId : target.DownloadArtifactId;
+                    var id = config.Source == "processed" ? ConfirmedSelection(target)?.ArtifactId ?? target.ProcessedArtifactId : target.DownloadArtifactId;
                     var input = id == null ? null : await store.ResolveByIdAsync(id, ct);
                     result = input == null ? new(null, "PublicationInputMissing", "The selected artifact is missing or modified. Reacquire or process it before delivery.") :
                         await publisher.PublishAsync(sourceIntent, input, directory, "workflow:" + ctx.RunId + ":publish:" + target.Id,

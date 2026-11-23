@@ -24,10 +24,26 @@ public sealed record FileArtifactProcessingConfig
     public RecursiveArchiveOptions Recursive { get; init; } = new();
     /// <summary>Optional placement override; never changes semantic operation identity.</summary>
     public string? WorkspaceRootDirectory { get; init; }
+    // Evidence from a frozen stage binding; runtime placement does not change the persisted operation identity.
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal string? BoundInputDirectory { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal ArchiveGroupOwner? ArchiveGroupOwner { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal bool BorrowSelectedProcessedArchives { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    internal string? RetainArchiveGroupToken { get; init; }
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public ArtifactDirectoryScope? WorkspaceDirectoryScope { get; init; }
     public ArtifactStoragePolicy? StoragePolicy { get; init; }
     public string? StorageTitle { get; init; }
+
+    internal FileProcessingPlan? ResolveInitialPlan(FileProcessingPlan plan)
+    {
+        if (ArchivePolicy == "keep") return new() {Requirement = "notRequired"};
+        if (plan.Requirement != "unknown" && (plan.Requirement != "required" || plan.Steps.Count > 0)) return plan;
+        return ArchivePolicy == "autoDetect" ? new() {Requirement = "notRequired"} : null;
+    }
 }
 
 public sealed record FileArtifactProcessingMetadata(string? InputArtifactId, string PlanJson,
@@ -43,13 +59,28 @@ public sealed record FileArtifactProcessingMetadata(string? InputArtifactId, str
     [System.Text.Json.Serialization.JsonInclude]
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     internal Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessingStageCommitReceipt? StageCommit { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? RetainedArchiveFiles { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? RetainedGroupTokens { get; init; }
 }
 public sealed record FileArtifactProcessingResult(ArtifactRecord? Artifact, string? WaitReason = null,
     string? Message = null, string? ArchiveId = null, IReadOnlyList<string>? TriedPasswords = null,
-    string? RequiredComponentId = null, FileProcessingPathConflict? PathConflict = null);
+    string? RequiredComponentId = null, FileProcessingPathConflict? PathConflict = null)
+{
+    internal IncompleteArchiveGroup? IncompleteArchiveGroup { get; init; }
+    internal static FileArtifactProcessingResult InstructionsRequired() => new(null, "ExtractionPlanUnknown",
+        "Provide file-processing instructions, confirm no extraction is needed, or explicitly approve automatic archive detection. Recursive extraction alone does not approve the initial files.");
+}
 
 /// <summary>Private workflow continuation constraint; never an instruction to create or retry an operation.</summary>
-public sealed record FileArtifactProcessingRecovery(string OperationId, int Attempt);
+public sealed record FileArtifactProcessingRecovery(string OperationId, int Attempt)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool RepairArchiveVolumes { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? SelectedInputArtifactId { get; init; }
+}
 internal sealed record FileArtifactCheckpointContinuation(string OperationKey, int Attempt, string CheckpointRoot,
     FileProcessingCheckpointInput Input, bool ResumeExistingOperation);
 
@@ -57,7 +88,7 @@ internal sealed record FileArtifactCheckpointContinuation(string OperationKey, i
 /// Reusable file operation. It accepts exact file artifacts and an opaque logical source intent;
 /// it knows nothing about posts, URLs, download tools, or workflow run histories.
 /// </summary>
-public sealed class FileArtifactProcessor
+public sealed class FileArtifactProcessor : IFileArtifactProcessor
 {
     private readonly IArtifactOperationStore store;
     private readonly FileProcessingPlanExecutor plans;
@@ -90,7 +121,6 @@ public sealed class FileArtifactProcessor
 
     private sealed record BorrowedInputCheckpoint(int Version, string ArtifactId, string InputOperationId,
         string Fingerprint, string ProcessingOperationId, int Attempt);
-    private sealed class BorrowedInputChangedException(string message) : InvalidOperationException(message);
 
     /// <summary>
     /// A pure outer-packaging pass can read its already immutable artifact directly. The
@@ -104,14 +134,14 @@ public sealed class FileArtifactProcessor
     {
         var marker = FileProcessingFiles.Within(Path.Combine(state, "borrowed-input.json"), state);
         ArtifactManifestFiles.RejectLinks(marker);
-        if (Directory.Exists(marker)) throw new BorrowedInputChangedException("The borrowed input checkpoint is not a file.");
+        if (Directory.Exists(marker)) throw new FileProcessingInputChangedException("The borrowed input checkpoint is not a file.");
         var exists = File.Exists(marker);
         var eligible = onlyOuterPackaging && config.ArchivePolicy == "autoDetect" &&
                        (config.StoragePolicy?.Materialization is null or "auto") &&
                        plan.Requirement == "notRequired" && plan.Steps.Count == 0 && stopAfterStepId == null;
         if (!eligible)
         {
-            if (exists) throw new BorrowedInputChangedException("The borrowed input belongs to a different processing mode.");
+            if (exists) throw new FileProcessingInputChangedException("The borrowed input belongs to a different processing mode.");
             return null;
         }
         // A prior attempt already tied recursive-state to its plan/result paths. Even an
@@ -120,35 +150,28 @@ public sealed class FileArtifactProcessor
         {
             if (Directory.Exists(checkpointDirectory) || File.Exists(checkpointDirectory)) return null;
             if (Directory.Exists(Path.Combine(state, "recursive")) || File.Exists(Path.Combine(state, "recursive")))
-                throw new BorrowedInputChangedException("The existing recursive checkpoint has no input-layout receipt. Retain it for review.");
+                throw new FileProcessingInputChangedException("The existing recursive checkpoint has no input-layout receipt. Retain it for review.");
         }
         var expected = new BorrowedInputCheckpoint(1, input.Id, input.OperationId, input.Fingerprint, operation.Id, operation.Attempt);
         if (exists)
         {
             if (new FileInfo(marker).Length > 4096 || Directory.Exists(checkpointDirectory) || File.Exists(checkpointDirectory))
-                throw new BorrowedInputChangedException("The borrowed input checkpoint changed.");
+                throw new FileProcessingInputChangedException("The borrowed input checkpoint changed.");
             BorrowedInputCheckpoint? saved;
             try { saved = JsonSerializer.Deserialize<BorrowedInputCheckpoint>(await File.ReadAllTextAsync(marker, ct), Json); }
-            catch (JsonException) { throw new BorrowedInputChangedException("The borrowed input checkpoint is invalid."); }
-            if (saved != expected) throw new BorrowedInputChangedException("The borrowed input checkpoint belongs to different files or an attempt.");
+            catch (JsonException) { throw new FileProcessingInputChangedException("The borrowed input checkpoint is invalid."); }
+            if (saved != expected) throw new FileProcessingInputChangedException("The borrowed input checkpoint belongs to different files or an attempt.");
         }
         // Currently the artifact store supports durable workflow owners. Unscoped callers
         // keep snapshots; a short-lived lease is not sufficient protection across a wait.
         var owner = StorageWriteScope.Current;
         if (owner is not {OwnerKind: "workflow"} || !int.TryParse(owner.OwnerId, out var runId) || runId <= 0)
         {
-            if (exists) throw new BorrowedInputChangedException("Resume the borrowed input through its durable owner.");
+            if (exists) throw new FileProcessingInputChangedException("Resume the borrowed input through its durable owner.");
             return null;
         }
         var ownerId = runId.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var consumer = "files.process:" + operation.Id + ":" + operation.Attempt + ":input:" + ownerId;
-        if (!await store.PinConsumerAsync(input.OperationId, consumer, owner.OwnerKind, ownerId, ct))
-            throw new BorrowedInputChangedException("The immutable input cannot be pinned to the active caller.");
-        var verified = await store.ResolveByIdAsync(input.Id, ct);
-        if (verified == null || verified.OperationId != input.OperationId || verified.Fingerprint != input.Fingerprint ||
-            verified.RootDirectory != input.RootDirectory || !FileDispositionProofs.SameManifest(input.Manifest, verified.Manifest) ||
-            !verified.Files.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(input.Files))
-            throw new BorrowedInputChangedException("The immutable input is missing or changed; retain it for review.");
+        var verified = await PinVerifiedProcessingInputAsync(input, operation, ownerId, ct);
         if (!exists)
         {
             // Publish the choice before recursion creates its path-bound state. A crash can
@@ -246,6 +269,101 @@ public sealed class FileArtifactProcessor
     public Task<ArtifactRecord?> ResolveAsync(string intent, CancellationToken ct) =>
         store.ResolveAsync(intent, ct);
 
+    async Task<IncompleteArchiveGroup?> IFileArtifactProcessor.InspectIncompleteGroupAsync(string intent,
+        ArtifactRecord input, FileProcessingPlan plan, string? defaultPassword, FileArtifactProcessingConfig config,
+        CancellationToken ct)
+    {
+        if (config.ArchiveGroupOwner is not {} owner || input.State != ArtifactLocationState.Available) return null;
+        plan = FileExtractionLayouts.Apply(WithDefaultPasswords(plan, defaultPassword), config.ExtractionLayout);
+        var key = OperationKey(intent, input, plan, defaultPassword, config);
+        var operation = await store.GetOperationAsync(key, ct);
+        if (operation is not {State: ArtifactOperationState.Running, Attempt: > 0, Kind: "files.process"} ||
+            operation.InputFingerprint != input.Fingerprint || operation.IntentKey != intent) return null;
+        var locations = new FileProcessingWorkspaceResolver(appData(), storage);
+        var checkpoint = await locations.ReadCheckpointAsync(CheckpointKey(input, plan), key, operation.Attempt,
+            config.WorkspaceDirectoryScope?.Directory ?? config.WorkspaceRootDirectory ?? config.StoragePolicy?.ProcessingWorkspaceDirectory, ct);
+        if (checkpoint == null) return null;
+        var directory = FileProcessingPlanExecutor.CheckpointInputDirectory(checkpoint, plan, input, locations.IdentityPath);
+        return await FileProcessingPlanExecutor.InspectPendingGroupAsync(directory, input,
+            new(owner, input.Id, input.Fingerprint, key, operation.Attempt, null), ct);
+    }
+
+    Task<FileArtifactCheckpointContinuation?> IFileArtifactProcessor.ReadCheckpointContinuationAsync(string intent,
+        ArtifactRecord input, string planJson, string? defaultPassword, FileArtifactProcessingConfig config,
+        ArtifactRecord previous, string previousStep, CancellationToken ct) =>
+        ReadCheckpointContinuationAsync(intent, input, planJson, defaultPassword, config, previous, previousStep, ct);
+
+    Task<FileArtifactProcessingResult> IFileArtifactProcessor.ExecuteAsync(string intent, ArtifactRecord input,
+        string planJson, string? defaultPassword, FileArtifactProcessingConfig config, string consumerKey,
+        RecursiveArchivePasswordAnswer? answer, string? planPasswordAnswer,
+        Action<int>? progress, CancellationToken ct, bool replan, string? stopAfterStepId,
+        FileArtifactProcessingRecovery? recovery, FileArtifactCheckpointContinuation? checkpointContinuation,
+        Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence, Func<string, Task>? reportStage,
+        string? originalDownloadPassword) =>
+        ExecuteAsync(intent, input, planJson, defaultPassword, config, consumerKey, answer, planPasswordAnswer,
+            progress, ct, replan, stopAfterStepId, recovery, checkpointContinuation: checkpointContinuation,
+            passwordEvidence: passwordEvidence, reportStage: reportStage, originalDownloadPassword: originalDownloadPassword);
+
+    private async Task<ArtifactRecord> PinVerifiedProcessingInputAsync(ArtifactRecord input, ArtifactOperationDbModel operation,
+        string ownerId, CancellationToken ct)
+    {
+        var consumer = "files.process:" + operation.Id + ":" + operation.Attempt + ":input:" + ownerId;
+        if (!await store.PinConsumerAsync(input.OperationId, consumer, "workflow", ownerId, ct))
+            throw new FileProcessingInputChangedException("The immutable input cannot be pinned to the active caller.");
+        var verified = await store.ResolveByIdAsync(input.Id, ct);
+        if (verified == null || verified.OperationId != input.OperationId || verified.Fingerprint != input.Fingerprint ||
+            verified.RootDirectory != input.RootDirectory || !FileDispositionProofs.SameManifest(input.Manifest, verified.Manifest) ||
+            !verified.Files.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(input.Files))
+            throw new FileProcessingInputChangedException("The immutable input is missing or changed; retain it for review.");
+        return verified;
+    }
+
+    // Only a completed result in its producer's registered, installation-owned workspace is
+    // eligible. Stage views and user-managed directories keep their independent snapshots.
+    private async Task<bool> CanBorrowProcessedResultAsync(ArtifactRecord input, string workspace,
+        FileProcessingWorkspaceResolver locations, CancellationToken ct)
+    {
+        if (Path.GetFileName(input.RootDirectory) != "result" ||
+            Bakabase.InsideWorld.Business.Components.ResourceMove.ResourceMoveFileSystem.AreOnSameFileSystem(input.RootDirectory, workspace) != true)
+            return false;
+        var producer = await store.GetOperationAsync(input.OperationId, ct);
+        if (producer is not {Kind: "files.process", State: ArtifactOperationState.Completed, Attempt: > 0} ||
+            producer.OutputArtifactId != input.Id || input.MetadataJson == null) return false;
+        try
+        {
+            var metadata = JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(input.MetadataJson, Json);
+            if (metadata == null || metadata.StageCommit != null || metadata.StoragePolicy is {Materialization: "copy"} or
+                {CleanupIntermediates: false} or {SourceCleanup: "keep" or "quarantine"}) return false;
+            var producerPlan = JsonSerializer.Deserialize<FileProcessingPlan>(metadata.PlanJson, Json);
+            if (producerPlan == null || producerPlan.Steps.Any(step => step.StoragePolicy is {Materialization: "copy"} or
+                {CleanupIntermediates: false} or {SourceCleanup: "keep" or "quarantine"})) return false;
+            FileProcessingWorkspaceResolver.Location? location;
+            if (metadata.CompletedThroughStepId != null)
+            {
+                if (producerPlan.Steps.LastOrDefault()?.Id != metadata.CompletedThroughStepId) return false;
+                location = await locations.InspectCompletedCheckpointAsync(CheckpointKey(producer.InputFingerprint, producerPlan),
+                    producer.Id, producer.Attempt, metadata.WorkspaceDirectoryScope?.Directory ?? metadata.StoragePolicy?.ProcessingWorkspaceDirectory, ct);
+            }
+            else location = await locations.InspectExistingAsync("operations", producer.Id, producer.Attempt, ct);
+            return location != null && ArtifactCleanupPathReferences.StrictlyUnder(input.RootDirectory, location.Directory) &&
+                await locations.HasOwnedLocationAsync(location, ct);
+        }
+        catch (Exception error) when (error is JsonException or IOException or FileProcessingCheckpointPlacementException)
+        { return false; }
+    }
+
+    private async Task<ArtifactManifest> ReadRegisteredSnapshotManifestAsync(ArtifactRecord input, CancellationToken ct)
+    {
+        var source = await store.GetArtifactAsync(input.Id, ct);
+        if (source is not {State: ArtifactLocationState.Available} || source.OperationId != input.OperationId ||
+            source.Kind != input.Kind || source.Fingerprint != input.Fingerprint || source.Manifest.Fingerprint != input.Fingerprint ||
+            !ArtifactManifestFiles.PathComparer.Equals(source.RootDirectory, input.RootDirectory) ||
+            !FileDispositionProofs.SameManifest(source.Manifest, input.Manifest) ||
+            !source.Files.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(input.Files))
+            throw new FileProcessingInputChangedException("The registered processing input changed before its private snapshot was created.");
+        return source.Manifest;
+    }
+
     private async Task ReclaimCachedAsync(ArtifactRecord artifact, CancellationToken ct)
     {
         if (maintenance != null) await maintenance.ReclaimAsync([artifact.Id], ct);
@@ -262,7 +380,10 @@ public sealed class FileArtifactProcessor
             ? step with {Password = password} : step).ToList()};
 
     internal static string OperationKey(string intent, ArtifactRecord input, FileProcessingPlan resolvedPlan,
-        string? defaultPassword, FileArtifactProcessingConfig config) => Hash(intent + "\n" + input.Fingerprint + "\n" +
+        string? defaultPassword, FileArtifactProcessingConfig config) => OperationKey(intent, input.Fingerprint, resolvedPlan, defaultPassword, config);
+
+    internal static string OperationKey(string intent, string inputFingerprint, FileProcessingPlan resolvedPlan,
+        string? defaultPassword, FileArtifactProcessingConfig config) => Hash(intent + "\n" + inputFingerprint + "\n" +
         CreateIntent("resolved-recipe", JsonSerializer.Serialize(resolvedPlan, Json), defaultPassword, config,
             null, ResolvedRecipeSchemaVersion));
 
@@ -316,11 +437,18 @@ public sealed class FileArtifactProcessor
         Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null,
         Func<string, Task>? reportStage = null, string? originalDownloadPassword = null)
     {
+        FileArtifactProcessingResult CheckedResult(ArtifactRecord artifact)
+        {
+            if (config.RetainArchiveGroupToken is {} consent &&
+                JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(artifact.MetadataJson ?? "{}", Json)?.RetainedGroupTokens?.Contains(consent) != true)
+                return new(null, "NeedsReconciliation", "This completed result has no receipt for the selected incomplete archive group.");
+            return new(artifact);
+        }
         Validate(config);
         if (recovery != null && (replan || answer != null || planPasswordAnswer != null || recovery.Attempt < 1))
             throw new ArgumentException("A storage continuation cannot change processing instructions or passwords.");
         var existing = replan || recovery != null ? null : await ResolveAsync(intent, ct);
-        if (existing != null) return new(existing);
+        if (existing != null) return CheckedResult(existing);
         FileProcessingPlan plan;
         if (config.ArchivePolicy == "keep") plan = new() {Requirement = "notRequired"};
         else
@@ -334,13 +462,9 @@ public sealed class FileArtifactProcessor
             { plan = new() {Requirement = "notRequired"}; }
         }
         plan = FileExtractionLayouts.Apply(WithDefaultPasswords(plan, defaultPassword), config.ExtractionLayout);
-        if (config.ArchivePolicy == "keep") plan = new() {Requirement = "notRequired"};
-        else if (plan.Requirement == "unknown" || plan.Requirement == "required" && plan.Steps.Count == 0)
-        {
-            if (config.ArchivePolicy != "autoDetect")
-                return new(null, "ExtractionPlanUnknown", "Provide file-processing instructions, confirm no extraction is needed, or explicitly approve automatic archive detection. Recursive extraction alone does not approve the initial files.");
-            plan = new() {Requirement = "notRequired"};
-        }
+        if (config.ResolveInitialPlan(plan) is not {} initialPlan)
+            return FileArtifactProcessingResult.InstructionsRequired();
+        plan = initialPlan;
         // New demands include the current processing semantics (including authorized signature
         // detection). Keep the resolved-plan schema stable so an older pinned demand still reaches
         // its original operation, attempt and archive/password checkpoints.
@@ -356,10 +480,18 @@ public sealed class FileArtifactProcessor
             // A competing claim between this read and the CAS must not turn a new
             // allocation into a takeover of an unknown, already-started workspace.
             AllowRetry: !firstAttempt && (checkpointContinuation == null || checkpointContinuation.ResumeExistingOperation));
-        var claim = recovery == null && checkpointContinuation?.ResumeExistingOperation != true
+        ArtifactOperationClaim claim;
+        if (recovery is {RepairArchiveVolumes: true} && beforeClaim?.State == ArtifactOperationState.Failed)
+        {
+            if (beforeClaim.Error == null || !await SevenZipVolumeSet.CanRecoverAsync(beforeClaim.Error, plan, stopAfterStepId, input.Files, ct))
+                return new(null, "NeedsReconciliation", "The failed archive or its registered volumes changed after recovery was approved.");
+            claim = await store.ReopenFailedAttemptAsync(request, recovery.Attempt, beforeClaim.Error, consumerKey, LeaseDuration, ct);
+        }
+        else
+            claim = recovery == null && checkpointContinuation?.ResumeExistingOperation != true
             ? await store.ClaimAsync(request, consumerKey, LeaseDuration, ct)
             : await store.ClaimSameAttemptAsync(request, recovery?.Attempt ?? checkpointContinuation!.Attempt, consumerKey, LeaseDuration, ct);
-        if (claim.Artifact != null) return new(claim.Artifact);
+        if (claim.Artifact != null) return CheckedResult(claim.Artifact);
         if (claim.Status == ArtifactClaimStatus.StorageUnavailable)
             return new(null, "StorageUnavailable", "The stored result directory is unavailable. Reconnect its storage to reuse the completed files.");
         if (claim.Status != ArtifactClaimStatus.Acquired || claim.Lease == null)
@@ -386,21 +518,35 @@ public sealed class FileArtifactProcessor
             var checkpointDirectory = stopAfterStepId == null ? Path.Combine(state, "plan") :
                 await locations.ResolveCheckpointAsync(CheckpointKey(input, plan), key, operation.Attempt, input, plan,
                     config.WorkspaceDirectoryScope?.Directory ?? config.WorkspaceRootDirectory ?? config.StoragePolicy?.ProcessingWorkspaceDirectory, selectedRoot,
-                    config.StoragePolicy, config.StorageTitle, operationCt);
+                    config.StoragePolicy, config.StorageTitle, operationCt, config.BoundInputDirectory);
             if (checkpointContinuation != null && !ArtifactManifestFiles.PathComparer.Equals(checkpointDirectory, checkpointContinuation.CheckpointRoot))
                 throw new InvalidDataException("The pinned checkpoint location changed.");
             var borrowed = await BorrowOuterInputAsync(state, checkpointDirectory, operation, input, plan, config,
                 onlyOuterPackaging, stopAfterStepId, operationCt);
+            var selectedArchives = config.BorrowSelectedProcessedArchives && stopAfterStepId == null && checkpointContinuation == null &&
+                ReadOnlyArchiveVolumes.SupportsProcessedSelection(plan, input, config.StoragePolicy) &&
+                await CanBorrowProcessedResultAsync(input, state, locations, operationCt);
             var result = borrowed ?? await plans.ExecuteAsync(plan, input.RootDirectory, input.Files,
                 checkpointDirectory, planPasswordAnswer, progress, operationCt, stopAfterStepId, locations.IdentityPath,
                 config.StoragePolicy, config.StorageTitle,
                 inputDirectories: ArtifactManifestFiles.ResolveDirectories(input.RootDirectory, input.Manifest),
                 checkpointInput: checkpointContinuation?.Input, inputDirectoryProvenance: FileArtifactDeliveryLayout.ReadProvenance(input),
-                passwordEvidence: passwordEvidence, reportStage: reportStage, originalDownloadPassword: originalDownloadPassword);
+                passwordEvidence: passwordEvidence, reportStage: reportStage, originalDownloadPassword: originalDownloadPassword,
+                resolveReadOnlyArchiveInput: checkpointContinuation == null && config.ArchivePolicy == "instructions" &&
+                    (selectedArchives || ReadOnlyArchiveVolumes.Supports(plan, input, config.StoragePolicy)) &&
+                    StorageWriteScope.Current is {OwnerKind: "workflow", OwnerId: {} workflow} &&
+                    int.TryParse(workflow, out var runId) && runId > 0
+                    ? token => PinVerifiedProcessingInputAsync(input, operation, workflow, token) : null,
+                snapshotSource: new(input, token => ReadRegisteredSnapshotManifestAsync(input, token))
+                {
+                    BorrowSelectedProcessedArchives = selectedArchives,
+                    ArchiveGroup = config.ArchiveGroupOwner is {} owner
+                        ? new(owner, input.Id, input.Fingerprint, key, operation.Attempt, config.RetainArchiveGroupToken) : null
+                });
             if (!result.Completed)
                 waiting = new(null, result.NeedsPassword ? "PasswordUnknown" : result.FailureCode ?? "ExtractionPlanUnknown",
                     result.Message, TriedPasswords: result.TriedPasswords, RequiredComponentId: result.RequiredComponentId,
-                    PathConflict: result.PathConflict);
+                    PathConflict: result.PathConflict) {IncompleteArchiveGroup = result.IncompleteArchiveGroup};
             else
             {
                 var files = result.Files;
@@ -429,7 +575,7 @@ public sealed class FileArtifactProcessor
                         directoryProvenance = nested.DirectoryProvenance;
                         lineage = FileDispositionProofs.Compose(lineage, nested.FileLineage);
                         if (borrowed != null && lineage == null)
-                            throw new BorrowedInputChangedException("The recursive result does not match its immutable input evidence.");
+                            throw new FileProcessingInputChangedException("The recursive result does not match its immutable input evidence.");
                     }
                 }
                 if (waiting == null)
@@ -447,7 +593,8 @@ public sealed class FileArtifactProcessor
                         JsonSerializer.Serialize(new FileArtifactProcessingMetadata(input.Id,
                             JsonSerializer.Serialize(plan, Json), input.MetadataJson, archiveCount, stopAfterStepId,
                             result.StoragePolicy, disposition, directoryProvenance, CommonExtractionLayout(result, config.ExtractionLayout),
-                            config.WorkspaceDirectoryScope), Json), ExpectedManifestFingerprint: outputManifest?.Fingerprint,
+                            config.WorkspaceDirectoryScope) {RetainedArchiveFiles = result.RetainedArchiveFiles is {Count: > 0} kept ? kept : null,
+                                RetainedGroupTokens = result.RetainedGroupTokens}, Json), ExpectedManifestFingerprint: outputManifest?.Fingerprint,
                         Directories: directories);
                 }
             }
@@ -467,7 +614,7 @@ public sealed class FileArtifactProcessor
                 return new(published);
             }
         }
-        catch (BorrowedInputChangedException error)
+        catch (FileProcessingInputChangedException error)
         {
             heartbeatCancellation.Cancel();
             await StopHeartbeat(heartbeat);

@@ -39,7 +39,6 @@ public record BTaskHandlerBuilder
     public HashSet<string>? ConflictKeys { get; init; }
     public string? ConcurrencyGroup { get; init; }
     public Func<int>? GetConcurrencyLimit { get; init; }
-    public Func<BTask, bool>? CanShareConcurrencySlotWith { get; init; }
     public HashSet<string>? DependsOn { get; init; }
     public BTaskLevel Level { get; init; } = BTaskLevel.Default;
     public TimeSpan? Interval { get; init; }

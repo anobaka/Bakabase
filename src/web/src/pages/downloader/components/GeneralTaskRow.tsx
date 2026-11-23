@@ -13,8 +13,9 @@ import {
 import { Button, Chip, Progress, Tooltip } from "@/components/bakaui";
 import { downloadProblemSummary } from "@/components/CloudDownload/problemLabels";
 import { formatBtBytes } from "@/pages/bt-downloads/format";
-import { centerStatusColor, type CenterTask, type TaskAction } from "../downloadCenter";
+import { centerStatusColor, isFileVerificationStage, type CenterTask, type TaskAction } from "../downloadCenter";
 import { DOWNLOAD_TASK_ROW_HEIGHT } from "./TaskRow";
+import { VerifyExistingFilesButton } from "./VerifyExistingDownloadFiles";
 
 type Props = {
   task: CenterTask;
@@ -36,13 +37,14 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
 }: Props) {
   const { t } = useTranslation();
   const color = centerStatusColor(task.status);
+  const verifying = isFileVerificationStage(task.stage);
   const stageKey = `downloadCenter.stage.${task.stage}`;
   const btStageKey = `bt.stage.${task.stage}`;
   const translatedStage = t(stageKey);
   const btStage = t(btStageKey);
   const stage =
     translatedStage !== stageKey ? translatedStage : btStage !== btStageKey ? btStage : task.stage;
-  const errorSummary = task.error
+  const errorSummary = !verifying && task.error
     ? (downloadProblemSummary(task.error, t) ?? task.error)
     : undefined;
   const icons = { start: FiPlay, stop: FiSquare, retry: FiRefreshCw, delete: FiTrash2 };
@@ -94,17 +96,19 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <div className="flex min-w-0 items-center gap-2 text-xs">
             <span
-              className={`min-w-0 flex-1 truncate ${task.error ? "text-danger" : "text-default-500"}`}
-              title={task.error || undefined}
+              className={`min-w-0 flex-1 truncate ${!verifying && task.error ? "text-danger" : "text-default-500"}`}
+              title={verifying ? undefined : task.error || undefined}
             >
               {errorSummary || stage}
             </span>
-            <span className="shrink-0 tabular-nums text-default-500">
-              {formatBtBytes(task.completedBytes)} / {formatBtBytes(task.totalBytes)}
-              {task.speedBytesPerSecond
-                ? ` · ${formatBtBytes(task.speedBytesPerSecond)}/s`
-                : ""} · {task.progress == null ? "—" : `${Math.round(task.progress)}%`}
-            </span>
+            {!verifying && (
+              <span className="shrink-0 tabular-nums text-default-500">
+                {formatBtBytes(task.completedBytes)} / {formatBtBytes(task.totalBytes)}
+                {task.speedBytesPerSecond
+                  ? ` · ${formatBtBytes(task.speedBytesPerSecond)}/s`
+                  : ""} · {task.progress == null ? "—" : `${Math.round(task.progress)}%`}
+              </span>
+            )}
           </div>
           <Progress
             disableAnimation
@@ -112,11 +116,14 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
             classNames={{ track: "h-1 bg-default-100" }}
             color={color}
             size="sm"
-            value={task.progress ?? 0}
-            isIndeterminate={task.progress == null && task.status === "running"}
+            value={verifying ? undefined : task.progress ?? 0}
+            isIndeterminate={verifying || (task.progress == null && task.status === "running")}
           />
         </div>
         <div data-task-action className="flex shrink-0 gap-0.5">
+          {!verifying && task.availableActions?.includes("verifyExistingFiles") && (
+            <VerifyExistingFilesButton task={task} />
+          )}
           {(task.availableActions ?? [])
             .filter((action) => action in icons)
             .map((action) => {

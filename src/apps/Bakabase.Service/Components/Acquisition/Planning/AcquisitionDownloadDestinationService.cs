@@ -71,6 +71,14 @@ public sealed class AcquisitionDownloadDestinationService(BakabaseDbContext db,
         Func<string, Task> guard, CancellationToken ct = default)
     {
         var ids = Ids(input.TaskIds);
+        int? selectedSite = null;
+        var reuseExistingFiles = input.ReuseExistingFiles == true;
+        if (reuseExistingFiles || input.DownloadTaskIds != null)
+        {
+            if (!reuseExistingFiles || ids.Length != 1 || input.DownloadTaskIds is not {Count: 1} sites || sites[0] <= 0)
+                throw new ArgumentException("DOWNLOAD_DESTINATION_SELECTION_INVALID");
+            selectedSite = sites[0];
+        }
         ValidateRoot(input.TargetRootDirectory);
         var root = Path.GetFullPath(input.TargetRootDirectory);
         await guard(root);
@@ -88,23 +96,37 @@ public sealed class AcquisitionDownloadDestinationService(BakabaseDbContext db,
             var reason = state.Problem;
             if (reason == null)
             {
-                foreach (var target in state.Workset!.Targets.Where(t => !t.Excluded))
+                var selected = state.Workset!.Targets.Where(t => !t.Excluded && (selectedSite == null || t.DownloadTaskId == selectedSite)).ToList();
+                if (selectedSite != null && selected.Count != 1) throw new ArgumentException("DOWNLOAD_DESTINATION_SELECTION_INVALID");
+                foreach (var target in selected)
                 {
                     var intent = DownloadArtifactCoordinator.DownloadIntent(target, state.Workset.OutputDirectory, workspaces);
                     var directory = Path.Combine(root, ArtifactStoragePolicies.RenderDownload(policy,
                         target.Title ?? state.Task!.Title, intent, target.SelectedSource!.ProviderId));
                     await guard(directory);
                     var check = await destinations.PreviewAsync(state.Run!.Id, target, state.Workset.OutputDirectory,
-                        root, directory, ct);
+                        root, directory, ct, reuseExistingFiles, guard);
                     if (check.PreviousDirectory != null) await guard(check.PreviousDirectory);
-                    items.Add(new(check.DownloadTaskId ?? target.DownloadTaskId, check.PreviousDirectory, directory, check.CanRevise, check.ReasonCode));
-                    targets.Add(new(target, check, Guid.NewGuid().ToString("N")));
-                    if (!check.CanRevise) reason ??= check.ReasonCode;
+                    items.Add(new(check.DownloadTaskId ?? target.DownloadTaskId, check.PreviousDirectory, directory, check.CanRevise, check.ReasonCode,
+                        check.CanPreviewReuse, check.ReuseEstimate));
+                    if (check.CanRevise)
+                        targets.Add(new(target, check, Guid.NewGuid().ToString("N")));
+                    else
+                        reason ??= check.ReasonCode;
                 }
-                if ((await ReadAsync(id, ct)).Version != state.Version) reason = "ACQUISITION_TASK_CHANGED";
-                if (reason == null) entries[id] = new(state.Run!.Id, state.Version, state.Workset.OutputDirectory, targets);
+                if ((await ReadAsync(id, ct)).Version != state.Version)
+                {
+                    targets.Clear();
+                    reason = "ACQUISITION_TASK_CHANGED";
+                }
+                if (targets.Count > 0)
+                {
+                    entries[id] = new(state.Run!.Id, state.Version, state.Workset.OutputDirectory, targets);
+                    reason = targets.Count != items.Count ? "DOWNLOAD_DESTINATION_ELIGIBLE_PARTS" :
+                        reuseExistingFiles ? "DOWNLOAD_DESTINATION_REUSE_READY" : "DOWNLOAD_DESTINATION_READY";
+                }
             }
-            rows.Add(new(id, state.Task?.Title, reason == null, reason ?? "DOWNLOAD_DESTINATION_READY", items));
+            rows.Add(new(id, state.Task?.Title, targets.Count > 0, reason ?? "DOWNLOAD_DESTINATION_CHECKPOINT_UNSUPPORTED", items));
         }
         var result = new AcquisitionDownloadDestinationPreview(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddMinutes(10),
             rows.Count, rows.SelectMany(r => r.Downloads).Select(d => d.DownloadTaskId).Where(d => d != null).Distinct().Count(), rows);
@@ -136,7 +158,7 @@ public sealed class AcquisitionDownloadDestinationService(BakabaseDbContext db,
                         throw new InvalidOperationException(state.Problem ?? "ACQUISITION_TASK_CHANGED");
                 }
                 await ValidateOwner(ct);
-                // Protect all targets before applying any. Each download still repeats its own CAS
+                // Revalidate every target selected by the preview before applying any. Each download repeats its own CAS
                 // under operation/download/run gates; external edits can produce a partial batch,
                 // which is reported explicitly rather than treated as an atomic task-wide success.
                 foreach (var target in expected.Targets)
@@ -144,14 +166,14 @@ public sealed class AcquisitionDownloadDestinationService(BakabaseDbContext db,
                     if (target.Preview.PreviousDirectory != null) await guard(target.Preview.PreviousDirectory);
                     await guard(target.Preview.NewDirectory!);
                     var current = await destinations.PreviewAsync(expected.RunId, target.Value, expected.SemanticRoot,
-                        entry.NewRoot, target.Preview.NewDirectory!, ct);
+                        entry.NewRoot, target.Preview.NewDirectory!, ct, target.Preview.ReuseEstimate != null, guard);
                     if (!current.CanRevise || current.Fingerprint != target.Preview.Fingerprint)
                         throw new InvalidOperationException(current.CanRevise ? "DOWNLOAD_DESTINATION_PREVIEW_CHANGED" : current.ReasonCode);
                 }
                 foreach (var target in expected.Targets)
                 {
                     await destinations.ApplyAsync(expected.RunId, target.Value, expected.SemanticRoot, entry.NewRoot,
-                        target.Preview.NewDirectory!, target.Preview.Fingerprint!, target.RevisionId, ct, ValidateOwner);
+                        target.Preview.NewDirectory!, target.Preview.Fingerprint!, target.RevisionId, ct, ValidateOwner, target.Preview.ReuseEstimate != null, guard);
                     count++; changed++;
                 }
                 applied.Add(id);

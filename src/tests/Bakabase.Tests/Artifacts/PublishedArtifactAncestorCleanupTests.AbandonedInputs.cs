@@ -27,11 +27,11 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     private async Task<(AcquisitionTaskDbModel Task, ArtifactRecord Raw, ArtifactRecord Final,
         string OperationId, string Private, string StateFile, AcquisitionTaskDeletionService Service)>
         AbandonedDeletionFixture(string? unboundLeaseOwner = null, IReadOnlyList<int>? ownerRuns = null,
-            string? currentInputScenario = null, bool completedNoTransform = false, bool stagedOnly = false)
+            string? currentInputScenario = null, bool completedNoTransform = false, bool stagedOnly = false, string? privateStorage = null, bool processedArchive = false)
     {
         ArtifactRecord raw;
         if (currentInputScenario == null)
-            raw = await Artifact(stagedOnly ? "processedFiles" : "download", filename: stagedOnly ? "image.png" : "archive.zip", contents: "archive bytes");
+            raw = await Artifact(stagedOnly || processedArchive ? "processedFiles" : "download", filename: stagedOnly ? "image.png" : "archive.zip", contents: "archive bytes");
         else
         {
             var currentDirectory = Path.Combine(root, "manual-current-files");
@@ -54,7 +54,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         Assert.IsNotNull(claim.Lease);
         var workspaces = new FileProcessingWorkspaceResolver(root);
         var attempt = await workspaces.ResolveAsync("operations", operationId, 1, raw.RootDirectory,
-            raw.RootDirectory, default, newAttempt: true);
+            privateStorage ?? raw.RootDirectory, default, newAttempt: true);
         var extraction = new AbandonedExtraction();
         var executor = new FileProcessingPlanExecutor(extraction);
         if (completedNoTransform)

@@ -76,6 +76,9 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var retried = await f.Service.DeleteAsync(new(retry.PreviewId, RetryRetainedFiles: true));
         Assert.AreEqual(0, retried.RemovedFiles);
         Assert.IsTrue(retried.CleanupResults!.Single().Completed);
+        var saved = (await f.Service.GetDeletedTasksAsync(1, 25, "all", default)).Items.Single();
+        Assert.AreEqual("notRequested", saved.IntermediateCleanup);
+        Assert.AreEqual("completed", saved.DeliveryCleanup);
     }
 
     [DataTestMethod]

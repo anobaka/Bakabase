@@ -110,16 +110,27 @@ public sealed partial class DownloadResultService
             fingerprint, workflowDefinitionId, ct, requiresContentsDownload);
     }
 
+    public Task<DownloadResultDbModel> RecordFilesAsync(int downloadTaskId, ThirdPartyId thirdPartyId,
+        string sourceKey, string name, string directory, IReadOnlyCollection<string> files,
+        int? workflowDefinitionId, CancellationToken ct = default) =>
+        RecordFilesAsync(downloadTaskId, thirdPartyId, sourceKey, name, directory, files,
+            workflowDefinitionId, null, ct);
+
+    /// <summary>Reports successful local hash reads, separately from provider transfer progress.</summary>
     public async Task<DownloadResultDbModel> RecordFilesAsync(int downloadTaskId, ThirdPartyId thirdPartyId,
         string sourceKey, string name, string directory, IReadOnlyCollection<string> files,
-        int? workflowDefinitionId, CancellationToken ct = default)
+        int? workflowDefinitionId, Action<int>? onBytesRead, CancellationToken ct)
     {
         var root = System.IO.Path.GetFullPath(directory);
         var paths = files.Select(System.IO.Path.GetFullPath).Distinct(StringComparer.Ordinal)
             .OrderBy(x => x, StringComparer.Ordinal).ToArray();
         if (paths.Length == 0) throw new ArgumentException("A local-files result must contain at least one file.", nameof(files));
         ArtifactManifest manifest;
-        try { manifest = await ArtifactManifestFiles.CaptureAsync(root, paths, ct); }
+        try
+        {
+            manifest = await ArtifactManifestFiles.CaptureAsync(root, paths, path => new FileInfo(path),
+                (stream, token) => ArtifactContentHash.ComputeAsync(stream, token, onBytesRead), ct, verifyTimestampChange: true);
+        }
         catch (InvalidDataException error) { throw new ArgumentException(error.Message, nameof(files), error); }
         var fingerprint = manifest.Fingerprint;
         return await RecordAsync(downloadTaskId, thirdPartyId, sourceKey, name, DownloadResultKind.LocalFiles,

@@ -1,4 +1,5 @@
 import envConfig from "@/config/env";
+import { normalizeAcquisitionDownloadSource } from "./downloadSourceFilter";
 import { acquisitionStages, type AcquisitionStageFilter } from "@/components/Acquire/taskStage";
 import { acquisitionFactFilters, normalizeAcquisitionFilters, type AcquisitionFilterSelection } from "./acquisitionFilters";
 
@@ -6,6 +7,9 @@ export const acquisitionSorts = ["newest", "lastProcessed", "sizeAsc", "sizeDesc
 export type AcquisitionListPreferences = AcquisitionFilterSelection & {
   stage: AcquisitionStageFilter;
   keyword: string;
+  downloadSource?: string;
+  capabilityId?: string;
+  executionState?: string;
   sort: (typeof acquisitionSorts)[number];
 };
 export const acquisitionListPreferencesKey = () => `bakabase:acquisition:list:${encodeURIComponent(
@@ -19,6 +23,9 @@ export function readAcquisitionListPreferences(): AcquisitionListPreferences {
     if (value?.version !== 1) return { ...defaults };
     return {
       stage: ["all", ...acquisitionStages].includes(value.stage) ? value.stage : "all",
+      downloadSource: normalizeAcquisitionDownloadSource(value.downloadSource),
+      capabilityId: typeof value.capabilityId === "string" ? value.capabilityId : undefined,
+      executionState: typeof value.executionState === "string" ? value.executionState : undefined,
       keyword: typeof value.keyword === "string" ? value.keyword.slice(0, 2048) : "",
       sort: acquisitionSorts.includes(value.sort) ? value.sort : "newest",
       ...normalizeAcquisitionFilters({
@@ -36,6 +43,9 @@ export function writeAcquisitionListPreferences(value: AcquisitionListPreference
     // Explicit fields only: never restore selections, pages or task deep links.
     localStorage.setItem(acquisitionListPreferencesKey(), JSON.stringify({ version: 1,
       stage: value.stage, keyword: value.keyword, sort: value.sort,
+      downloadSource: normalizeAcquisitionDownloadSource(value.downloadSource),
+      capabilityId: value.capabilityId,
+      executionState: value.executionState,
       ...normalizeAcquisitionFilters(value),
     }));
   } catch { /* Storage-disabled browsers keep the current session usable. */ }

@@ -8,7 +8,7 @@ namespace Bakabase.Modules.Acquisition.Components;
 
 /// <summary>
 /// The heartbeat behind the acquisitions page: brings task rows back in line with the runs that
-/// carry them, then starts as many queued acquisitions as the limit allows.
+/// carry them, then dispatches pending acquisitions.
 /// <para>
 /// Both halves need something outside a run to do them. Nothing runs after a recipe's last step, so
 /// only an outside observer can notice that it finished; and a task that had to queue when it was
@@ -62,6 +62,6 @@ public interface IAcquisitionQueue
     /// <summary>Brings task rows back in line with the runs that do the work.</summary>
     Task ReconcileAsync(CancellationToken ct = default);
 
-    /// <summary>Starts queued acquisitions while there is room under the concurrency limit.</summary>
+    /// <summary>Dispatches pending acquisitions; individual activities own resource concurrency.</summary>
     Task PumpAsync(CancellationToken ct = default);
 }

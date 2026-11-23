@@ -13,6 +13,11 @@ internal sealed record AcquisitionStageDirectoryCleanupReceipt(string Id, int Ta
     string Stage, string Directory, string BindingFingerprint, DateTime StartedAt, string Status,
     IReadOnlyList<AcquisitionTaskDeleteCleanupFile> Files, ArtifactDeliveryCleanupConsent Consent, DateTime? FinishedAt = null)
 {
+    public AcquisitionCleanupScopes Scopes { get; init; }
+    public string? LiveTaskVersion { get; init; }
+    public string? SelectionId { get; init; }
+    public bool CleanupIntermediates { get; init; }
+    public IReadOnlyList<DeferredDirectoryIdentity>? WaitingDirectories { get; init; }
     public int? RemovedFiles { get; init; }
     public long? RemovedBytes { get; init; }
 

@@ -1,3 +1,4 @@
+import type { BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask as SiteDownloadTask } from "@/sdk/Api";
 import type { DownloadTaskAction, DownloadTaskStatus, ThirdPartyId } from "@/sdk/constants";
 
 export type DownloadTask = {
@@ -7,6 +8,7 @@ export type DownloadTask = {
   thirdPartyId: ThirdPartyId;
   type: number;
   progress: number;
+  fileVerification?: SiteDownloadTask["fileVerification"];
   downloadedBytes?: number | null;
   downloadSpeedBytesPerSecond?: number | null;
   estimatedRemainingSeconds?: number | null;

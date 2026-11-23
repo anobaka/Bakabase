@@ -11,13 +11,11 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Co
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
-using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.CloudDownloads;
-using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
@@ -45,10 +43,8 @@ public interface IAcquisitionDownloadOnlyRecoveryService
 /// checkpoints, enqueues a new generation, purchases content, or invokes a transfer.</summary>
 public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db, CloudDownloadRecoveryService recovery,
     IAcquisitionOriginalDownloadStarter starter, DownloaderManager manager, IStorageWriteGuard writes,
-    IBOptions<AcquisitionOptions> options) : IAcquisitionDownloadOnlyRecoveryService
+    DownloadTaskService nativeTasks) : IAcquisitionDownloadOnlyRecoveryService
 {
-    private static readonly SemaphoreSlim Admission = new(1, 1);
-
     internal static CloudDownloadTarget[]? Targets(WorkflowRunDbModel? run, string signalJson, bool verificationOnly = false)
     {
         if (run?.Status != WorkflowRunStatus.Waiting || run.PendingSignalJson != null ||
@@ -75,26 +71,28 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
     public async Task<AcquisitionDownloadRecoveryOutcome> StartAsync(int taskId, WorkflowRunDbModel run, string signalJson,
         Func<CancellationToken, Task> validateOwner, CancellationToken ct)
     {
-        var targets = Targets(run, signalJson) ?? throw new InvalidOperationException("RECOVERY_DOWNLOAD_SCOPE_UNAVAILABLE");
         var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson)!;
+        if (Targets(run, signalJson, verificationOnly: true) is { } verificationTargets)
+            return await VerifyOnlyAsync(taskId, run.Id, workset.OutputDirectory, verificationTargets, validateOwner, ct);
+        var targets = Targets(run, signalJson) ?? throw new InvalidOperationException("RECOVERY_DOWNLOAD_SCOPE_UNAVAILABLE");
         var started = new List<int>(); var unknown = new List<int>(); string? reason = null;
         foreach (var target in targets)
         {
             ct.ThrowIfCancellationRequested();
+            var grouped = workset.Targets.Count(t => t.DownloadTaskId == target.DownloadTaskId) > 1;
             try { await validateOwner(ct); }
             catch (InvalidOperationException error) {reason = SafeReason(error); break;}
             using var remoteBudget = CancellationTokenSource.CreateLinkedTokenSource(ct);
             remoteBudget.CancelAfter(TimeSpan.FromSeconds(15));
             CloudDownloadRecoveryCheck check;
-            try { check = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, true, remoteBudget.Token, includeStopped: true); }
+            try { check = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, true, remoteBudget.Token,
+                includeStopped: true, requireEquivalentGroup: grouped); }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             { reason = "RECOVERY_CHECK_INCOMPLETE"; break; }
             if (!check.CanRetry || check.VerifyExistingOnly) {reason = check.ReasonCode; break;}
-            await Admission.WaitAsync(ct);
             try
             {
                 var id = target.DownloadTaskId!.Value;
-                await EnsureAdmission(id, ct);
                 // The owner gate is acquired here only for the initial local check. The native
                 // starter then acquires it itself and calls ValidateOwnerLease twice under that lease.
                 async Task Validate(CancellationToken token)
@@ -103,16 +101,19 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
                     try
                     {
                         await validateOwner(token);
-                        var local = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, false, token, includeStopped: true);
+                        var local = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, false, token,
+                            includeStopped: true, requireEquivalentGroup: grouped);
                         if (!local.Candidate || local.VerifyExistingOnly) throw new InvalidOperationException(local.ReasonCode);
-                        await EnsureAdmission(id, token); await CheckCapacity(id, target, workset, token);
+                        await CheckCapacity(id, target, workset, token);
                     }
                     finally {gate.Release();}
                 }
                 async Task ValidateOwnerLease(CancellationToken token)
                 {
                     // Do not recursively take the run gate. No callback is retained by a worker.
-                    await validateOwner(token); await EnsureAdmission(id, token);
+                    await validateOwner(token);
+                    if (grouped && (await recovery.ReadEquivalentGroupAsync(run.Id, target, workset.OutputDirectory, token))?.Owner.Id != target.Id)
+                        throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
                     await CheckCapacity(id, target, workset, token);
                 }
                 bool accepted;
@@ -140,9 +141,40 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
             }
             catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
             { reason = SafeReason(error); break; }
-            finally {Admission.Release();}
         }
         return new(taskId, started, unknown, reason);
+    }
+
+    private async Task<AcquisitionDownloadRecoveryOutcome> VerifyOnlyAsync(int taskId, int runId, string outputRoot,
+        IReadOnlyList<CloudDownloadTarget> targets, Func<CancellationToken, Task> validateOwner, CancellationToken ct)
+    {
+        // The acquisition lock already fixes the user's selection. The native download action lock
+        // protects the payload during verification. Fence the short receipt transaction against
+        // independent workflow edits, without locking the workflow during a long network read.
+        async Task GuardRegistration(Func<Task> register)
+        {
+            var gate = WorkflowRunMutationGate.For(runId);
+            await gate.WaitAsync(ct);
+            try { await validateOwner(ct); await register(); }
+            finally { gate.Release(); }
+        }
+        var verified = new List<int>();
+        foreach (var target in targets)
+        {
+            try
+            {
+                await validateOwner(ct);
+                await recovery.VerifyExistingAsync(runId, target, outputRoot, nativeTasks, ct, GuardRegistration);
+                verified.Add(target.DownloadTaskId!.Value);
+            }
+            catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException)
+            {
+                var reason = AcquisitionRuntimeProblems.Code(error.Message) ??
+                    SafeReason(error, "RECOVERY_EXISTING_FILES_UNVERIFIED");
+                return new(taskId, [], [], reason, verified);
+            }
+        }
+        return new(taskId, [], [], VerifiedDownloadTaskIds: verified);
     }
 
     private async Task CheckCapacity(int id, CloudDownloadTarget target, DownloadWorkset workset, CancellationToken ct)
@@ -153,25 +185,7 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
         await writes.CheckAsync(download.DownloadPath, new("cloudOperation", operationId), ct);
     }
 
-    private async Task EnsureAdmission(int currentId, CancellationToken ct)
-    {
-        var taskRuns = await db.AcquisitionTasks.AsNoTracking().Where(t => t.WorkflowRunId != null).Select(t => t.WorkflowRunId!.Value).ToListAsync(ct);
-        var sourceRuns = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking().Where(s => s.Module == "acquisition" && s.EntityKind == "task")
-            .Select(s => s.WorkflowRunId).ToListAsync(ct);
-        var runs = taskRuns.Concat(sourceRuns).Distinct().ToArray();
-        var cloud = await db.CloudDownloadOperations.AsNoTracking().Where(o => o.DownloadTaskId != null && runs.Contains(o.WorkflowRunId))
-            .Select(o => o.DownloadTaskId!.Value).ToListAsync(ct);
-        var managed = await db.ManagedDownloadTasks.AsNoTracking().Where(o => o.SiteTaskId != null && o.WorkflowRunId != null && runs.Contains(o.WorkflowRunId.Value))
-            .Select(o => o.SiteTaskId!.Value).ToListAsync(ct);
-        var owned = await db.DownloadResultOwners.AsNoTracking().Where(o => o.AcquisitionTaskId > 0).Select(o => o.DownloadTaskId).ToListAsync(ct);
-        var ids = cloud.Concat(managed).Concat(owned).Distinct().Where(id => id != currentId).ToArray();
-        var states = await db.DownloadTasks.AsNoTracking().Where(d => ids.Contains(d.Id)).Select(d => new {d.Id, d.Status}).ToListAsync(ct);
-        var active = states.Count(d => d.Status == DownloadTaskDbModelStatus.InProgress || manager[d.Id]?.IsOccupyingDownloadTaskSource() == true);
-        if (active >= Math.Clamp(options.Value.Concurrency, AcquisitionOptions.MinimumConcurrency, AcquisitionOptions.MaximumConcurrency))
-            throw new InvalidOperationException("RECOVERY_DOWNLOAD_CONCURRENCY_LIMIT");
-    }
-
-    private static string SafeReason(Exception error)
+    private static string SafeReason(Exception error, string fallback = "RECOVERY_DOWNLOAD_START_REJECTED")
     {
         if (error is LocalStorageException local) return local.Code;
         if (LocalStorageFailures.PersistedCode(error.Message) is { } storageCode) return storageCode;
@@ -179,6 +193,6 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
         var code = error.Message;
         return code.Length <= 100 && code.All(c => c is >= 'A' and <= 'Z' or '_') &&
                (code.StartsWith("RECOVERY_", StringComparison.Ordinal) || code.StartsWith("ACQUISITION_", StringComparison.Ordinal))
-            ? code : "RECOVERY_DOWNLOAD_START_REJECTED";
+            ? code : fallback;
     }
 }

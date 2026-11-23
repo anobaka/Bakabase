@@ -29,6 +29,52 @@ public sealed partial class FileArtifactProcessorTests
         return (input, plan, resolved, legacy, checkpoint, file, key);
     }
 
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Bound_stage_input_uses_its_own_checkpoint_and_cleanup_retains_other_owners(bool sameStorageRoot)
+    {
+        var f = await EmptyLegacyCheckpoint();
+        var resolver = new FileProcessingWorkspaceResolver(_appData);
+        var oldOperation = ArtifactManifestFiles.Hash("old-acquisition");
+        await resolver.ResolveAsync("operations", oldOperation, 1, f.Input.RootDirectory, f.LegacyRoot, default, newAttempt: true);
+        var oldCheckpoint = (await resolver.InspectOwnedCheckpointForStageCleanupAsync(f.BaseKey, oldOperation, 1, null, default))!;
+        var previousRoot = Path.GetDirectoryName(f.StateFile)!;
+        var evidence = Path.Combine(previousRoot, "existing-operation.receipt");
+        await File.WriteAllTextAsync(evidence, "retain unrelated progress");
+        var oldState = await File.ReadAllBytesAsync(f.StateFile);
+
+        var stage = sameStorageRoot ? f.LegacyRoot : Directory.CreateDirectory(Path.Combine(_root, "declared-stage")).FullName;
+        var files = f.Input.Files.Select(file =>
+        {
+            var target = Path.Combine(stage, Path.GetRelativePath(f.Input.RootDirectory, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!); File.Copy(file, target);
+            return target;
+        }).ToArray();
+        var input = f.Input with {RootDirectory = stage, Files = files};
+        var currentOperation = ArtifactManifestFiles.Hash("current-acquisition");
+        await resolver.ResolveAsync("operations", currentOperation, 1, stage, null, default, newAttempt: true);
+        var before = await resolver.InspectOwnedCheckpointForStageCleanupAsync(f.BaseKey, currentOperation, 1, null, default);
+        if (sameStorageRoot) Assert.AreEqual(oldCheckpoint.Directory, before?.Directory);
+        else Assert.IsNull(before, "A foreign family's path alone cannot authorize stage cleanup.");
+        var preview = await resolver.InspectCheckpointAsync(f.BaseKey, currentOperation, 1, input, f.Resolved, null, default, stage);
+        Assert.AreEqual(stage, preview?.StorageRoot);
+        var actual = await resolver.ResolveCheckpointAsync(f.BaseKey, currentOperation, 1, input, f.Resolved, null, stage, null, null, default, stage);
+        Assert.AreEqual(actual, await resolver.ReadCheckpointAsync(f.BaseKey, currentOperation, 1, null, default));
+        var currentCleanup = await resolver.InspectOwnedCheckpointForStageCleanupAsync(f.BaseKey, currentOperation, 1, null, default);
+        Assert.AreEqual(actual, currentCleanup?.Directory);
+        Assert.AreEqual(stage, currentCleanup?.StorageRoot);
+        Assert.AreEqual(oldCheckpoint.Directory, (await resolver.InspectOwnedCheckpointForStageCleanupAsync(f.BaseKey, oldOperation, 1, null, default))?.Directory);
+        if (sameStorageRoot) Assert.AreEqual(f.CheckpointRoot, actual);
+        else
+        {
+            Assert.AreNotEqual(f.CheckpointRoot, actual);
+            Directory.Delete(currentCleanup!.Directory, true);
+        }
+        CollectionAssert.AreEqual(oldState, await File.ReadAllBytesAsync(f.StateFile));
+        Assert.AreEqual("retain unrelated progress", await File.ReadAllTextAsync(evidence));
+    }
+
     [DataTestMethod]
     [DataRow(false)]
     [DataRow(true)]

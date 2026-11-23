@@ -41,6 +41,14 @@ public static class ArchiveSignature
         return structure != null && structure.ArchiveEnd - structure.ZipOffset > length / 2 ? structure.ZipOffset : null;
     }
 
+    /// <summary>Verify the complete offset-zero member layout before lending a selected,
+    /// registered ZIP as a read-only input. General discovery uses its smaller candidate budget.</summary>
+    public static async Task<bool> IsCompleteStandaloneZipAsync(string path, long length, CancellationToken ct)
+    {
+        var structure = await BoundedZipStructureProbe.FindStructureAsync(path, length, ct, verifySelectedStandaloneZip: true);
+        return structure is {ZipOffset: 0} && structure.ArchiveEnd > length / 2;
+    }
+
     // Used only to preserve an existing outer container before a deeper ZIP hint.
     // This does not expand the set of files admitted by ordinary workflow discovery.
     internal static bool HasKnownContainerHeader(ReadOnlySpan<byte> header) => Detect(header) != null ||

@@ -16,13 +16,17 @@ public sealed partial class FileProcessingPlanExecutor
     public sealed record FinalAssemblyJournal(int Version, ArtifactManifest Manifest,
         IReadOnlyList<FinalAssemblyFile> Files, string CopyDirectoryName)
     {
+        // A missing boundary identifies the historical final-result journal.
+        public string? BoundaryStepId { get; init; }
+        public bool PromoteExtractionOutputs { get; init; }
+        public string? StandaloneExtractionStep { get; init; }
         public IReadOnlyList<ArtifactManifestEntry> ReplacedPartialCopies { get; init; } = [];
     }
 
     private static bool CanMoveToFinal(State state, string directory, Artifact file)
     {
         var policy = file.StepId != null ? state.StepPolicies.GetValueOrDefault(file.StepId) : state.StoragePolicy;
-        if (state.MaterializationVersion < 2 || state.LineageVersion != 1 || state.StoragePolicy?.CleanupIntermediates != true ||
+        if (file.RetainedIncompleteArchive || state.MaterializationVersion < 2 || state.LineageVersion != 1 || state.StoragePolicy?.CleanupIntermediates != true ||
             policy?.CleanupIntermediates == false || MaterializationMode(state, policy) != "auto" ||
             state.Active.Count(a => FileProcessingFiles.PathComparer.Equals(a.Path, file.Path)) != 1 ||
             !new[] {"inputs", "outputs"}.Any(name => IsInside(Path.Combine(directory, name), file.Path)) ||
@@ -39,18 +43,60 @@ public sealed partial class FileProcessingPlanExecutor
         return true;
     }
 
-    private static async Task<bool> PrepareFinalAssemblyAsync(State state, string directory, string resultDirectory,
-        Func<Task> save, CancellationToken ct)
+    // A committed extraction receipt proves ownership of the private source. Ancestor boundaries
+    // and explicit retention still pin their bytes; original or borrowed inputs cannot qualify.
+    internal static HashSet<string> PromotableExtractions(State state, string directory, string? boundary, CancellationToken ct,
+        string? standaloneExtractionStep = null)
     {
-        if (!state.Active.Any(file => CanMoveToFinal(state, directory, file))) return false;
+        var promotable = new HashSet<string>(FileProcessingFiles.PathComparer);
+        if (state.MaterializationVersion != 2 || state.LineageVersion != 1 || state.StoragePolicy?.CleanupIntermediates == false ||
+            state.Active.Any(f => !IsInside(directory, f.Path)) || !OperationDirectoriesAreDisjoint(state)) return promotable;
+        // A standalone registered-input review has no prior boundary to pin its writer outputs.
+        // The saved step identity also lets a partly moved result resume the same assembly.
+        var standalone = standaloneExtractionStep != null && boundary == null && state.BoundaryResults.Count == 0 &&
+            state.InputManifest != null && (state.SnapshotSourceArtifactId != null || state.ReadOnlyVolumeArtifactId != null) &&
+            state.Outputs.Count == 2 && state.Outputs.ContainsKey("download") && state.Outputs.ContainsKey(standaloneExtractionStep);
+        if (!standalone && (state.Active.Select(f => f.StepId).Distinct(StringComparer.Ordinal).Take(2).Count() < 2 ||
+            boundary == null && state.BoundaryResults.Count == 0)) return promotable;
+        var unique = state.Active.GroupBy(f => f.Path, FileProcessingFiles.PathComparer)
+            .Where(group => group.Count() == 1).Select(group => group.Key).ToHashSet(FileProcessingFiles.PathComparer);
+        var pinned = state.BoundaryResults.Values.SelectMany(b => b.Files).Select(f => f.Path)
+            .Concat(state.RetainedFiles).ToHashSet(FileProcessingFiles.PathComparer);
+        foreach (var group in state.Active.Where(f => f.Extracted && !f.RetainedIncompleteArchive && f.StepId != null && (boundary == null || f.StepId == boundary))
+                     .GroupBy(f => f.StepId!))
+        {
+            var policy = state.StepPolicies.GetValueOrDefault(group.Key);
+            if (policy?.CleanupIntermediates == false || MaterializationMode(state, policy) != "auto" ||
+                !state.Outputs.TryGetValue(group.Key, out var outputs)) continue;
+            var owned = RegisteredExtractionOutputs(state, directory, group.Key, ct, promoting: true);
+            if (owned == null) continue;
+            var produced = outputs.Select(f => f.Path).ToHashSet(FileProcessingFiles.PathComparer);
+            foreach (var item in group)
+                if (unique.Contains(item.Path) && !pinned.Contains(item.Path) && produced.Contains(item.Path) && owned.TryGetValue(item.Path, out var writer) &&
+                    state.FileContents.TryGetValue(ContentKey(state, item.Path), out var contents) && SameContent(writer, contents))
+                    promotable.Add(item.Path);
+        }
+        return promotable;
+    }
+
+    private static async Task<bool> PrepareFinalAssemblyAsync(State state, FileProcessingPlan plan, string directory, string resultDirectory,
+        string? boundary, Func<Task> save, CancellationToken ct)
+    {
+        if (state.Active.Any(f => !IsInside(directory, f.Path))) return false;
+        var standalone = plan.Steps is [{ Op: "extractArchive" } step] && step.StoragePolicy?.CleanupIntermediates != false &&
+            step.StoragePolicy?.Materialization != "copy" ? step.Id : null;
+        var promotable = PromotableExtractions(state, directory, boundary, ct, standalone);
+        bool Move(Artifact file) => promotable.Contains(file.Path) || boundary == null && CanMoveToFinal(state, directory, file);
+        if (!state.Active.Any(Move)) return false;
         await VerifyContents(state, state.Active.Select(a => a.Path), ct);
         VerifyActiveDirectories(state);
         var manifest = ManifestFor(state, state.Active, resultDirectory);
         var entries = manifest.Entries.ToDictionary(e => e.RelativePath, FileProcessingFiles.PathComparer);
         state.FinalAssembly = new(1, manifest, state.Active.Select(a => new FinalAssemblyFile(a.Path,
-            a.RelativePath.Replace('\\', '/'), entries[a.RelativePath.Replace('\\', '/')], CanMoveToFinal(state, directory, a),
+            a.RelativePath.Replace('\\', '/'), entries[a.RelativePath.Replace('\\', '/')], Move(a),
             MaterializationMode(state, a.StepId != null ? state.StepPolicies.GetValueOrDefault(a.StepId) : state.StoragePolicy))).ToArray(),
-            "final-copy-" + Guid.NewGuid().ToString("N"));
+            "final-copy-" + Guid.NewGuid().ToString("N"))
+        {BoundaryStepId = boundary, PromoteExtractionOutputs = promotable.Count > 0, StandaloneExtractionStep = boundary == null ? standalone : null};
         // This receipt precedes the first rename. Files can subsequently live at their
         // original private path, in pending, or in the committed result directory.
         await save();
@@ -65,13 +111,16 @@ public sealed partial class FileProcessingPlanExecutor
             !journal.CopyDirectoryName.StartsWith("final-copy-", StringComparison.Ordinal) ||
             !Guid.TryParseExact(journal.CopyDirectoryName[11..], "N", out _))
             throw new InvalidDataException("The final assembly receipt no longer matches the processing result.");
+        var promotable = journal.PromoteExtractionOutputs ? PromotableExtractions(state, directory, journal.BoundaryStepId, ct, journal.StandaloneExtractionStep)
+            : new HashSet<string>(FileProcessingFiles.PathComparer);
         for (var index = 0; index < journal.Files.Count; index++)
         {
             var entry = journal.Files[index]; var active = state.Active[index];
             if (!FileProcessingFiles.PathComparer.Equals(entry.Source, active.Path) ||
                 !FileProcessingFiles.PathComparer.Equals(entry.RelativePath, active.RelativePath.Replace('\\', '/')) ||
                 !state.FileContents.TryGetValue(ContentKey(state, entry.Source), out var content) || !SameContent(entry.Content, content) ||
-                entry.Mode is not ("auto" or "copy") || entry.Move && !CanMoveToFinal(state, directory, active))
+                entry.Mode is not ("auto" or "copy") || entry.Move && !promotable.Contains(active.Path) &&
+                    (journal.BoundaryStepId != null || !CanMoveToFinal(state, directory, active)))
                 throw new InvalidDataException("A final assembly member changed after it was recorded.");
             FileProcessingFiles.Within(entry.Source, directory);
             ArtifactManifestFiles.RejectLinks(entry.Source);
@@ -220,6 +269,19 @@ public sealed partial class FileProcessingPlanExecutor
                 Manifest = resultManifest};
         state.FinalExtractedFiles = state.Active.Where(a => a.Extracted)
             .Select(a => FileProcessingFiles.Within(Path.Combine(resultDirectory, a.RelativePath), resultDirectory)).ToList();
+        if (!isFinalBoundary && state.FinalAssembly is {BoundaryStepId: not null} assembly)
+        {
+            // Future steps and branches address the canonical, pinned boundary. Keep the old
+            // private path in cleanup evidence when an unsupported rename fell back to copying.
+            var promoted = assembly.Files.Where(f => f.Move).ToDictionary(f => f.Source,
+                f => FileProcessingFiles.Within(Path.Combine(resultDirectory, f.RelativePath), resultDirectory),
+                FileProcessingFiles.PathComparer);
+            Artifact Canonical(Artifact file) => promoted.TryGetValue(file.Path, out var path) ? file with {Path = path} : file;
+            foreach (var step in state.Outputs.Keys.ToArray()) state.Outputs[step] = state.Outputs[step].Select(Canonical).ToList();
+            state.Active = state.Active.Select(Canonical).ToList();
+            state.StagedFiles = state.StagedFiles.Concat(promoted.Keys.Where(File.Exists)).Distinct(FileProcessingFiles.PathComparer).ToList();
+            state.FinalAssembly = null;
+        }
         state.Completed = isFinalBoundary;
         await save();
         return CompletedResult(state, state.FinalFiles, resultDirectory);

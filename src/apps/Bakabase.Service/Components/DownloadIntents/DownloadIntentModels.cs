@@ -37,13 +37,15 @@ public sealed record DownloadMethodView(string Id, string DisplayName, string Pr
 public sealed record DownloadCandidateView(DownloadCandidate Candidate, IReadOnlyList<DownloadMethodView> Methods,
     bool CanSelect, string State, IReadOnlyList<DownloadRequirement> Requirements, CloudSource? ResolvedSource = null,
     string? SelectedMethodId = null, ProcessingPlanPreflightResult? ProcessingPlan = null,
-    SourceAvailabilityResult? Availability = null, bool? SourceDisabled = null);
+    SourceAvailabilityResult? Availability = null, bool? SourceDisabled = null, bool? CanSelectManually = null);
 
 public sealed record DownloadIntentPreflight(string Mode, IReadOnlyList<DownloadCandidateView> Candidates,
     IReadOnlyList<DownloadRequirement> Requirements, bool CanSubmit);
 
 public sealed record DownloadIntentRequest
 {
+    // Server-owned acquisition grants only. Ordinary intent submission cannot supply these.
+    internal IReadOnlyDictionary<string, string> AllowedUnavailableSourceFingerprints { get; init; } = new Dictionary<string, string>();
     public string? AvailabilityContextKey { get; init; }
     public bool? CheckSourceAvailability { get; init; }
     /// <summary>Frozen executions retain their source and reuse existing artifacts regardless of later share observations.</summary>

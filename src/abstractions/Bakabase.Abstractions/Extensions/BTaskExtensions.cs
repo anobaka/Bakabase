@@ -25,8 +25,7 @@ public static class BTaskExtensions
             builder.RetryPolicy,
             builder.DependencyFailurePolicy,
             builder.ConcurrencyGroup,
-            builder.GetConcurrencyLimit,
-            builder.CanShareConcurrencySlotWith)
+            builder.GetConcurrencyLimit)
         {
             EnableAfter = enableAfter,
             Interval = interval ?? builder.Interval

@@ -81,7 +81,7 @@
   "helpCenter.acquisition.concept.task.name": "Acquisition task",
   "helpCenter.acquisition.concept.task.intro": "A task runs a workflow for one resource, recording progress, the current step, and anything needing your attention. Multiple tasks can use the same workflow.",
   "helpCenter.acquisition.concept.task.start.title": "Follow queued and running work",
-  "helpCenter.acquisition.concept.task.start.desc": "Open “Active tasks” after creation. Tasks may queue when the concurrency limit is reached, then execute the selected workflow step by step.",
+  "helpCenter.acquisition.concept.task.start.desc": "Open “Active tasks” after creation. Acquisition tasks progress within a configurable overall parallel limit, defaulting to 20. AI, downloads and other capabilities control their own execution and queues; downloads use the channel and account limits in Download Center.",
   "helpCenter.acquisition.concept.task.wait.title": "Supply the input a waiting task needs",
   "helpCenter.acquisition.concept.task.wait.desc": "Follow the task's prompt when it needs files, a password, or a conflict decision. Claiming files or submitting the requested input lets the workflow continue from that waiting step.",
   "helpCenter.acquisition.concept.task.finish.title": "Inspect the result or failure reason",

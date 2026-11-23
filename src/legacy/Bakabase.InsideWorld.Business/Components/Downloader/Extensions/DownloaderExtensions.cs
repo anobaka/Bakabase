@@ -207,6 +207,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 Status = status,
                 DownloadPath = task.DownloadPath,
                 Current = storageBlock ?? downloader?.Current,
+                FileVerification = downloaderManager.GetFileVerification(task.Id),
                 FailureTimes = downloader?.FailureTimes ?? 0,
                 NextStartDt = nextStartDt,
                 AvailableActions = actions,

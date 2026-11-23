@@ -16,7 +16,10 @@ import { parseServerTime } from "@/core/serverTime";
 const { copy } = vi.hoisted(() => ({ copy: vi.fn() }));
 const i18n = createInstance();
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: i18n.t }) }));
-vi.mock("@/components/Workflow/displayNames", () => ({ activityDisplayName: () => "下载来源" }));
+vi.mock("@/components/Workflow/displayNames", () => ({
+  activityDisplayName: (_t: unknown, kind: string, fallback?: string) =>
+    kind === "custom.analyze" ? fallback ?? kind : "下载来源",
+}));
 vi.mock("@/components/ExternalLink", () => ({
   default: ({ href, children }: any) => <a href={href}>{children}</a>,
 }));
@@ -50,12 +53,14 @@ beforeAll(async () => {
     fallbackLng: false,
     keySeparator: false,
     interpolation: { escapeValue: false },
-    resources: { cn: { translation: { ...acquisition, ...directories, ...cloud, ...downloader, ...workflow, ...dateTime } } },
+    resources: { cn: { translation: { ...acquisition, ...directories, ...cloud, ...downloader, ...workflow, ...dateTime,
+      "custom.capability.name": "检查媒体元信息" } } },
   });
 });
 afterEach(cleanup);
 const overview = (patch: Partial<RuntimeOverview> = {}): RuntimeOverview => ({
   taskId: 969,
+  planRevision: 4,
   workflowRunId: 11,
   currentStepIndex: 2,
   stepCount: 5,
@@ -230,7 +235,7 @@ it("shows measured speed and the download-stage estimate beside the percentage",
 it("distinguishes live input preparation from the archive tool's measured extraction percentage", () => {
   const running = { currentNodeKind: "acquisition.plan.process", workflowStatus: "running" };
   const view = render(<RuntimeOverviewSummary overview={overview({ ...running,
-    stage: "preparingFiles", progressScope: "processing", progress: null })} />);
+    stage: "preparingFiles", progressScope: "processing", progress: undefined })} />);
   expect(screen.getByText("正在准备处理文件")).toBeVisible();
   expect(screen.getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
   view.rerender(<RuntimeOverviewSummary overview={overview({ ...running,
@@ -241,6 +246,31 @@ it("distinguishes live input preparation from the archive tool's measured extrac
     stage: "extractingArchive", progressScope: "archive", progress: 62 })} />);
   expect(screen.queryByRole("progressbar")).toBeNull();
   expect(screen.queryByText("正在解压当前压缩包")).toBeNull();
+});
+
+it("localizes the AI queue stage without inventing a percentage", () => {
+  render(<RuntimeOverviewSummary overview={overview({ currentNodeKind: "acquisition.plan.process",
+    workflowStatus: "running", stage: "waitingForAi", progressScope: "processing", progress: undefined })} />);
+  expect(screen.getByText("等待 AI 分析名额")).toBeVisible();
+  expect(screen.getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
+  expect(screen.queryByText(/%/)).toBeNull();
+});
+
+it("uses registered capability metadata and raw stage text for an unknown activity", () => {
+  const view = render(<RuntimeOverviewSummary overview={overview({ currentNodeKind: "custom.analyze",
+    capability: { id: "custom", displayName: "Inspect media metadata", displayNameKey: "custom.unknown.name" },
+    workflowStatus: "running", stage: "Reading media tags", progressScope: "metadata", progress: 70 })} />);
+  expect(screen.getByText("当前步骤：Inspect media metadata")).toBeVisible();
+  expect(screen.getByText("Reading media tags")).toBeVisible();
+  expect(screen.queryByRole("progressbar")).toBeNull();
+  expect(view.container.textContent).not.toContain("downloadCenter.stage.");
+
+  view.rerender(<RuntimeOverviewSummary overview={overview({ currentNodeKind: "custom.analyze",
+    capability: { id: "custom", displayName: "Inspect media metadata", displayNameKey: "custom.capability.name" },
+    workflowStatus: "running", stage: "Reading media tags", progressScope: "processing", progress: undefined })} />);
+  expect(screen.getByText("Reading media tags")).toBeVisible();
+  expect(screen.getByText("当前步骤：检查媒体元信息")).toBeVisible();
+  expect(view.container.textContent).not.toContain("acquisition.runtime.fileStage.");
 });
 
 it("uses the server's generic classification for both task and source reasons", () => {
@@ -369,4 +399,28 @@ it("retains a newer verification error after downloads completed", () => {
   expect(screen.getByText("下载已完成，后续处理需要先解决下方问题。")).toBeVisible();
   expect(screen.getByText("生成文件清单时检测到文件大小或修改时间变化。")).toBeVisible();
   expect(screen.queryByText("下载已完成，工作流正在自动衔接后续处理。")).toBeNull();
+});
+
+it.each([["VerifyingSource", "正在核对来源文件"], ["VerifyingLocalFiles", "正在复核本地文件"]])(
+  "shows the bound verification stage %s without suggesting transfer activity", (stage, label) => {
+    render(<RuntimeOverviewSummary overview={overview({ stage, workflowStatus: "running",
+      progressScope: "download", progress: 99, completedBytes: 12345, downloadCount: 1, activeDownloadCount: 1,
+      speedBytesPerSecond: 12345, estimatedRemainingSeconds: 90, problem: "previous transfer failure",
+    })} />);
+    expect(screen.getByText(label)).toBeVisible();
+    expect(screen.getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
+    expect(screen.queryByText(/99%|previous transfer failure|KiB/)).toBeNull();
+  },
+);
+
+it.each([undefined, 11])("shows an active confirmation for run %s without stale transfer or workflow progress", run => {
+  render(<RuntimeOverviewSummary overview={overview({
+    workflowRunId: run, workflowStatus: run ? "waiting" : undefined,
+    stage: "verifyingFiles", progressScope: "confirmation", problem: "Previous transfer failed",
+    progress: 100, completedBytes: 199, totalBytes: 199, activeDownloadCount: 1, downloadCount: 1,
+    downloadsCompletedAwaitingWorkflow: true, speedBytesPerSecond: 80, estimatedRemainingSeconds: 4,
+  })} />);
+  expect(screen.getByText("正在核验已有文件")).toBeVisible();
+  expect(screen.getByRole("progressbar", { name: "已有文件核验进度" })).not.toHaveAttribute("aria-valuenow");
+  expect(screen.queryByText(/Previous transfer failed|100%|预计剩余|当前下载/)).toBeNull();
 });

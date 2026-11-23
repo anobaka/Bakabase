@@ -28,6 +28,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bakabase.Tests;
 
 [TestClass]
+[DoNotParallelize] // Independent fixtures reuse IDs; deletion intentionally skips busy process-wide task/run gates.
 public sealed class AcquisitionTaskDeletionTests
 {
     private IServiceProvider _services = null!;
@@ -47,7 +48,58 @@ public sealed class AcquisitionTaskDeletionTests
         _activity = new(_db, _services.GetRequiredService<DownloadTaskService>(), bt, http);
         _delete = new(_db, _activity, new());
     }
+    [TestMethod]
+    public async Task DeletedTaskHistoryIncludesOlderReceiptsAndKeepsPageOrderStable()
+    {
+        var timestamp = DateTime.UtcNow;
+        var recent = new AcquisitionTaskDbModel {DeletedAt = timestamp, DeletedIntermediateCleanup = "incomplete", DeletedDeliveryCleanup = "completed",
+            DeletedCleanupReasons = "ReferencedPath,CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED"};
+        var historical = new AcquisitionTaskDbModel {DeletedAt = timestamp};
+        _db.AcquisitionTasks.AddRange(new AcquisitionTaskDbModel(), recent, historical);
+        await _db.SaveChangesAsync();
+        var page = await _delete.GetDeletedTasksAsync(1, 1, "all", default);
+        Assert.AreEqual(2, page.TotalCount);
+        Assert.AreEqual(historical.Id, page.Items.Single().TaskId);
+        Assert.AreEqual(recent.Id, (await _delete.GetDeletedTasksAsync(2, 1, "all", default)).Items.Single().TaskId);
+        var incomplete = (await _delete.GetDeletedTasksAsync(1, 25, "incomplete", default)).Items.Single();
+        CollectionAssert.AreEqual(new[] {"ReferencedPath", "CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED"}, incomplete.LastReasonCodes.ToArray());
+        Assert.AreEqual("unknown", (await _delete.GetDeletedTasksAsync(1, 25, "unknown", default)).Items.Single().DeliveryCleanup);
+    }
+
     [TestCleanup] public void Cleanup() => (_services as IDisposable)?.Dispose();
+
+    [TestMethod]
+    public async Task DeletedHistoryFiltersAndPagesOnlyScopesAwaitingFileRelease()
+    {
+        var at = DateTime.UtcNow;
+        var receipt = Guid.NewGuid().ToString("N");
+        var waiting = DeferredStageCleanup.Encode([receipt], false);
+        var manual = DeferredStageCleanup.Encode([receipt], true);
+        AcquisitionTaskDbModel Deleted(string? intermediate, string? delivery) =>
+            new() {DeletedAt = at, DeletedIntermediateCleanup = intermediate, DeletedDeliveryCleanup = delivery};
+        var download = Deleted(waiting, "completed");
+        var delivery = Deleted("incomplete", waiting);
+        var both = Deleted(waiting, waiting);
+        _db.AcquisitionTasks.AddRange(download, delivery, both, Deleted(manual, "completed"),
+            Deleted("smbPending:invalid", null), new AcquisitionTaskDbModel {DeletedIntermediateCleanup = waiting});
+        await _db.SaveChangesAsync();
+
+        var first = await _delete.GetDeletedTasksAsync(1, 2, "awaitingFileRelease", default);
+        var next = await _delete.GetDeletedTasksAsync(2, 2, "awaitingFileRelease", default);
+        Assert.AreEqual(3, first.TotalCount);
+        CollectionAssert.AreEqual(new[] {both.Id, delivery.Id}, first.Items.Select(t => t.TaskId).ToArray());
+        CollectionAssert.AreEqual(new[] {"intermediate", "delivery"}, first.Items[0].AwaitingFileReleaseScopes.ToArray());
+        CollectionAssert.AreEqual(new[] {"delivery"}, first.Items[1].AwaitingFileReleaseScopes.ToArray());
+        Assert.AreEqual(download.Id, next.Items.Single().TaskId);
+        Assert.AreEqual("incomplete", next.Items.Single().IntermediateCleanup);
+        CollectionAssert.AreEqual(new[] {"intermediate"}, next.Items.Single().AwaitingFileReleaseScopes.ToArray());
+
+        download.DeletedIntermediateCleanup = "completed";
+        await _db.SaveChangesAsync();
+        var refreshed = await _delete.GetDeletedTasksAsync(2, 2, "awaitingFileRelease", default);
+        Assert.AreEqual(2, refreshed.TotalCount);
+        Assert.AreEqual(0, refreshed.Items.Count);
+    }
 
     private async Task<(AcquisitionTaskDbModel Task, WorkflowRunDbModel Run)> Seed(WorkflowRunStatus status = WorkflowRunStatus.Waiting)
     {
@@ -99,11 +151,16 @@ public sealed class AcquisitionTaskDeletionTests
             Assert.AreEqual(2, progress.FinishedTasks, "Skipped rows are handled, not reported as successfully deleted.");
             Assert.AreEqual(0, progress.CompletedFiles);
             Assert.IsNull(progress.CurrentTaskId);
-            CollectionAssert.AreEqual(new[] {task.Id}, result.DeletedTaskIds.ToArray());
+            CollectionAssert.AreEqual(new[] {task.Id}, result.DeletedTaskIds.ToArray(),
+                string.Join(", ", result.Skipped.Select(row => $"{row.TaskId}: {row.ReasonCode}")));
             Assert.AreEqual("ACQUISITION_TASK_NOT_FOUND", result.Skipped.Single().ReasonCode);
             await _db.Entry(task).ReloadAsync(); Assert.IsNotNull(task.DeletedAt);
             var persisted = await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
-            Assert.AreEqual(before, JsonSerializer.Serialize(persisted with {DeletedAt = null}));
+            Assert.AreEqual(before, JsonSerializer.Serialize(persisted with {DeletedAt = null, DeletedIntermediateCleanup = null, DeletedDeliveryCleanup = null}));
+            var historic = (await _delete.GetDeletedTasksAsync(1, 25, "all", default)).Items.Single();
+            Assert.AreEqual(task.Id, historic.TaskId);
+            Assert.AreEqual("notRequested", historic.IntermediateCleanup);
+            Assert.AreEqual("notRequested", historic.DeliveryCleanup);
             Assert.IsNull(later.DeletedAt); Assert.AreEqual(checkpoint, run.CurrentItemJson);
             Assert.AreEqual(2, await _db.WorkflowNodeExecutions.CountAsync());
             Assert.AreEqual(2, await _db.Set<WorkflowRunSourceDbModel>().CountAsync());

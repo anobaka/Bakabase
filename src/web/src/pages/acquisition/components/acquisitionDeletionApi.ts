@@ -2,9 +2,12 @@ import BApi from "@/sdk/BApi";
 
 type Api = typeof BApi.acquisition;
 export type AcquisitionDeletionOptions = Pick<Parameters<Api["deleteAcquisitionTasks"]>[0],
-  "cleanupFiles" | "deleteDeliveredFiles" | "removeTaskIfCleanupFails" | "retryRetainedFiles">;
+  "cleanupFiles" | "deleteDeliveredFiles" | "removeTaskIfCleanupFails" | "retryRetainedFiles" | "selectedCleanupDirectories">;
 export type AcquisitionDeletionResult = NonNullable<
   Awaited<ReturnType<Api["deleteAcquisitionTasks"]>>["data"]
+>;
+export type AcquisitionDeletionPreview = NonNullable<
+  Awaited<ReturnType<Api["previewDeleteAcquisitionTasks"]>>["data"]
 >;
 export type AcquisitionDeletionProgress = NonNullable<
   Awaited<ReturnType<typeof BApi.acquisition.getAcquisitionTaskDeletionProgress>>["data"]
@@ -22,12 +25,16 @@ export const acquisitionDeletionApi = {
     const names = await unwrap(BApi.acquisition.getAcquisitionTaskNames({ taskIds }, { ...options, signal }));
     return Object.fromEntries(Object.entries(names).filter((entry): entry is [string, string] => !!entry[1]?.trim()));
   },
+  previewRetained: (taskIds: number[], choices: AcquisitionDeletionOptions, signal: AbortSignal) =>
+    unwrap(BApi.acquisition.previewDeleteAcquisitionTasks({
+      taskIds, cleanupFiles: choices.cleanupFiles, deleteDeliveredFiles: choices.deleteDeliveredFiles, retryRetainedFiles: true,
+    }, { ...options, signal })),
   remove: (
     operationId: string,
-    taskIds: number[],
+    taskIds: number[] | undefined,
     choices: AcquisitionDeletionOptions = {},
   ): Promise<AcquisitionDeletionResult> => {
-    const request = { previewId: operationId, taskIds, ...choices };
+    const request = { previewId: operationId, ...(taskIds ? { taskIds } : {}), ...choices };
     return unwrap(BApi.acquisition.deleteAcquisitionTasks(request, options));
   },
   progress: (operationId: string, signal?: AbortSignal): Promise<AcquisitionDeletionProgress> =>

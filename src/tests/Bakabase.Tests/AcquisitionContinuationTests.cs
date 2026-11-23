@@ -94,6 +94,25 @@ public sealed partial class AcquisitionContinuationTests
         Assert.IsFalse(preview.Rows[0].CanQueue); Assert.AreEqual("LOCAL_BATCH_ALREADY_QUEUED", preview.Rows[0].ReasonCode);
         Assert.IsTrue(preview.Rows[1].CanQueue);
     }
+
+    [TestMethod]
+    public async Task ActiveLocalRecoveryOnlyExcludesItsOwnTaskFromDeferredContinuation()
+    {
+        using var f = await Fixture.Create();
+        var task = await f.Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == 1);
+        var state = new AcquisitionLocalRecoveryQueueEntry {BatchId = Guid.NewGuid().ToString("N"), Version = "v", Signal = "{}",
+            RecoveryScope = "workflow", StorageStamp = "s", Status = "running", WorkflowRunId = 1};
+        await f.Db.AcquisitionTasks.Where(t => t.Id == 1).ExecuteUpdateAsync(s => s.SetProperty(t => t.BuilderStateJson,
+            AcquisitionLocalRecoveryQueueEntry.Write(task.BuilderStateJson, state)));
+        await f.Db.WorkflowRuns.Where(r => r.Id == 1).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Running));
+        var preview = await f.Service.PreviewAsync(new([1, 2], "workflow"), false);
+        Assert.IsFalse(preview.Rows[0].CanQueue);
+        var job = await f.Service.ApplyAsync(new(preview.PreviewToken, [2]), false);
+        await f.Service.TickAsync(default);
+        Assert.AreEqual(1, f.Host.Calls);
+        Assert.AreEqual("submitted", (await f.Service.GetAsync(job.BatchId)).Rows.Single().Status);
+        Assert.AreEqual(WorkflowRunStatus.Running, (await f.Db.WorkflowRuns.AsNoTracking().SingleAsync(r => r.Id == 1)).Status);
+    }
     [TestMethod]
     public async Task RelativeProcessingInstructionsAndFileMetadataAreNotFilesystemPaths()
     {
@@ -174,7 +193,8 @@ public sealed partial class AcquisitionContinuationTests
     {
         internal int Calls;
         public Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
-            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
+            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false,
+            bool includeStoppedVerification = false, bool deferCompletedDownloadVerification = false)
         {
             Assert.IsTrue(verifyFiles && verifyContent); Calls++;
             return Task.FromResult(new AcquisitionRecoveryDiagnosis(new(task.Id, task.Title, run?.Id, true, "resume", "READY")));

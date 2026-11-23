@@ -5,6 +5,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Service.Components.DownloadIntents;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
@@ -33,6 +34,8 @@ public sealed record AcquisitionPlanTaskDetail(AcquisitionTask Task, Acquisition
     public bool CanEditStoragePolicy { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? CanKeepPreparedFiles { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? CanDeferPreparedProcessing => CanKeepPreparedFiles;
     public IReadOnlyList<AcquisitionPlanRevision> PlanHistory { get; init; } = [];
     public IReadOnlyList<AcquisitionPlanPreparationAttempt> PreparationAttempts { get; init; } = [];
     public IReadOnlyList<AcquisitionPlanArtifactCandidate> ReplanArtifacts { get; init; } = [];
@@ -60,6 +63,7 @@ public sealed record AcquisitionPlanCreationInput(string Title, string BuilderId
 public sealed record AcquisitionPlanSearchInput(string Query);
 public sealed record AcquisitionPlanSelectionInput(string CandidateId, int ExpectedRevision);
 public sealed record AcquisitionPlanRunInput(int ExpectedRevision, bool? UseEmergencySpaceReserve = null);
+public sealed record AcquisitionDeferPreparedProcessingInput(int ExpectedRevision);
 public sealed record AcquisitionKeepPreparedFilesInput(int ExpectedRevision, string? Reason = null);
 public sealed record AcquisitionPlanUpdateInput(int ExpectedRevision, string? OutputDirectory = null,
     AcquisitionDeliverySettings? DeliverySettings = null, ArtifactStoragePolicy? StoragePolicy = null,
@@ -109,6 +113,8 @@ public sealed record AcquisitionDraftSource
 {
     public string Id { get; init; } = "";
     public string? Title { get; init; }
+    /// <summary>An existing preparation group. Ungrouped links require an explicit relationship choice.</summary>
+    public string? GroupId { get; init; }
     public string Url { get; init; } = "";
     public string Kind { get; init; } = "auto";
     public string? ProviderId { get; init; }
@@ -130,6 +136,17 @@ public sealed record AcquisitionDraftUpdateInput(int ExpectedRevision, string? T
     AcquisitionDeliverySettings? DeliverySettings = null, ArtifactStoragePolicy? StoragePolicy = null);
 public sealed record AcquisitionDraftBuilderInput(int ExpectedRevision, string BuilderId);
 public sealed record AcquisitionDraftPreparationInput(int ExpectedRevision, AcquisitionPlan Plan);
+public sealed record AcquisitionPreparationInput(int ExpectedRevision,
+    IReadOnlyList<AcquisitionDraftSource>? Sources = null, string? Relationship = null,
+    IReadOnlyList<string>? SelectedSourceIds = null, bool? CheckAvailability = null,
+    IReadOnlyList<string>? AllowUnavailableSourceIds = null);
+public sealed record AcquisitionPreparationPreview(int ExpectedRevision, string Title,
+    IReadOnlyList<string> ProviderPriority, bool RequiresRelationshipChoice, string? Relationship,
+    IReadOnlyList<AcquisitionPreparationGroup> Groups, IReadOnlyList<DownloadRequirement> Requirements, bool CanConfirm,
+    IReadOnlyList<string> AllowUnavailableSourceIds);
+public sealed record AcquisitionPreparationGroup(string Id, string? Title, bool Required, string SelectionMode,
+    IReadOnlyList<string> SelectedSourceIds, IReadOnlyList<string> RecommendedSourceIds,
+    IReadOnlyList<DownloadCandidateView> Sources);
 public sealed record AcquisitionLegacyImportInput(IReadOnlyList<int> ResourceIds);
 public sealed record AcquisitionDraftListInput(IReadOnlyList<AcquisitionDraftListRow> Rows);
 public sealed record AcquisitionDraftListRow(string? Title, string? Url, string? Password, int LineNumber);

@@ -92,7 +92,7 @@ describe("download center filters with production controls", () => {
     const sources = within(screen.getByRole("group", { name: "downloader.filter.source" }));
     const all = sources.getByRole("button", { name: "downloader.filter.allSources" });
     const bt = sources.getByRole("button", { name: "downloadCenter.provider.bt" });
-    const site = sources.getByRole("button", { name: "ExHentai" });
+    const site = sources.getByRole("button", { name: "ThirdPartyId.ExHentai" });
     expect(bt.querySelector("svg")).toBeInTheDocument();
     expect(site.querySelector("img")).toBeInTheDocument();
     expect(all).toHaveAttribute("aria-pressed", "true");

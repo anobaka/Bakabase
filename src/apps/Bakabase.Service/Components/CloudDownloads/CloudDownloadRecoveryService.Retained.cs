@@ -1,10 +1,12 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Service.Components.FileProcessing;
@@ -16,7 +18,8 @@ public sealed partial class CloudDownloadRecoveryService
 {
     private async Task<CloudDownloadRecoveryCheck> CheckRetainedAsync(int runId, CloudDownloadTarget target,
         string outputRoot, DownloadTaskDbModel download, ICloudRetainedDownloadRecoveryProvider? provider,
-        string failure, bool revalidate, CancellationToken ct, ICloudExistingDownloadVerificationProvider? verifier = null, bool includeStopped = false)
+        string? failure, bool revalidate, CancellationToken ct, ICloudExistingDownloadVerificationProvider? verifier = null,
+        bool includeStopped = false, bool requireRetainedFiles = false, NativeVerificationScope? nativeVerification = null)
     {
         CloudDownloadRecoveryCheck Block(string code, string? problem = null, bool candidate = false) =>
             new(false, code, problem ?? failure, candidate);
@@ -48,6 +51,8 @@ public sealed partial class CloudDownloadRecoveryService
             operation.ReceiptJson != null || await db.ArtifactOperations.AsNoTracking().AnyAsync(o => o.Id == intent, ct) ||
             await db.CloudDownloadOperations.AsNoTracking().AnyAsync(o => o.DownloadTaskId == download.Id && o.Id != intent, ct))
             return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+        if (verifier != null && download.Status == DownloadTaskDbModelStatus.Disabled && operation.State != "started")
+            return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
         var request = JsonSerializer.Deserialize<CloudDownloadRequest>(operation.RequestJson, JsonSerializerOptions.Web);
         var configured = JsonSerializer.Deserialize<CloudDownloadRequest>(download.Options ?? "", JsonSerializerOptions.Web);
         static string Json<T>(T value) => JsonSerializer.Serialize(value, JsonSerializerOptions.Web);
@@ -77,7 +82,7 @@ public sealed partial class CloudDownloadRecoveryService
                 (b.OwnerKind != "workflow" || b.OwnerId != owner || b.Slot != transferSlot), ct))
             return Block("RECOVERY_TRANSFER_REVIEW_REQUIRED");
         var transfer = await db.CloudDownloadOperations.AsNoTracking().SingleOrDefaultAsync(o => o.Id == transferId, ct);
-        if (transfer?.Kind != "transfer" || transfer.State != "succeeded" || transfer.WorkflowRunId != runId ||
+        if (transfer == null || transfer.Kind != (target.ReviewedTransferId == null ? "transfer" : CloudOperationService.ReplayKind) || transfer.State != "succeeded" || transfer.WorkflowRunId != runId ||
             transfer.TargetId != target.Id || transfer.ReceiptJson == null || transfer.DownloadTaskId != null)
             return Block("RECOVERY_TRANSFER_REVIEW_REQUIRED");
         var transferRequest = JsonSerializer.Deserialize<CloudTransferRequest>(transfer.RequestJson, JsonSerializerOptions.Web);
@@ -96,7 +101,27 @@ public sealed partial class CloudDownloadRecoveryService
         for (var directory = new DirectoryInfo(download.DownloadPath); directory != null; directory = directory.Parent)
             if (directory.Exists && (directory.Attributes & FileAttributes.ReparsePoint) != 0)
                 return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+        if (requireRetainedFiles && !File.Exists(download.DownloadPath) && !HasRetainedFiles(executionRoot, download.DownloadPath, ct))
+            return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
         var executionRequest = CloudDownloadDestinations.ExecutionRequest(request);
+        if (nativeVerification.HasValue)
+        {
+            var otherDestinations = await db.DownloadTasks.AsNoTracking().Where(d => d.Id != download.Id)
+                .Select(d => d.DownloadPath).Distinct().ToListAsync(ct);
+            if (otherDestinations.Any(path => CloudDownloadDestinationService.Overlaps(path, download.DownloadPath)))
+                return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+            var inventory = nativeVerification == NativeVerificationScope.InspectInventory ? await verifier!.InspectExistingFileInventoryAsync(executionRequest, ct) : null;
+            if (inventory is {Available: false}) return Block("RECOVERY_SOURCE_STILL_BLOCKED", inventory.Problem) with {Inventory = inventory};
+            var identity = SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
+            {
+                runId, target, outputRoot, operation.Id, operation.RequestJson, operation.State,
+                transferId, transferRequest = transfer.RequestJson, transfer.ReceiptJson,
+                native = new {download.Id, download.Key, download.Options, download.DownloadPath, download.ThirdPartyId,
+                    download.Status, download.Message, download.Progress, download.DownloadStatusUpdateDt}
+            }, JsonSerializerOptions.Web));
+            return new(false, "RECOVERY_EXISTING_FILES_VERIFY_REQUIRED", Candidate: true, VerifyExistingOnly: true)
+                {VerificationIdentity = Convert.ToHexString(identity), Inventory = inventory};
+        }
         var inspection = verifier == null ? await provider!.InspectRetainedDownloadAsync(executionRequest, revalidate, ct)
             : await verifier.InspectExistingDownloadAsync(executionRequest, ct);
         if (!inspection.Available) return Block("RECOVERY_SOURCE_STILL_BLOCKED", inspection.Problem);
@@ -108,6 +133,7 @@ public sealed partial class CloudDownloadRecoveryService
         // The remote read can overlap edits. Repeat local identity/ownership/checkpoint
         // checks; the same path runs once more under StartConditionally's action lock.
         var latest = await CheckAsync(runId, target, outputRoot, false, ct, includeStopped);
-        return latest.Candidate ? new(true, "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED", failure, true) : latest;
+        return latest is {Candidate: true, VerifyExistingOnly: false}
+            ? new(true, "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED", failure, true) : latest;
     }
 }

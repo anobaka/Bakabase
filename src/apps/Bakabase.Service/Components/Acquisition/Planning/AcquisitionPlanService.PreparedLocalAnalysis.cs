@@ -32,10 +32,18 @@ public sealed partial class AcquisitionPlanService
                     r.OperationId == input.OperationId && r.Fingerprint == input.Fingerprint));
     }
 
-    public async Task<AcquisitionPlanTaskDetail> KeepPreparedFilesAsync(int id, AcquisitionKeepPreparedFilesInput input,
-        CancellationToken ct, Func<string?, Task>? guardDirectory = null)
+    public Task<AcquisitionPlanTaskDetail> KeepPreparedFilesAsync(int id, AcquisitionKeepPreparedFilesInput input,
+        CancellationToken ct, Func<string?, Task>? guardDirectory = null) =>
+        SetPreparedProcessingChoiceAsync(id, input.ExpectedRevision, "notRequired",
+            string.IsNullOrWhiteSpace(input.Reason) ? "delivery.keepPreparedFiles" : input.Reason.Trim(), ct, guardDirectory);
+
+    public Task<AcquisitionPlanTaskDetail> DeferPreparedProcessingAsync(int id, int expectedRevision,
+        CancellationToken ct, Func<string?, Task>? guardDirectory = null) =>
+        SetPreparedProcessingChoiceAsync(id, expectedRevision, "unknown", "processing.deferPreparedFiles", ct, guardDirectory);
+
+    private async Task<AcquisitionPlanTaskDetail> SetPreparedProcessingChoiceAsync(int id, int expectedRevision,
+        string requirement, string reason, CancellationToken ct, Func<string?, Task>? guardDirectory)
     {
-        var reason = string.IsNullOrWhiteSpace(input.Reason) ? "delivery.keepPreparedFiles" : input.Reason.Trim();
         if (reason.Length > 1000) throw new ArgumentException("PLAN_REPLAN_INVALID");
         var gate = AcquisitionTaskGate.For(id);
         await gate.WaitAsync(ct);
@@ -47,12 +55,12 @@ public sealed partial class AcquisitionPlanService
             var plan = Plan(row);
             var state = State(row);
             if (!HasPreparedDownloads(row, plan, state)) throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
-            var alreadyKept = !plan.AdaptiveFileProcessing && !plan.PublishRetainedFiles && plan.Parts.All(p =>
-                p.UseAdaptiveAssessment == false && p.Processing is {Requirement: "notRequired", Steps.Count: 0});
-            var same = alreadyKept && ReadHistory(row).LastOrDefault()?.Reason == reason;
+            var configured = !plan.AdaptiveFileProcessing && !plan.PublishRetainedFiles && plan.Parts.All(p =>
+                p.UseAdaptiveAssessment == false && p.Processing is {Steps.Count: 0} && p.Processing.Requirement == requirement);
+            var same = configured && ReadHistory(row).LastOrDefault()?.Reason == reason;
             // A lost save response can be replayed for that exact revision and choice. Never
             // reinterpret a stale approval of a different note or differently bound inputs.
-            if (!same || input.ExpectedRevision != row.PlanRevision - 1) Revision(row, input.ExpectedRevision);
+            if (!same || expectedRevision != row.PlanRevision - 1) Revision(row, expectedRevision);
             if (guardDirectory != null)
             {
                 if (state.RegisteredDownload is {} borrowed) await guardDirectory(borrowed.Directory);
@@ -64,7 +72,7 @@ public sealed partial class AcquisitionPlanService
                 var updated = plan with
                 {
                     PublishRetainedFiles = false, AdaptiveFileProcessing = false, AdaptiveFileProcessingContext = null,
-                    Parts = plan.Parts.Select(p => p with {Processing = new() {Requirement = "notRequired"}, UseAdaptiveAssessment = false,
+                    Parts = plan.Parts.Select(p => p with {Processing = new() {Requirement = requirement}, UseAdaptiveAssessment = false,
                         AppliedProcessingRevisionId = null, DeliveryProjectionFingerprint = null}).ToList()
                 };
                 await SavePreparedChoiceAsync(row, updated, reason, "PLAN_VERSION_CONFLICT", ct);

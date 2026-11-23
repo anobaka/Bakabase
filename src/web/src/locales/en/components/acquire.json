@@ -233,5 +233,10 @@
   "acquire.requirement.TERABOX_SHARE_EXPIRED": "TeraBox confirmed that this share expired. Use another source or contact the owner.",
   "acquire.requirement.TERABOX_SHARE_DELETED": "TeraBox confirmed that this share was deleted. Use another source or contact the owner.",
   "acquire.requirement.DOWNLOAD_METHOD_UNAVAILABLE": "This download method is temporarily unavailable. Choose another source, or download manually and continue processing. This status is separate from account authorization and share validity.",
-  "acquire.readiness.unavailable": "Download method unavailable"
+  "acquire.readiness.unavailable": "Download method unavailable",
+  "acquire.requirement.SOURCE_SELECTION_REQUIRED": "Choose an available download source for every required content group.",
+  "acquire.requirement.SOURCE_RELATIONSHIP_REQUIRED": "Choose whether these links are mirrors of the same content or separate downloads.",
+  "acquire.requirement.DOWNLOAD_INFO_MISSING": "No download sources are available. Add a link or search for sources.",
+  "acquire.requirement.SOURCE_PROCESSING_INVALID": "Review and correct this source’s retained processing data before selecting it.",
+  "acquire.requirement.SOURCE_REPLACEMENT_LOCAL_FILES": "This task already has local files. Continue from the download stage before changing sources."
 }

@@ -1,6 +1,8 @@
 using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -65,6 +67,57 @@ public sealed partial class FileArtifactDeliveryAssessmentTests
         Assert.IsFalse(assessment.Automatic);
         var ai = await AdaptiveFileProcessingAssessmentService.DescribeFormatEvidenceAsync(artifact, ["download.mp4"], default);
         Assert.AreEqual(expected, ai.Contains("recognizedOuterZipInVideoFile"));
+    }
+
+    [TestMethod]
+    public async Task Delivery_review_explains_offset_zero_archive_signatures_without_changing_the_answer()
+    {
+        var dir = Path.Combine(root, "review-signatures");
+        Directory.CreateDirectory(dir);
+        var bytes = new Dictionary<string, byte[]>
+        {
+            ["01.mp4"] = [0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c],
+            ["02.mp4"] = [0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x00],
+            ["03.mov"] = [0x50, 0x4b, 0x03, 0x04],
+            ["04.mp4"] = MediaBox("ftyp", "isom"u8.ToArray()),
+            ["05.zip"] = "only the filename says zip"u8.ToArray(),
+            ["06.mp4"] = [0x00, 0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c],
+            ["07.mp4"] = [0x37, 0x7a]
+        };
+        foreach (var (name, content) in bytes)
+            await File.WriteAllBytesAsync(Path.Combine(dir, name), content);
+        var artifact = await store.AdoptAsync(new("review-signatures", "review-signatures", "files.process", "fixture"),
+            new(dir, Directory.GetFiles(dir), "processedFiles", true), "fixture");
+        var item = Workset(artifact);
+        var config = new FileArtifactDeliveryAssessmentConfig("part", RequiresAdaptiveDecision: true);
+        var outcome = await activity.ProcessItemAsync(Context(item).ForPlannedActivity(Json(config), []), item, default);
+        var suspension = outcome.Suspension!;
+        var prompt = JsonNode.Parse(suspension.PromptJson!)!.AsObject();
+        Assert.AreEqual(FileArtifactDeliveryAssessment.ResultUncertain, prompt["reason"]!.GetValue<string>());
+        var signatures = prompt["archiveSignatures"]!.Deserialize<Dictionary<string, string>>()!;
+        Assert.AreEqual(3, signatures.Count);
+        Assert.AreEqual(".7z", signatures["01.mp4"]);
+        Assert.AreEqual(".rar", signatures["02.mp4"]);
+        Assert.AreEqual(".zip", signatures["03.mov"]);
+        var waiting = (DownloadWorkset)suspension.Item;
+        var answer = Answer(waiting, new() {TargetId = "part", ArchivePolicy = "keep"});
+        prompt.Remove("archiveSignatures"); // The same answer works for prompts persisted before signatures were displayed.
+        var accepted = await activity.ResumeAsync(Context(waiting, prompt.ToJsonString()), waiting, answer, default);
+        Assert.IsTrue(((DownloadWorkset)accepted.Replacement!).Targets.Single().DeliveryReview!.Accepted);
+        Assert.AreEqual(0, archives.Count);
+    }
+
+    [TestMethod]
+    public async Task Review_signature_sample_excludes_unlisted_changed_and_over_budget_files()
+    {
+        var names = Enumerable.Range(1, 10).Select(i => $"{i:00}.7z删除").ToArray();
+        var artifact = await Register(names);
+        File.Delete(Path.Combine(artifact.RootDirectory, names[2]));
+        await File.AppendAllTextAsync(Path.Combine(artifact.RootDirectory, names[3]), "changed length");
+        var shown = names.Skip(1).ToArray();
+        var signatures = await FileArtifactDeliveryAssessment.ReadReviewSignaturesAsync(artifact, shown, default);
+        CollectionAssert.AreEquivalent(new[] {names[1], names[4], names[5], names[6], names[7], names[8]}, signatures.Keys.ToArray());
+        Assert.IsTrue(signatures.Values.All(s => s == ".7z"));
     }
 
     [TestMethod]

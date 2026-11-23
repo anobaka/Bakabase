@@ -25,7 +25,7 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 internal sealed record AcquisitionStageInputReceipt(int Version, string Id, int TaskId, int RunId,
     string PartId, string BindingId, string Directory, string SourceArtifactId, string SourceFingerprint,
     string? Workspace = null, int WorkspaceAttempt = 0, IReadOnlyList<string>? StartedFiles = null,
-    string? SnapshotArtifactId = null, string? ResultArtifactId = null, ArtifactStoragePolicy? StoragePolicy = null);
+    string? SnapshotArtifactId = null, string? ResultArtifactId = null, ArtifactStoragePolicy? StoragePolicy = null, bool ReadOnlyArchive = false);
 
 /// <summary>Establishes the first processing input without moving the download or making
 /// a second payload copy. Its pending task marker prevents reading a partially populated stage.</summary>
@@ -35,43 +35,39 @@ internal static class AcquisitionProcessingStageInput
     private static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(2);
 
     internal static async Task<ArtifactRecord> PrepareAsync(WorkflowExecutionContext ctx,
-        CloudDownloadTarget target, ArtifactRecord input, CancellationToken ct, ArtifactStoragePolicy? policy = null)
+        CloudDownloadTarget target, ArtifactRecord input, CancellationToken ct, ArtifactStoragePolicy? policy = null,
+        FileProcessingPlan? plan = null, bool waitForInstructions = false)
     {
         if (target.StageDirectories?.Processing is not {BindingId: not null} binding ||
             Same(binding.Directory, input.RootDirectory)) return input;
-        // Explicitly selected files keep their identity when another populated stage
-        // already exists. An empty processing stage still needs its initial input before
-        // assessment can suspend; otherwise the next processing retry sees an empty root.
-        if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
-        {
-            // A current-file selection may also be an already processed or delivered
-            // directory. Only the bound download hand-off initializes a different root.
-            if (target.StageDirectories.Download is not {} download || !Same(download.Directory, input.RootDirectory))
-                return input;
-            var workspaces = ctx.Services.GetRequiredService<FileProcessingWorkspaceResolver>();
-            if (Directory.Exists(binding.Directory))
-            {
-                var excluded = (await workspaces.OwnedDirectoriesUnderAsync(binding.Directory, ct))
-                    .Select(p => p.Directory).ToHashSet(ArtifactManifestFiles.PathComparer);
-                if (AcquisitionStageDirectoryFileMove.Inspect(binding.Directory, excluded, ct).Files.Count > 0) return input;
-            }
-        }
+        // Only selected download files initialize a different processing stage. Files
+        // selected from another stage remain the explicit input of the continuation.
+        if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind &&
+            (target.StageDirectories.Download is not {} download || !Same(download.Directory, input.RootDirectory)))
+            return input;
         var db = ctx.Services.GetRequiredService<BakabaseDbContext>();
         var ids = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking().Where(s => s.WorkflowRunId == ctx.RunId &&
             s.Module == "acquisition" && s.EntityKind == "task").Select(s => s.EntityId).Distinct().ToArrayAsync(ct);
         if (ids is not [{} id] || !int.TryParse(id, out var taskId))
             throw new InvalidOperationException("STAGE_COMMIT_OWNER_INVALID");
+        // Once the user has reviewed the download, files newly placed in its empty
+        // processing stage must not silently replace the input named by that prompt.
+        var reviewedDownload = target.ProcessingWaitReason == "ExtractionPlanUnknown" &&
+            ctx.ResumePromptJson is {Length: > 0} prompt &&
+            JsonSerializer.Deserialize<SavedProcessingInput>(prompt, Json) is {Reason: "ExtractionPlanUnknown"} reviewed &&
+            reviewed.TargetId == target.Id && reviewed.ArtifactId == input.Id && reviewed.Fingerprint == input.Fingerprint;
         return await PrepareCoreAsync(db, ctx.Services.GetRequiredService<IArtifactOperationStore>(),
             ctx.Services.GetRequiredService<IUserStoragePolicy>(), ctx.Services.GetRequiredService<FileProcessingWorkspaceResolver>(),
             taskId, (int)ctx.RunId, target.Id, binding, input,
             new FileArtifactMaterializer(ctx.Services.GetRequiredService<IStorageWriteGuard>()),
-            ctx.Services.GetRequiredService<IServiceScopeFactory>(), ct, policy ?? target.StoragePolicy);
+            ctx.Services.GetRequiredService<IServiceScopeFactory>(), ct, policy ?? target.StoragePolicy, plan, waitForInstructions, reviewedDownload);
     }
 
     internal static async Task<ArtifactRecord> PrepareCoreAsync(BakabaseDbContext db, IArtifactOperationStore store,
         IUserStoragePolicy storage, FileProcessingWorkspaceResolver workspaces, int taskId, int runId, string partId,
         AcquisitionStageDirectory binding, ArtifactRecord input, IFileArtifactMaterializer materializer,
-        IServiceScopeFactory scopes, CancellationToken ct, ArtifactStoragePolicy? policy = null)
+        IServiceScopeFactory scopes, CancellationToken ct, ArtifactStoragePolicy? policy = null, FileProcessingPlan? plan = null,
+        bool waitForInstructions = false, bool reviewedDownload = false)
     {
         if (!Guid.TryParseExact(binding.BindingId, "N", out _)) throw new InvalidOperationException("PLAN_STAGE_DIRECTORY_INVALID");
         if (Same(binding.Directory, input.RootDirectory)) return input;
@@ -99,6 +95,10 @@ internal static class AcquisitionProcessingStageInput
         }
         else
         {
+            // A manual review can reference the verified download. Honor any prior handoff above
+            // and any populated processing stage below before deferring a new input snapshot.
+            var reviewDownload = waitForInstructions && input.Kind is "download" or AcquisitionCurrentDirectoryFiles.Kind;
+            if (reviewDownload && binding.Allocation != null && !Path.Exists(binding.Directory)) return input;
             if (binding.Allocation != null) await workspaces.EnsureScopedDirectoryAsync(binding.Allocation, ct);
             else if (!Directory.Exists(binding.Directory)) throw new DirectoryNotFoundException("STAGE_COMMIT_DIRECTORY_UNAVAILABLE");
             var excluded = (await workspaces.OwnedDirectoriesUnderAsync(binding.Directory, ct))
@@ -106,6 +106,10 @@ internal static class AcquisitionProcessingStageInput
             var current = AcquisitionStageDirectoryFileMove.Inspect(binding.Directory, excluded, ct);
             if (current.Files.Count > 0)
             {
+                // Without this run's hand-off receipt these files could belong to an
+                // independently prepared stage. Keep the explicitly selected download.
+                if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind) return input;
+                if (reviewedDownload) throw new InvalidDataException("STAGE_COMMIT_TARGET_CONFLICT");
                 // An explicitly selected, populated stage is current input, not an invitation
                 // to overlay an earlier download. Capture it without claiming deletion rights.
                 var revision = await db.AcquisitionTasks.Where(t => t.Id == taskId).Select(t => t.PlanRevision).SingleAsync(ct);
@@ -117,6 +121,18 @@ internal static class AcquisitionProcessingStageInput
                     input.Id, input.Fingerprint, ResultArtifactId: captured.Id, StoragePolicy: policy);
                 await SaveAsync(path, receipt, ct);
                 return captured;
+            }
+            if (reviewDownload) return input;
+            // An empty processing stage is an output allocation. When the extractor can
+            // pin and read the registered volumes, record that selection before starting:
+            // no cross-volume handoff is needed. Existing populated/user stages and prior
+            // handoffs continue through their own receipts above.
+            if (await ReadOnlyArchiveVolumes.InspectAsync(plan, input, policy, ct) != null)
+            {
+                receipt = new(1, key, taskId, runId, partId, binding.BindingId!, binding.Directory,
+                    input.Id, input.Fingerprint, ResultArtifactId: input.Id, StoragePolicy: policy, ReadOnlyArchive: true);
+                await SaveAsync(path, receipt, ct);
+                return input;
             }
             receipt = new(1, key, taskId, runId, partId, binding.BindingId!, binding.Directory, input.Id, input.Fingerprint, StoragePolicy: policy);
             await SaveAsync(path, receipt, ct);
@@ -255,6 +271,63 @@ internal static class AcquisitionProcessingStageInput
             binding, input, materializer, scopes, ct, plan.StoragePolicy);
     }
 
+    private sealed record SavedProcessingInput(string? Reason, string? TargetId, string? KnownStepId,
+        string? ArtifactId, string? Fingerprint);
+
+    // A previous version could start a later boundary on the selected download even
+    // after preparing a copy in the bound stage. Only its own saved wait identifies
+    // which checkpoint actually contains this operation's unfinished work.
+    internal static bool WaitUsedSelectedInput(CloudDownloadTarget target, ArtifactRecord source,
+        ArtifactRecord? prepared, string? stepId, string? savedWait)
+    {
+        if (prepared == null || prepared.Id == source.Id || source.Kind != AcquisitionCurrentDirectoryFiles.Kind ||
+            target.StageDirectories?.Download is not {} download || !Same(download.Directory, source.RootDirectory) ||
+            string.IsNullOrEmpty(stepId) || savedWait is not {Length: > 0 and <= 1024 * 1024}) return false;
+        try
+        {
+            var wait = JsonSerializer.Deserialize<SavedProcessingInput>(savedWait, WorkflowJson.Options);
+            return wait?.Reason == "StorageUnavailable" && wait.TargetId == target.Id && wait.KnownStepId == stepId &&
+                   wait.ArtifactId == source.Id && wait.Fingerprint == source.Fingerprint;
+        }
+        catch (JsonException) { return false; }
+    }
+
+    // Storage recovery must use the same committed stage input as the original processing attempt.
+    // Reading a receipt never initializes the stage, registers a new artifact or moves a file.
+    internal static async Task<ArtifactRecord?> ReadPreparedAsync(BakabaseDbContext db, IArtifactOperationStore store, FileProcessingWorkspaceResolver workspaces,
+        int taskId, int runId, CloudDownloadTarget target, ArtifactRecord source, CancellationToken ct, bool readOnlyReceiptOnly = false)
+    {
+        if (target.StageDirectories?.Processing is not {BindingId: not null} binding || Same(source.RootDirectory, binding.Directory))
+            return null;
+        var key = InputKey(taskId, runId, target.Id, binding, source);
+        var path = ReceiptPath(workspaces, key);
+        if (!File.Exists(path)) return null;
+        var receipt = await ReadAsync(path, ct);
+        if (receipt.Id != key || receipt.TaskId != taskId || receipt.RunId != runId || receipt.PartId != target.Id ||
+            receipt.BindingId != binding.BindingId || !Same(receipt.Directory, binding.Directory) ||
+            receipt.SourceArtifactId != source.Id || receipt.SourceFingerprint != source.Fingerprint ||
+            receipt.ResultArtifactId is not {} result)
+            throw new InvalidDataException("STAGE_COMMIT_JOURNAL_INVALID");
+        if (receipt.ReadOnlyArchive)
+        {
+            if (result != source.Id || !readOnlyReceiptOnly && source.State != ArtifactLocationState.Available ||
+                source.Fingerprint != source.Manifest.Fingerprint ||
+                !await AcquisitionPlanArtifactInputGuard.OwnsRunAsync(db, runId, taskId, ct))
+                throw new InvalidDataException("STAGE_COMMIT_SOURCE_CHANGED");
+            return source;
+        }
+        if (readOnlyReceiptOnly) return null;
+        var prepared = await store.GetArtifactAsync(result, ct);
+        if (prepared?.State != ArtifactLocationState.Available || !Same(prepared.RootDirectory, binding.Directory) ||
+            prepared.Manifest.Entries.Count is 0 or > 100000 || prepared.Fingerprint != prepared.Manifest.Fingerprint ||
+            (await store.GetOperationAsync(prepared.OperationId, ct)) is not {State: ArtifactOperationState.Completed} operation ||
+            operation.OutputArtifactId != prepared.Id || !await db.ArtifactOperationBindings.AsNoTracking().AnyAsync(b =>
+                b.OwnerKind == "workflow" && b.OwnerId == runId.ToString() && b.OperationId == prepared.OperationId &&
+                b.Slot == target.Id + ":process:stage:" + prepared.Id, ct))
+            throw new InvalidDataException("STAGE_COMMIT_SOURCE_CHANGED");
+        return prepared;
+    }
+
     // The runner can re-enter its original processing cursor when its completed private input
     // is still bound to this run. Use the same ownership/reference checks as the eventual move.
     internal static async Task<bool> CanRetrySnapshotAsync(BakabaseDbContext db, IArtifactOperationStore store,
@@ -325,6 +398,28 @@ internal static class AcquisitionProcessingStageInput
             throw new InvalidOperationException("STAGE_DIRECTORY_COMMIT_PENDING");
     }
     private static AcquisitionPlanBuilderState State(string? json) => json == null ? new() : JsonSerializer.Deserialize<AcquisitionPlanBuilderState>(json, Json)!;
+    internal static async Task<bool> WasCommittedSnapshotAsync(FileProcessingWorkspaceResolver workspaces, int taskId,
+        int runId, string partId, AcquisitionStageDirectory binding, ArtifactRecord download, ArtifactRecord snapshot,
+        ArtifactRecord committed, CancellationToken ct, string sourceCleanup = "delete")
+    {
+        var key = InputKey(taskId, runId, partId, binding, download);
+        var path = ReceiptPath(workspaces, key);
+        if (!File.Exists(path)) return false;
+        var receipt = await ReadAsync(path, ct);
+        if (receipt.Version != 1 || receipt.Id != key || receipt.TaskId != taskId || receipt.RunId != runId ||
+            receipt.PartId != partId || receipt.BindingId != binding.BindingId || !Same(receipt.Directory, binding.Directory) ||
+            receipt.SourceArtifactId != download.Id || receipt.SourceFingerprint != download.Fingerprint ||
+            receipt.ReadOnlyArchive || receipt.Workspace == null || receipt.WorkspaceAttempt < 1 ||
+            snapshot.OperationId != key || receipt.SnapshotArtifactId != snapshot.Id || receipt.ResultArtifactId != committed.Id ||
+            receipt.StartedFiles == null || !receipt.StartedFiles.ToHashSet(StringComparer.Ordinal)
+                .SetEquals(download.Manifest.Entries.Select(f => f.RelativePath)) ||
+            receipt.StoragePolicy is not {CleanupIntermediates: true} || receipt.StoragePolicy.SourceCleanup != sourceCleanup) return false;
+        var owned = await workspaces.InspectOwnedLocationForStageCleanupAsync("operations", key, receipt.WorkspaceAttempt, ct);
+        return owned != null && Same(owned.Directory, receipt.Workspace) &&
+            ArtifactCleanupPathReferences.StrictlyUnder(owned.Directory, binding.Directory) &&
+            Same(Path.Combine(owned.Directory, "stage-input"), snapshot.RootDirectory);
+    }
+
     private static string ReceiptPath(FileProcessingWorkspaceResolver workspaces, string id)
     {
         if (id is not {Length: 64} || id.Any(c => !Uri.IsHexDigit(c))) throw new InvalidDataException("STAGE_COMMIT_JOURNAL_INVALID");

@@ -14,6 +14,11 @@ export type StorageMaintenanceRow = {
   artifactIds?: string[];
   fileCount?: number;
   bytes?: number;
+  processedCheckpointCleanup?: {
+    verifiedResultArtifactIds: string[];
+    retainedDownloadArtifactIds: string[];
+    intermediateArtifactIds: string[];
+  } | null;
 };
 export type StorageMaintenancePreview = {
   previewId: string;
@@ -43,16 +48,30 @@ export const acquisitionStorageApi = {
     taskIds: number[],
     signal?: AbortSignal,
     overrideRetention = false,
+    includeOriginalDownloads = false,
   ): Promise<StorageMaintenancePreview> =>
     mode === "policy"
       ? unwrap(
           BApi.acquisition.previewAcquisitionStoragePolicy(
-            { taskIds, outputDirectory: "", applyCurrentSettings: true },
+            {
+              taskIds,
+              outputDirectory: "",
+              applyCurrentSettings: true,
+              overrideRetention: false,
+              preserveOriginalDownloads: false,
+            },
             { ...options, signal },
           ),
         )
       : unwrap(
-          BApi.acquisition.previewAcquisitionWorkspaceCleanup({ taskIds, overrideRetention }, { ...options, signal }),
+          BApi.acquisition.previewAcquisitionWorkspaceCleanup(
+            {
+              taskIds,
+              overrideRetention,
+              preserveOriginalDownloads: overrideRetention && !includeOriginalDownloads,
+            },
+            { ...options, signal },
+          ),
         ),
   apply: async (
     mode: StorageMaintenanceMode,

@@ -39,22 +39,23 @@ public sealed class AcquisitionSupersededRunCleanup
 
     internal sealed record Run(int RunId, int Revision, int ReplacedByRevision, string Version);
     internal sealed record Plan(string Id, int TaskId, int CompletedRunId, int CompletedRevision,
-        [property: JsonIgnore] string HistoryJson, IReadOnlyList<Run> Runs, bool AbandonUnfinishedFiles = false)
+        [property: JsonIgnore] string HistoryJson, IReadOnlyList<Run> Runs, bool AbandonUnfinishedFiles = false, DateTime? DeletedAt = null)
     { public string HistoryFingerprint => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(HistoryJson))); }
     private sealed record PreviousRun(int RunId, WorkflowRunStatus Status, DateTime? CompletedAt);
     private sealed record Receipt(Plan Plan, string Reason, DateTime ConfirmedAt, string Status,
         IReadOnlyList<PreviousRun> OriginalRuns, IReadOnlyList<ArtifactAcceptedPublication>? VerifiedPublications = null);
 
-    internal async Task<Plan?> PreviewAsync(AcquisitionTaskDbModel task, IReadOnlyList<int> owners, CancellationToken ct, bool abandonUnfinishedFiles = false)
+    internal async Task<Plan?> PreviewAsync(AcquisitionTaskDbModel task, IReadOnlyList<int> owners, CancellationToken ct, bool abandonUnfinishedFiles = false, bool reviewDeletedWaits = false)
     {
         var saved = await db.AcquisitionTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == task.Id, ct);
-        if (saved == null || saved.DeletedAt != null || saved.WorkflowRunId != task.WorkflowRunId ||
+        if (saved == null || saved.DeletedAt != task.DeletedAt || (saved.DeletedAt != null) != reviewDeletedWaits ||
+            reviewDeletedWaits && !abandonUnfinishedFiles || saved.WorkflowRunId != task.WorkflowRunId ||
             saved.PlanRevision != task.PlanRevision || saved.PlanHistoryJson != task.PlanHistoryJson ||
             saved.PlanJson != task.PlanJson || saved.Status != task.Status) return null;
         var nonterminal = await db.WorkflowRuns.AsNoTracking().Where(r => owners.Contains(r.Id) &&
             (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running || r.Status == WorkflowRunStatus.Waiting)).ToArrayAsync(ct);
         if (nonterminal.Length == 0) return new(Guid.NewGuid().ToString("N"), task.Id, task.WorkflowRunId ?? 0,
-            task.PlanRevision, task.PlanHistoryJson ?? "[]", [], abandonUnfinishedFiles);
+            task.PlanRevision, task.PlanHistoryJson ?? "[]", [], abandonUnfinishedFiles, saved.DeletedAt);
         var completed = task.WorkflowRunId ?? 0;
         if (!abandonUnfinishedFiles && completed == 0 ||
             nonterminal.Any(r => r.Status != WorkflowRunStatus.Waiting || r.PendingSignalJson != null)) return null;
@@ -62,7 +63,7 @@ public sealed class AcquisitionSupersededRunCleanup
         if (live?.BlockReason != null || live == null || !live.RunIds.Order().SequenceEqual(owners.Order())) return null;
         if (abandonUnfinishedFiles)
         {
-            if (!live.CanAbandon(task)) return null;
+            if (!live.CanAbandon(task, reviewDeletedWaits)) return null;
         }
         else if (task.Status != AcquisitionStatus.Completed || nonterminal.Any(r => r.Id == completed) ||
             !await db.WorkflowRuns.AnyAsync(r => r.Id == completed && r.Status == WorkflowRunStatus.Success && r.FailedItemCount == 0, ct))
@@ -97,6 +98,20 @@ public sealed class AcquisitionSupersededRunCleanup
         if (completed != 0 && !links.Any(s => s.WorkflowRunId == completed && s.EntityId == taskKey && s.Revision == task.PlanRevision.ToString(CultureInfo.InvariantCulture)) ||
             links.Any(s => s.EntityId != taskKey) ||
             await db.DownloadResultOwners.AnyAsync(o => ids.Contains(o.WorkflowRunId) && o.AcquisitionTaskId != task.Id, ct)) return null;
+        if (reviewDeletedWaits)
+        {
+            var waitKeys = ids.Select(id => id.ToString(CultureInfo.InvariantCulture)).ToArray();
+            var ownerKeys = owners.Select(id => id.ToString(CultureInfo.InvariantCulture)).ToArray();
+            var operations = db.ArtifactOperationBindings.Where(b => b.OwnerKind == "workflow" && waitKeys.Contains(b.OwnerId))
+                .Select(b => b.OperationId);
+            if (await db.ArtifactOperationBindings.AnyAsync(b => operations.Contains(b.OperationId) &&
+                    (b.OwnerKind != "workflow" || !ownerKeys.Contains(b.OwnerId)), ct) ||
+                await db.ArtifactConsumers.AnyAsync(c => operations.Contains(c.OperationId) && c.ReleasedAt == null &&
+                    (c.OwnerKind != "workflow" || !ownerKeys.Contains(c.OwnerId!)) &&
+                    (c.LeaseUntil > DateTime.UtcNow || c.OwnerKind == "workflow" && db.WorkflowRuns.Any(r =>
+                        r.Id.ToString() == c.OwnerId && (r.Status == WorkflowRunStatus.Waiting ||
+                        r.Status == WorkflowRunStatus.Running || r.Status == WorkflowRunStatus.Pending))), ct)) return null;
+        }
         // A post-parser source is provenance, not a second execution owner. Accept it
         // only when it appears in this task's frozen source history; unknown origins fail closed.
         var provenance = history.SelectMany(h => h.SourceRefs).Concat(currentSources ?? []).ToArray();
@@ -136,13 +151,13 @@ public sealed class AcquisitionSupersededRunCleanup
             if (!abandonUnfinishedFiles && replaced == null) return null;
             snapshots.Add(new(run.Id, revision, replaced?.Revision ?? revision, Version(run)));
         }
-        return new(Guid.NewGuid().ToString("N"), task.Id, completed, task.PlanRevision, task.PlanHistoryJson ?? "[]", snapshots, abandonUnfinishedFiles);
+        return new(Guid.NewGuid().ToString("N"), task.Id, completed, task.PlanRevision, task.PlanHistoryJson ?? "[]", snapshots, abandonUnfinishedFiles, saved.DeletedAt);
     }
 
     internal async Task<bool> StillMatchesAsync(AcquisitionTaskDbModel task, IReadOnlyList<int> owners, Plan expected, CancellationToken ct)
     {
-        var current = await PreviewAsync(task, owners, ct, expected.AbandonUnfinishedFiles);
-        return current != null && current.TaskId == expected.TaskId && current.CompletedRunId == expected.CompletedRunId &&
+        var current = await PreviewAsync(task, owners, ct, expected.AbandonUnfinishedFiles, expected.DeletedAt.HasValue);
+        return current != null && current.DeletedAt == expected.DeletedAt && current.TaskId == expected.TaskId && current.CompletedRunId == expected.CompletedRunId &&
             current.CompletedRevision == expected.CompletedRevision && current.HistoryJson == expected.HistoryJson &&
             current.Runs.SequenceEqual(expected.Runs);
     }

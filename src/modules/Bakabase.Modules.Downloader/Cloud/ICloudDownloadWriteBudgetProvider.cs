@@ -15,4 +15,9 @@ public interface ICloudDownloadWriteBudgetProvider
 {
     Task<CloudDownloadWritePlan?> PrepareWriteAsync(
         CloudDownloadRequest request, CancellationToken ct);
+
+    /// <summary>When the full budget cannot fit, optionally prove existing immutable members and
+    /// prevent their rewrite during this invocation. The queued request stays unchanged.</summary>
+    Task<CloudDownloadWritePlan?> TryPrepareRetainedWriteAsync(CloudDownloadRequest pinnedRequest,
+        Func<Task> verificationActivity, CancellationToken ct) => Task.FromResult<CloudDownloadWritePlan?>(null);
 }

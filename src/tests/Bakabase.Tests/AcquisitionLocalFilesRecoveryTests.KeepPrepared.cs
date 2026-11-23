@@ -1,13 +1,106 @@
 using System.Text.Json;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
+using Bakabase.Modules.Workflow.Components;
+using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.Acquisition.Planning;
+using Bakabase.Modules.Workflow.Artifacts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionRecoveryTests
 {
+    [TestMethod]
+    public async Task Prepared_local_parts_defer_separately_with_their_verified_inputs_and_destinations()
+    {
+        var f = await LocalFilesFixture(dependencyMissing: true);
+        var oldRun = await _db.WorkflowRuns.SingleAsync();
+        var task = await _db.AcquisitionTasks.SingleAsync();
+        var workset = (DownloadWorkset)WorkflowItemSnapshot.Restore(oldRun.CurrentItemJson!);
+        var first = workset.Targets.Single();
+        var secondSource = first.SelectedSource! with {Id = "second-source", Url = "https://pan.baidu.com/s/second"};
+        var second = first with {Id = "second", SelectedSourceId = secondSource.Id, Sources = [secondSource]};
+        var (secondDownload, _) = await RecordFixtureDownloadPart(oldRun.Id, second, workset.OutputDirectory, "second");
+        oldRun.CurrentItemJson = WorkflowItemSnapshot.Capture(workset with {Targets = [first, second with {DownloadTaskId = secondDownload.Id}]});
+        var plan = JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson!, WorkflowJson.Options)!;
+        var part = plan.Parts.Single();
+        plan = plan with {Parts = [part, part with {Id = second.Id, SelectedSourceId = secondSource.Id, Sources = [part.Sources.Single() with {Id = secondSource.Id, Url = secondSource.Url}]}]};
+        task.PlanJson = JsonSerializer.Serialize(plan, WorkflowJson.Options);
+        task.PlanHistoryJson = JsonSerializer.Serialize(new[] {new AcquisitionPlanRevision(1, plan, [], DateTime.UtcNow)}, WorkflowJson.Options);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var preview = await f.Recovery.PreviewAsync(new([f.TaskId], "localFiles"));
+        Assert.IsTrue(preview.Rows.Single().CanContinue, preview.Rows.Single().ReasonCode);
+        await f.Recovery.ApplyAsync(new(preview.PreviewToken, [f.TaskId], PrepareOnly: true));
+        var ready = (await f.Plans.GetAsync(f.TaskId, default))!;
+        var deferred = await f.Plans.DeferPreparedProcessingAsync(f.TaskId, ready.Task.PlanRevision, default);
+        Assert.IsTrue(deferred.CanDeferPreparedProcessing);
+        Assert.IsNull(deferred.Task.WorkflowRunId);
+        Assert.AreEqual(0, f.Host.Calls);
+        Assert.AreEqual("processing.deferPreparedFiles", deferred.PlanHistory.Last().Reason);
+        var inputs = deferred.Plan!.Parts.Select(p => p.ContinueFrom).ToArray();
+        CollectionAssert.AreEqual(ready.Plan!.Parts.Select(p => p.ContinueFrom).ToArray(), inputs);
+        Assert.AreEqual(2, inputs.Select(p => p!.ArtifactId).Distinct().Count());
+        Assert.AreEqual(JsonSerializer.Serialize(ready.StageDirectories), JsonSerializer.Serialize(deferred.StageDirectories));
+        Assert.AreEqual(JsonSerializer.Serialize(ready.Plan.StoragePolicy), JsonSerializer.Serialize(deferred.Plan.StoragePolicy));
+        Assert.AreEqual(JsonSerializer.Serialize(ready.PlanHistory), JsonSerializer.Serialize(deferred.PlanHistory.SkipLast(1)));
+        Assert.IsTrue(ready.Plan.Parts.All(p => (int?)p.Processing!.Steps.Single().ZipPasswordCodePage == 936));
+
+        var replay = await f.Plans.DeferPreparedProcessingAsync(f.TaskId, ready.Task.PlanRevision, default);
+        Assert.AreEqual(deferred.Task.PlanRevision, replay.Task.PlanRevision);
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => f.Plans.KeepPreparedFilesAsync(f.TaskId, new(ready.Task.PlanRevision), default));
+        var running = await f.Plans.RunAsync(f.TaskId, replay.Task.PlanRevision, default);
+        Assert.AreEqual(1, f.Host.Calls);
+        Assert.IsNull(running.CanDeferPreparedProcessing);
+        var run = await _db.WorkflowRuns.AsNoTracking().SingleAsync(r => r.Id == running.Task.WorkflowRunId);
+        var nodes = WorkflowRunPlans.Read(run.PlanSnapshotJson)!.Nodes;
+        CollectionAssert.AreEqual(new[] {"acquisition.plan.continueFiles", "acquisition.plan.process", "acquisition.plan.process",
+            "fs.assessDelivery", "fs.assessDelivery", "fs.publishArtifacts"}, nodes.Select(n => n.Kind).ToArray());
+        for (var index = 0; index < inputs.Length; index++)
+        {
+            var config = JsonSerializer.Deserialize<AcquisitionPlanProcessingConfig>(nodes[index + 1].ConfigJson!, WorkflowJson.Options)!;
+            Assert.AreEqual(deferred.Plan.Parts[index].Id, config.TargetId);
+            Assert.AreEqual(inputs[index], config.ContinueFrom);
+            Assert.AreEqual("unknown", config.Plan.Requirement);
+            Assert.AreEqual(0, config.Plan.Steps.Count);
+            Assert.IsNull(config.StopAfterStepId);
+            Assert.IsFalse(config.UseVerifiedInput || config.ExplicitlyKeepFiles);
+        }
+        var payload = AcquisitionPlanCompiler.Workset(f.TaskId, deferred.Task.PlanRevision, deferred.Plan, deferred.SourceRefs);
+        WorkflowExecutionContext Context(int node, string? prompt = null) => new() {RunId = run.Id, WorkflowDefinitionId = 0,
+            TriggerKind = CloudWorkflow.Trigger, Payload = payload, Services = _services, ActivityConfigJson = nodes[node].ConfigJson,
+            ResumePromptJson = prompt, Logger = NullLogger.Instance};
+        var connected = await new AcquisitionPlanContinueFilesActivity().ProcessItemAsync(Context(0), payload, default);
+        var activity = new AcquisitionPlanProcessingActivity();
+        var firstWait = await activity.ProcessItemAsync(Context(1), connected.Replacement!, default);
+        Assert.IsNotNull(firstWait.Suspension);
+        StringAssert.Contains(firstWait.Suspension.PromptJson!, "ExtractionPlanUnknown");
+        Assert.IsFalse(Directory.EnumerateFileSystemEntries(f.Options.Value.ProcessingWorkspaceDirectory!).Any());
+        var instructions = new FileProcessingPlan {Requirement = "required", Steps = [
+            new() {Id = "first", Op = "renameExtension", Extension = ".dat", Selector = "official.bin"},
+            new() {Id = "second", Op = "renameExtension", Input = "first", Extension = ".jpg", Selector = "*.dat"}
+        ]};
+        var answer = new CloudFileProcessingSignal {TargetId = first.Id,
+            ExtractionPlanJson = JsonSerializer.Serialize(instructions, WorkflowJson.Options)};
+        var finished = await activity.ResumeAsync(Context(1, firstWait.Suspension.PromptJson), firstWait.Suspension.Item,
+            JsonSerializer.Serialize(answer, WorkflowJson.Options), default);
+        Assert.IsNull(finished.Suspension, finished.Suspension?.PromptJson);
+        var firstResult = ((DownloadWorkset)finished.Replacement!).Targets.Single(t => t.Id == first.Id);
+        Assert.AreEqual("official.jpg", Path.GetFileName(firstResult.ProcessedFiles.Single()));
+        Assert.AreEqual("verified existing bytes", await File.ReadAllTextAsync(firstResult.ProcessedFiles.Single()));
+        var secondWait = await activity.ProcessItemAsync(Context(2), finished.Replacement!, default);
+        Assert.IsNotNull(secondWait.Suspension);
+        using var nextPrompt = JsonDocument.Parse(secondWait.Suspension.PromptJson!);
+        Assert.AreEqual("ExtractionPlanUnknown", nextPrompt.RootElement.GetProperty("reason").GetString());
+        Assert.AreEqual(second.Id, nextPrompt.RootElement.GetProperty("targetId").GetString());
+        Assert.AreEqual(inputs[1]!.ArtifactId, nextPrompt.RootElement.GetProperty("artifactId").GetString());
+        Assert.IsTrue((await _db.DownloadResults.AsNoTracking().ToListAsync())
+            .All(r => JsonSerializer.Deserialize<string[]>(r.FilesJson)!.All(File.Exists)));
+    }
+
     [DataTestMethod]
     [DataRow("Accepted the nine available original archives; the tenth is missing.")]
     [DataRow(null)]
@@ -88,7 +181,10 @@ public sealed partial class AcquisitionRecoveryTests
         if (fault == "note")
             await Assert.ThrowsExactlyAsync<ArgumentException>(() => f.Plans.KeepPreparedFilesAsync(f.TaskId, new(row.PlanRevision, new string('x', 1001)), default));
         else
+        {
             await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => f.Plans.KeepPreparedFilesAsync(f.TaskId, new(row.PlanRevision), default));
+            await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => f.Plans.DeferPreparedProcessingAsync(f.TaskId, row.PlanRevision, default));
+        }
         Assert.AreEqual(before, (await _db.AcquisitionTasks.AsNoTracking().SingleAsync()).PlanHistoryJson);
         Assert.AreEqual(0, f.Host.Calls);
         Assert.AreEqual(1, await _db.WorkflowRuns.CountAsync());

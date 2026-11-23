@@ -53,7 +53,7 @@ public record AcquisitionSetupInputModel
     /// <summary>Null keeps the runtime reserve; zero disables the additional reserve.</summary>
     public long? MinimumFreeSpaceBytes { get; set; }
     public bool? UseEmergencySpaceReserve { get; set; }
-    /// <summary>Maximum simultaneous acquisition runs, from 1 to 100. Omit to keep the current limit.</summary>
+    /// <summary>Maximum concurrent acquisition workflows; each invoked capability retains its own execution policy.</summary>
     public int? Concurrency { get; set; }
 }
 

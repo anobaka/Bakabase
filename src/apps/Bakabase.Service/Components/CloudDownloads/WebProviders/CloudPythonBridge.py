@@ -4,6 +4,7 @@ Run only with the dependency's isolated Python. No user config, browser cookies,
 postprocessors, shell commands, global package installation or URL fallback.
 """
 import contextlib
+import errno
 import hashlib
 import importlib.metadata
 import json
@@ -12,6 +13,7 @@ from pathlib import Path
 import re
 import stat
 import sys
+import tempfile
 import time
 import urllib.parse
 
@@ -267,7 +269,11 @@ def pixeldrain_failure(status=0, value=""):
     value = value.lower() if isinstance(value, str) else ""
     if "captcha" in value or "recaptcha" in value:
         return BridgeError("PIXELDRAIN_VERIFICATION_REQUIRED: complete verification on the official share page or use another source")
-    if status == 429 or value in ("max_concurrent_downloads", "transfer_limit_exceeded", "download_limit_exceeded"):
+    if value == "transfer_limit_exceeded":
+        return BridgeError("PIXELDRAIN_TRANSFER_QUOTA_EXCEEDED: the free Pixeldrain transfer quota was exceeded; wait for the quota to reset or use a supported account")
+    if value == "download_limit_exceeded":
+        return BridgeError("PIXELDRAIN_DOWNLOAD_QUOTA_EXCEEDED: the free Pixeldrain download quota was exceeded; wait for the quota to reset or use a supported account")
+    if status == 429 or value == "max_concurrent_downloads":
         return BridgeError("PIXELDRAIN_RATE_LIMITED: the current download or transfer limit was reached; wait or use the official share page")
     if status in (404, 410, 451) or value in ("not_found", "path_not_found", "unavailable_for_legal_reasons"):
         return BridgeError("PIXELDRAIN_SHARE_UNAVAILABLE: this file or folder is no longer publicly available")
@@ -437,6 +443,236 @@ def atomic_json(path, value):
     os.replace(temp, path)
     if os.name != "nt":
         os.chmod(path, 0o600)
+
+
+def sync_directory(path):
+    if os.name == "nt":
+        return
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        try:
+            os.fsync(fd)
+        except OSError as error:
+            if error.errno not in (errno.EINVAL, errno.ENOTSUP):
+                raise
+    finally:
+        os.close(fd)
+
+
+def present(path):
+    try:
+        return path.lstat()
+    except FileNotFoundError:
+        return None
+
+
+def file_identity(info):
+    return [info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns]
+
+
+def rename_noreplace(source, destination):
+    import ctypes
+
+    rename = getattr(ctypes.CDLL(None, use_errno=True), 'renameat2', None)
+    if rename is None:
+        raise OSError(errno.ENOSYS, 'renameat2 is unavailable')
+    rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    at_fdcwd = -100
+    rename_noreplace_flag = 1
+    if rename(at_fdcwd, os.fsencode(source), at_fdcwd, os.fsencode(destination), rename_noreplace_flag) != 0:
+        code = ctypes.get_errno()
+        raise OSError(code, os.strerror(code))
+
+
+def publish_verified_part(part, destination, verified, state):
+    try:
+        os.link(part, destination)
+        return False
+    except OSError as error:
+        if sys.platform != 'linux' or error.errno not in (errno.ENOTSUP, errno.ENOSYS):
+            raise
+
+    # A move consumes the staging name. Persist the already written completion
+    # receipt and staged bytes first so replay can verify the destination alone.
+    sync_directory(state)
+    # Network filesystems can reject a flush on a read-only handle.
+    with os.fdopen(os.open(part, os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK), 'r+b') as source:
+        info = os.fstat(source.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or file_identity(info) != file_identity(verified):
+            raise BridgeError('The verified partial changed before publication')
+        os.fsync(source.fileno())
+        if file_identity(part.lstat()) != file_identity(verified):
+            raise BridgeError('The verified partial changed before publication')
+        rename_noreplace(part, destination)
+    sync_directory(destination.parent)
+    sync_directory(part.parent)
+    return True
+
+
+def rejected_partial_error():
+    return BridgeError("CLOUD_PARTIAL_IDENTITY_UNVERIFIED: The rejected partial does not match this operation")
+
+
+def checksum_retry_key(value):
+    return value if isinstance(value, str) and re.fullmatch("[0-9]{1,19}", value) else None
+
+
+def rejected_partial_state(state, part, identity, entry):
+    record = state / (part.stem + ".rejected.json")
+    rejected = part.with_suffix(".rejected")
+    expected = {"version": 2, "operation": identity, "member": part.stem,
+                "size": entry["size"], "sha256": entry.get("sha256")}
+    info = present(record)
+    if info is None:
+        if present(rejected) is not None:
+            raise rejected_partial_error()
+        return record, rejected, expected, None, None
+    try:
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or not 0 < info.st_size <= 4096:
+            raise ValueError()
+        with os.fdopen(os.open(record, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)), encoding="utf-8") as source:
+            if file_identity(os.fstat(source.fileno())) != file_identity(info):
+                raise ValueError()
+            saved = json.loads(source.read(4096))
+        original = saved.pop("original")
+        key = checksum_retry_key(saved.pop("key"))
+        version = saved["version"]
+        if type(version) is not int or version not in (1, 2):
+            raise ValueError()
+        expected["version"] = version
+        if key is None or saved != expected or not isinstance(original, list) or len(original) != 4 or any(
+                type(value) is not int for value in original) or not 0 < original[2] <= entry["size"]:
+            raise ValueError()
+    except (TypeError, AttributeError, KeyError, ValueError):
+        raise rejected_partial_error() from None
+    return record, rejected, expected, original, key
+
+
+def save_rejected_partial(record, expected, original, key):
+    # The provider holds its operation lock. A private temporary file keeps a
+    # process interruption before publishing intent from leaving a partial record.
+    descriptor, name = tempfile.mkstemp(dir=record.parent, prefix=".rejected-")
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as target:
+            json.dump(dict(expected, original=original, key=key), target)
+            target.flush()
+            os.fsync(target.fileno())
+        if present(record) is not None:
+            raise rejected_partial_error()
+        os.replace(temporary, record)
+        sync_directory(record.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def rejected_original(rejected, version):
+    if version == 1:
+        return rejected
+    info = present(rejected)
+    if info is not None and (not stat.S_ISDIR(info.st_mode) or any(child.name != "original" for child in rejected.iterdir())):
+        raise rejected_partial_error()
+    return rejected / "original"
+
+
+def isolate_rejected_partial(state, part, identity, entry, repair_record, retry_key):
+    record, rejected, expected, original, _ = rejected_partial_state(state, part, identity, entry)
+    current = present(part)
+    if original is None:
+        if (retry_key is None or current is None or current.st_size == 0 or present(repair_record) is not None or
+                present(repair_record.with_suffix(".new")) is not None):
+            return
+        checksum = entry.get("sha256")
+        if (not isinstance(checksum, str) or not re.fullmatch("[a-fA-F0-9]{64}", checksum) or
+                not stat.S_ISREG(current.st_mode) or current.st_nlink != 1 or not 0 < current.st_size <= entry["size"]):
+            raise rejected_partial_error()
+        original = file_identity(current)
+        if current.st_size == entry["size"] and sha256(part) == checksum.lower():
+            if file_identity(part.lstat()) != original:
+                raise rejected_partial_error()
+            return
+        save_rejected_partial(record, expected, original, retry_key)
+
+    version = expected["version"]
+    original_path = rejected_original(rejected, version)
+    old = present(original_path)
+    if old is None:
+        if current is None or not stat.S_ISREG(current.st_mode) or current.st_nlink != 1 or file_identity(current) != original:
+            raise rejected_partial_error()
+        if version == 1:
+            os.link(part, original_path, follow_symlinks=False)
+        else:
+            if present(rejected) is None:
+                rejected.mkdir(mode=0o700)
+            if present(rejected_original(rejected, version)) is not None:
+                raise rejected_partial_error()
+            # A rename into our exclusive private directory does not ask the
+            # share to unlink a second name for the original file.
+            os.rename(part, original_path)
+            sync_directory(rejected)
+        sync_directory(part.parent)
+        old = original_path.lstat()
+    if not stat.S_ISREG(old.st_mode) or file_identity(old)[:3] != original[:3]:
+        raise rejected_partial_error()
+    current = present(part)
+    if current is not None and file_identity(current)[:2] == original[:2]:
+        # Only the legacy method could leave two names for the original inode.
+        if (version != 1 or not stat.S_ISREG(current.st_mode) or file_identity(current) != original or
+                file_identity(old) != original or current.st_nlink != 2 or old.st_nlink != 2):
+            raise rejected_partial_error()
+        part.unlink()
+        sync_directory(part.parent)
+
+
+def release_rejected_partial(state, part, identity, entry, destination, verified):
+    _, rejected, expected, original, _ = rejected_partial_state(state, part, identity, entry)
+    if original is None:
+        return False
+    with os.fdopen(os.open(destination, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)), "rb") as output:
+        if file_identity(os.fstat(output.fileno())) != verified or file_identity(destination.lstat()) != verified:
+            raise rejected_partial_error()
+        if os.name != "nt":
+            os.fsync(output.fileno())
+    sync_directory(destination.parent)
+    pending = present(part)
+    if pending is not None:
+        if not stat.S_ISREG(pending.st_mode) or file_identity(pending) != verified or pending.st_nlink != 2:
+            return True
+        part.unlink()
+        sync_directory(part.parent)
+    # A share's recycle bin can retain a name and round timestamps after unlink.
+    # The final file has its own content proof; ambiguous rejected bytes can stay.
+    version = expected["version"]
+    try:
+        original_path = rejected_original(rejected, version)
+    except BridgeError:
+        return True
+    old = present(original_path)
+    if old is not None:
+        if not stat.S_ISREG(old.st_mode) or old.st_nlink != 1 or file_identity(old) != original:
+            return True
+        original_path.unlink()
+    if version == 2 and present(rejected) is not None:
+        rejected.rmdir()
+    sync_directory(part.parent)
+    # Keep the generation's intent after this member publishes. A process
+    # restart can still carry the previous failure while another member waits.
+    return True
+
+
+def used_checksum_retry_keys(state, identity, members):
+    keys = set()
+    for record in state.glob("*.rejected.json"):
+        member = members.get(record.name.removesuffix(".rejected.json"))
+        if member is None:
+            raise rejected_partial_error()
+        entry, part = member
+        _, _, _, original, key = rejected_partial_state(state, part, identity, entry)
+        if original is None or key in keys:
+            raise rejected_partial_error()
+        keys.add(key)
+    return keys
 
 
 # Sparse partials left by interrupted storage writes sometimes contain long zero runs.
@@ -696,8 +932,10 @@ def run(request):
     if staging.is_symlink():
         raise BridgeError("Symbolic links are not supported")
     upgrade_manifest = False
+    frozen_manifest = False
     if manifest_path.exists():
         recorded = json.loads(manifest_path.read_text())
+        frozen_manifest = recorded == persisted
         if recorded != persisted:
             # Older file descriptors could omit SHA256. Only add the provider's checksum
             # when the operation and every previously frozen descriptor still match.
@@ -720,23 +958,39 @@ def run(request):
     completed_bytes = 0
     total_bytes = sum(e["size"] for e in entries) if all(
         isinstance(e.get("size"), int) and e["size"] >= 0 for e in entries) else None
+    pixeldrain = request["provider"] == "pixeldrain"
+    members = {}
+    for entry in entries:
+        key = hashlib.sha256(entry["path"].encode()).hexdigest()
+        members[key] = (entry, staging / (key + ".part"))
+    retry_key = checksum_retry_key(request.get("checksumRetryKey")) if pixeldrain and frozen_manifest else None
+    if pixeldrain and retry_key in used_checksum_retry_keys(state, identity, members):
+        retry_key = None
+    completed_recoveries = []
     last_progress = 0
-    for index, entry in enumerate(entries):
+    for index, (entry, part) in enumerate(members.values()):
         destination = beneath(output, entry["path"])
         receipt = receipts.get(entry["path"])
+        # Partial and recovery names are private, derived from the immutable member path.
+        repair_record = state / (part.stem + ".repair.json")
         if destination.exists():
-            if (not destination.is_file() or not receipt or destination.stat().st_size != receipt["size"] or
+            existing = destination.stat()
+            if (not stat.S_ISREG(existing.st_mode) or not receipt or existing.st_size != receipt["size"] or
                     (entry.get("sha256") and receipt["sha256"].lower() != entry["sha256"].lower()) or
                     sha256(destination) != receipt["sha256"]):
                 raise BridgeError("Destination already exists and is not a verified result of this operation")
+            if pixeldrain and release_rejected_partial(state, part, identity, entry, destination, file_identity(existing)):
+                completed_recoveries.append((entry, part))
             completed.append(str(destination))
             completed_bytes += destination.stat().st_size
             # Reset the network-speed baseline; these bytes were verified locally, not received.
             emit({"type": "progress", "stage": "reusing", "percentage": 100 * (index + 1) / len(entries)})
             continue
         destination.parent.mkdir(parents=True, exist_ok=True)
-        # Partial files stay in a private operation directory; filenames never come from the remote server.
-        part = staging / (hashlib.sha256(entry["path"].encode()).hexdigest() + ".part")
+        if pixeldrain:
+            isolate_rejected_partial(state, part, identity, entry, repair_record,
+                                     retry_key if entry["path"] not in receipts else None)
+            retry_key = None
         def progress(done, total):
             nonlocal last_progress
             now = time.monotonic()
@@ -752,21 +1006,31 @@ def run(request):
                 raise BridgeError("gdown did not produce the expected file")
             checksum = sha256(part)
         else:
-            checksum = http_original(session, entry, part, request["provider"], progress, state / (part.stem + ".repair.json"))
-        receipts[entry["path"]] = {"size": part.stat().st_size, "sha256": checksum}
+            checksum = http_original(session, entry, part, request["provider"], progress, repair_record)
+        verified = part.stat()
+        receipts[entry["path"]] = {"size": verified.st_size, "sha256": checksum}
         atomic_json(receipt_path, receipts)
-        # Hard-link publication fails if anything already exists; never overwrite the user's file.
+        # Both publication primitives fail if anything already exists.
         beneath(output, entry["path"])
         try:
-            os.link(part, destination)
+            part_moved = publish_verified_part(part, destination, verified, state)
         except OSError:
-            raise BridgeError("Could not publish file atomically without overwriting the destination")
-        part.unlink()
+            raise BridgeError("Could not publish file atomically without overwriting the destination") from None
+        if pixeldrain and release_rejected_partial(state, part, identity, entry, destination, file_identity(verified)):
+            completed_recoveries.append((entry, part))
+        elif not part_moved:
+            part.unlink()
         completed.append(str(destination))
         completed_bytes += receipts[entry["path"]]["size"]
         emit({"type": "progress", "stage": "downloading", "percentage": 100 * (index + 1) / len(entries), "completedBytes": completed_bytes, "totalBytes": total_bytes})
     if upgrade_manifest:
         atomic_json(manifest_path, persisted)
+    for entry, part in completed_recoveries:
+        record, rejected, _, original, _ = rejected_partial_state(state, part, identity, entry)
+        if original is not None and present(rejected) is None and present(part) is None:
+            record.unlink()
+    if completed_recoveries:
+        sync_directory(state)
     try:
         staging.rmdir()
     except OSError:

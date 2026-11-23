@@ -5,10 +5,13 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.CloudDownloads;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.FileProcessing;
 
@@ -19,6 +22,7 @@ internal static class ArtifactAcquisitionAllocationReferences
     private static readonly JsonSerializerOptions Strict = new(JsonSerializerDefaults.Web)
         {UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow};
     internal sealed record TaskContext(int Id, int? RunId, int Revision, string? PlanJson, string? HistoryJson);
+    private readonly record struct ReviewedWorkspace(int RunId, int Revision, string StorageStamp, string Directory);
     private sealed record WorksetWaitPrompt(List<CloudDownloadTarget> Targets, string Reason, string OutputDirectory);
 
     internal static IReadOnlySet<JsonElement> PlanValues(JsonElement document, CancellationToken ct, int? expectedTaskId = null)
@@ -118,7 +122,8 @@ internal static class ArtifactAcquisitionAllocationReferences
     }
 
     internal static IReadOnlySet<JsonElement> QueueValues(JsonElement document, TaskContext task,
-        IReadOnlySet<(int TaskId, int RunId, int Revision)> ownedRevisions, CancellationToken ct)
+        IReadOnlySet<(int TaskId, int RunId, int Revision)> ownedRevisions, CancellationToken ct, bool deletingTaskStage = false,
+        bool verifiedPendingRecovery = false)
     {
         var values = new HashSet<JsonElement>();
         if (!Unique(document, ct)) return values;
@@ -129,18 +134,143 @@ internal static class ArtifactAcquisitionAllocationReferences
             if (plan != null) values.UnionWith(DeliveryLayoutValues(document, task.Id, plan.Parts.Select(p => p.Id).ToArray(), ct));
         }
         catch (Exception error) when (Invalid(error)) { /* Unknown prepared plans retain all concrete references. */ }
+        var reviewedStorage = new HashSet<ReviewedWorkspace>();
+        if (Property(document, "localFilesRecovery") is {ValueKind: JsonValueKind.Object} recovery)
+        {
+            if (verifiedPendingRecovery)
+            {
+                var parts = Property(Property(recovery, "preview")!.Value, "parts")!.Value;
+                values.UnionWith(parts.EnumerateArray().Select(p => Property(p, "workingDirectory")!.Value));
+                var delivery = Property(Property(recovery, "storage")!.Value, "delivery")!.Value;
+                if (Property(delivery, "rootDirectory") is {ValueKind: JsonValueKind.String} root)
+                    values.Add(root);
+            }
+            else values.UnionWith(LocalFilesValues(recovery, task, ownedRevisions, reviewedStorage, ct));
+        }
+        if (Property(document, "continuationRequest") is {ValueKind: JsonValueKind.Object} continuation)
+            values.UnionWith(ContinuationAuthorizationValues(continuation, task, ownedRevisions, reviewedStorage, ct, deletingTaskStage));
+        if (Property(document, "continuationRequestHistory") is {ValueKind: JsonValueKind.Array} continuations)
+            foreach (var entry in continuations.EnumerateArray())
+                values.UnionWith(ContinuationAuthorizationValues(entry, task, ownedRevisions, reviewedStorage, ct, deletingTaskStage));
         if (Property(document, "localRecoveryQueue") is {ValueKind: JsonValueKind.Object} current)
-            values.UnionWith(QueueEntryValues(current, task, ownedRevisions, ct));
+            values.UnionWith(QueueEntryValues(current, task, ownedRevisions, reviewedStorage, ct, deletingTaskStage));
         if (Property(document, "localRecoveryQueueHistory") is {ValueKind: JsonValueKind.Array} history)
             foreach (var entry in history.EnumerateArray())
-                values.UnionWith(QueueEntryValues(entry, task, ownedRevisions, ct));
-        if (Property(document, "localFilesRecovery") is {ValueKind: JsonValueKind.Object} recovery)
-            values.UnionWith(LocalFilesValues(recovery, task, ownedRevisions, ct));
+                values.UnionWith(QueueEntryValues(entry, task, ownedRevisions, reviewedStorage, ct, deletingTaskStage));
         return values;
     }
 
+    // Recovery records the verified downloads before it finishes saving the local revision.
+    // During that interval the preview's capacity roots already have their normal roles.
+    // The actual source and destination fields are independent references throughout.
+    internal static async Task<bool> HasVerifiedPendingRecoveryAsync(BakabaseDbContext db, TaskContext task,
+        string? builderJson, IReadOnlySet<(int TaskId, int RunId, int Revision)> ownedRevisions, CancellationToken ct)
+    {
+        if (builderJson == null || task.RunId is not { } runId) return false;
+        try
+        {
+            using var document = JsonDocument.Parse(builderJson);
+            if (!Unique(document.RootElement, ct) ||
+                Property(document.RootElement, "localFilesRecovery") is not {ValueKind: JsonValueKind.Object} raw ||
+                JsonSerializer.Deserialize<AcquisitionLocalFilesRecoveryReceipt>(raw, Strict) is not
+                    {ResultingRevision: null, Parts.Count: > 0 and <= 100, Preview.Parts.Count: > 0, Storage.Policy: not null, Storage.Delivery: not null} receipt ||
+                receipt.PreviousRunId != runId || receipt.PreviousRevision != task.Revision ||
+                !Digest(receipt.Checkpoint) || receipt.Parts.Count != receipt.Preview.Parts.Count ||
+                OwnedPlan(task, runId, task.Revision, ownedRevisions, ct) is not { } plan)
+                return false;
+            ArtifactStoragePolicies.Validate(receipt.Storage.Policy);
+            AcquisitionDeliveryDirectoryResolver.ValidateSettings(receipt.Storage.Delivery);
+            var run = await db.WorkflowRuns.AsNoTracking().SingleOrDefaultAsync(r => r.Id == runId, ct);
+            if (run == null || !AcquisitionLocalFilesRecoveryReceipt.Awaiting(run) ||
+                receipt.Checkpoint != AcquisitionLocalFilesRecoveryReceipt.Hash(run)) return false;
+            var ids = plan.Parts.Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
+            if (receipt.Parts.Any(p => p == null) || receipt.Preview.Parts.Any(p => p == null) ||
+                ids.Count != receipt.Parts.Count || !ids.SetEquals(receipt.Parts.Select(p => p.PartId)) ||
+                !ids.SetEquals(receipt.Preview.Parts.Select(p => p.PartId))) return false;
+            foreach (var proof in receipt.Parts)
+            {
+                var preview = receipt.Preview.Parts.Single(p => p.PartId == proof.PartId);
+                if (proof.DownloadTaskId <= 0 || proof.DownloadResultId <= 0 || !Digest(proof.DownloadEvidence) ||
+                    string.IsNullOrWhiteSpace(proof.ArtifactId) || string.IsNullOrWhiteSpace(proof.OperationId) ||
+                    string.IsNullOrWhiteSpace(proof.DownloadIntent) ||
+                    preview.ArtifactId != proof.ArtifactId || preview.Fingerprint != proof.Fingerprint || !Digest(proof.Fingerprint) ||
+                    preview.DownloadTaskId != proof.DownloadTaskId || preview.DownloadResultId != proof.DownloadResultId ||
+                    preview.FileCount <= 0 || !Path.IsPathFullyQualified(preview.SourceDirectory) ||
+                    !Path.IsPathFullyQualified(preview.DeliveryDirectory) || !Path.IsPathFullyQualified(preview.WorkingDirectory) ||
+                    preview.WorkingDirectory != receipt.Storage.Policy.ProcessingWorkspaceDirectory ||
+                    !await db.Artifacts.AnyAsync(a => a.Id == proof.ArtifactId && a.Kind == "download" &&
+                        a.OperationId == proof.OperationId && a.Fingerprint == proof.Fingerprint && !a.RootIsAppData &&
+                        a.RootPath == preview.SourceDirectory && a.State == ArtifactLocationState.Available, ct) ||
+                    !await AcquisitionLocalFilesRecoveryReceipt.AuthorizesAsync(db, task.Id, proof.PartId, run,
+                        new(task.Id, runId, proof.ArtifactId, proof.OperationId, proof.Fingerprint), ct)) return false;
+            }
+            return true;
+        }
+        catch (Exception e) when (Invalid(e)) { return false; }
+    }
+
+    private static IReadOnlySet<JsonElement> ContinuationAuthorizationValues(JsonElement raw, TaskContext task,
+        IReadOnlySet<(int TaskId, int RunId, int Revision)> ownedRevisions,
+        HashSet<ReviewedWorkspace> reviewedStorage, CancellationToken ct, bool deletingTaskStage)
+    {
+        try
+        {
+            var entry = JsonSerializer.Deserialize<AcquisitionContinuationEntry>(raw, Strict);
+            if (entry is not {WorkflowRunId: { } run, Status: "attention" or "cancelled" or "skipped" or "submitted"} ||
+                !Guid.TryParseExact(entry.BatchId, "N", out _) || !Guid.TryParseExact(entry.PreviewToken, "N", out _) ||
+                !Digest(entry.Version) || entry.Order is < 0 or >= 1000 || entry.CreatedAt == default || entry.UpdatedAt < entry.CreatedAt ||
+                entry.Paths is not {Length: > 0} || entry.Paths.Any(p => string.IsNullOrWhiteSpace(p) ||
+                    !Path.IsPathFullyQualified(p) || Path.GetFullPath(p) != p) ||
+                !entry.Paths.SequenceEqual(entry.Paths.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)) ||
+                Property(raw, "paths") is not {ValueKind: JsonValueKind.Array} paths) return new HashSet<JsonElement>();
+            AcquisitionLocalFilesStorage? savedStorage = null;
+            if (entry.Scope is "workflow" or "downloads")
+            {
+                if (entry.Settings != "{}") return new HashSet<JsonElement>();
+            }
+            else if (entry.Scope == "localFiles" && !string.IsNullOrWhiteSpace(entry.Settings))
+            {
+                using var settings = JsonDocument.Parse(entry.Settings);
+                if (!Unique(settings.RootElement, ct) || JsonSerializer.Deserialize<AcquisitionLocalFilesStorage>(settings.RootElement, Strict)
+                        is not {Policy: not null, Delivery: not null} saved) return new HashSet<JsonElement>();
+                ArtifactStoragePolicies.Validate(saved.Policy);
+                AcquisitionDeliveryDirectoryResolver.ValidateSettings(saved.Delivery);
+                savedStorage = saved;
+            }
+            else return new HashSet<JsonElement>();
+
+            var plan = OwnedPlan(task, run, entry.PlanRevision, ownedRevisions, ct);
+            if (plan == null) return new HashSet<JsonElement>();
+            var layoutRoots = DeliveryLayoutValues(JsonSerializer.SerializeToElement(plan, Strict), task.Id,
+                plan.Parts.Select(p => p.Id).ToArray(), ct).Select(value => value.GetString());
+            var processingRoots = plan.StoragePolicy == null ? Enumerable.Empty<string?>() : plan.Parts.Select(part =>
+                ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy).ProcessingWorkspaceDirectory);
+            // Local-file recovery freezes its reviewed storage independently of the original
+            // plan. A legacy plan may have no processing policy at all.
+            var roots = layoutRoots.Concat(processingRoots).Append(savedStorage?.Policy.ProcessingWorkspaceDirectory).Append(plan.OutputDirectory)
+                .Where(p => !string.IsNullOrWhiteSpace(p) && Path.IsPathFullyQualified(p))
+                .Select(p => Path.GetFullPath(p!)).ToHashSet(StringComparer.Ordinal);
+            // Terminal authorization receipts retain the paths used to admit the request.
+            // The frozen plan identifies the allocating roots. Exact and concrete file references still protect their paths.
+            if (savedStorage != null && entry.Paths.Contains(savedStorage.Policy.ProcessingWorkspaceDirectory, StringComparer.Ordinal))
+                reviewedStorage.Add(new(run, entry.PlanRevision, AcquisitionLocalFilesRecoveryReceipt.Hash(savedStorage),
+                    savedStorage.Policy.ProcessingWorkspaceDirectory));
+            var values = paths.EnumerateArray().Where(p => roots.Contains(p.GetString()!)).ToHashSet();
+            if (deletingTaskStage && savedStorage != null)
+            {
+                // Settings is a serialized, strictly validated placement policy. It
+                // contains the allocation roots again inside the JSON string.
+                values.Add(Property(raw, "settings")!.Value);
+                values.UnionWith(paths.EnumerateArray().Where(p => p.GetString() == savedStorage.Delivery.RootDirectory));
+            }
+            return values;
+        }
+        catch (Exception error) when (Invalid(error)) { return new HashSet<JsonElement>(); }
+    }
+
     private static IReadOnlySet<JsonElement> QueueEntryValues(JsonElement raw, TaskContext task,
-        IReadOnlySet<(int TaskId, int RunId, int Revision)> ownedRevisions, CancellationToken ct)
+        IReadOnlySet<(int TaskId, int RunId, int Revision)> ownedRevisions,
+        IReadOnlySet<ReviewedWorkspace> reviewedStorage, CancellationToken ct, bool deletingTaskStage)
     {
         try
         {
@@ -153,22 +283,64 @@ internal static class ArtifactAcquisitionAllocationReferences
                 !ownedRevisions.Contains((task.Id, run, entry.PlanRevision)) || entry.WorkingDirectories is not {Count: > 0} ||
                 entry.WorkingDirectories.Any(p => !Path.IsPathFullyQualified(p))) return new HashSet<JsonElement>();
             var plan = OwnedPlan(task, run, entry.PlanRevision, ownedRevisions, ct);
-            if (plan?.StoragePolicy == null) return new HashSet<JsonElement>();
-            var roots = plan.Parts.Select(part => ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy).ProcessingWorkspaceDirectory)
+            if (plan == null || Property(raw, "workingDirectories") is not {ValueKind: JsonValueKind.Array} paths)
+                return new HashSet<JsonElement>();
+            // A stopped request can precede adoption. Its full storage digest identifies
+            // the configured capacity root for both processing and cleanup. Only this
+            // typed field gets allocation semantics; concrete inputs and outputs still protect it.
+            if (entry.RecoveryScope == "localFiles" && entry.ActionCategory == "localProcessing" && Digest(entry.Signal) &&
+                entry.Status is "attention" or "cancelled" or "completed" or "skipped" &&
+                entry.WorkingDirectories is [var working] &&
+                (reviewedStorage.Contains(new(run, entry.PlanRevision, entry.StorageStamp, working)) ||
+                 MatchesFrozenLocalFilesStorage(task, ownedRevisions, working, entry.StorageStamp, ct)))
+                return paths.EnumerateArray().ToHashSet();
+            var roots = plan.StoragePolicy == null ? new HashSet<string>(StringComparer.Ordinal) : plan.Parts
+                .Select(part => ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy).ProcessingWorkspaceDirectory)
                 .Where(p => !string.IsNullOrWhiteSpace(p)).ToHashSet(StringComparer.Ordinal);
-            if (Property(raw, "workingDirectories") is not {ValueKind: JsonValueKind.Array} paths ||
-                !QueueWorkingDirectoriesMatch(entry, plan, task.Id, roots)) return new HashSet<JsonElement>();
-            // Only the configured roots allocate sibling workspaces. A checkpoint's
-            // specific stage directory still protects all its contents.
-            return paths.EnumerateArray().Where(p => roots.Contains(p.GetString())).ToHashSet();
+            var values = new HashSet<JsonElement>();
+            // Admission reserves space on the configured volumes. Deleting another task's
+            // stage must not turn that reservation into ownership of every sibling on the volume.
+            // Actual stage paths, registered inputs and even equal paths in other JSON fields
+            // are still checked independently.
+            if (deletingTaskStage && entry.RecoveryScope == "workflow")
+            {
+                foreach (var directory in paths.EnumerateArray())
+                    if (directory.GetString() == plan.OutputDirectory || roots.Contains(directory.GetString()))
+                        values.Add(directory);
+                var layoutRoots = DeliveryLayoutValues(JsonSerializer.SerializeToElement(plan, Strict), task.Id,
+                    plan.Parts.Select(part => part.Id).ToArray(), ct).Select(value => value.GetString()).ToHashSet(StringComparer.Ordinal);
+                if (Property(raw, "deliveryDirectories") is {ValueKind: JsonValueKind.Array} destinations)
+                    foreach (var destination in destinations.EnumerateArray())
+                        if (layoutRoots.Contains(destination.GetString())) values.Add(destination);
+            }
+            if (plan.StoragePolicy != null && QueueWorkingDirectoriesMatch(entry, plan, task.Id, roots))
+                values.UnionWith(paths.EnumerateArray().Where(p => roots.Contains(p.GetString()) &&
+                    !(entry.RecoveryScope == "workflow" && entry.ActionCategory == "workflow" && p.GetString() == plan.OutputDirectory)));
+            return values;
         }
         catch (Exception e) when (Invalid(e)) { return new HashSet<JsonElement>(); }
+    }
+
+    private static bool MatchesFrozenLocalFilesStorage(TaskContext task, IReadOnlySet<(int TaskId, int RunId, int Revision)> owners,
+        string directory, string stamp, CancellationToken ct)
+    {
+        if (task.RunId is not { } run || !owners.Contains((task.Id, run, task.Revision))) return false;
+        using var document = JsonDocument.Parse(task.PlanJson ?? "null");
+        if (ReadPlan(document.RootElement, ct) is not {StoragePolicy: { } policy, DeliveryLayout: { } layout} plan ||
+            layout.TaskId != task.Id || policy.ProcessingWorkspaceDirectory != directory) return false;
+        ArtifactStoragePolicies.Validate(policy);
+        AcquisitionDeliveryDirectoryResolver.ValidateLayout(layout, plan.Parts.Select(p => p.Id).ToArray());
+        return AcquisitionLocalFilesRecoveryReceipt.Hash(new AcquisitionLocalFilesStorage(policy, layout.Settings)) == stamp;
     }
 
     private static bool QueueWorkingDirectoriesMatch(AcquisitionLocalRecoveryQueueEntry entry, AcquisitionPlan plan,
         int taskId, HashSet<string> roots)
     {
         if (roots.SetEquals(entry.WorkingDirectories)) return true;
+        if (entry.RecoveryScope == "workflow" && entry.ActionCategory == "workflow" &&
+            entry.SelectedAction == "continue" && Path.IsPathFullyQualified(plan.OutputDirectory) &&
+            roots.IsSubsetOf(entry.WorkingDirectories))
+            return entry.WorkingDirectories.All(p => roots.Contains(p) || p == plan.OutputDirectory);
         if (entry.RecoveryScope != "workflow" || entry.ActionCategory != "localProcessing" ||
             plan.StageDirectories is not { } stages || stages.TaskId != taskId ||
             !roots.IsSubsetOf(entry.WorkingDirectories)) return false;
@@ -180,7 +352,8 @@ internal static class ArtifactAcquisitionAllocationReferences
     }
 
     private static IReadOnlySet<JsonElement> LocalFilesValues(JsonElement raw, TaskContext task,
-        IReadOnlySet<(int TaskId, int RunId, int Revision)> ownedRevisions, CancellationToken ct)
+        IReadOnlySet<(int TaskId, int RunId, int Revision)> ownedRevisions,
+        HashSet<ReviewedWorkspace> reviewedStorage, CancellationToken ct)
     {
         try
         {
@@ -240,6 +413,9 @@ internal static class ArtifactAcquisitionAllocationReferences
                     if (Property(part, "originalDeliveryDirectory") is { ValueKind: JsonValueKind.String } previous &&
                         previous.GetString() == original.OutputDirectory)
                         values.Add(previous);
+            ArtifactStoragePolicies.Validate(receipt.Storage.Policy);
+            reviewedStorage.Add(new(receipt.PreviousRunId, receipt.PreviousRevision, AcquisitionLocalFilesRecoveryReceipt.Hash(receipt.Storage),
+                receipt.Storage.Policy.ProcessingWorkspaceDirectory));
             return values;
         }
         catch (Exception e) when (Invalid(e)) { return new HashSet<JsonElement>(); }

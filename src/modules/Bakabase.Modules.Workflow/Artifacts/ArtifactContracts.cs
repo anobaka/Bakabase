@@ -36,11 +36,22 @@ public sealed record ArtifactRegistration(string RootDirectory, IReadOnlyList<st
     IReadOnlyList<string>? Directories = null,
     // Trusted in-process adapter metadata, evaluated against the exact manifest captured by the store.
     [property: System.Text.Json.Serialization.JsonIgnore]
-    Func<ArtifactManifest, string?>? CreateMetadata = null);
+    Func<ArtifactManifest, string?>? CreateMetadata = null)
+{
+    // Previous complete native-receipt verification from this same request, never a client hint.
+    [System.Text.Json.Serialization.JsonIgnore] public ArtifactManifest? VerifiedDownloadFiles { get; init; }
+}
 
 public sealed record ArtifactRecord(string Id, string OperationId, string Kind, string RootDirectory,
     IReadOnlyList<string> Files, ArtifactManifest Manifest, string Fingerprint, ArtifactLocationState State,
     bool Managed, IReadOnlyList<string> ParentArtifactIds, string? MetadataJson);
+
+/// <summary>An exclusive maintenance operation may admit waiting registrations at a durable checkpoint.
+/// A successful handoff invalidates the caller's prior reference check. Other maintenance remains excluded.</summary>
+public interface IArtifactMaintenanceHandoff : IAsyncDisposable
+{
+    Task<bool> YieldToWaitingMutationsAsync(CancellationToken ct);
+}
 
 /// <summary>
 /// Opt-in operation persistence for activities that can describe and validate reusable outputs.
@@ -51,6 +62,9 @@ public interface IArtifactOperationStore
     /// <summary>Excludes new claims, registrations, consumer attachment and relocations until reclamation finishes.</summary>
     Task<IAsyncDisposable> AcquireMaintenanceAsync(CancellationToken ct = default) =>
         throw new NotSupportedException("This artifact store does not support workspace maintenance.");
+    /// <summary>Excludes mutations affecting these individually registered publication files.</summary>
+    Task<IAsyncDisposable> AcquirePublishedFilesMaintenanceAsync(string artifactId, string root, string fingerprint,
+        IReadOnlyList<string> files, CancellationToken ct = default) => AcquireMaintenanceAsync(ct);
     /// <summary>Includes current manifests and roots fenced by an in-progress quarantine/restore.</summary>
     Task<bool> HasRegisteredFilesAsync(IReadOnlyList<string> files, CancellationToken ct = default) =>
         throw new NotSupportedException("This artifact store does not support workspace maintenance.");
@@ -75,6 +89,10 @@ public interface IArtifactOperationStore
     Task<ArtifactOperationClaim> ClaimSameAttemptAsync(ArtifactOperationRequest request, int expectedAttempt,
         string ownerId, TimeSpan leaseDuration, CancellationToken ct = default) =>
         throw new NotSupportedException("This artifact store does not support an attempt-bound continuation.");
+    /// <summary>Reopen a provider-verified, restartable failed attempt owned by the same consumer. Never allocate another generation.</summary>
+    Task<ArtifactOperationClaim> ReopenFailedAttemptAsync(ArtifactOperationRequest request, int expectedAttempt,
+        string expectedError, string ownerId, TimeSpan leaseDuration, CancellationToken ct = default) =>
+        throw new NotSupportedException("This artifact store does not support reopening a verified failed checkpoint.");
     Task<bool> RenewAsync(ArtifactOperationLease lease, TimeSpan leaseDuration, CancellationToken ct = default);
     Task<ArtifactRecord> CompleteAsync(ArtifactOperationLease lease, ArtifactRegistration registration,
         CancellationToken ct = default);
@@ -95,6 +113,10 @@ public interface IArtifactOperationStore
     Task<bool> HasActiveConsumersAsync(string operationId, CancellationToken ct = default);
     /// <summary>Atomically refuses active consumers and blocks new consumers before relocation.</summary>
     Task<bool> TryQuarantineAsync(string artifactId, CancellationToken ct = default);
+    /// <summary>Fence a verified independent processing boundary. Only the named workflow's
+    /// pins on the distinct original download may survive. Other stores retain their normal fence.</summary>
+    Task<bool> TryQuarantineProcessingBoundaryAsync(string artifactId, string fingerprint,
+        string downloadId, int retainedByRunId, CancellationToken ct) => TryQuarantineAsync(artifactId, ct);
     /// <summary>Update a quarantined artifact's location; restoring Available verifies every hash first.</summary>
     Task SetLocationAsync(string artifactId, string rootDirectory, ArtifactLocationState state,
         CancellationToken ct = default);

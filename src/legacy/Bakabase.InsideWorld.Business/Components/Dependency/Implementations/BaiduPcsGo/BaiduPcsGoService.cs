@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,9 +33,10 @@ public sealed class BaiduPcsGoService(ILoggerFactory loggerFactory, AppService a
     IHttpClientFactory clients, IServiceProvider services)
     : DependentComponentService(loggerFactory, appService, "baidu-pcs-go", services)
 {
-    public const string BridgeVersion = "4.0.2+bakabase.15";
+    public const string BridgeVersion = "4.0.2+bakabase.28";
     public const string UpstreamCommit = "225bdd3b6cb298601c4d5ef7104c3e08cd1d692d";
     private const string SourceSha256 = "6da5fbee22d3747a8dbc9e78d833f775de839c1ed77f6526642c79f4f6d189cf";
+    private const string UpstreamPatchName = "upstream-patch.json";
     public override string Id => "baidu-pcs-go-component-service";
     protected override string KeyInLocalizer => "BaiduPcsGo";
     public override bool IsRequired => false;
@@ -73,12 +75,26 @@ public sealed class BaiduPcsGoService(ILoggerFactory loggerFactory, AppService a
             var sourceParent = Path.Combine(build, "source");
             ZipFile.ExtractToDirectory(archive, sourceParent);
             var source = Directory.GetDirectories(sourceParent).Single();
+            var patchManifest = Path.Combine(build, UpstreamPatchName);
+            await using (var resource = typeof(BaiduPcsGoService).Assembly
+                             .GetManifestResourceStream($"Bakabase.BaiduPcsBridge.{UpstreamPatchName}")!)
+            await using (var output = File.Create(patchManifest))
+                await resource.CopyToAsync(output, ct);
+            await using (var patch = File.OpenRead(patchManifest))
+                await ApplyUpstreamPatchAsync(source, patch, ct);
             var cmd = Path.Combine(source, "cmd", "bakabase-bridge");
             Directory.CreateDirectory(cmd);
-            await using (var resource = typeof(BaiduPcsGoService).Assembly
-                             .GetManifestResourceStream("Bakabase.BaiduPcsBridge.main.go")!)
-            await using (var output = File.Create(Path.Combine(cmd, "main.go")))
+            const string bridgeSourcePrefix = "Bakabase.BaiduPcsBridge.";
+            var assembly = typeof(BaiduPcsGoService).Assembly;
+            var bridgeSources = assembly.GetManifestResourceNames()
+                .Where(name => name.StartsWith(bridgeSourcePrefix, StringComparison.Ordinal) && name.EndsWith(".go", StringComparison.Ordinal))
+                .Select(name => name[bridgeSourcePrefix.Length..]).ToArray();
+            foreach (var name in bridgeSources)
+            {
+                await using var resource = assembly.GetManifestResourceStream(bridgeSourcePrefix + name)!;
+                await using var output = File.Create(Path.Combine(cmd, name));
                 await resource.CopyToAsync(output, ct);
+            }
             await UpdateContext(c => c.InstallationProgress = 15);
 
             var os = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsMacOS() ? "darwin" : "linux";
@@ -135,12 +151,14 @@ public sealed class BaiduPcsGoService(ILoggerFactory loggerFactory, AppService a
             // Keep the exact corresponding upstream archive and bridge source beside the
             // optional executable, including in offline/container installations.
             File.Copy(archive, Path.Combine(sources, $"BaiduPCS-Go-{UpstreamCommit}.zip"), true);
-            File.Copy(Path.Combine(cmd, "main.go"), Path.Combine(sources, "main.go"), true);
+            foreach (var name in bridgeSources) File.Copy(Path.Combine(cmd, name), Path.Combine(sources, name), true);
+            File.Copy(patchManifest, Path.Combine(sources, UpstreamPatchName), true);
             File.Copy(Path.Combine(source, "LICENSE"), Path.Combine(DefaultLocation, "LICENSE.BaiduPCS-Go"), true);
             await File.WriteAllTextAsync(Path.Combine(sources, "BUILD.txt"),
                 $"BaiduPCS-Go {UpstreamCommit}, Bakabase bridge {BridgeVersion}\n" +
                 $"Compiler: {compiler.GetProperty("version").GetString()}\n" +
-                "Extract the source ZIP, copy main.go into cmd/bakabase-bridge/main.go inside that module, then run:\n" +
+                $"Extract the source ZIP. For each file in {UpstreamPatchName}, verify its original SHA-256 and apply " +
+                "each before/after edit in order exactly once using UTF-8. Copy the supplied Go source files into cmd/bakabase-bridge/, then run:\n" +
                 "CGO_ENABLED=0 go build -trimpath -mod=readonly -o bakabase-baidu-pcs ./cmd/bakabase-bridge\n" +
                 "The upstream Apache-2.0 license is retained in LICENSE.BaiduPCS-Go.\n", ct);
             // Move replaces the executable only after download, build and protocol checks succeed.
@@ -152,6 +170,33 @@ public sealed class BaiduPcsGoService(ILoggerFactory loggerFactory, AppService a
         {
             try { Directory.Delete(build, true); }
             catch (Exception e) { Logger.LogWarning(e, "Could not remove BaiduPCS-Go build cache"); }
+        }
+    }
+
+    internal static async Task ApplyUpstreamPatchAsync(string directory, Stream manifest, CancellationToken ct)
+    {
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory)) + Path.DirectorySeparatorChar;
+        using var edits = await JsonDocument.ParseAsync(manifest, cancellationToken: ct);
+        foreach (var patch in edits.RootElement.EnumerateArray())
+        {
+            var file = Path.GetFullPath(Path.Combine(root, patch.GetProperty("path").GetString()!));
+            if (!file.StartsWith(root, StringComparison.Ordinal)) throw new IOException("Unsafe upstream patch path.");
+            var bytes = await File.ReadAllBytesAsync(file, ct);
+            var expected = patch.GetProperty("sha256").GetString();
+            if (!Convert.ToHexString(SHA256.HashData(bytes)).Equals(expected, StringComparison.OrdinalIgnoreCase))
+                throw new IOException("Upstream patch input checksum mismatch.");
+            var text = Encoding.UTF8.GetString(bytes);
+            foreach (var edit in patch.GetProperty("edits").EnumerateArray())
+            {
+                var before = edit.GetProperty("before").GetString()!;
+                var after = edit.GetProperty("after").GetString()!;
+                var start = text.IndexOf(before, StringComparison.Ordinal);
+                if (before.Length == 0 || start < 0 ||
+                    text.IndexOf(before, start + before.Length, StringComparison.Ordinal) >= 0)
+                    throw new IOException("Upstream patch input is ambiguous.");
+                text = string.Concat(text.AsSpan(0, start), after, text.AsSpan(start + before.Length));
+            }
+            await File.WriteAllTextAsync(file, text, ct);
         }
     }
 

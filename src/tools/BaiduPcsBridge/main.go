@@ -34,6 +34,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/qjfoidnh/BaiduPCS-Go/baidupcs"
+	"github.com/qjfoidnh/BaiduPCS-Go/baidupcs/pcserror"
 	"github.com/qjfoidnh/BaiduPCS-Go/internal/pcsconfig"
 	"github.com/qjfoidnh/BaiduPCS-Go/internal/pcsfunctions/pcsdownload"
 	"github.com/qjfoidnh/BaiduPCS-Go/pcsutil/taskframework"
@@ -44,23 +45,25 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-const version = "4.0.2+bakabase.15"
+const version = "4.0.2+bakabase.28"
 
 type request struct {
-	Command            string  `json:"command"`
-	Cookies            string  `json:"cookies"`
-	BDUSS              string  `json:"bduss"`
-	STOKEN             string  `json:"stoken"`
-	OperationID        string  `json:"operationId"`
-	URL                string  `json:"url"`
-	AccessCode         string  `json:"accessCode"`
-	RemoteDirectory    string  `json:"remoteDirectory"`
-	RemotePath         string  `json:"remotePath"`
-	OutputDirectory    string  `json:"outputDirectory"`
-	ExpectedManifest   []entry `json:"expectedManifest"`
-	ExpectedUID        string  `json:"expectedUid"`
-	VerifyRemote       bool    `json:"verifyRemote"`
-	ConnectionsPerFile int     `json:"connectionsPerFile"`
+	Command            string       `json:"command"`
+	Cookies            string       `json:"cookies"`
+	BDUSS              string       `json:"bduss"`
+	STOKEN             string       `json:"stoken"`
+	OperationID        string       `json:"operationId"`
+	URL                string       `json:"url"`
+	AccessCode         string       `json:"accessCode"`
+	RemoteDirectory    string       `json:"remoteDirectory"`
+	RemotePath         string       `json:"remotePath"`
+	OutputDirectory    string       `json:"outputDirectory"`
+	ReuseSource        *reuseSource `json:"reuseSource,omitempty"`
+	ReadOnlyFileIDs    []string     `json:"readOnlyFileIds"`
+	ExpectedManifest   []entry      `json:"expectedManifest"`
+	ExpectedUID        string       `json:"expectedUid"`
+	VerifyRemote       bool         `json:"verifyRemote"`
+	ConnectionsPerFile int          `json:"connectionsPerFile"`
 }
 type entry struct {
 	ID          int64  `json:"id"`
@@ -69,10 +72,11 @@ type entry struct {
 	IsDirectory bool   `json:"isDirectory"`
 }
 type receipt struct {
-	Fingerprint string  `json:"fingerprint"`
-	Stage       string  `json:"stage"`
-	RemotePath  string  `json:"remotePath"`
-	Manifest    []entry `json:"manifest"`
+	Fingerprint        string              `json:"fingerprint"`
+	Stage              string              `json:"stage"`
+	RemotePath         string              `json:"remotePath"`
+	Manifest           []entry             `json:"manifest"`
+	TransferDiagnostic *transferDiagnostic `json:"transferDiagnostic,omitempty"`
 }
 
 var output *json.Encoder
@@ -81,6 +85,9 @@ var remoteMutationStarted bool
 
 func emit(v any)             { outputMutex.Lock(); defer outputMutex.Unlock(); _ = output.Encode(v) }
 func fail(code string) error { return errors.New(code) }
+
+var errLocalFileChanged = errors.New("BAIDU_LOCAL_FILE_CHANGED")
+
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "--version" {
 		fmt.Println(version)
@@ -128,13 +135,28 @@ func run(ctx context.Context) error {
 	if !filepath.IsAbs(os.Getenv(pcsconfig.EnvConfigDir)) {
 		return fail("BAIDU_CONFIG_DIRECTORY_REQUIRED")
 	}
-	if r.Command == "download" || r.Command == "membership" || r.Command == "manifest" {
+	if r.Command == "download" || r.Command == "membership" || r.Command == "manifest" || r.Command == "inspect-transfer-target" {
 		pcs, uid, err := inspectionPCS(os.Getenv(pcsconfig.EnvConfigDir), r.ExpectedUID)
 		if err != nil {
 			return err
 		}
 		if r.Command == "download" {
 			return download(ctx, r, pcs)
+		}
+		if r.Command == "inspect-transfer-target" {
+			state, err := inspectTransferTarget(r, pcs)
+			if err != nil {
+				return err
+			}
+			if state == "empty" || state == "absent" {
+				client := newShareProbeRequester(ctx)
+				defer client.client.CloseIdleConnections()
+				if err := probeShare(r, client); err != nil {
+					return err
+				}
+			}
+			emit(map[string]any{"type": "result", "uid": uid, "state": state})
+			return nil
 		}
 		if r.Command == "manifest" {
 			if !path.IsAbs(r.RemotePath) || path.Clean(r.RemotePath) != r.RemotePath {
@@ -156,10 +178,34 @@ func run(ctx context.Context) error {
 		emit(map[string]any{"type": "result", "uid": uid, "membershipKind": kind, "probeMethod": "baidu-xpan-uinfo"})
 		return nil
 	}
+	if r.Command == "inspect-reuse-source" {
+		pcs, uid, err := inspectionPCS(os.Getenv(pcsconfig.EnvConfigDir), r.ExpectedUID)
+		if err != nil {
+			return err
+		}
+		entries, _, err := manifestLimited(pcs, r.RemotePath, 10000)
+		if err != nil {
+			return err
+		}
+		if !sameManifest(r.ExpectedManifest, entries) {
+			return fail("BAIDU_REMOTE_MANIFEST_CHANGED")
+		}
+		inventory, _, err := inspectReuseSource(ctx, os.Getenv(pcsconfig.EnvConfigDir), uid, r)
+		if err != nil {
+			return err
+		}
+		emit(inventory)
+		return nil
+	}
 	if r.Command == "verify-existing" {
 		pcs, uid, err := inspectionPCS(os.Getenv(pcsconfig.EnvConfigDir), r.ExpectedUID)
 		if err != nil {
 			return err
+		}
+		if r.ReuseSource != nil {
+			if _, err = inspectReuseDestination(ctx, r, pcs); err != nil {
+				return err
+			}
 		}
 		files, err := verifyExistingDownload(ctx, r, pcs)
 		if err != nil {
@@ -168,12 +214,34 @@ func run(ctx context.Context) error {
 		emit(map[string]any{"type": "result", "uid": uid, "files": files})
 		return nil
 	}
+	if r.Command == "inspect-retained-writes" {
+		pcs, uid, err := inspectionPCS(os.Getenv(pcsconfig.EnvConfigDir), r.ExpectedUID)
+		if err != nil {
+			return err
+		}
+		var ids []string
+		if r.ReuseSource != nil {
+			ids, err = inspectReuseDestination(ctx, r, pcs)
+		} else {
+			ids, err = inspectRetainedWrites(ctx, r, pcs)
+		}
+		if err != nil {
+			return err
+		}
+		emit(map[string]any{"type": "result", "uid": uid, "readOnlyFileIds": ids})
+		return nil
+	}
 	if r.Command == "inspect-download" {
 		pcs, uid, err := inspectionPCS(os.Getenv(pcsconfig.EnvConfigDir), r.ExpectedUID)
 		if err != nil {
 			return err
 		}
-		if err = inspectDownload(ctx, r, pcs); err != nil {
+		if r.ReuseSource != nil {
+			_, err = inspectReuseDestination(ctx, r, pcs)
+		} else {
+			err = inspectDownload(ctx, r, pcs)
+		}
+		if err != nil {
 			return err
 		}
 		emit(map[string]any{"type": "result", "canResume": true, "uid": uid})
@@ -417,19 +485,38 @@ func manifestLimited(pcs *baidupcs.BaiduPCS, root string, limit int) ([]entry, [
 	}
 	return entries, files, nil
 }
-func saveReceipt(file string, r *receipt) error {
-	b, _ := json.Marshal(r)
-	if os.WriteFile(file+".new", b, 0600) != nil {
+func saveReceipt(file string, record *receipt) error {
+	if err := writePrivateReceipt(file, record); err != nil {
 		return fail("BAIDU_RECEIPT_WRITE_FAILED")
 	}
-	// Windows cannot replace an existing file with Rename. The previous intent must
-	// remain on disk until the replacement is ready; host serializes each account.
-	if err := os.Rename(file+".new", file); err != nil {
-		if os.Remove(file) != nil || os.Rename(file+".new", file) != nil {
-			return fail("BAIDU_RECEIPT_WRITE_FAILED")
-		}
-	}
 	return nil
+}
+
+func writePrivateReceipt(file string, value any) error {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(file)
+	f, err := os.CreateTemp(dir, ".bakabase-receipt-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	if _, err = f.Write(data); err == nil {
+		err = f.Sync()
+	}
+	closeErr := f.Close()
+	if err == nil {
+		err = closeErr
+	}
+	if err == nil {
+		err = os.Rename(f.Name(), file)
+	}
+	if err == nil {
+		err = syncReuseDir(dir)
+	}
+	return err
 }
 
 // Keep the account's existing cookie jar, proxy and HTTP behavior. In particular,
@@ -793,13 +880,21 @@ func transferShare(r request, pcs *baidupcs.BaiduPCS) error {
 	state := &receipt{Fingerprint: hex.EncodeToString(fingerprint[:]), Stage: "prepared", RemotePath: path.Join(r.RemoteDirectory, "bakabase-"+key[:24])}
 	if b, err := os.ReadFile(journal); err == nil {
 		var old receipt
-		if json.Unmarshal(b, &old) != nil || old.Fingerprint != state.Fingerprint {
+		if json.Unmarshal(b, &old) != nil || old.Fingerprint != state.Fingerprint || old.RemotePath != state.RemotePath {
 			remoteMutationStarted = true
 			return fail("BAIDU_OPERATION_MISMATCH")
 		}
-		if old.Stage == "completed" {
+		if old.Stage == "completed" && old.TransferDiagnostic == nil {
 			emit(map[string]any{"type": "result", "receipt": old})
 			return nil
+		}
+		if old.TransferDiagnostic != nil {
+			if validTransferDiagnostic(old.TransferDiagnostic, old.Stage) {
+				remoteMutationStarted = old.Stage != "rejected"
+				return old.TransferDiagnostic
+			}
+			remoteMutationStarted = true
+			return fail("BAIDU_RECEIPT_READ_FAILED")
 		}
 		if old.Stage != "prepared" {
 			remoteMutationStarted = true
@@ -887,6 +982,11 @@ func transferShare(r request, pcs *baidupcs.BaiduPCS) error {
 	if errList != nil || len(children) != 0 {
 		return fail("BAIDU_TARGET_NOT_EMPTY")
 	}
+	restoreTransport, err := secureTransferTransport(pcs.GetClient(), params["shareUrl"])
+	if err != nil {
+		return err
+	}
+	defer restoreTransport()
 	state.Stage = "transferring"
 	if err := saveReceipt(journal, state); err != nil {
 		return err
@@ -897,23 +997,58 @@ func transferShare(r request, pcs *baidupcs.BaiduPCS) error {
 	params["referer"] = "https://pan.baidu.com/s/" + feature
 	pcs.UpdatePCSCookies(true)
 	remoteMutationStarted = true
-	if pcs.GenerateRequestQuery("POST", params)["ErrNo"] != "0" {
-		return fail("BAIDU_TRANSFER_FAILED_CONFIRM_TARGET")
+	if err := recordTransferResponse(journal, state, ids, func(observe func(*http.Response)) { pcs.ReadShareTransferResponse(params, observe) }); err != nil {
+		return err
 	}
 	children, errList = listDirectory(pcs, state.RemotePath)
 	if errList != nil || len(children) != len(ids) {
-		return fail("BAIDU_TRANSFER_INCOMPLETE_CONFIRM_TARGET")
+		return state.TransferDiagnostic
 	}
 	state.Manifest, _, err = manifest(pcs, state.RemotePath)
 	if err != nil {
-		return err
+		return state.TransferDiagnostic
 	}
+	state.TransferDiagnostic = nil
 	state.Stage = "completed"
 	if err := saveReceipt(journal, state); err != nil {
 		return err
 	}
 	emit(map[string]any{"type": "result", "receipt": state})
 	return nil
+}
+
+func inspectTransferTarget(r request, pcs *baidupcs.BaiduPCS) (string, error) {
+	if r.OperationID == "" || len(r.OperationID) > 4096 || !path.IsAbs(r.RemoteDirectory) ||
+		path.Clean(r.RemoteDirectory) != r.RemoteDirectory || strings.ContainsAny(r.RemoteDirectory, "\x00\\") {
+		return "", fail("BAIDU_TRANSFER_TARGET_REQUIRED")
+	}
+	key := sha256.Sum256([]byte(r.OperationID))
+	target := path.Join(r.RemoteDirectory, "bakabase-"+hex.EncodeToString(key[:])[:24])
+	metadata, err := pcs.FilesDirectoriesMeta(target)
+	if err != nil {
+		if isMissingTransferTarget(err) {
+			return "absent", nil
+		}
+		return "", fail("BAIDU_TRANSFER_TARGET_UNVERIFIED")
+	}
+	if metadata == nil || !metadata.Isdir || metadata.Path != target || metadata.FsID <= 0 {
+		return "", fail("BAIDU_TRANSFER_TARGET_UNVERIFIED")
+	}
+	children, listErr := listDirectory(pcs, target)
+	if listErr != nil {
+		return "", listErr
+	}
+	if len(children) > 0 {
+		return "nonempty", nil
+	}
+	return "empty", nil
+}
+
+func isMissingTransferTarget(err pcserror.Error) bool {
+	// Only the PCS metadata endpoint's explicit no-such-file response. Account,
+	// network, parsing and directory-list failures cannot prove absence.
+	return err.GetOperation() == baidupcs.OperationFilesDirectoriesMeta &&
+		err.GetErrType() == pcserror.ErrTypeRemoteError && err.GetRemoteErrCode() == 31066
 }
 
 func safeLocal(root, relative string) (string, error) {
@@ -1276,8 +1411,16 @@ func resolveDownloadPaths(ctx context.Context, configDir, uid, root string, r re
 			for _, e := range entries {
 				legacy[e.Path] = strings.TrimPrefix(e.Path, base)
 			}
-			if inspectErr := inspectLocalDownloadWithPaths(ctx, root, r.RemotePath, entries, legacy); inspectErr == nil {
+			inspectErr := inspectDownloadTree(ctx, root, r.RemotePath, entries, legacy, r.Command == "verify-existing")
+			if r.Command == "inspect-reuse-source" {
+				_, _, inspectErr = inventoryReuseTree(ctx, uid, r, legacy)
+			}
+			if inspectErr == nil {
 				return legacy, nil
+			}
+			switch inspectErr.Error() {
+			case "BAIDU_DOWNLOAD_PARTIAL_UNVERIFIED", "BAIDU_DOWNLOAD_CHECKPOINT_INVALID", "BAIDU_VERIFIED_FILE_MISSING", "BAIDU_VERIFIED_FILE_SIZE_CHANGED":
+				return nil, inspectErr
 			}
 		}
 		return nil, err
@@ -1347,20 +1490,10 @@ func download(ctx context.Context, r request, pcs *baidupcs.BaiduPCS) error {
 			}
 		}
 	}
-	if err := os.MkdirAll(r.OutputDirectory, 0700); err != nil {
-		return storageFail("BAIDU_OUTPUT_DIRECTORY_FAILED", "createDirectory", err)
-	}
-	root, err := filepath.EvalSymlinks(r.OutputDirectory)
-	if err != nil {
-		return storageFail("BAIDU_OUTPUT_DIRECTORY_FAILED", "resolveDirectory", err)
-	}
-	paths, err := resolveDownloadPaths(ctx, os.Getenv(pcsconfig.EnvConfigDir), strconv.FormatUint(pcsconfig.Config.ActiveUser().UID, 10), root, r, entries, true)
-	if err != nil {
-		return err
-	}
-	results, err := downloadManifestFilesWithPaths(root, r.RemotePath, files, paths, func(fd *baidupcs.FileDirectory) (*baidupcs.FileDirectory, error) {
+	metadata := func(fd *baidupcs.FileDirectory) (*baidupcs.FileDirectory, error) {
 		return pcs.FilesDirectoriesMeta(fd.Path)
-	}, func(fd *baidupcs.FileDirectory, local string) error {
+	}
+	execute := func(fd *baidupcs.FileDirectory, local string, checkpointProgress func(int64)) error {
 		// Upstream ignores os.Create's error for empty files. Preserve the local
 		// cause here as well; no payload request is needed for an empty member.
 		if fd.Size == 0 {
@@ -1375,7 +1508,7 @@ func download(ctx context.Context, r request, pcs *baidupcs.BaiduPCS) error {
 		}
 		executor := taskframework.TaskExecutor{IsFailedDeque: true}
 		executor.SetParallel(1)
-		cfg := &downloader.Config{Mode: transfer.RangeGenMode_BlockSize, CacheSize: 65536, BlockSize: baidupcs.InitRangeSize, MaxParallel: connections, InstanceStateStorageFormat: downloader.InstanceStateStorageFormatProto3, TryHTTP: false}
+		cfg := &downloader.Config{Mode: transfer.RangeGenMode_BlockSize, CacheSize: 65536, BlockSize: baidupcs.InitRangeSize, MaxParallel: connections, InstanceStateStorageFormat: downloader.InstanceStateStorageFormatProto3, TryHTTP: false, CheckpointProgress: checkpointProgress, PreserveWorkingFiles: r.ReuseSource != nil}
 		unit := &pcsdownload.DownloadTaskUnit{Cfg: cfg, PCS: pcs, ParentTaskExecutor: &executor, DownloadStatistic: &pcsdownload.DownloadStatistic{}, VerbosePrinter: pcsverbose.New("BAKABASE"), IsOverwrite: true, NoCheck: false, DownloadMode: pcsdownload.DownloadModeLocate, PcsPath: fd.Path, SavePath: local, FileInfo: fd}
 		guarded := &storageAwareDownloadUnit{DownloadTaskUnit: unit}
 		executor.Append(guarded, 2)
@@ -1388,16 +1521,41 @@ func download(ctx context.Context, r request, pcs *baidupcs.BaiduPCS) error {
 			return fail("BAIDU_DOWNLOAD_FAILED")
 		}
 		return nil
-	}, func(completed, total int64) {
+	}
+	report := func(completed, total int64) {
 		emit(map[string]any{"type": "progress", "stage": "downloading", "completedBytes": completed, "totalBytes": total})
-	}, verificationProgress{Context: ctx, Report: func(checked, total int64) {
-		emit(map[string]any{"type": "progress", "stage": "verifying", "verifiedBytes": checked, "verificationTotalBytes": total})
-	}})
+	}
+	progress := bridgeVerificationProgress(ctx)
+	var results []string
+	if r.ReuseSource != nil {
+		results, err = downloadWithReuse(ctx, os.Getenv(pcsconfig.EnvConfigDir), r, entries, files, metadata, execute, report, progress)
+	} else {
+		if err := os.MkdirAll(r.OutputDirectory, 0700); err != nil {
+			return storageFail("BAIDU_OUTPUT_DIRECTORY_FAILED", "createDirectory", err)
+		}
+		var root string
+		root, err = filepath.EvalSymlinks(r.OutputDirectory)
+		if err != nil {
+			return storageFail("BAIDU_OUTPUT_DIRECTORY_FAILED", "resolveDirectory", err)
+		}
+		var paths map[string]string
+		paths, err = resolveDownloadPaths(ctx, os.Getenv(pcsconfig.EnvConfigDir), strconv.FormatUint(pcsconfig.Config.ActiveUser().UID, 10), root, r, entries, true)
+		if err != nil {
+			return err
+		}
+		results, err = downloadManifestFilesWithReadOnly(root, r.RemotePath, files, paths, r.ReadOnlyFileIDs, metadata, execute, report, progress)
+	}
 	if err != nil {
 		return err
 	}
 	emit(map[string]any{"type": "result", "files": results})
 	return nil
+}
+
+func bridgeVerificationProgress(ctx context.Context) verificationProgress {
+	return verificationProgress{Context: ctx, Report: func(checked, total int64) {
+		emit(map[string]any{"type": "progress", "stage": "verifying", "verifiedBytes": checked, "verificationTotalBytes": total})
+	}}
 }
 
 func downloadConnections(configured int) (int, error) {
@@ -1418,23 +1576,33 @@ type downloadChecksums struct {
 	hashes    [][]byte
 }
 
+// A multipart checksum list identifies a boundary only when exactly one known
+// block size accounts for all of its entries, including the final partial block.
+func uniqueMultipartBlockSize(size int64, blocks int, candidates ...int64) int64 {
+	if size <= 0 || blocks < 2 {
+		return 0
+	}
+	var matched int64
+	for _, candidate := range candidates {
+		if 1+(size-1)/candidate != int64(blocks) {
+			continue
+		}
+		if matched != 0 {
+			return 0
+		}
+		matched = candidate
+	}
+	return matched
+}
+
 func trustedDownloadChecksums(fd *baidupcs.FileDirectory) *downloadChecksums {
 	if fd.Size < 0 || len(fd.BlockList) == 0 {
 		return nil
 	}
 	blockSize := fd.Size
 	if len(fd.BlockList) > 1 {
-		blockSize = 0
-		// Use upstream upload boundaries, never size/block-count averages. Unknown
-		// layouts stay on the ordinary continuation path rather than trusting size.
-		for _, candidate := range []int64{baidupcs.MinUploadBlockSize, baidupcs.MiddleUploadBlockSize, baidupcs.MaxUploadBlockSize} {
-			if fd.Size > 0 && 1+(fd.Size-1)/candidate == int64(len(fd.BlockList)) {
-				if blockSize != 0 {
-					return nil
-				}
-				blockSize = candidate
-			}
-		}
+		blockSize = uniqueMultipartBlockSize(fd.Size, len(fd.BlockList),
+			baidupcs.MinUploadBlockSize, 8<<20, baidupcs.MiddleUploadBlockSize, 32<<20, baidupcs.MaxUploadBlockSize)
 		if blockSize == 0 {
 			return nil
 		}
@@ -1450,6 +1618,8 @@ func trustedDownloadChecksums(fd *baidupcs.FileDirectory) *downloadChecksums {
 	return &downloadChecksums{blockSize: blockSize, hashes: hashes}
 }
 
+const verificationReadSize = 4 * 1024 * 1024
+
 // Verification reports actual read activity, not a timer that could keep a stuck
 // filesystem alive forever. A bounded read checks cancellation between chunks;
 // the host also terminates the process tree when its cancellation token is set.
@@ -1457,6 +1627,7 @@ type verificationProgress struct {
 	Digest   io.Writer
 	Context  context.Context
 	Report   func(int64, int64)
+	mismatch *existingChecksumMismatch
 	Interval time.Duration
 	Clock    func() time.Time
 }
@@ -1464,6 +1635,7 @@ type verificationReader struct {
 	reader   io.Reader
 	ctx      context.Context
 	report   func(int64, int64)
+	mismatch *existingChecksumMismatch
 	total    int64
 	read     int64
 	last     time.Time
@@ -1484,7 +1656,7 @@ func newVerificationReader(reader io.Reader, total int64, progress verificationP
 	if interval <= 0 {
 		interval = time.Second
 	}
-	r := &verificationReader{reader: reader, ctx: ctx, report: progress.Report, total: total, interval: interval, clock: clock}
+	r := &verificationReader{reader: reader, ctx: ctx, report: progress.Report, mismatch: progress.mismatch, total: total, interval: interval, clock: clock}
 	r.last = clock()
 	if r.report != nil && ctx.Err() == nil {
 		r.report(0, total)
@@ -1495,8 +1667,8 @@ func (r *verificationReader) Read(buffer []byte) (int, error) {
 	if err := r.ctx.Err(); err != nil {
 		return 0, err
 	}
-	if len(buffer) > 256*1024 {
-		buffer = buffer[:256*1024]
+	if len(buffer) > verificationReadSize {
+		buffer = buffer[:verificationReadSize]
 	}
 	n, err := r.reader.Read(buffer)
 	r.read += int64(n)
@@ -1511,8 +1683,52 @@ func (r *verificationReader) Read(buffer []byte) (int, error) {
 	return n, err
 }
 
+func verifyChecksumBlocks(reader *verificationReader, expected *downloadChecksums) (int64, bool, error) {
+	// CopyN uses a new 32 KiB buffer for every block. Keep one larger buffer
+	// per file and limit each copy to the exact recorded checksum boundary.
+	buffer := make([]byte, min(max(reader.total, 1), verificationReadSize))
+	var n int64
+	matches := true
+	for index, expectedHash := range expected.hashes {
+		length := min(expected.blockSize, reader.total-n)
+		hash := md5.New()
+		read, readErr := io.CopyBuffer(hash, io.LimitReader(reader, length), buffer)
+		n += read
+		if cancelled := reader.ctx.Err(); cancelled != nil {
+			return n, false, cancelled
+		}
+		// An explicit verification may publish evidence about every block; a
+		// device error alongside the last bytes cannot establish that evidence.
+		if reader.mismatch != nil && readErr != nil && !errors.Is(readErr, io.EOF) {
+			return n, false, readErr
+		}
+		// Match CopyN: full blocks succeed and premature EOF is an error.
+		if read != length {
+			if readErr == nil {
+				readErr = io.EOF
+			}
+			return n, false, readErr
+		}
+		if !bytes.Equal(hash.Sum(nil), expectedHash) {
+			matches = false
+			if reader.mismatch != nil {
+				reader.mismatch.record(index+1, length)
+			}
+		}
+	}
+	return n, matches, nil
+}
+
 func verifiedLocalDownload(local string, fd *baidupcs.FileDirectory,
 	metadata func(*baidupcs.FileDirectory) (*baidupcs.FileDirectory, error), progress ...verificationProgress) (os.FileInfo, error) {
+	return verifyLocalDownload(local, fd, metadata, nil, progress...)
+}
+
+// On a successful digest, retain may take ownership of the read-only descriptor
+// used for that exact read. Every other exit closes it here.
+func verifyLocalDownload(local string, fd *baidupcs.FileDirectory,
+	metadata func(*baidupcs.FileDirectory) (*baidupcs.FileDirectory, error), retain func(*os.File),
+	progress ...verificationProgress) (os.FileInfo, error) {
 	control := verificationProgress{}
 	if len(progress) > 0 {
 		control = progress[0]
@@ -1562,55 +1778,133 @@ func verifiedLocalDownload(local string, fd *baidupcs.FileDirectory,
 	if err != nil {
 		return nil, storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "open", err)
 	}
-	defer f.Close()
+	defer func() {
+		if f != nil {
+			f.Close()
+		}
+	}()
 	opened, err := f.Stat()
-	if err != nil || !sameLocalFile(info, opened) {
-		return nil, fail("BAIDU_LOCAL_FILE_CHANGED")
+	if err != nil {
+		return nil, storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "inspectOpenFile", err)
+	}
+	if !sameLocalFile(info, opened) {
+		return nil, errLocalFileChanged
 	}
 	var input io.Reader = f
 	if control.Digest != nil {
 		input = io.TeeReader(f, control.Digest)
 	}
 	reader := newVerificationReader(input, fd.Size, control)
-	var n int64
-	matches := true
-	for _, expectedHash := range expected.hashes {
-		length := expected.blockSize
-		if remaining := fd.Size - n; length > remaining {
-			length = remaining
+	n, matches, readErr := verifyChecksumBlocks(reader, expected)
+	if readErr != nil {
+		if errors.Is(readErr, context.Canceled) || errors.Is(readErr, context.DeadlineExceeded) {
+			return nil, readErr
 		}
-		hash := md5.New()
-		read, readErr := io.CopyN(hash, reader, length)
-		n += read
-		if control.Context != nil && control.Context.Err() != nil {
-			return nil, control.Context.Err()
-		}
-		if readErr != nil {
-			if errors.Is(readErr, context.Canceled) || errors.Is(readErr, context.DeadlineExceeded) {
-				return nil, readErr
-			}
-			return nil, storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "read", readErr)
-		}
-		if !bytes.Equal(hash.Sum(nil), expectedHash) {
-			matches = false
-		}
+		return nil, storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "read", readErr)
 	}
 	after, err := os.Lstat(local)
-	if err != nil || n != fd.Size || !sameLocalFile(opened, after) {
-		return nil, fail("BAIDU_LOCAL_FILE_CHANGED")
+	if err != nil {
+		return nil, storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "inspectVerifiedFile", err)
+	}
+	if n != fd.Size || !sameLocalFile(opened, after) {
+		return nil, errLocalFileChanged
 	}
 	if !matches {
+		if control.mismatch != nil {
+			control.mismatch.witness = opened
+		}
 		return nil, nil
 	}
 
 	// A stale sidecar can remain after an interrupted overwrite of an already
 	// complete file. The full checksum proves it safe to skip; preserve the sidecar.
+	if retain != nil {
+		retain(f)
+		f = nil
+	}
 	return after, nil
 }
 
 func sameLocalFile(before, after os.FileInfo) bool {
 	return before != nil && after != nil && after.Mode().IsRegular() && os.SameFile(before, after) &&
 		before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
+}
+
+// A manifest may contain many more files than the process has descriptors.
+// Pin previously verified inputs where possible and always enforce the same
+// identity fence for every entry, including those above the handle budget.
+const maxRetainedWitnesses = 256
+
+type retainedRecheckFailure struct {
+	member int
+	cause  error
+}
+
+func (e *retainedRecheckFailure) Error() string { return e.cause.Error() }
+func (e *retainedRecheckFailure) Unwrap() error { return e.cause }
+
+func compareRetainedFile(before, after os.FileInfo) error {
+	switch {
+	case after == nil:
+		return fail("BAIDU_VERIFIED_FILE_MISSING")
+	case !after.Mode().IsRegular() || !os.SameFile(before, after):
+		return fail("BAIDU_VERIFIED_FILE_REPLACED")
+	case before.Size() != after.Size():
+		return fail("BAIDU_VERIFIED_FILE_SIZE_CHANGED")
+	case !before.ModTime().Equal(after.ModTime()):
+		return fail("BAIDU_VERIFIED_FILE_TIME_CHANGED")
+	}
+	return nil
+}
+
+func recheckRetainedFile(ctx context.Context, original os.FileInfo, witness *os.File,
+	statPath func() (os.FileInfo, error), verifyAgain func() (os.FileInfo, error)) error {
+	if witness != nil {
+		info, err := witness.Stat()
+		if err != nil {
+			return storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "inspectVerifiedHandle", err)
+		}
+		if err := compareRetainedFile(original, info); err != nil {
+			return err
+		}
+	}
+	for attempt := 0; ; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		info, err := statPath()
+		switch {
+		case err == nil:
+			if err := compareRetainedFile(original, info); err != nil {
+				return err
+			}
+			if attempt > 0 {
+				// A recovered mount must reproduce every authoritative checksum
+				// on the same original file before it may be admitted.
+				confirmed, err := verifyAgain()
+				if err != nil {
+					return err
+				}
+				if confirmed == nil {
+					return fail("BAIDU_DOWNLOAD_CHECKSUM_MISMATCH")
+				}
+				return compareRetainedFile(original, confirmed)
+			}
+			return nil
+		case errors.Is(err, os.ErrNotExist):
+			return fail("BAIDU_VERIFIED_FILE_MISSING")
+		case attempt >= 2 || !(errors.Is(err, syscall.EINTR) || errors.Is(err, syscall.EAGAIN) ||
+			errors.Is(err, syscall.EIO) || errors.Is(err, syscall.ESTALE) || errors.Is(err, syscall.ETIMEDOUT)):
+			return storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "recheckVerifiedFile", err)
+		}
+		timer := time.NewTimer(time.Duration(attempt+1) * 150 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
 }
 
 // Read only the upstream range checkpoint for progress. File length alone may
@@ -1672,18 +1966,25 @@ func checkpointDownloadedBytes(local string, expectedSize int64) (int64, bool) {
 
 func downloadManifestFiles(root, remotePath string, files []*baidupcs.FileDirectory,
 	metadata func(*baidupcs.FileDirectory) (*baidupcs.FileDirectory, error),
-	execute func(*baidupcs.FileDirectory, string) error, report func(int64, int64), verification ...verificationProgress) ([]string, error) {
+	execute func(*baidupcs.FileDirectory, string, func(int64)) error, report func(int64, int64), verification ...verificationProgress) ([]string, error) {
 	return downloadManifestFilesWithPaths(root, remotePath, files, nil, metadata, execute, report, verification...)
 }
 
 func downloadManifestFilesWithPaths(root, remotePath string, files []*baidupcs.FileDirectory, paths map[string]string,
 	metadata func(*baidupcs.FileDirectory) (*baidupcs.FileDirectory, error),
-	execute func(*baidupcs.FileDirectory, string) error, report func(int64, int64), verification ...verificationProgress) ([]string, error) {
-	checkCancellation := func() error {
-		if len(verification) > 0 && verification[0].Context != nil {
-			return verification[0].Context.Err()
+	execute func(*baidupcs.FileDirectory, string, func(int64)) error, report func(int64, int64), verification ...verificationProgress) ([]string, error) {
+	return downloadManifestFilesWithReadOnly(root, remotePath, files, paths, nil, metadata, execute, report, verification...)
+}
+
+func downloadManifestFilesWithReadOnly(root, remotePath string, files []*baidupcs.FileDirectory, paths map[string]string, readOnlyIDs []string,
+	metadata func(*baidupcs.FileDirectory) (*baidupcs.FileDirectory, error),
+	execute func(*baidupcs.FileDirectory, string, func(int64)) error, report func(int64, int64), verification ...verificationProgress) ([]string, error) {
+	readOnly := make(map[string]bool, len(readOnlyIDs))
+	for _, id := range readOnlyIDs {
+		if id == "" || readOnly[id] {
+			return nil, fail("BAIDU_DOWNLOAD_IDENTITY_INVALID")
 		}
-		return nil
+		readOnly[id] = true
 	}
 	type localFile struct {
 		remote     *baidupcs.FileDirectory
@@ -1691,11 +1992,26 @@ func downloadManifestFilesWithPaths(root, remotePath string, files []*baidupcs.F
 		verified   os.FileInfo
 		downloaded int64
 	}
+	ctx := context.Background()
+	if len(verification) > 0 && verification[0].Context != nil {
+		ctx = verification[0].Context
+	}
+	witnesses := make(map[*localFile]*os.File)
+	closeWitnesses := func() {
+		for entry, file := range witnesses {
+			file.Close()
+			delete(witnesses, entry)
+		}
+	}
+	defer closeWitnesses()
+	// POSIX permits replacing or unlinking an open file. Do not change
+	// Windows sharing semantics by extending its read handle lifetime.
+	canPin := runtime.GOOS != "windows"
 	base := path.Dir(path.Clean(remotePath))
 	var pending []*localFile
 	var total int64
 	for _, fd := range files {
-		if err := checkCancellation(); err != nil {
+		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 		relative := strings.TrimPrefix(fd.Path, base+"/")
@@ -1726,17 +2042,42 @@ func downloadManifestFilesWithPaths(root, remotePath string, files []*baidupcs.F
 			return nil, fail("BAIDU_MANIFEST_FAILED")
 		}
 		total += fd.Size
-		verified, err := verifiedLocalDownload(local, fd, metadata, verification...)
+		id := strconv.FormatInt(fd.FsID, 10)
+		file := &localFile{remote: fd, path: local}
+		var retain func(*os.File)
+		if readOnly[id] && canPin && len(witnesses) < maxRetainedWitnesses {
+			retain = func(f *os.File) { witnesses[file] = f }
+		}
+		verified, err := verifyLocalDownload(local, fd, metadata, retain, verification...)
+		if len(witnesses) > 0 && (errors.Is(err, syscall.EMFILE) || errors.Is(err, syscall.ENFILE)) {
+			// Leave small descriptor limits usable. Unpinned inputs still have
+			// to match their original identity and content proof.
+			closeWitnesses()
+			canPin = false
+			verified, err = verifiedLocalDownload(local, fd, metadata, verification...)
+		}
 		if err != nil {
 			return nil, err
 		}
-		file := &localFile{remote: fd, path: local, verified: verified}
+		if readOnly[id] {
+			if verified == nil {
+				return nil, errLocalFileChanged
+			}
+			delete(readOnly, id)
+		}
+		file.verified = verified
 		if verified != nil {
 			file.downloaded = fd.Size
 		} else {
+			// Pin only the existing prefix so no additional descriptor stays
+			// open during a later payload transfer, even in a mixed manifest.
+			canPin = false
 			file.downloaded, _ = checkpointDownloadedBytes(local, fd.Size)
 		}
 		pending = append(pending, file)
+	}
+	if len(readOnly) != 0 {
+		return nil, fail("BAIDU_DOWNLOAD_IDENTITY_INVALID")
 	}
 	reportProgress := func() {
 		var completed int64
@@ -1747,40 +2088,36 @@ func downloadManifestFilesWithPaths(root, remotePath string, files []*baidupcs.F
 	}
 	reportProgress()
 	results := []string{}
-	for _, file := range pending {
-		if err := checkCancellation(); err != nil {
+	for index, file := range pending {
+		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
 		fd, local := file.remote, file.path
 		if file.verified != nil {
-			info, err := os.Lstat(local)
-			if err != nil || !sameLocalFile(file.verified, info) {
-				return nil, fail("BAIDU_LOCAL_FILE_CHANGED")
+			err := recheckRetainedFile(ctx, file.verified, witnesses[file], func() (os.FileInfo, error) {
+				return os.Lstat(local)
+			}, func() (os.FileInfo, error) {
+				return verifiedLocalDownload(local, fd, nil, verification...)
+			})
+			if err != nil {
+				return nil, &retainedRecheckFailure{index + 1, err}
+			}
+			if witness := witnesses[file]; witness != nil {
+				witness.Close()
+				delete(witnesses, file)
 			}
 			results = append(results, local)
 			continue
 		}
-		stop := make(chan struct{})
-		done := make(chan struct{})
-		go func() {
-			defer close(done)
-			ticker := time.NewTicker(time.Second)
-			defer ticker.Stop()
-			for {
-				select {
-				case <-stop:
-					return
-				case <-ticker.C:
-					if downloaded, ok := checkpointDownloadedBytes(local, fd.Size); ok {
-						file.downloaded = downloaded
-					}
-					reportProgress()
-				}
+		// Opening the checkpoint while the downloader removes it can leave a
+		// hidden SMB file behind. Read it before starting; use in-memory progress
+		// until the downloader has finished.
+		err := execute(fd, local, func(downloaded int64) {
+			if downloaded >= 0 && downloaded <= fd.Size {
+				file.downloaded = downloaded
 			}
-		}()
-		err := execute(fd, local)
-		close(stop)
-		<-done
+			reportProgress()
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -1795,6 +2132,17 @@ func downloadManifestFilesWithPaths(root, remotePath string, files []*baidupcs.F
 		// A previously corrupt completed range must never become a successful
 		// output merely because the remaining ranges and final length match.
 		verified, verifyErr := verifiedLocalDownload(local, fd, metadata, verification...)
+		if errors.Is(verifyErr, errLocalFileChanged) {
+			// A fresh read can prove bytes after the filesystem's metadata settles.
+			// Use the same pinned checksums, path and context, without another transfer.
+			confirmed, retryErr := verifiedLocalDownload(local, fd, nil, verification...)
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			if retryErr == nil && confirmed != nil {
+				verified, verifyErr = confirmed, nil
+			}
+		}
 		if verifyErr != nil {
 			return nil, verifyErr
 		}
@@ -1805,7 +2153,7 @@ func downloadManifestFilesWithPaths(root, remotePath string, files []*baidupcs.F
 		results = append(results, local)
 		reportProgress()
 	}
-	if err := checkCancellation(); err != nil {
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -1856,11 +2204,37 @@ func storageFail(code, operation string, cause error) error {
 	return &storageFailure{code, operation, kind, cause}
 }
 func errorEvent(err error) map[string]any {
+	var pathErr *os.PathError
+	var linkErr *os.LinkError
+	var classified *storageFailure
+	if !errors.As(err, &classified) && (errors.As(err, &pathErr) || errors.As(err, &linkErr)) {
+		err = storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "reuseDownload", err)
+	}
 	event := map[string]any{"type": "error", "code": err.Error(), "mayHaveSideEffects": remoteMutationStarted}
+	var diagnostic *transferDiagnostic
+	if errors.As(err, &diagnostic) && diagnostic.valid() {
+		event["transferDiagnostic"] = diagnostic
+	}
 	var storage *storageFailure
 	if errors.As(err, &storage) {
 		event["code"] = storage.code
 		event["storage"] = map[string]any{"kind": storage.kind, "operation": storage.operation}
+	}
+	var recheck *retainedRecheckFailure
+	if errors.As(err, &recheck) {
+		event["manifestFileNumber"] = recheck.member
+	}
+	var member *existingMemberFailure
+	if errors.As(err, &member) {
+		event["manifestFileNumber"] = member.number
+		event["manifestFileCount"] = member.count
+		var mismatch *existingChecksumMismatch
+		if errors.As(member.cause, &mismatch) {
+			event["checksumBlockCount"] = mismatch.blocks
+			event["mismatchedBlockCount"] = mismatch.bad
+			event["firstMismatchedBlockNumber"] = mismatch.first
+			event["firstMismatchedBlockBytes"] = mismatch.firstBytes
+		}
 	}
 	return event
 }
@@ -1969,29 +2343,87 @@ func sameManifest(expected, actual []entry) bool {
 	return true
 }
 func inspectDownload(ctx context.Context, r request, pcs *baidupcs.BaiduPCS) error {
+	_, _, err := inspectDownloadLayout(ctx, r, pcs, r.VerifyRemote)
+	return err
+}
+
+func inspectDownloadLayout(ctx context.Context, r request, pcs *baidupcs.BaiduPCS, verifyRemote bool) (map[string]string, []*baidupcs.FileDirectory, error) {
 	if !path.IsAbs(r.RemotePath) || path.Clean(r.RemotePath) != r.RemotePath || !filepath.IsAbs(r.OutputDirectory) ||
 		filepath.Clean(r.OutputDirectory) != r.OutputDirectory || !sameManifest(r.ExpectedManifest, r.ExpectedManifest) {
-		return fail("BAIDU_DOWNLOAD_IDENTITY_INVALID")
+		return nil, nil, fail("BAIDU_DOWNLOAD_IDENTITY_INVALID")
 	}
-	if r.VerifyRemote {
-		actual, _, err := manifestLimited(pcs, r.RemotePath, 10000)
+	var files []*baidupcs.FileDirectory
+	if verifyRemote {
+		actual, listing, err := manifestLimited(pcs, r.RemotePath, 10000)
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 		if !sameManifest(r.ExpectedManifest, actual) {
-			return fail("BAIDU_REMOTE_MANIFEST_CHANGED")
+			return nil, nil, fail("BAIDU_REMOTE_MANIFEST_CHANGED")
 		}
+		files = listing
 	}
 	paths, err := resolveDownloadPaths(ctx, os.Getenv(pcsconfig.EnvConfigDir), r.ExpectedUID, r.OutputDirectory, r, r.ExpectedManifest, false)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	return inspectLocalDownloadWithPaths(ctx, r.OutputDirectory, r.RemotePath, r.ExpectedManifest, paths)
+	if err := inspectDownloadTree(ctx, r.OutputDirectory, r.RemotePath, r.ExpectedManifest, paths, r.Command == "verify-existing"); err != nil {
+		return nil, nil, err
+	}
+	return paths, files, nil
 }
+
+// Inspect without creating the output tree, a path-map receipt or a download checkpoint.
+func inspectRetainedWrites(ctx context.Context, r request, pcs *baidupcs.BaiduPCS) ([]string, error) {
+	paths, files, err := inspectDownloadLayout(ctx, r, pcs, true)
+	if err != nil {
+		return nil, err
+	}
+	return verifiedRetainedFileIDs(r.OutputDirectory, files, paths, func(fd *baidupcs.FileDirectory) (*baidupcs.FileDirectory, error) {
+		return pcs.FilesDirectoriesMeta(fd.Path)
+	}, bridgeVerificationProgress(ctx))
+}
+
+func verifiedRetainedFileIDs(root string, files []*baidupcs.FileDirectory, paths map[string]string,
+	metadata func(*baidupcs.FileDirectory) (*baidupcs.FileDirectory, error), progress verificationProgress) ([]string, error) {
+	ids := []string{}
+	for _, fd := range files {
+		if fd.Isdir || fd.Size == 0 {
+			continue
+		}
+		relative, ok := paths[fd.Path]
+		if !ok {
+			return nil, fail("BAIDU_LOCAL_PATH_MAPPING_INVALID")
+		}
+		local, err := safeLocal(root, relative)
+		if err != nil {
+			return nil, err
+		}
+		info, err := verifiedLocalDownload(local, fd, metadata, progress)
+		if err != nil {
+			return nil, err
+		}
+		if info != nil {
+			ids = append(ids, strconv.FormatInt(fd.FsID, 10))
+		}
+	}
+	return ids, nil
+}
+
 func inspectLocalDownload(ctx context.Context, root, remotePath string, entries []entry) error {
 	return inspectLocalDownloadWithPaths(ctx, root, remotePath, entries, nil)
 }
+
+// macOS SMB can leave an unlinked file open under this generated name. Only
+// a regular sibling of an established remote directory can be ignored. The
+// bridge never returns, writes or deletes such siblings.
+var smbPendingDeleteName = regexp.MustCompile(`^\.smbdelete[A-Za-z]{3}[0-9A-Fa-f]{4,8}4\.4$`)
+
 func inspectLocalDownloadWithPaths(ctx context.Context, root, remotePath string, entries []entry, paths map[string]string) error {
+	return inspectDownloadTree(ctx, root, remotePath, entries, paths, false)
+}
+
+func inspectDownloadTree(ctx context.Context, root, remotePath string, entries []entry, paths map[string]string, verifyOnly bool) error {
 	// No symlink in an existing ancestor, including a missing destination's parent.
 	for current := root; ; current = filepath.Dir(current) {
 		info, err := os.Lstat(current)
@@ -2008,6 +2440,10 @@ func inspectLocalDownloadWithPaths(ctx context.Context, root, remotePath string,
 	base := path.Dir(remotePath)
 	allowed := map[string]bool{}
 	expected := map[string]entry{}
+	var orderedFiles []string
+	reservedMarkerNames := map[string]bool{}
+	hasRemoteDirectory := false
+	payloadParents := map[string]bool{}
 	for _, e := range entries {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -2027,37 +2463,70 @@ func inspectLocalDownloadWithPaths(ctx context.Context, root, remotePath string,
 		if err != nil {
 			return err
 		}
+		for _, candidate := range []string{path.Base(e.Path), filepath.Base(local)} {
+			if strings.HasPrefix(strings.ToLower(candidate), ".smbdelete") {
+				reservedMarkerNames[strings.ToLower(candidate)] = true
+			}
+		}
 		if e.IsDirectory {
+			if e.Path == remotePath {
+				hasRemoteDirectory = true
+			}
 			continue
 		}
 		if _, duplicate := expected[local]; duplicate {
 			return fail("BAIDU_REMOTE_MANIFEST_CHANGED")
 		}
+		if allowed[local] || allowed[local+pcsdownload.DownloadSuffix] {
+			return fail("BAIDU_LOCAL_PATH_MAPPING_CONFLICT")
+		}
 		expected[local] = e
+		orderedFiles = append(orderedFiles, local)
+		payloadParents[filepath.Dir(local)] = true
 		allowed[local] = true
 		allowed[local+pcsdownload.DownloadSuffix] = true
 	}
-	for local, e := range expected {
+	// A checkpoint error describes this layout only after every existing entry
+	// has been accounted for. Unexpected files and aliases can still make it
+	// unsafe to infer the legacy map.
+	var checkpointError, memberError error
+	hasCompletePayload := false
+	completeMembers := 0
+	existing := map[string]bool{}
+	for index, local := range orderedFiles {
+		e := expected[local]
 		info, err := os.Lstat(local)
 		if err != nil && !os.IsNotExist(err) {
 			return storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "inspectFile", err)
 		}
-		sidecar, sideErr := os.Lstat(local + pcsdownload.DownloadSuffix)
+		sidecarPath := local + pcsdownload.DownloadSuffix
+		sidecar, sideErr := os.Lstat(sidecarPath)
 		if sideErr != nil && !os.IsNotExist(sideErr) {
 			return storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "inspectCheckpoint", sideErr)
 		}
+		if sideErr == nil {
+			existing[sidecarPath] = true
+		}
 		if os.IsNotExist(err) {
+			if verifyOnly && memberError == nil {
+				memberError = &existingMemberFailure{index + 1, len(orderedFiles), fail("BAIDU_VERIFIED_FILE_MISSING")}
+			}
 			if sideErr == nil {
-				return fail("BAIDU_DOWNLOAD_CHECKPOINT_INVALID")
+				checkpointError = fail("BAIDU_DOWNLOAD_CHECKPOINT_INVALID")
 			}
 			continue
 		}
-		if !info.Mode().IsRegular() || info.Size() > e.Size {
+		existing[local] = true
+		if !info.Mode().IsRegular() || (!verifyOnly && info.Size() > e.Size) {
 			return fail("BAIDU_OUTPUT_FILE_INVALID")
+		}
+		if verifyOnly && info.Size() != e.Size && memberError == nil {
+			memberError = &existingMemberFailure{index + 1, len(orderedFiles), fail("BAIDU_VERIFIED_FILE_SIZE_CHANGED")}
 		}
 		if sideErr == nil {
 			if !sidecar.Mode().IsRegular() || sidecar.Size() > 1024*1024 {
-				return fail("BAIDU_DOWNLOAD_CHECKPOINT_INVALID")
+				checkpointError = fail("BAIDU_DOWNLOAD_CHECKPOINT_INVALID")
+				continue
 			}
 			// BaiduPCS-Go creates both files before recording its first range.
 			// Its state reader treats an empty checkpoint as no saved progress.
@@ -2065,17 +2534,23 @@ func inspectLocalDownloadWithPaths(ctx context.Context, root, remotePath string,
 				continue
 			}
 			if _, valid := checkpointDownloadedBytes(local, e.Size); !valid {
-				return fail("BAIDU_DOWNLOAD_CHECKPOINT_INVALID")
+				checkpointError = fail("BAIDU_DOWNLOAD_CHECKPOINT_INVALID")
 			}
-		} else if info.Size() != e.Size {
-			return fail("BAIDU_DOWNLOAD_PARTIAL_UNVERIFIED")
+		} else if info.Size() == e.Size {
+			hasCompletePayload = hasCompletePayload || e.Size > 0
+			completeMembers++
+		} else if !verifyOnly && checkpointError == nil && info.Size() != e.Size {
+			checkpointError = fail("BAIDU_DOWNLOAD_PARTIAL_UNVERIFIED")
 		}
 	}
 	if _, err := os.Lstat(root); os.IsNotExist(err) {
-		return nil
+		if checkpointError != nil {
+			return checkpointError
+		}
+		return memberError
 	}
 	count := 0
-	return filepath.WalkDir(root, func(name string, d os.DirEntry, err error) error {
+	if err := filepath.WalkDir(root, func(name string, d os.DirEntry, err error) error {
 		if err != nil {
 			return storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "inspectDirectory", err)
 		}
@@ -2089,6 +2564,22 @@ func inspectLocalDownloadWithPaths(ctx context.Context, root, remotePath string,
 		if d.Type()&os.ModeSymlink != 0 {
 			return fail("BAIDU_UNSAFE_REMOTE_PATH")
 		}
+		delete(existing, name)
+		if smbPendingDeleteName.MatchString(d.Name()) && !reservedMarkerNames[strings.ToLower(d.Name())] {
+			parent := filepath.Dir(name)
+			// A completed SMB checkpoint can remain as a zero-byte delete-pending
+			// file beside the payload. Only the exact-file, non-writing verification
+			// command can look past it, once every expected member is accounted for.
+			verifyCompletedParent := verifyOnly && completeMembers == len(expected) && payloadParents[parent]
+			info, err := d.Info()
+			if err != nil {
+				return storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "inspectFile", err)
+			}
+			if hasRemoteDirectory && hasCompletePayload && info.Mode().IsRegular() && (parent == root || verifyCompletedParent && info.Size() == 0) {
+				return nil
+			}
+			return fail("BAIDU_OUTPUT_UNEXPECTED_FILE")
+		}
 		if d.IsDir() {
 			return nil
 		}
@@ -2096,7 +2587,16 @@ func inspectLocalDownloadWithPaths(ctx context.Context, root, remotePath string,
 			return fail("BAIDU_OUTPUT_UNEXPECTED_FILE")
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	if (checkpointError != nil || verifyOnly) && len(existing) != 0 {
+		return fail("BAIDU_LOCAL_PATH_MAPPING_CONFLICT")
+	}
+	if checkpointError != nil {
+		return checkpointError
+	}
+	return memberError
 }
 
 // Completion recovery never invokes the downloader, creates directories/checkpoints,
@@ -2105,6 +2605,43 @@ type verifiedExistingFile struct {
 	Path   string `json:"path"`
 	Length int64  `json:"length"`
 	Sha256 string `json:"sha256"`
+}
+
+type existingMemberFailure struct {
+	number, count int
+	cause         error
+}
+
+func (e *existingMemberFailure) Error() string { return e.cause.Error() }
+func (e *existingMemberFailure) Unwrap() error { return e.cause }
+
+type existingChecksumMismatch struct {
+	blocks, bad, first int
+	firstBytes         int64
+	witness            os.FileInfo
+}
+
+func (e *existingChecksumMismatch) Error() string { return "BAIDU_DOWNLOAD_CHECKSUM_MISMATCH" }
+func (e *existingChecksumMismatch) record(number int, length int64) {
+	e.bad++
+	if e.bad == 1 {
+		e.first, e.firstBytes = number, length
+	}
+}
+
+func existingMemberInfo(local string, length int64) (os.FileInfo, error) {
+	info, err := os.Lstat(local)
+	switch {
+	case os.IsNotExist(err):
+		return nil, fail("BAIDU_VERIFIED_FILE_MISSING")
+	case err != nil:
+		return nil, storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "inspectFile", err)
+	case !info.Mode().IsRegular():
+		return nil, fail("BAIDU_OUTPUT_FILE_INVALID")
+	case info.Size() != length:
+		return nil, fail("BAIDU_VERIFIED_FILE_SIZE_CHANGED")
+	}
+	return info, nil
 }
 
 func verifyExistingDownload(ctx context.Context, r request, pcs *baidupcs.BaiduPCS) ([]verifiedExistingFile, error) {
@@ -2129,35 +2666,11 @@ func verifyExistingDownload(ctx context.Context, r request, pcs *baidupcs.BaiduP
 			return nil, fail("BAIDU_REMOTE_MANIFEST_CHANGED")
 		}
 	}
-	results := []verifiedExistingFile{}
-	for _, expected := range r.ExpectedManifest {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		if expected.IsDirectory {
-			continue
-		}
-		local, err := safeLocal(r.OutputDirectory, paths[expected.Path])
-		if err != nil {
-			return nil, err
-		}
-		info, err := os.Lstat(local)
-		if err != nil || !info.Mode().IsRegular() || info.Size() != expected.Size {
-			return nil, fail("BAIDU_EXISTING_DOWNLOAD_UNVERIFIED")
-		}
-		result := verifiedExistingFile{Path: local, Length: info.Size()}
-		if r.VerifyRemote {
-			result, err = verifyExistingFile(ctx, local, expected, func() (*baidupcs.FileDirectory, error) {
-				return pcs.FilesDirectoriesMeta(expected.Path)
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-		results = append(results, result)
-	}
-	if len(results) == 0 {
-		return nil, fail("BAIDU_EXISTING_DOWNLOAD_UNVERIFIED")
+	results, err := verifyExistingMembers(ctx, r, paths, func(remote string) (*baidupcs.FileDirectory, error) {
+		return pcs.FilesDirectoriesMeta(remote)
+	})
+	if err != nil {
+		return nil, err
 	}
 	if r.VerifyRemote {
 		actual, _, err := manifestLimited(pcs, r.RemotePath, 10000)
@@ -2170,8 +2683,60 @@ func verifyExistingDownload(ctx context.Context, r request, pcs *baidupcs.BaiduP
 	}
 	return results, nil
 }
+
+func verifyExistingMembers(ctx context.Context, r request, paths map[string]string,
+	metadata func(string) (*baidupcs.FileDirectory, error)) ([]verifiedExistingFile, error) {
+	count := 0
+	for _, member := range r.ExpectedManifest {
+		if !member.IsDirectory {
+			count++
+		}
+	}
+	if count == 0 {
+		return nil, fail("BAIDU_EXISTING_DOWNLOAD_UNVERIFIED")
+	}
+	results := make([]verifiedExistingFile, 0, count)
+	for _, expected := range r.ExpectedManifest {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		if expected.IsDirectory {
+			continue
+		}
+		local, err := safeLocal(r.OutputDirectory, paths[expected.Path])
+		if err != nil {
+			return nil, err
+		}
+		var result verifiedExistingFile
+		if r.VerifyRemote {
+			result, err = verifyExistingFile(ctx, local, expected, func() (*baidupcs.FileDirectory, error) {
+				return metadata(expected.Path)
+			})
+		} else {
+			_, err = existingMemberInfo(local, expected.Size)
+			result = verifiedExistingFile{Path: local, Length: expected.Size}
+		}
+		if err != nil {
+			return nil, &existingMemberFailure{len(results) + 1, count, err}
+		}
+		results = append(results, result)
+	}
+	return results, nil
+}
+
 func verifyExistingFile(ctx context.Context, local string, expected entry, metadata func() (*baidupcs.FileDirectory, error)) (verifiedExistingFile, error) {
+	return verifyExistingFileTo(ctx, local, expected, metadata, verificationProgress{})
+}
+
+func verifyExistingFileTo(ctx context.Context, local string, expected entry, metadata func() (*baidupcs.FileDirectory, error), progress verificationProgress) (verifiedExistingFile, error) {
 	empty := verifiedExistingFile{}
+	if err := ctx.Err(); err != nil {
+		return empty, err
+	}
+	original, err := existingMemberInfo(local, expected.Size)
+	if err != nil {
+		return empty, err
+	}
 	before, err := metadata()
 	if err != nil {
 		return empty, fail("BAIDU_MANIFEST_FAILED")
@@ -2184,16 +2749,38 @@ func verifyExistingFile(ctx context.Context, local string, expected entry, metad
 	}
 	checksums := trustedDownloadChecksums(before)
 	if checksums == nil {
-		return empty, fail("BAIDU_EXISTING_DOWNLOAD_UNVERIFIED")
+		return empty, fail("BAIDU_EXISTING_CHECKSUM_UNAVAILABLE")
 	}
 	digest := sha256.New()
-	info, err := verifiedLocalDownload(local, before, nil, verificationProgress{Context: ctx, Digest: digest})
-	if err != nil {
+	mismatch := &existingChecksumMismatch{blocks: len(checksums.hashes)}
+	progress.Context, progress.mismatch = ctx, mismatch
+	if progress.Digest != nil {
+		progress.Digest = io.MultiWriter(digest, progress.Digest)
+	} else {
+		progress.Digest = digest
+	}
+	info, readErr := verifiedLocalDownload(local, before, nil, progress)
+	checkIdentity := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		current, err := os.Lstat(local)
+		if err != nil && !os.IsNotExist(err) {
+			return storageFail("BAIDU_OUTPUT_FILE_READ_FAILED", "inspectVerifiedFile", err)
+		}
+		return compareRetainedFile(original, current)
+	}
+	if err := checkIdentity(); err != nil {
 		return empty, err
 	}
-	if info == nil {
-		return empty, fail("BAIDU_EXISTING_DOWNLOAD_UNVERIFIED")
+	if readErr != nil {
+		return empty, readErr
 	}
+	if info == nil && mismatch.bad == 0 {
+		return empty, errLocalFileChanged
+	}
+	// A comparison is conclusive only if both observations of the official
+	// checksums and the local identity still agree, even on a digest mismatch.
 	after, err := metadata()
 	if err != nil {
 		return empty, fail("BAIDU_MANIFEST_FAILED")
@@ -2210,9 +2797,17 @@ func verifyExistingFile(ctx context.Context, local string, expected entry, metad
 			return empty, fail("BAIDU_REMOTE_MANIFEST_CHANGED")
 		}
 	}
-	current, err := os.Lstat(local)
-	if err != nil || !sameLocalFile(info, current) {
-		return empty, fail("BAIDU_LOCAL_FILE_CHANGED")
+	if err := checkIdentity(); err != nil {
+		return empty, err
+	}
+	if mismatch.bad > 0 {
+		if !sameLocalFile(original, mismatch.witness) {
+			return empty, errLocalFileChanged
+		}
+		return empty, mismatch
+	}
+	if !sameLocalFile(original, info) {
+		return empty, errLocalFileChanged
 	}
 	return verifiedExistingFile{local, info.Size(), hex.EncodeToString(digest.Sum(nil))}, nil
 }

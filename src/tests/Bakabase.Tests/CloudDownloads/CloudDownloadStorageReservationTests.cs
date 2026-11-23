@@ -101,6 +101,40 @@ public sealed class CloudDownloadStorageReservationTests
         Assert.AreEqual("CLOUD_DOWNLOAD_PREPARATION_IDENTITY_CHANGED", error.Message); Assert.AreEqual(0, provider.Downloads);
     }
 
+    [DataTestMethod]
+    [DataRow(1000L, 0, true)]
+    [DataRow(300L, 1, true)]
+    [DataRow(299L, 1, false)]
+    public async Task AdmissionUsesVerifiedRetainedBudgetOnlyWhenTheFullPayloadCannotFit(long available, int expectedChecks, bool succeeds)
+    {
+        var request = Request("retained");
+        var guard = new StorageWriteGuard(new Policy(), _ => ("volume", Floor + StorageWriteGuard.ReservationHeadroomBytes + available), TimeSpan.FromMilliseconds(5));
+        var provider = new Provider([new(request.OutputDirectory, Payload)], _ => Task.FromResult(new CloudDownloadResult([])));
+        provider.RetainedPlan = new(request with {ReadOnlyProviderFileKeys = ["existing"]}, [new(request.OutputDirectory, 300)]);
+        var activity = 0;
+        var run = CloudSiteDownloader<BaiduCloudTaskType>.RunWithStorageAsync(guard, provider, request,
+            (prepared, token) => provider.DownloadAsync(prepared, _ => Task.CompletedTask, token), () => Task.CompletedTask,
+            default, () => {activity++; return Task.CompletedTask;});
+        if (succeeds) await run;
+        else Assert.AreEqual(StorageWriteGuard.ReserveLowCode, (await Assert.ThrowsExactlyAsync<LocalStorageException>(() => run)).Code);
+        Assert.AreEqual(expectedChecks, activity);
+        Assert.AreEqual(succeeds ? 1 : 0, provider.Downloads);
+        if (succeeds) Assert.AreSame(expectedChecks == 0 ? request : provider.RetainedPlan.Request, provider.LastRequest);
+    }
+
+    [TestMethod]
+    public async Task AStorageFailureAfterWriterStartsNeverLaunchesASecondAttempt()
+    {
+        var request = Request("started");
+        var guard = new StorageWriteGuard(new Policy(), _ => ("volume", Floor + StorageWriteGuard.ReservationHeadroomBytes + Payload), TimeSpan.FromMilliseconds(5));
+        var provider = new Provider([new(request.OutputDirectory, Payload)], _ => throw new LocalStorageException(StorageWriteGuard.ReserveLowCode));
+        provider.RetainedPlan = new(request, [new(request.OutputDirectory, 0)]);
+        await Assert.ThrowsExactlyAsync<LocalStorageException>(() => CloudSiteDownloader<BaiduCloudTaskType>.RunWithStorageAsync(
+            guard, provider, request, (prepared, token) => provider.DownloadAsync(prepared, _ => Task.CompletedTask, token),
+            () => Task.CompletedTask, default, () => throw new AssertFailedException("Started writer triggered a retained preflight.")));
+        Assert.AreEqual(1, provider.Downloads);
+    }
+
     private sealed class Policy : IStorageWritePolicyProvider
     { public Task<long> GetMinimumFreeBytesAsync(StorageWriteContext? context, CancellationToken ct = default) => Task.FromResult(Floor); }
 
@@ -111,6 +145,12 @@ public sealed class CloudDownloadStorageReservationTests
         public string ProviderId => "baidu";
         public int Estimates, Downloads;
         public CloudDownloadRequest? LastRequest;
+        public CloudDownloadWritePlan? RetainedPlan;
+        public async Task<CloudDownloadWritePlan?> TryPrepareRetainedWriteAsync(CloudDownloadRequest request, Func<Task> activity, CancellationToken ct)
+        {
+            if (RetainedPlan != null) await activity();
+            return RetainedPlan;
+        }
         public Task<CloudReadiness> CheckReadyAsync(string? accountId, CancellationToken ct) => Task.FromResult(new CloudReadiness(true));
         public Task<CloudDownloadWritePlan?> PrepareWriteAsync(CloudDownloadRequest request, CancellationToken ct)
         { Estimates++; return Task.FromResult(budget == null ? null : new CloudDownloadWritePlan(prepare?.Invoke(request) ?? request, budget)); }

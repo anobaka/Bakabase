@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from "react";
-import { CloudDownloadOutlined, FileDoneOutlined, HistoryOutlined, ToolOutlined } from "@ant-design/icons";
+import { CloudDownloadOutlined, FileDoneOutlined, FileSearchOutlined, HistoryOutlined, ToolOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { Button, Spinner, Tooltip } from "@/components/bakaui";
 import StageExecutionRecords from "./StageExecutionRecords";
@@ -16,6 +16,8 @@ const stageStyles = {
   delivery: { background: "bg-success-50/30", icon: "bg-success-100 text-success-600" },
 };
 export type AcquisitionStage = (typeof stages)[number];
+/** Preparation has no file workspace or workflow execution cursor of its own. */
+export type AcquisitionPresentationStage = "preparation" | AcquisitionStage;
 
 export function asAcquisitionStage(value?: string | null): AcquisitionStage | undefined {
   return stages.find((stage) => stage === value);
@@ -176,13 +178,17 @@ export default function AcquisitionExecutionTimeline({
   currentProblemCode,
   currentStepIndex,
   onOpenRun,
+  onPreparationHistory,
+  preparationWaiting = false,
 }: {
   detail: PlanTaskDetail;
-  actions: Partial<Record<AcquisitionStage, ReactNode>>;
-  headerActions?: Partial<Record<AcquisitionStage, ReactNode>>;
+  actions: Partial<Record<AcquisitionPresentationStage, ReactNode>>;
+  headerActions?: Partial<Record<AcquisitionPresentationStage, ReactNode>>;
   currentProblemCode?: string | null;
   currentStepIndex?: number | null;
   onOpenRun: (id: number) => void;
+  onPreparationHistory?: () => void;
+  preparationWaiting?: boolean;
 }) {
   const { t } = useTranslation();
   const attempts = detail.stageAttempts ?? [];
@@ -194,10 +200,36 @@ export default function AcquisitionExecutionTimeline({
     .find((attempt) => attempt.runId === detail.task.workflowRunId);
   const currentStage = asAcquisitionStage(currentStepIndex != null
     ? detail.steps[currentStepIndex]?.stage : undefined) ?? asAcquisitionStage(active?.stage);
+  const preparationComplete = !preparationWaiting && (!!detail.task.workflowRunId || detail.task.phase === "ready");
+  const preparationStatus = preparationComplete ? "completed" :
+    detail.task.status === AcquisitionStatus.Cancelled ? "cancelled" :
+    detail.task.phase === "searching" ? "running" : "waiting";
+  const sourceCount = detail.plan?.parts.reduce((count, part) => count + (part.sources?.length ?? 0), 0) ?? detail.draftSources?.length ?? 0;
+  const hasPreparationHistory = !!detail.preparationAttempts?.length || !!detail.task.creationOrigins?.length;
   return (
     <section aria-label={t("acquisition.timeline.title")} className="min-w-0">
       <h3 className="mb-2 text-sm font-medium">{t("acquisition.timeline.title")}</h3>
       <ol className="ml-4 space-y-1">
+        <li className={`relative min-w-0 rounded-r-lg border-l-2 pl-6 pr-2 py-2 ${preparationComplete ? "border-default-200" : "border-primary-300 bg-primary-50/30"}`}
+          aria-current={!preparationComplete ? "step" : undefined}>
+          <span aria-hidden className="absolute left-0 top-2 -translate-x-1/2 flex h-8 w-8 items-center justify-center rounded-full ring-2 ring-background bg-warning-100 text-warning-700">
+            <FileSearchOutlined />
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="text-sm font-semibold text-foreground">{t("acquisition.timeline.stage.preparation")}</h4>
+            <AttemptStatus status={preparationStatus} />
+            {hasPreparationHistory && onPreparationHistory && <Tooltip content={t("acquisition.preparation.history")}>
+              <Button isIconOnly size="sm" variant="light" className="h-7 w-7 min-w-7"
+                aria-label={t("acquisition.preparation.history")} aria-haspopup="dialog" onPress={onPreparationHistory}>
+                <HistoryOutlined aria-hidden />
+              </Button>
+            </Tooltip>}
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-1">{headerActions.preparation}</div>
+          </div>
+          <p className="my-1 text-xs text-default-500">{t(preparationComplete ? "acquisition.preparation.readySummary" :
+            sourceCount ? "acquisition.preparation.sourcesSummary" : "acquisition.preparation.emptySummary", { count: sourceCount })}</p>
+          {actions.preparation}
+        </li>
         {stages.map((stage) => {
           const currentDirectories = new Map<string, string[]>();
           if (directories?.taskId === detail.task.id) for (const [partId, locations] of Object.entries(directories.parts)) {
@@ -210,7 +242,7 @@ export default function AcquisitionExecutionTimeline({
           const stageAttempts = attempts.filter((attempt) => attempt.stage === stage);
           const attemptedThisRun = stageAttempts.some(attempt => attempt.runId === detail.task.workflowRunId);
           const pending =
-            firstStep >= 0 &&
+            !detail.task.workflowRunId || firstStep >= 0 &&
             (!detail.task.workflowRunId ||
               (detail.task.status !== AcquisitionStatus.Completed && !attemptedThisRun &&
                 (currentStage ? stages.indexOf(stage) > stages.indexOf(currentStage) :
@@ -222,7 +254,7 @@ export default function AcquisitionExecutionTimeline({
               runId={detail.task.workflowRunId}
               stage={stage}
               attempts={stageAttempts}
-              activeId={active?.id}
+              activeId={preparationWaiting ? undefined : active?.id}
               pending={pending}
               actions={actions[stage]}
               headerActions={headerActions[stage]}

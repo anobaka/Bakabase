@@ -256,24 +256,19 @@ public sealed class AcquisitionWorkflowReadinessTests
     {
         await Seed();
         Options.LibraryRootDirectory = Path.Combine(_root, "library");
-        Options.Concurrency = 1;
         var recipe = (await Acquisitions.GetRecipesAsync()).Single(r => r.Name == BuiltinAcquisitionRecipes.DirectDownload);
-        var occupying = new AcquisitionTaskDbModel
+        // Model a persisted pending task recovered at startup, without relying on a whole-task
+        // concurrency limit to defer dispatch.
+        var queued = new AcquisitionTaskDbModel
         {
             ResourceId = await Missing(), RecipeDefinitionId = recipe.DefinitionId,
-            Status = AcquisitionStatus.Running, LeadKind = AcquisitionLeadKind.DirectUrl,
+            Status = AcquisitionStatus.Pending, LeadKind = AcquisitionLeadKind.DirectUrl,
+            LeadValue = "https://example.invalid/resource.zip",
             CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now,
         };
-        Db.Set<AcquisitionTaskDbModel>().Add(occupying);
+        Db.Set<AcquisitionTaskDbModel>().Add(queued);
         await Db.SaveChangesAsync();
-        var target = await _sp.GetRequiredService<IPlaceholderResourceService>().CreateByTitle("Queued resource");
-        var queued = await Acquisitions.CreateAsync(target.ResourceId, AcquisitionLeadKind.DirectUrl,
-            "https://example.invalid/resource.zip", recipeDefinitionId: recipe.DefinitionId);
-        Assert.AreEqual(AcquisitionStatus.Pending, queued.Status);
-        Assert.IsNull(queued.WorkflowRunId);
         Options.LibraryRootDirectory = null;
-        occupying.Status = AcquisitionStatus.Completed;
-        await Db.SaveChangesAsync();
         await _sp.GetRequiredService<IAcquisitionQueue>().PumpAsync();
         var failed = (await Acquisitions.GetAsync(queued.Id))!;
         Assert.AreEqual(AcquisitionStatus.Failed, failed.Status);

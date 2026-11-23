@@ -2,6 +2,7 @@ using System.Text.Json;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -22,6 +23,60 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         public Task<IReadOnlyDictionary<int, AcquisitionDeletionActivity>> ReadAsync(IReadOnlyList<AcquisitionTaskDbModel> tasks,
             CancellationToken ct) => Task.FromResult<IReadOnlyDictionary<int, AcquisitionDeletionActivity>>(
             tasks.ToDictionary(t => t.Id, t => new AcquisitionDeletionActivity([t.WorkflowRunId!.Value], "finished", null)));
+    }
+
+    [TestMethod]
+    public async Task Direct_deletion_reports_only_directories_it_removed()
+    {
+        var f = await StageDeletion();
+        Directory.Delete(f.Processing, recursive: true);
+
+        var result = await f.Service.DeleteAsync(DirectDelete(f.Task.Id));
+
+        Assert.IsTrue(result.CleanupResults!.Single().Completed,
+            string.Join(",", result.CleanupResults.Single().ReasonCodes));
+        CollectionAssert.AreEquivalent(new[] {f.Download, f.Delivery}, result.RemovedDirectories!.ToArray());
+        Assert.IsFalse(Directory.Exists(f.Processing));
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Direct_deletion_validates_foreign_continuation_paths_at_all_three_stages(bool concreteReference)
+    {
+        var f = await StageDeletion();
+        var other = new AcquisitionTaskDbModel { Title = "Another task", Status = AcquisitionStatus.Completed,
+            PlanRevision = 1, WorkflowRunId = 2 };
+        db.AcquisitionTasks.Add(other);
+        await db.SaveChangesAsync();
+        db.Set<WorkflowRunSourceDbModel>().Add(new() { WorkflowRunId = 2, Module = "acquisition",
+            EntityKind = "task", EntityId = other.Id.ToString(), Revision = "1" });
+        var layout = f.Plan.DeliveryLayout!;
+        var sibling = Path.Combine(layout.RootDirectory, "different-task");
+        other.PlanJson = JsonSerializer.Serialize(f.Plan with { Title = other.Title!, StageDirectories = null,
+            DeliveryLayout = layout with { TaskId = other.Id, TaskDirectory = sibling,
+                PartDirectories = new() { ["nested.part"] = sibling } } }, Json);
+        var now = DateTimeOffset.UtcNow;
+        var paths = new List<string> { f.Plan.OutputDirectory, f.Plan.StoragePolicy!.ProcessingWorkspaceDirectory!, layout.RootDirectory };
+        var protectedFile = Path.Combine(f.Processing, "manual.key");
+        if (concreteReference) paths.Add(protectedFile);
+        other.BuilderStateJson = AcquisitionContinuationEntry.Write(null, new()
+        {
+            BatchId = Guid.NewGuid().ToString("N"), PreviewToken = Guid.NewGuid().ToString("N"),
+            Scope = "workflow", Version = new string('a', 64), Settings = "{}", WorkflowRunId = 2,
+            PlanRevision = 1, Paths = paths.Order(StringComparer.Ordinal).ToArray(), CreatedAt = now, UpdatedAt = now,
+            Status = "attention"
+        });
+        await db.SaveChangesAsync();
+
+        var result = await f.Service.DeleteAsync(DirectDelete(f.Task.Id));
+
+        Assert.AreEqual(!concreteReference, result.CleanupResults!.Single().Completed,
+            string.Join(",", result.CleanupResults.Single().ReasonCodes));
+        Assert.AreEqual(concreteReference, await db.AcquisitionTasks.AnyAsync(t => t.Id == f.Task.Id && t.DeletedAt == null));
+        Assert.AreEqual(concreteReference, File.Exists(protectedFile));
+        Assert.IsFalse(Directory.Exists(f.Download));
+        Assert.IsFalse(Directory.Exists(f.Delivery));
     }
 
     [TestMethod]

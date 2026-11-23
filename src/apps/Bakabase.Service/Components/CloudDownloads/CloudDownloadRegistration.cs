@@ -13,8 +13,18 @@ using Bakabase.Service.Components.CloudDownloads.Rclone;
 
 namespace Bakabase.Service.Components.CloudDownloads;
 
+/// <summary>Advertises verification without constructing provider dependencies on every download-center read.</summary>
+public sealed record CloudExistingFileVerificationCapability(string ProviderId);
+
 public static class CloudDownloadRegistration
 {
+    private static void AddVerifiableProvider<T>(IServiceCollection services, string providerId)
+        where T : class, ICloudDownloadProvider, ICloudExistingDownloadVerificationProvider
+    {
+        services.AddSingleton<ICloudDownloadProvider, T>();
+        services.AddSingleton(new CloudExistingFileVerificationCapability(providerId));
+    }
+
     public static IServiceCollection AddCloudDownloads(this IServiceCollection services)
     {
         services.AddSingleton<IStorageWritePolicyProvider,
@@ -26,7 +36,7 @@ public static class CloudDownloadRegistration
         services.AddSingleton<BaiduPcsAccountStore>();
         services.AddSingleton<Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components.IDownloadTaskConcurrencyPolicy,
             BaiduDownloadTaskConcurrencyPolicy>();
-        services.AddSingleton<ICloudDownloadProvider, BaiduCloudDownloadProvider>();
+        AddVerifiableProvider<BaiduCloudDownloadProvider>(services, BaiduCloudDownloadProvider.SiteId);
         services.AddSingleton<ICloudDownloadProvider, GoogleDriveCloudProvider>();
         services.AddSingleton<ICloudDownloadProvider, GofileCloudProvider>();
         services.AddSingleton<ICloudDownloadProvider, PixeldrainCloudProvider>();
@@ -80,6 +90,7 @@ public static class CloudDownloadRegistration
         services.AddScoped<FileProcessingWorkspaceResolver>(sp => new(
             sp.GetRequiredService<AppService>().AppDataDirectory, sp.GetRequiredService<IUserStoragePolicy>()));
         services.AddScoped<FileArtifactProcessor>();
+        services.AddScoped<IFileArtifactProcessor>(sp => sp.GetRequiredService<FileArtifactProcessor>());
         services.AddScoped<ArtifactWorkspaceMaintenance>();
         services.AddScoped<PublishedArtifactAncestorCleanup>();
         services.AddScoped<IWorkflowRunCompletionObserver, PublishedArtifactCleanupCompletionObserver>();
@@ -90,6 +101,8 @@ public static class CloudDownloadRegistration
         services.AddSingleton<IWorkflowTrigger, CloudSourcesTrigger>();
         services.AddSingleton<IWorkflowItemTypeDescriptor, CloudWorksetDescriptor>();
         services.AddSingleton<IWorkflowActivity, PrepareCloudSourcesActivity>();
+        services.AddScoped<IWorkflowActivityRuntimeProvider, FileProcessingActivityRuntimeProvider>();
+        services.AddScoped<IWorkflowActivityRuntimeProvider, CloudDownloadActivityRuntimeProvider>();
         services.AddSingleton<IWorkflowActivity, SelectCloudSourcesActivity>();
         services.AddSingleton<IWorkflowActivity, BaiduTransferActivity>();
         services.AddSingleton<IWorkflowActivity, BaiduDownloadActivity>();

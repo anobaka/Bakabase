@@ -27,7 +27,8 @@ internal static partial class AcquisitionCurrentDirectoryFiles
 {
     internal const string Kind = "currentFiles";
     internal const string OperationKind = "files.captureCurrentDirectory";
-    private const int MaximumEntries = 10000;
+    internal const int MaximumEntries = 10000;
+    private const int MaximumDeliveryEntries = 100000;
     private static readonly JsonSerializerOptions Json = WorkflowJson.Options;
     private static string Slot(AcquisitionCurrentDirectoryReceipt receipt) =>
         $"{receipt.PartId}:current-files:{receipt.Revision}:{receipt.CaptureId}";
@@ -227,7 +228,8 @@ internal static partial class AcquisitionCurrentDirectoryFiles
                     !artifact.Files.Concat(frozenDirectories).Any(path => Overlap(path, proof.Directory))))
                 .DistinctBy(proof => proof.Directory, ArtifactManifestFiles.PathComparer).ToArray();
         }
-        var now = await EnumerateAsync(artifact.RootDirectory, exclusions, workspaces, ct);
+        var limit = IsDeliveryOnlyStageCapture(artifact) ? MaximumDeliveryEntries : MaximumEntries;
+        var now = await EnumerateAsync(artifact.RootDirectory, exclusions, workspaces, ct, limit);
         if (!now.Files.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(artifact.Files) ||
             !now.Directories.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(frozenDirectories))
             throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_CHANGED");
@@ -235,7 +237,7 @@ internal static partial class AcquisitionCurrentDirectoryFiles
 
     private sealed record Selection(IReadOnlyList<string> Files, IReadOnlyList<string> Directories);
     private static async Task<Selection> EnumerateAsync(string root, IReadOnlyList<OwnedWorkspaceDirectory> exclusions,
-        FileProcessingWorkspaceResolver? workspaces, CancellationToken ct)
+        FileProcessingWorkspaceResolver? workspaces, CancellationToken ct, int maximumEntries = MaximumEntries)
     {
         if (exclusions == null || exclusions.Count > 10000) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_CHANGED");
         var excluded = new HashSet<string>(ArtifactManifestFiles.PathComparer);
@@ -249,21 +251,23 @@ internal static partial class AcquisitionCurrentDirectoryFiles
             excluded.Add(proof.Directory);
         }
         var files = new List<string>(); var empty = new List<string>();
-        var pending = new Stack<(string Path, int Depth)>(); pending.Push((root, 0)); var count = 0;
+        var pending = new Stack<(string Path, int Depth)>(); pending.Push((root, 0)); var count = 1;
         while (pending.TryPop(out var directory))
         {
             ct.ThrowIfCancellationRequested();
             ArtifactManifestFiles.RejectLinks(directory.Path);
-            if (directory.Depth > 128 || ++count > MaximumEntries) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_TOO_LARGE");
-            var entries = Directory.GetFileSystemEntries(directory.Path);
-            if (entries.Length == 0 && directory.Path != root) empty.Add(directory.Path);
-            foreach (var path in entries)
+            if (directory.Depth > 128) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_TOO_LARGE");
+            var hasEntries = false;
+            foreach (var path in Directory.EnumerateFileSystemEntries(directory.Path))
             {
+                hasEntries = true;
                 ct.ThrowIfCancellationRequested(); ArtifactManifestFiles.RejectLinks(path);
                 if (excluded.Contains(path)) continue;
+                if (++count > maximumEntries) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_TOO_LARGE");
                 if (File.GetAttributes(path).HasFlag(FileAttributes.Directory)) pending.Push((path, directory.Depth + 1));
-                else { files.Add(path); if (++count > MaximumEntries) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_TOO_LARGE"); }
+                else files.Add(path);
             }
+            if (!hasEntries && directory.Path != root) empty.Add(directory.Path);
         }
         if (files.Count == 0) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_EMPTY");
         return new(files.OrderBy(p => p, StringComparer.Ordinal).ToArray(), empty.OrderBy(p => p, StringComparer.Ordinal).ToArray());

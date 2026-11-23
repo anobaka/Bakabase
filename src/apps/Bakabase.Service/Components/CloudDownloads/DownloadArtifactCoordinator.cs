@@ -58,11 +58,21 @@ public sealed class DownloadArtifactCoordinator(BakabaseDbContext db, IArtifactO
             ExecutionStatus = "reused"};
     }
 
-    public async Task<CloudDownloadTarget> RecordAsync(WorkflowExecutionContext ctx, CloudDownloadTarget target,
-        string outputDirectory, CancellationToken ct)
+    public Task<CloudDownloadTarget> RecordAsync(WorkflowExecutionContext ctx, CloudDownloadTarget target,
+        string outputDirectory, CancellationToken ct) => RecordAsync(ctx, target, outputDirectory, ct, null);
+
+    internal async Task<CloudDownloadTarget> RecordAsync(WorkflowExecutionContext ctx, CloudDownloadTarget target,
+        string outputDirectory, CancellationToken ct, CompletedCloudDownloadReceipt? receipt, ArtifactManifest? verifiedFiles = null)
     {
         if (target.DownloadArtifactId != null)
         {
+            if (receipt != null)
+            {
+                var registered = await store.ResolveByIdAsync(target.DownloadArtifactId, ct);
+                if (registered == null || registered.OperationId != target.DownloadOperationId)
+                    throw new InvalidDataException("RECOVERY_FILES_UNVERIFIED");
+                receipt.RequireManifest(registered.RootDirectory, registered.Manifest);
+            }
             if (!await store.PinConsumerAsync(target.DownloadOperationId!, Consumer(ctx, target), "workflow", ctx.RunId.ToString(), ct))
                 throw new InvalidOperationException("The download is being cleaned. Retry after cleanup finishes.");
             await BindAsync(ctx, target, target.DownloadOperationId!, ct);
@@ -75,11 +85,16 @@ public sealed class DownloadArtifactCoordinator(BakabaseDbContext db, IArtifactO
         var metadata = new DownloadArtifactMetadata(target.DownloadTaskId, target.TransportTaskId);
         var evidence = await ExistingDirectoryEvidenceAsync(target, root, ct);
         var registration = new ArtifactRegistration(root, target.Files, "download", true,
+            ExpectedManifestFingerprint: verifiedFiles?.Fingerprint,
             MetadataJson: JsonSerializer.Serialize(metadata, WorkflowJson.Options),
-            CreateMetadata: evidence == null ? null : manifest =>
-                JsonSerializer.Serialize(metadata with {DirectoryProvenance = evidence.Bind(manifest)}, WorkflowJson.Options));
+            CreateMetadata: evidence == null && receipt == null ? null : manifest =>
+            {
+                receipt?.RequireManifest(root, manifest);
+                return JsonSerializer.Serialize(metadata with {DirectoryProvenance = evidence?.Bind(manifest)}, WorkflowJson.Options);
+            }) {VerifiedDownloadFiles = verifiedFiles};
         var artifact = await store.AdoptAsync(new(intent, intent, "download", Source(target)), registration,
             Consumer(ctx, target), ct);
+        receipt?.RequireManifest(artifact.RootDirectory, artifact.Manifest);
         if (!await store.PinConsumerAsync(artifact.OperationId, Consumer(ctx, target), "workflow", ctx.RunId.ToString(), ct))
             throw new InvalidOperationException("The download is being cleaned. Retry after cleanup finishes.");
         await BindAsync(ctx, target, artifact.OperationId, ct);
@@ -159,7 +174,7 @@ public sealed class DownloadArtifactCoordinator(BakabaseDbContext db, IArtifactO
                 // task/source transfer first; the provider must still verify its own journal.
                 var slot = CloudOperationService.OperationSlot(target, "transfer");
                 var transfer = await db.CloudDownloadOperations.AsNoTracking().SingleOrDefaultAsync(t =>
-                    t.Kind == "transfer" && t.State == "succeeded" && db.ArtifactOperationBindings.Any(b =>
+                    t.Kind == (target.ReviewedTransferId == null ? "transfer" : CloudOperationService.ReplayKind) && t.State == "succeeded" && db.ArtifactOperationBindings.Any(b =>
                         b.OwnerKind == "workflow" && b.OwnerId == run.ToString() && b.Slot == slot && b.OperationId == t.Id), ct);
                 if (transfer?.ReceiptJson == null) return null;
                 var original = JsonSerializer.Deserialize<CloudTransferRequest>(transfer.RequestJson, WorkflowJson.Options);

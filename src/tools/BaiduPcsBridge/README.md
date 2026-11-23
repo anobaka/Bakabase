@@ -37,7 +37,7 @@ script. Tests still run natively; only the final `go build` uses those targets.
 
 ## Protocol and behavior
 
-`--version` reports `4.0.2+bakabase.15`. Otherwise one JSON request is read from
+`--version` reports `4.0.2+bakabase.28`. Otherwise one JSON request is read from
 stdin; JSON line events on stdout have `type: progress`, `result`, or `error`.
 Set `BAIDUPCS_GO_CONFIG_DIR` to an absolute private per-account directory,
 including when probing `--version` (upstream package initialization otherwise
@@ -57,6 +57,7 @@ Upstream stdout/stderr are discarded. Errors are stable safe codes.
   errors, network failures and missing access conditions. Checking metadata does
   not guarantee that an original file can ultimately be downloaded.
 - `inspect-download`: read-only recovery inspection of the exact pinned remote manifest and retained local files/PCS range sidecars. Reads a stable existing profile with a fixed expected UID without `Config.Init`, account writes, downloads, transfers, directory creation, file hashing or checkpoint synthesis. An empty payload paired with an empty range sidecar is an unstarted upstream download. A nonempty partial file without a valid matching sidecar remains blocked. Complete-length files are only candidates; ordinary download checksum verification still decides reuse.
+- `inspect-retained-writes` checks the pinned remote listing, local path mapping and original file checksums. It returns the immutable member IDs eligible to reduce a storage reservation. During execution `download` verifies these IDs again before any payload writes and never rewrites them. Missing, partial and unproven members keep their full write budget.
 - `transfer`: `operationId`, `url`, `accessCode`, `remoteDirectory`; stores the
   share in its own deterministic subdirectory and returns an exact recursive
   manifest. Top-level share items and owned directories are paginated. A four
@@ -68,7 +69,7 @@ Upstream stdout/stderr are discarded. Errors are stable safe codes.
   and final size. Empty directories are preserved. Unsafe paths and symlinks are
   rejected. Existing files are reused only after matching the remote size and a
   verified original `block_list`: either a single whole-file MD5 or every ordered
-  block MD5 at upstream 4, 16 or 64 MiB boundaries, including the final partial
+  block MD5 at 4, 8, 16, 32 or 64 MiB boundaries, including the final partial
   block. Unknown block layouts are not reused. The provider's separate `md5` field
   can be encoded or incorrect for multipart uploads even after normalization,
   and is not sufficient proof. Missing listing
@@ -83,8 +84,11 @@ Upstream stdout/stderr are discarded. Errors are stable safe codes.
   process tree on cancellation as well.
   Full verification can also reuse an intact file with a stale continuation
   sidecar after an interrupted overwrite. Sidecars are preserved and excluded
-  from the returned file manifest. Progress includes verified completed files
-  plus valid upstream range checkpoints; an existing or sparse file's length is
+  from the returned file manifest. Progress includes verified completed files,
+  saved ranges read before download starts, and in-memory updates during download.
+  The downloader closes the checkpoint handle before removing the checkpoint on
+  success, and closes the handle while retaining the checkpoint on failed attempts.
+  An existing or sparse file's length is
   not counted as completed download data. Final success uses upstream task status
   and revalidates every supported original block checksum, including after range
   continuation. A checksum mismatch does not publish the file as a successful
@@ -139,16 +143,26 @@ mutation blocks later readers, so continuous downloads cannot starve login/logou
 Overlapping local output roots are serialized even for different operations or
 accounts. Transfer journals record intent
 before the remote mutation and persist a completed receipt after verifying the
-target. Repeating a completed operation returns its receipt. If interrupted after
-the remote request begins, the operation requires confirmation rather than
-blindly transferring again. The host can recover completed receipts after its
-own persistence boundary. Logout clears local credentials and retains operation
+target. Repeating a completed operation returns its receipt. The read-only
+`inspect-transfer-target` command checks the exact operation-owned path under
+the expected account. It distinguishes a typed PCS missing response, a verified
+empty directory, and a nonempty directory. A prepared journal can resume on the
+original path. An interrupted remote request can proceed only with an approved
+isolated attempt and the original journal remains available. The host can recover
+completed receipts after its own persistence boundary. Logout clears local credentials and retains operation
 journals; it does not revoke sessions on other devices.
 
 Tests do not require credentials. Live login, remote transfer and download need
 a user-provided Baidu session and test share and are separate acceptance checks.
 
 Local filesystem failures include a safe structured `storage` kind and operation. Local disk/quota exhaustion differs from remote account quota. Legacy bare error codes never prove a full disk. Raw paths, credentials and upstream diagnostics are not emitted. `ENAMETOOLONG` / Windows error 206 uses `BAIDU_LOCAL_PATH_TOO_LONG`, not the non-regular-file code.
+
+For previously verified downloads, the bridge checks file identity again when it
+accepts the result. It can hold a bounded number of read-only handles for files
+credited against the disk reservation. A transient storage read error permits two
+retries. Once the path is readable again, the file must match the original identity
+and every original checksum. A missing, replaced or modified file is reported
+separately. The server log includes its one-based position among manifest files.
 
 ## Portable local names
 
@@ -184,8 +198,15 @@ receipt and download operation, without transferring again.
 
 ## Existing-file completion verification
 
+Bridge `.26` reports the one-based payload file number and total on a member
+failure in `verify-existing`. A stable checksum mismatch also reports the
+number of official blocks, the number of differing blocks, and the first
+differing block's one-based index and byte length. Checksum evidence that
+cannot be used is reported as `BAIDU_EXISTING_CHECKSUM_UNAVAILABLE`. The error
+event contains only the numeric diagnostics and the failure code.
+
 Bridge `.12` adds `verify-existing`, separate from `download` and `inspect-download`.
-The host binds it to one original failed download and completed transfer receipt.
+The host binds it to one original stopped or failed download and completed transfer receipt.
 The cheap inspection requires every expected local file at its original mapped
 path and exact length; that only allows attempting verification, never completion.
 With `verifyRemote: true`, it checks the pinned manifest, reads metadata for each
@@ -197,10 +218,10 @@ and atomically registers the original download's result and completion status.
 
 This command never enters upstream account initialization, changes a profile,
 creates or deletes local files/checkpoints, transfers a share, downloads payloads,
-or falls back to the normal downloader. It retains stale valid sidecars. Upload
-boundaries are the pinned upstream's 4/16/64 MiB constants; only a unique boundary
-consistent with the entire ordered list is accepted. The upstream's aggregate
-MD5 field is not accepted as a substitute for multipart checksums.
+or falls back to the normal downloader. It retains stale valid sidecars. The
+bridge supports Baidu's 4, 8, 16, 32 and 64 MiB checksum boundaries. A boundary
+qualifies only if it uniquely matches the entire ordered list. The aggregate MD5 field cannot substitute for multipart
+checksums.
 
 ## Account capability and concurrent downloads
 
@@ -243,3 +264,19 @@ previously unpinned remote download starts, the host uses this manifest to creat
 one prepared request for both storage reservation and execution. The ordinary
 download revalidates that exact manifest before writing. It never substitutes an
 unknown size with zero or starts parallel unbudgeted payloads.
+
+Bridge `.24` permits read-only completion verification when an SMB client retains a zero-byte pending-delete checkpoint beside a mapped payload. It requires every expected member at its recorded length, a matching parent directory, and no conflicting remote name, live checkpoint, or unrelated file. Completion still requires authoritative provider checksums and a second local SHA-256 verification. The download and resume modes preserve their existing layout checks.
+
+Bridge `.27` supports moving a stopped download to a new destination with a separate layout revision. The host previews the original mapping with `inspect-reuse-source`. The result includes file and byte counts for length-matching candidates and a fingerprint of the manifest, mapped paths, filesystem identities, modification times and checkpoint identities. The scan accepts only members of the frozen manifest and their regular checkpoint files.
+
+A confirmed `download` can carry `reuseSource` with the original operation ID, directory and fingerprint. During preparation the source mounting stays read-only. Each length-matching file is read against the provider's official block checksums. The bridge verifies the remote identity and checksum metadata before and after the read. Missing, incomplete or corrupt source files use the ordinary download on the new volume. Copying reports verification activity. A persisted preparation checkpoint lets a retry finish on the new volume after the old volume becomes unavailable.
+
+The new operation owns a private staging directory on the destination volume. It records the volume and file identities for data and range checkpoints, takes an operation lock during execution and publishes each verified file through an atomic, same-volume hard link. The destination filesystem must support hard links. The published directory is rechecked against the manifest before the private staging files are reclaimed. The host receives the new payload paths after all members succeed.
+
+
+The transfer journal distinguishes an acknowledged request awaiting file verification, an
+uncertain submission, and an explicit rejection of every requested item. A rejection requires
+a zero asynchronous task ID and a distinct nonzero item error for each submitted file ID.
+The bridge records bounded numeric provider error codes and file-count limits. Raw response
+text and names never enter the diagnostic. Subsequent calls return the recorded diagnosis
+without sending another transfer. Older journals retain their original confirmation behavior.

@@ -5,6 +5,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.Modules.AI.Models.Domain;
+using Bakabase.Modules.AI.Services;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
@@ -22,8 +24,11 @@ public sealed record FileArtifactDeliveryReview(string ArtifactId, string Finger
     string? PlanJson = null, string? Intent = null, string? WaitReason = null, bool Accepted = false,
     bool AutomaticOuter = false, RecursiveArchiveOptions? Limits = null, string? ArchiveId = null,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
-    string? ExtractionLayout = null);
-public sealed record FileArtifactDeliverySignal(string ArtifactId, string Fingerprint, string ReviewToken, CloudFileProcessingSignal Processing);
+    string? ExtractionLayout = null,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    ConfirmedDeliverySelection? Selection = null);
+public sealed record FileArtifactDeliverySignal(string ArtifactId, string Fingerprint, string ReviewToken, CloudFileProcessingSignal Processing,
+    IReadOnlyList<string>? ExcludedFiles = null);
 public sealed record FileArtifactDeliveryAssessmentConfig(string TargetId, bool AutoContinueOuterPackaging = true,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     string? ExtractionLayout = null,
@@ -66,7 +71,8 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
     private static DownloadWorkset Replace(DownloadWorkset workset, CloudDownloadTarget target) =>
         workset with {Targets = workset.Targets.Select(t => t.Id == target.Id ? target : t).ToList()};
     private static bool CanRevise(string? reason) => reason is FileArtifactDeliveryAssessment.ReviewRequired or FileArtifactDeliveryAssessment.ResultUncertain or
-        "ExtractionPlanUnknown" or "ArchiveInputRequired" or "MissingVolumes" or "ProcessingInputNotMatched" or "RepeatedContent" or "ExtractionLayoutConflict";
+        "ExtractionPlanUnknown" or "ArchiveInputRequired" or "MissingVolumes" or "ProcessingInputNotMatched" or "RepeatedContent" or
+        "ExtractionLayoutConflict" or "ArchiveNameEncodingUnsupported" or "ProcessingPathConflict";
 
     private static bool BudgetWait(string? reason) => reason is "DepthLimit" or "ArchiveCountLimit" or
         "FileCountLimit" or "ExpandedBytesLimit" or "DiskSpaceLimit";
@@ -75,7 +81,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
     private static FileArtifactProcessingConfig ProcessingConfig(FileArtifactDeliveryReview review, CloudDownloadTarget target) => new()
         {ArchivePolicy = review.AutomaticOuter ? "autoDetect" : "instructions", Recursive = review.Limits ?? new(),
             StoragePolicy = target.StoragePolicy, StorageTitle = target.Title, ExtractionLayout = review.ExtractionLayout,
-            WorkspaceDirectoryScope = target.ProcessingDirectoryScope};
+            WorkspaceDirectoryScope = target.ProcessingDirectoryScope, BorrowSelectedProcessedArchives = !review.AutomaticOuter};
 
     internal static string ReviewToken(string targetId, FileArtifactDeliveryReview review) =>
         ArtifactManifestFiles.Hash("delivery-review-v1:" + targetId + ":" + JsonSerializer.Serialize(review, WorkflowJson.Options));
@@ -96,6 +102,9 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             prompt.GetProperty("reviewToken").GetString() != answer.ReviewToken)
             throw new ArgumentException("FILE_DELIVERY_REVIEW_CHANGED");
         var input = answer.Processing;
+        if (answer.ExcludedFiles != null && (review.WaitReason is not (FileArtifactDeliveryAssessment.ResultUncertain or FileArtifactDeliveryAssessment.ReviewRequired) ||
+            input != new CloudFileProcessingSignal {TargetId = target.Id, ArchivePolicy = "keep"}))
+            throw new ArgumentException("FILE_DELIVERY_REVIEW_INVALID");
         if (input.StorageRecovery != null ||
             input.RecursiveOptions != null && (!review.AutomaticOuter || !BudgetWait(review.WaitReason)) ||
             input.ArchiveId != null && (!review.AutomaticOuter || input.ArchiveId != review.ArchiveId) ||
@@ -124,6 +133,62 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
         }
     }
 
+    private static async Task<(ArtifactRecord Input, bool WasExtracted)> VerifyDeliveryInputAsync(
+        WorkflowExecutionContext ctx, IArtifactOperationStore store, string id, FileArtifactDeliveryReview? review,
+        CancellationToken ct)
+    {
+        bool MatchesReview(ArtifactRecord artifact) => review == null || artifact.Fingerprint == review.Fingerprint &&
+            artifact.Kind is ("processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind);
+
+        async Task<bool> CheckSelectionAndLineage(ArtifactRecord artifact)
+        {
+            if (!MatchesReview(artifact)) throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+            if (artifact.Kind == AcquisitionCurrentDirectoryFiles.Kind)
+                await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(artifact, ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct);
+            return await FileArtifactDeliveryAssessment.WasExtractedBeforeDeliveryAsync(artifact, store, ct);
+        }
+
+        var owner = ctx.RunId.ToString();
+        var consumer = "workflow:" + owner + ":delivery-input:" + id;
+        if (review?.Accepted != true && await store.GetArtifactAsync(id, ct) is {State: ArtifactLocationState.Available} candidate &&
+            MatchesReview(candidate))
+        {
+            // The verification pin belongs only to this invocation. A failed check must
+            // leave any earlier review's durable pin alone.
+            var verificationConsumer = consumer + ":verification:" + Guid.NewGuid().ToString("N");
+            try
+            {
+                if (await store.PinConsumerAsync(candidate.OperationId, verificationConsumer, "workflow", owner, ct))
+                {
+                    var verified = await store.ResolveByIdAsync(id, ct);
+                    if (verified == null || verified.OperationId != candidate.OperationId ||
+                        verified.Fingerprint != candidate.Fingerprint || verified.Kind != candidate.Kind ||
+                        !ArtifactManifestFiles.PathComparer.Equals(verified.RootDirectory, candidate.RootDirectory))
+                        throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+                    var wasExtracted = await CheckSelectionAndLineage(verified);
+                    if (!await store.PinConsumerAsync(verified.OperationId, consumer, "workflow", owner, ct))
+                        throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+                    return (verified, wasExtracted);
+                }
+            }
+            finally
+            {
+                try { await store.ReleaseConsumerAsync(candidate.OperationId, verificationConsumer, CancellationToken.None); }
+                catch (Exception error)
+                { ctx.Logger.LogWarning(error, "Could not release a delivery verification input for run {RunId}.", ctx.RunId); }
+            }
+        }
+
+        // A stale storage state can block a pin until disk validation refreshes it.
+        var input = await store.ResolveByIdAsync(id, ct) ?? throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+        var extracted = await CheckSelectionAndLineage(input);
+        if (review?.Accepted == true) return (input, extracted);
+        if (!await store.PinConsumerAsync(input.OperationId, consumer, "workflow", owner, ct))
+            throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+        input = await store.ResolveByIdAsync(id, ct) ?? throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+        return (input, extracted);
+    }
+
     internal static async Task<WorkflowItemOutcome> ReviewAsync(WorkflowExecutionContext ctx, DownloadWorkset workset,
         FileArtifactDeliveryAssessmentConfig config, FileArtifactDeliverySignal? answer, CancellationToken ct)
     {
@@ -136,26 +201,20 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
         if (review != null && review.ArtifactId != target.ProcessedArtifactId)
             throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
         await ctx.ReportStage("verifyingFiles");
-        var id = review?.ArtifactId ?? target.ProcessedArtifactId;
-        var input = id == null ? null : await store.ResolveByIdAsync(id, ct);
-        if (input == null || review != null && (input.Fingerprint != review.Fingerprint || input.Kind is not ("processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind)))
-            throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
-        if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
-            await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct);
-        var wasExtracted = await FileArtifactDeliveryAssessment.WasExtractedBeforeDeliveryAsync(input, store, ct);
+        var id = review?.ArtifactId ?? target.ProcessedArtifactId ?? throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
+        var (input, wasExtracted) = await VerifyDeliveryInputAsync(ctx, store, id, review, ct);
         if (review?.Accepted == true) return WorkflowItemOutcome.ReplaceWith(workset);
-        // Protect the immutable input through human review and publication.
-        // Terminal workflow states release the durable owner without a timing gap between nodes.
-        var consumer = "workflow:" + ctx.RunId + ":delivery-input:" + input.Id;
-        if (!await store.PinConsumerAsync(input.OperationId, consumer, "workflow", ctx.RunId.ToString(), ct))
-            throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
-        input = await store.ResolveByIdAsync(input.Id, ct)
-            ?? throw new InvalidOperationException("FILE_DELIVERY_INPUT_CHANGED");
         // A migrated historical run already has a deterministic DeliveryReview parked on the
         // target. The adaptive planner must still get a chance to inspect the same immutable
         // artifact before that review is treated as a final human-only checkpoint. Once a review
         // has been accepted, however, never reinterpret it automatically.
         var adaptiveService = ctx.Services.GetService<AdaptiveFileProcessingAssessmentService>();
+        if (answer == null && review == null && FileArtifactDeliveryAssessment.RetainedArchiveFiles(input).Count > 0)
+        {
+            var assessed = await FileArtifactDeliveryAssessment.AssessAsync(input, ct, wasExtracted);
+            return await SuspendAsync(input, ct, workset, target, new(input.Id, input.Fingerprint, ExtractionLayout: config.ExtractionLayout),
+                FileArtifactDeliveryAssessment.ResultUncertain, assessed.Files, adaptiveAssessment: config.EnableAdaptiveAssessment);
+        }
         if ((answer == null || !string.IsNullOrWhiteSpace(answer.Processing.UserContext)) && config.EnableAdaptiveAssessment && review?.Accepted != true &&
             adaptiveService is { } adaptive)
         {
@@ -172,7 +231,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
 
         // Explicit AI review is a decision boundary. An unavailable model must not authorize publication.
         if (config.RequiresAdaptiveDecision && (answer == null || !string.IsNullOrWhiteSpace(answer.Processing.UserContext)))
-            return Suspend(workset, target, review ?? new(input.Id, input.Fingerprint), FileArtifactDeliveryAssessment.ResultUncertain,
+            return await SuspendAsync(input, ct, workset, target, review ?? new(input.Id, input.Fingerprint), FileArtifactDeliveryAssessment.ResultUncertain,
                 input.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(),
                 adaptiveAssessment: true);
 
@@ -184,7 +243,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                 ? JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(input.MetadataJson, WorkflowJson.Options)?.InheritedExtractionLayout : null;
             review = new(input.Id, input.Fingerprint, ExtractionLayout: inherited ?? config.ExtractionLayout);
             if (!assessment.Automatic || !config.AutoContinueOuterPackaging)
-                return Suspend(workset, target, review, assessment.Uncertain ? FileArtifactDeliveryAssessment.ResultUncertain :
+                return await SuspendAsync(input, ct, workset, target, review, assessment.Uncertain ? FileArtifactDeliveryAssessment.ResultUncertain :
                     FileArtifactDeliveryAssessment.ReviewRequired, assessment.Files, adaptiveAssessment: config.EnableAdaptiveAssessment);
             var autoPlan = JsonSerializer.Serialize(new FileProcessingPlan {Requirement = "notRequired"}, WorkflowJson.Options);
             review = review with {AutomaticOuter = true, Limits = DefaultOuterLimits(), PlanJson = autoPlan};
@@ -193,8 +252,10 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
         }
         if (answer?.Processing.ArchivePolicy == "keep")
         {
+            var selection = answer.ExcludedFiles == null ? null :
+                await ConfirmedDeliverySelection.CreateAsync(ctx, store, target.Id, input, answer.ExcludedFiles, ct);
             return WorkflowItemOutcome.ReplaceWith(Replace(workset, target with
-            {DeliveryReview = review with {Accepted = true, WaitReason = null}, ProcessingWaitReason = null, Problem = null}));
+            {DeliveryReview = review with {Accepted = true, WaitReason = null, Selection = selection}, ProcessingWaitReason = null, Problem = null}));
         }
         if (answer?.Processing.ExtractionPlanJson is { } instructions)
         {
@@ -228,7 +289,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             var reassessmentReason = reassessment.Uncertain
                 ? FileArtifactDeliveryAssessment.ResultUncertain
                 : FileArtifactDeliveryAssessment.ReviewRequired;
-            return Suspend(workset, target, review, reassessmentReason, reassessment.Files,
+            return await SuspendAsync(input, ct, workset, target, review, reassessmentReason, reassessment.Files,
                 adaptiveAssessment: config.EnableAdaptiveAssessment);
         }
         // Only the retained processed artifact is input. Neither its original download nor a
@@ -244,7 +305,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                 ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ctx.RunId, target, input, review,
                 config, savedPlan, ProcessingConfig(review, target), ct);
             if (savedAdaptive == null)
-                return Suspend(workset, target, review, "NeedsReconciliation",
+                return await SuspendAsync(input, ct, workset, target, review, "NeedsReconciliation",
                     input.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(),
                     "RECOVERY_CHECKPOINT_UNSUPPORTED", config.EnableAdaptiveAssessment);
         }
@@ -258,7 +319,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             replan: false, stopAfterStepId: null, recovery: savedAdaptive == null ? null : new(savedAdaptive.OperationId, savedAdaptive.Attempt), onlyOuterPackaging: review.AutomaticOuter,
             passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url), reportStage: ctx.ReportStage);
         if (result.Artifact == null)
-            return Suspend(workset, target, review with {ArchiveId = result.ArchiveId}, result.WaitReason ?? "ExtractionPlanUnknown",
+            return await SuspendAsync(input, ct, workset, target, review with {ArchiveId = result.ArchiveId}, result.WaitReason ?? "ExtractionPlanUnknown",
                 input.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(), result.Message, config.EnableAdaptiveAssessment);
         var artifact = result.Artifact;
         await ArtifactWorkflowBindings.BindAsync(ctx, target.Id + ":process:delivery-result:" + artifact.Id, artifact.OperationId, ct);
@@ -287,7 +348,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                     initialCompletedProcessing: completed == null ? null : [completed]);
                 if (nextAssessment is { } nextOutcome) return nextOutcome;
             }
-            return Suspend(Replace(workset, target), target, new(artifact.Id, artifact.Fingerprint),
+            return await SuspendAsync(artifact, ct, Replace(workset, target), target, new(artifact.Id, artifact.Fingerprint),
                 FileArtifactDeliveryAssessment.ResultUncertain,
                 artifact.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(),
                 "LLM_ASSESSMENT_FAILED", adaptiveAssessment: true);
@@ -295,7 +356,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
         var remaining = await FileArtifactDeliveryAssessment.AssessAsync(artifact, ct, extractionWasReviewed: true);
         if (remaining.Files.Count > 0)
         {
-            return Suspend(Replace(workset, target), target, new(artifact.Id, artifact.Fingerprint),
+            return await SuspendAsync(artifact, ct, Replace(workset, target), target, new(artifact.Id, artifact.Fingerprint),
                 remaining.Uncertain ? FileArtifactDeliveryAssessment.ResultUncertain : FileArtifactDeliveryAssessment.ReviewRequired, remaining.Files,
                 adaptiveAssessment: config.EnableAdaptiveAssessment);
         }
@@ -330,9 +391,18 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             var inspectImagePackaging = !string.IsNullOrWhiteSpace(target.SelectedSource?.ArchivePassword) ||
                 AdaptiveFileProcessingAssessmentService.HasExtractionStep(target.SelectedSource?.ExtractionPlanJson) ||
                 executionEvidence?.CompletedProcessing.Any(round => round.Operations.Any(op => op.Kind == "extractArchive")) == true;
-            await ctx.ReportStage("analyzingFiles");
-            var decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct, inspectImagePackaging,
-                executionEvidence, target.SelectedSource?.ArchivePassword);
+            await ctx.ReportStage("preparingFiles");
+            AdaptiveFileProcessingDecision decision;
+            using (LlmExecutionScope.Begin((state, _) => state.Feature == AiFeature.FileProcessor
+                       ? ctx.ReportStage(state.Status switch
+                       {
+                           LlmFeatureExecutionStatus.Queued => "waitingForAi",
+                           LlmFeatureExecutionStatus.Running => "analyzingFiles",
+                           _ => "preparingFiles"
+                       })
+                       : Task.CompletedTask))
+                decision = await adaptive.AssessAsync(current, assessmentContext, iteration, ct, inspectImagePackaging,
+                    executionEvidence, target.SelectedSource?.ArchivePassword);
             var blocks = new List<WorkflowOutputBlock>();
             if (AdaptiveAssessmentDiagnostic.FromCode(decision.DiagnosticCode) is { } diagnostic) blocks.Add(diagnostic);
             if (decision.Call is {} call) blocks.Add(call.Block(currentTarget.Id));
@@ -345,7 +415,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                 var remaining = await FileArtifactDeliveryAssessment.AssessAsync(current, ct,
                     extractionWasReviewed: true);
                 if (remaining.Files.Count > 0)
-                    return Suspend(Replace(workset, currentTarget), currentTarget,
+                    return await SuspendAsync(current, ct, Replace(workset, currentTarget), currentTarget,
                         new FileArtifactDeliveryReview(current.Id, current.Fingerprint),
                         remaining.Uncertain ? FileArtifactDeliveryAssessment.ResultUncertain :
                             FileArtifactDeliveryAssessment.ReviewRequired,
@@ -376,7 +446,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             if (!decision.ShouldContinue)
             {
                 var review = new FileArtifactDeliveryReview(current.Id, current.Fingerprint);
-                return Suspend(Replace(workset, currentTarget), currentTarget, review,
+                return await SuspendAsync(current, ct, Replace(workset, currentTarget), currentTarget, review,
                     FileArtifactDeliveryAssessment.ResultUncertain,
                     current.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(),
                     decision.Reason ?? "需要人工确认文件处理方案。", config.EnableAdaptiveAssessment);
@@ -387,7 +457,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             catch (InvalidOperationException error)
             {
                 var invalidReview = new FileArtifactDeliveryReview(current.Id, current.Fingerprint);
-                return Suspend(Replace(workset, currentTarget), currentTarget, invalidReview,
+                return await SuspendAsync(current, ct, Replace(workset, currentTarget), currentTarget, invalidReview,
                     FileArtifactDeliveryAssessment.ResultUncertain,
                     current.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(),
                     "模型方案未通过安全校验：" + error.Message, config.EnableAdaptiveAssessment);
@@ -395,7 +465,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             if (plan == null)
             {
                 var review = new FileArtifactDeliveryReview(current.Id, current.Fingerprint);
-                return Suspend(Replace(workset, currentTarget), currentTarget, review,
+                return await SuspendAsync(current, ct, Replace(workset, currentTarget), currentTarget, review,
                     FileArtifactDeliveryAssessment.ResultUncertain,
                     current.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(),
                     decision.Reason ?? "模型未生成可执行的处理方案。", config.EnableAdaptiveAssessment);
@@ -426,7 +496,7 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
                     ? await AcquisitionFileProcessingEvidence.OriginalDownloadPasswordAsync(sourceEvidence, currentTarget, current, store, ct) : null);
             if (result.Artifact == null)
             {
-                return Suspend(Replace(workset, currentTarget), currentTarget,
+                return await SuspendAsync(current, ct, Replace(workset, currentTarget), currentTarget,
                     reviewForExecution with {ArchiveId = result.ArchiveId},
                     result.WaitReason ?? FileArtifactDeliveryAssessment.ResultUncertain,
                     current.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(),
@@ -459,20 +529,25 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
         }
 
         var exhausted = new FileArtifactDeliveryReview(current.Id, current.Fingerprint);
-        return Suspend(Replace(workset, currentTarget), currentTarget, exhausted,
+        return await SuspendAsync(current, ct, Replace(workset, currentTarget), currentTarget, exhausted,
             FileArtifactDeliveryAssessment.ResultUncertain,
             current.Manifest.Entries.Select(e => e.RelativePath).Take(FileArtifactDeliveryAssessment.MaximumFiles).ToArray(),
             "已达到下载后自动判断次数上限，请人工确认剩余文件。", config.EnableAdaptiveAssessment);
     }
 
-    private static WorkflowItemOutcome Suspend(DownloadWorkset workset, CloudDownloadTarget target,
+    private static async Task<WorkflowItemOutcome> SuspendAsync(ArtifactRecord artifact, CancellationToken ct,
+        DownloadWorkset workset, CloudDownloadTarget target,
         FileArtifactDeliveryReview review, string reason, IReadOnlyList<string> files, string? message = null,
-        bool adaptiveAssessment = false) =>
-        WorkflowItemOutcome.Suspend(new("cloud.fileProcessing", JsonSerializer.Serialize(new
+        bool adaptiveAssessment = false)
+    {
+        var archiveSignatures = reason is FileArtifactDeliveryAssessment.ResultUncertain or FileArtifactDeliveryAssessment.ReviewRequired
+            ? await FileArtifactDeliveryAssessment.ReadReviewSignaturesAsync(artifact, files, ct)
+            : null;
+        return WorkflowItemOutcome.Suspend(new("cloud.fileProcessing", JsonSerializer.Serialize(new
         {
             targetId = target.Id, target.Title, reason, message = message ?? reason,
             artifactId = review.ArtifactId, fingerprint = review.Fingerprint,
-            reviewToken = ReviewToken(target.Id, review with {WaitReason = reason}), files,
+            reviewToken = ReviewToken(target.Id, review with {WaitReason = reason}), files, archiveSignatures,
             deliveryReview = true, automaticOuterPackaging = review.AutomaticOuter,
             recursiveOptions = review.Limits, archiveId = review.ArchiveId,
             extractionPlanJson = review.PlanJson ?? "", canEditPlan = CanRevise(reason),
@@ -480,4 +555,5 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
             allowedArchivePolicies = new[] {"instructions", "keep"}, allowedActions = FileProcessingResumeActions.Allowed(reason)
         }, WorkflowJson.Options), Replace(workset, target with
         {DeliveryReview = review with {WaitReason = reason}, ProcessingWaitReason = reason, Problem = reason})));
+    }
 }

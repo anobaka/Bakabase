@@ -127,6 +127,7 @@ public class WorkflowDefinitionService<TDbContext> : IWorkflowDefinitionService
                 await Runs.Where(r => r.WorkflowDefinitionId == id && r.Status == WorkflowRunStatus.Pending)
                     .ExecuteUpdateAsync(s => s
                         .SetProperty(r => r.Status, _ => WorkflowRunStatus.Cancelled)
+                        .SetProperty(r => r.PendingSignalJson, (string?)null)
                         .SetProperty(r => r.CompletedAt, _ => DateTime.Now)
                         .SetProperty(r => r.ErrorMessage, _ => "Cancelled: the workflow was disabled"), ct);
             }

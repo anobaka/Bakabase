@@ -20,6 +20,7 @@ public static class AcquisitionPlanRegistration
         services.AddScoped<AcquisitionPlanService>();
         services.AddScoped<AcquisitionArchivePasswordEvidence>();
         services.AddScoped<AcquisitionFileProcessingEvidence>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowRunSchedulingPolicy, AcquisitionWorkflowSchedulingPolicy>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowRunSourceSchedulingPolicy, AcquisitionWorkflowSchedulingPolicy>());
         services.AddScoped<Bakabase.Service.Components.FileProcessing.IArtifactCleanupOwnerScopeProvider, AcquisitionArtifactCleanupOwnerScope>();
         services.AddScoped<AcquisitionCreationOriginService>();
@@ -30,6 +31,7 @@ public static class AcquisitionPlanRegistration
             provider.GetRequiredService<Bakabase.InsideWorld.Business.BakabaseDbContext>(),
             () => provider.GetRequiredService<IAcquisitionRuntimeDownloadReader>()));
         services.AddScoped<AcquisitionRuntimeOverviewService>();
+        services.AddSingleton<AcquisitionConfirmationRuntime>();
         services.AddScoped<AcquisitionSourceAttentionProjection>();
         services.AddScoped<AcquisitionTaskSearchService>();
         services.AddSingleton<AcquisitionTaskDeletePreviewStore>();
@@ -46,6 +48,8 @@ public static class AcquisitionPlanRegistration
         services.AddScoped<AcquisitionRecoveryService>();
         services.AddSingleton<AcquisitionLocalRecoveryBatchPreviewStore>();
         services.AddSingleton<IAcquisitionBatchCapacityReader, AcquisitionBatchCapacityReader>();
+        services.AddScoped<IAcquisitionBatchActionProvider, AcquisitionTransferReplayAction>();
+        services.AddScoped<IAcquisitionBatchActionProvider, AcquisitionReanalysisAction>();
         services.AddScoped<AcquisitionLocalRecoveryBatchService>();
         services.AddHostedService<AcquisitionLocalRecoveryBatchWorker>();
         services.AddScoped<AcquisitionLocalFilesRecoveryService>();

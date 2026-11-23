@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Service.Components.FileProcessing;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,7 +19,10 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 public sealed partial class AcquisitionTaskDeletionCleanupService
 {
     private sealed record StageCleanupSelection(string Id, string PartId, string Stage, AcquisitionStageDirectory Entry,
-        bool Current = false, FileProcessingWorkspaceResolver.Location? Workspace = null);
+        bool Current = false, FileProcessingWorkspaceResolver.Location? Workspace = null, bool HistoricalDeliveryLayout = false)
+    {
+        public AcquisitionCleanupScopes Scopes { get; init; } = Stage == "delivery" ? AcquisitionCleanupScopes.Delivery : AcquisitionCleanupScopes.Intermediate;
+    }
     private sealed record StageCleanupSelectionSet(IReadOnlyList<StageCleanupSelection> Selected,
         IReadOnlyList<string> ProtectedRoots, IReadOnlyList<string> ConfiguredRoots,
         IReadOnlyList<string> PublicationRoots, IReadOnlyList<string> DeliveryLayoutRoots);
@@ -57,11 +61,11 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         bool Selected(string stage) => stage == "delivery" ? deleteDeliveredFiles : cleanupIntermediates;
         static string Full(string path) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
         void Add(string identity, string partId, string stage, AcquisitionStageDirectory entry, bool isCurrent = false,
-            FileProcessingWorkspaceResolver.Location? workspace = null)
+            FileProcessingWorkspaceResolver.Location? workspace = null, bool historicalDeliveryLayout = false)
         {
             var normalized = entry with {Directory = Full(entry.Directory)};
             if (!Selected(stage)) {protectedRoots.Add(normalized.Directory); return;}
-            selections.Add(new(identity, partId, stage, normalized, isCurrent, workspace));
+            selections.Add(new(identity, partId, stage, normalized, isCurrent, workspace, historicalDeliveryLayout));
         }
         foreach (var plan in plans)
         {
@@ -87,8 +91,12 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 if (!Selected(stage)) {protectedRoots.Add(Full(entry.Directory)); continue;}
                 if (!isCurrent && entry.Evidence is not ("taskAllocation" or "taskLayout" or "downloadRecord" or
                         "userDirectoryRevision" or "plannedDelivery" or "deliveryRecord")) continue;
+                var historicalDeliveryLayout = !isCurrent && stage == "delivery" &&
+                    plan.DeliveryLayout is { } delivery && delivery.TaskId == task.Id &&
+                    delivery.PartDirectories.TryGetValue(partId, out var partPath) &&
+                    ArtifactManifestFiles.PathComparer.Equals(Full(partPath), Full(entry.Directory));
                 Add("binding:" + ArtifactManifestFiles.Hash(JsonSerializer.Serialize(new {partId, stage, entry})),
-                    partId, stage, entry, isCurrent);
+                    partId, stage, entry, isCurrent, historicalDeliveryLayout: historicalDeliveryLayout);
             }
         }
         var ownerKeys = owners.Select(id => id.ToString(CultureInfo.InvariantCulture)).ToArray();
@@ -115,6 +123,22 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             if (Part(artifact.OperationId) is { } partId)
                 Add("publication:" + id, partId, "delivery", new(directory, "borrowed", "publicationRecord"));
         }
+        // A reviewed cross-volume resume keeps its original source on disk. Retain that exact
+        // directory in task-wide cleanup history even after the native writer points elsewhere.
+        var retainedSources = await (from op in db.CloudDownloadOperations.AsNoTracking()
+            join native in db.DownloadTasks.AsNoTracking() on op.DownloadTaskId equals native.Id
+            where owners.Contains(op.WorkflowRunId) && op.Kind == "download" && native.Options == op.RequestJson &&
+                native.Options != null && native.Options.Contains("\"reuseInventoryFingerprint\"")
+            select new {op.Id, op.TargetId, native.DownloadPath, native.Options, Site = native.Id}).ToListAsync(ct);
+        foreach (var row in retainedSources.Where(r => allPartIds.Contains(r.TargetId, StringComparer.Ordinal)))
+        {
+            var request = JsonSerializer.Deserialize<CloudDownloadRequest>(row.Options!, JsonSerializerOptions.Web);
+            if (request == null || request.OperationId != row.Id ||
+                !ArtifactManifestFiles.PathComparer.Equals(CloudDownloadDestinations.ExecutionDirectory(request), Full(row.DownloadPath))) continue;
+            foreach (var revision in CloudDownloadDestinations.RetainedSources(request))
+                Add("transport-source:" + row.Site + ":" + revision.RevisionId, row.TargetId, "download",
+                    new(revision.PreviousDirectory, "borrowed", "retainedDownloadSource") {BindingId = revision.RevisionId});
+        }
         if (cleanupIntermediates)
         {
             // A detached current download binding does not erase the native transport's
@@ -136,15 +160,16 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 {
                     var partId = Part(operation.Id);
                     if (partId == null) continue;
-                    async Task AddLocation(FileProcessingWorkspaceResolver.Location? location)
+                    void AddLocation(FileProcessingWorkspaceResolver.Location? location)
                     {
-                        if (location == null || !await workspaces.HasOwnedLocationAsync(location, ct)) return;
+                        if (location == null) return;
                         Add("workspace:" + location.Kind + ":" + location.Key + ":" + location.Attempt,
                             partId, "processing", new(location.Directory, "exclusive", "ownedWorkspace"), workspace: location);
                     }
                     // The durable locator and installation marker prove the exact private
                     // attempt. No probing of directory names or broad .bakabase-work roots.
-                    await AddKnownLocation(async () => await workspaces.InspectExistingAsync("operations", operation.Id, operation.Attempt, ct), AddLocation);
+                    await AddKnownLocation(() => workspaces.InspectOwnedLocationForStageCleanupAsync("operations", operation.Id,
+                        operation.Attempt, ct), AddLocation);
                     if (operation.OutputArtifactId == null || await artifacts.GetArtifactAsync(operation.OutputArtifactId, ct) is not { } output ||
                         output.Kind != "processedFiles" || !output.Managed) continue;
                     var metadata = JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(output.MetadataJson ?? "null", JsonSerializerOptions.Web);
@@ -153,24 +178,24 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                     if (processingPlan == null) continue;
                     var configured = metadata.WorkspaceDirectoryScope?.Directory ?? metadata.StoragePolicy?.ProcessingWorkspaceDirectory;
                     await AddKnownLocation(async () =>
-                        await workspaces.InspectCompletedCheckpointAsync(FileArtifactProcessor.CheckpointKey(operation.InputFingerprint, processingPlan),
+                        await workspaces.InspectOwnedCheckpointForStageCleanupAsync(FileArtifactProcessor.CheckpointKey(operation.InputFingerprint, processingPlan),
                             operation.Id, operation.Attempt, configured, ct) ??
-                        await workspaces.InspectCompletedCheckpointAsync(ArtifactManifestFiles.Hash(operation.InputFingerprint + "\n" + metadata.PlanJson),
+                        await workspaces.InspectOwnedCheckpointForStageCleanupAsync(ArtifactManifestFiles.Hash(operation.InputFingerprint + "\n" + metadata.PlanJson),
                             operation.Id, operation.Attempt, configured, ct), AddLocation);
                 }
             }
         }
         // Prefer the current binding for exact duplicates. It remains visible as the
         // task's ordinary stage, while authenticated larger historical roots may cover it.
-        var distinct = selections.OrderByDescending(s => s.Current).GroupBy(s => s.Entry.Directory, ArtifactManifestFiles.PathComparer)
-            .Select(g => g.First()).ToArray();
+        var distinct = selections.OrderByDescending(s => s.Entry.Evidence == "retainedDownloadSource").ThenByDescending(s => s.Current).GroupBy(s => s.Entry.Directory, ArtifactManifestFiles.PathComparer)
+            .Select(g => g.First() with {Scopes = g.Aggregate(AcquisitionCleanupScopes.None, (scopes, entry) => scopes | entry.Scopes)}).ToArray();
         return new(distinct, protectedRoots.ToArray(), configuredRoots.ToArray(), publicationRoots.ToArray(), layoutRoots.ToArray());
     }
 
     private static async Task AddKnownLocation(Func<Task<FileProcessingWorkspaceResolver.Location?>> read,
-        Func<FileProcessingWorkspaceResolver.Location?, Task> add)
+        Action<FileProcessingWorkspaceResolver.Location?> add)
     {
-        try { await add(await read()); }
+        try { add(await read()); }
         // Missing locators are not permission to guess a parent. Existing stage bindings
         // still report unavailable storage; private locations without proof stay untouched.
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException) { }

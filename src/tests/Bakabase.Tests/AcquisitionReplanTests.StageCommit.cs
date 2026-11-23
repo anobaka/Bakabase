@@ -17,7 +17,7 @@ namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionReplanTests
 {
-    private async Task<(AcquisitionPlanTaskDetail Task, int RunId, ArtifactRecord Source)> StageCommitInput(bool reused, bool extracted = false)
+    private async Task<(AcquisitionPlanTaskDetail Task, int RunId, ArtifactRecord Source)> StageCommitInput(bool reused, bool extracted = false, bool emptyDirectory = false)
     {
         var (task, run, _) = await Failed();
         var stage = Directory.CreateDirectory(Path.Combine(_root, "canonical-processing")).FullName;
@@ -41,10 +41,11 @@ public sealed partial class AcquisitionReplanTests
             await File.WriteAllTextAsync(Path.Combine(stage, "license.key"), "keep original borrowed key");
         }
         await File.WriteAllTextAsync(Path.Combine(stage, "unknown-extra.txt"), "not selected by processing");
+        var directories = emptyDirectory ? new[] {Directory.CreateDirectory(Path.Combine(source, "extras", "empty")).FullName} : [];
         var artifact = await Artifacts.AdoptAsync(new("processed-for-stage", "stage-original-intent", "files.process", "source-fingerprint"),
             new(source, files, "processedFiles", true, MetadataJson: JsonSerializer.Serialize(
                 new FileArtifactProcessingMetadata(null, "{\"requirement\":\"notRequired\"}", null, ArchiveCount: extracted ? 1 : 0,
-                    StoragePolicy: new() {CleanupIntermediates = true}), WorkflowJson.Options)), "test");
+                    StoragePolicy: new() {CleanupIntermediates = true}), WorkflowJson.Options), Directories: directories), "test");
         await new ArtifactOperationBindingService(Db).BindAsync("workflow", run.Id.ToString(), "main:process:complete", artifact.OperationId);
         return (task, run.Id, artifact);
     }

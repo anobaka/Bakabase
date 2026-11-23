@@ -684,6 +684,19 @@ public sealed partial class RecursiveArchiveExecutor(IArchiveExtractionService e
         long previousBytes, int previousFiles) : IArchiveExtractionService
     {
         public string? LimitReason { get; private set; }
+        public async Task<long?> TryGetExpandedBytesAsync(ArchiveExtractionRequest request, CancellationToken ct)
+        {
+            var bytes = await inner.TryGetExpandedBytesAsync(request, ct);
+            ct.ThrowIfCancellationRequested();
+            if (bytes > options.MaxExpandedBytes - previousBytes)
+            {
+                // More disk space cannot make this group fit the recursive plan's own limit.
+                LimitReason = "ExpandedBytesLimit";
+                throw new OperationCanceledException(LimitReason);
+            }
+            return bytes;
+        }
+
         public Task<ArchivePasswordProbe> ProbePasswordAsync(string entry, IReadOnlyList<string?> candidates,
             Action<string>? output, CancellationToken ct) => inner.ProbePasswordAsync(entry, candidates, output, ct);
         public Task<ArchivePasswordProbe> ProbePasswordAsync(string entry, IReadOnlyList<string?> candidates,

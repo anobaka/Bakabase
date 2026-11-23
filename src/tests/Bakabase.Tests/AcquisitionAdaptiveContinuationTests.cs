@@ -101,6 +101,42 @@ public sealed class AcquisitionAdaptiveContinuationTests
     }
 
     [TestMethod]
+    public async Task Queued_reanalysis_changes_only_the_reviewed_assessment_node()
+    {
+        var services = await TestServiceBuilder.BuildServiceProvider();
+        var db = services.GetRequiredService<BakabaseDbContext>();
+        var run = Waiting("fs.assessDelivery", """{"reason":"FILE_DELIVERY_RESULT_UNCERTAIN","targetId":"part","artifactId":"known"}""");
+        var plan = WorkflowRunPlans.Read(run.PlanSnapshotJson)!;
+        var reviewed = plan.Nodes.Single();
+        var other = reviewed with {NodeId = "another-assessment", ConfigJson = """{"enableAdaptiveAssessment":true,"maxAdaptiveIterations":1}"""};
+        run.CurrentStepIndex = 1;
+        run.PlanSnapshotJson = WorkflowRunPlans.Serialize(plan with {Nodes = [other, reviewed]});
+        db.Add(run);
+        await db.SaveChangesAsync();
+        var task = new AcquisitionTaskDbModel {WorkflowRunId = run.Id, PlanRevision = 2};
+        db.Add(task);
+        await db.SaveChangesAsync();
+        Assert.IsFalse(AcquisitionAdaptiveMigrationService.Inspect(task, run).AlreadyEnabled);
+        var service = new AcquisitionAdaptiveMigrationService(db, new AssessmentHost());
+        var option = await service.PreviewForBatchAsync(task, run, 4, default);
+        Assert.IsNotNull(option);
+        var executed = await service.ApplyForBatchAsync(task.Id, option.Value.Fingerprint, 4, default);
+        Assert.AreEqual((run.Id, 2), executed);
+        var updated = WorkflowRunPlans.Read((await db.WorkflowRuns.FindAsync(run.Id))!.PlanSnapshotJson)!.Nodes;
+        Assert.AreEqual(System.Text.Json.JsonSerializer.Serialize(other), System.Text.Json.JsonSerializer.Serialize(updated[0]));
+        using var config = System.Text.Json.JsonDocument.Parse(updated[1].ConfigJson);
+        Assert.AreEqual(4, config.RootElement.GetProperty("maxAdaptiveIterations").GetInt32());
+    }
+
+    private sealed class AssessmentHost : Bakabase.Modules.Workflow.Abstractions.Services.IWorkflowRunResumer
+    {
+        public Task ReprocessWaitingAsync(int runId, CancellationToken ct) => Task.CompletedTask;
+        public Task ResumeAsync(int runId, string signalJson, CancellationToken ct) => throw new AssertFailedException();
+        public Task RequeueAsync(int runId, CancellationToken ct) => throw new AssertFailedException();
+        public Task UpdateWaitAsync(int runId, string reason, string? promptJson, CancellationToken ct) => throw new AssertFailedException();
+    }
+
+    [TestMethod]
     public async Task Preview_cannot_resume_a_different_artifact_at_the_same_cursor()
     {
         var services = await TestServiceBuilder.BuildServiceProvider();

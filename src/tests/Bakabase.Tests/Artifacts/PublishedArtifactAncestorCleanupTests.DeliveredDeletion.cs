@@ -145,10 +145,14 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     private sealed class CleanupDiagnosticLogger : ILogger<AcquisitionTaskDeletionCleanupService>
     {
         internal readonly List<Exception> Errors = [];
+        internal readonly List<string> Messages = [];
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        { if (exception != null) Errors.Add(exception); }
+        {
+            Messages.Add(formatter(state, exception));
+            if (exception != null) Errors.Add(exception);
+        }
     }
 
     [TestMethod]

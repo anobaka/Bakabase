@@ -371,7 +371,7 @@ public sealed class AcquisitionEntryPointsTests
         await using var scope = _sp.CreateAsyncScope();
         var setup = scope.ServiceProvider.GetRequiredService<AcquisitionSetupService>();
         var manager = scope.ServiceProvider.GetRequiredService<IBOptionsManager<AcquisitionOptions>>();
-        Assert.AreEqual(2, new AcquisitionOptions().Concurrency);
+        Assert.AreEqual(20, new AcquisitionOptions().Concurrency);
         await setup.ApplyAsync(new() {AutoPurchaseLimit = 17, MinimumFreeSpaceBytes = 123, PreferredDriveKinds = []});
         var previous = manager.Value with {};
         foreach (var limit in new[] {100, 1})

@@ -4,14 +4,18 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace Bakabase.Abstractions.Components.FileSystem;
 
 public sealed record StorageVolumeCapacity(string VolumePath, long AvailableBytes, long TotalBytes);
+public sealed record VerifiedStorageMount(string Identity, bool NativeFileIdentities);
 
 /// <summary>Read-only actual server-volume measurement, shared by safety checks and capacity display.</summary>
 public static class StorageVolumes
 {
+    internal const string DeploymentMountsVariable = "BAKABASE_DEPLOYMENT_MOUNTS";
+
     /// <summary>
     /// Identity for capacity accounting, distinct from the mount path shown to the user. Linux bind
     /// mounts (including container volumes) can expose one filesystem at several unrelated paths.
@@ -19,31 +23,132 @@ public static class StorageVolumes
     /// pools spanning separate filesystems, such as an APFS container or an overlay's backing store.
     /// </summary>
     public static string CapacityIdentity(StorageVolumeCapacity capacity) => OperatingSystem.IsLinux()
-        ? LinuxCapacityIdentity(capacity.VolumePath, File.ReadLines("/proc/self/mountinfo"))
+        ? LinuxCapacityIdentity(capacity.VolumePath, File.ReadLines("/proc/self/mountinfo"), capacity.TotalBytes,
+            Environment.GetEnvironmentVariable(DeploymentMountsVariable))
         : capacity.VolumePath;
 
-    internal static string LinuxCapacityIdentity(string volumePath, IEnumerable<string> mountInfo)
+    internal static string LinuxCapacityIdentity(string volumePath, IEnumerable<string> mountInfo, long? totalBytes = null,
+        string? deploymentMetadata = null)
     {
         var expected = Path.TrimEndingDirectorySeparator(Path.GetFullPath(volumePath));
-        string? identity = null;
+        var mounts = new List<LinuxMount>();
         foreach (var line in mountInfo)
         {
             var fields = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (fields.Length < 10 || Array.IndexOf(fields, "-", 6) < 6) continue;
-            // mountinfo escapes whitespace and backslash in path fields using these octal values.
-            var mount = fields[4].Replace("\\040", " ").Replace("\\011", "\t")
-                .Replace("\\012", "\n").Replace("\\134", "\\");
-            if (!string.Equals(Path.TrimEndingDirectorySeparator(mount), expected, StringComparison.Ordinal)) continue;
-            var device = fields[2].Split(':');
-            if (device.Length != 2 || !uint.TryParse(device[0], out var major) || !uint.TryParse(device[1], out var minor))
-                throw new IOException("The storage mount identity is invalid.");
-            var candidate = $"linux-device:{major}:{minor}";
-            if (identity != null && identity != candidate)
-                throw new IOException("The storage mount identity is ambiguous.");
-            identity = candidate;
+            if (fields.Length < 10) continue;
+            var separator = Array.IndexOf(fields, "-", 6);
+            if (separator < 6 || separator + 3 >= fields.Length) continue;
+            mounts.Add(new(DecodeMountPath(fields[4]), DecodeMountPath(fields[3]), fields[2],
+                fields[separator + 1] == "virtiofs" && fields[separator + 2] == "mac"));
         }
-        return identity ?? throw new IOException("The storage mount identity is unavailable.");
+        var matching = mounts.Where(m => m.Target == expected).ToArray();
+        if (matching.Length == 0) throw new IOException("The storage mount identity is unavailable.");
+        var selected = matching[0];
+        var device = selected.Device.Split(':');
+        if (device.Length != 2 || !uint.TryParse(device[0], out var major) || !uint.TryParse(device[1], out var minor))
+            throw new IOException("The storage mount identity is invalid.");
+        if (matching.Any(m => m.Device != selected.Device))
+            throw new IOException("The storage mount identity is ambiguous.");
+        var identity = $"linux-device:{major}:{minor}";
+        if (matching.Length != 1 || !selected.IsMacVirtioFs || totalBytes is null)
+            return identity;
+
+        var claims = ReadHostCapacityClaims(deploymentMetadata);
+        if (!claims.TryGetValue(selected.Target, out var selectedClaim) || selectedClaim.Root != selected.Root)
+            return identity;
+        if (totalBytes != selectedClaim.TotalBytes)
+            throw new IOException("The storage mount capacity differs from its host deployment.");
+        var peerTargets = new HashSet<string>(StringComparer.Ordinal);
+        var hostDevices = new Dictionary<long, long>();
+        foreach (var mount in mounts.Where(m => m.Device == selected.Device))
+        {
+            if (!mount.IsMacVirtioFs || !claims.TryGetValue(mount.Target, out var claim) || claim.Root != mount.Root ||
+                !peerTargets.Add(mount.Target))
+                return identity;
+            if (hostDevices.TryGetValue(claim.Device, out var known) && known != claim.TotalBytes)
+                return identity;
+            hostDevices[claim.Device] = claim.TotalBytes;
+        }
+
+        // Different APFS volumes may share one allocation pool. Leave groups with the
+        // same measured total together, even when the host gives them different devices.
+        return $"{identity}:mac-host-capacity:{totalBytes}";
     }
+
+    /// <summary>A single unambiguous Linux mount for these paths. Unknown network mounts and
+    /// nested bind mounts cannot establish isolation for concurrent file operations.</summary>
+    public static VerifiedStorageMount? VerifiedFileMount(string root, IReadOnlyList<string> files)
+    {
+        if (!OperatingSystem.IsLinux()) return null;
+        var capacity = Measure(root);
+        var lines = File.ReadAllLines("/proc/self/mountinfo");
+        var identity = LinuxCapacityIdentity(capacity.VolumePath, lines, capacity.TotalBytes,
+            Environment.GetEnvironmentVariable(DeploymentMountsVariable));
+        string? type = null;
+        var mount = Path.TrimEndingDirectorySeparator(capacity.VolumePath);
+        foreach (var line in lines)
+        {
+            var fields = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var separator = Array.IndexOf(fields, "-", 6);
+            if (separator < 6 || separator + 3 >= fields.Length) return null;
+            var path = DecodeMountPath(fields[4]);
+            if (path == mount)
+            {
+                if (type != null) return null;
+                type = fields[separator + 1];
+            }
+            else if (Under(path, mount) && files.Any(file => file == path || Under(file, path))) return null;
+        }
+        if (type is "ext4" or "ext3" or "xfs" or "btrfs" or "f2fs") return new(identity, NativeFileIdentities: true);
+        // Several host filesystems can share a guest st_dev. Only the host-attested mount
+        // with its backing path, peer devices and measured capacity reconciled is usable.
+        return type == "virtiofs" && identity.Contains(":mac-host-capacity:", StringComparison.Ordinal)
+            ? new(identity, NativeFileIdentities: false) : null;
+
+        static bool Under(string child, string parent) => child.StartsWith(
+            Path.EndsInDirectorySeparator(parent) ? parent : parent + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+    }
+
+    private static string DecodeMountPath(string path) => Path.TrimEndingDirectorySeparator(
+        path.Replace("\\040", " ").Replace("\\011", "\t").Replace("\\012", "\n").Replace("\\134", "\\"));
+
+    private static Dictionary<string, MacHostCapacity> ReadHostCapacityClaims(string? metadata)
+    {
+        var result = new Dictionary<string, MacHostCapacity>(StringComparer.Ordinal);
+        if (metadata is not { Length: > 0 and <= 65536 }) return result;
+        try
+        {
+            using var document = JsonDocument.Parse(metadata);
+            var root = document.RootElement;
+            if (root.GetProperty("schemaVersion").GetInt32() != 1) return result;
+            var mounts = root.GetProperty("mounts");
+            if (mounts.GetArrayLength() > 256) return result;
+            var targets = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var mount in mounts.EnumerateArray())
+            {
+                var target = mount.GetProperty("target").GetString();
+                if (target == null || !target.StartsWith('/')) return [];
+                target = Path.TrimEndingDirectorySeparator(target);
+                if (!targets.Add(target)) return [];
+                if (mount.GetProperty("type").GetString() != "bind" ||
+                    !mount.TryGetProperty("hostCapacity", out var capacity)) continue;
+                var hostRoot = capacity.GetProperty("root").GetString();
+                if (hostRoot == null || !hostRoot.StartsWith('/') ||
+                    !capacity.GetProperty("device").TryGetInt64(out var device) || device < 0 ||
+                    !capacity.GetProperty("totalBytes").TryGetInt64(out var total) || total <= 0)
+                    return [];
+                result.Add(target, new(Path.TrimEndingDirectorySeparator(hostRoot), device, total));
+            }
+        }
+        catch (Exception e) when (e is JsonException or InvalidOperationException or KeyNotFoundException or FormatException)
+        {
+            return [];
+        }
+        return result;
+    }
+
+    private sealed record LinuxMount(string Target, string Root, string Device, bool IsMacVirtioFs);
+    private sealed record MacHostCapacity(string Root, long Device, long TotalBytes);
 
     public static StorageVolumeCapacity Measure(string path)
     {

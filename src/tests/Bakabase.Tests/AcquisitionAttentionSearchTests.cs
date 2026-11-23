@@ -56,6 +56,45 @@ public sealed partial class AcquisitionAttentionSearchTests
     }
 
     [TestMethod]
+    public async Task LiveCompletedTasksShowPendingRemovalOnlyWhileTheirAuthorizedCleanupIsWaiting()
+    {
+        var receipt = DeferredStageCleanup.Encode([Guid.NewGuid().ToString("N")], false);
+        AcquisitionTaskDbModel Completed(string title, string? reason = null, string? intermediate = null,
+            string? delivery = null) => new()
+        {
+            Title = title, BuilderId = "test", Status = AcquisitionStatus.Completed, Phase = "completed",
+            CompletedAt = DateTime.UtcNow, DeletedCleanupReasons = reason, DeletedIntermediateCleanup = intermediate,
+            DeletedDeliveryCleanup = delivery
+        };
+        var pending = Completed("Pending", DeferredStageCleanup.AwaitRemoval, receipt, AcquisitionTaskDeletionService.CompleteCleanup);
+        var deliveryOnly = Completed("Delivery only", DeferredStageCleanup.AwaitRemoval, AcquisitionTaskDeletionService.NoCleanup, receipt);
+        var review = Completed("Manual review", DeferredStageCleanup.RequiresReview, AcquisitionTaskDeletionService.IncompleteCleanup,
+            AcquisitionTaskDeletionService.CompleteCleanup);
+        _db.AcquisitionTasks.AddRange(pending, deliveryOnly, review, Completed("Normal"),
+            Completed("Unbound review", DeferredStageCleanup.RequiresReview),
+            Completed("Missing receipt", DeferredStageCleanup.AwaitRemoval),
+            Completed("Damaged receipt", DeferredStageCleanup.AwaitRemoval, "smbPending:bad", AcquisitionTaskDeletionService.NoCleanup),
+            Completed("Mixed review", DeferredStageCleanup.AwaitRemoval, receipt, AcquisitionTaskDeletionService.IncompleteCleanup));
+        await _db.SaveChangesAsync();
+        var page = await _search.SearchAsync(new(Stage: "completed"));
+        Assert.AreEqual(8, page.TotalCount);
+        CollectionAssert.AreEquivalent(new[] {review.Id}, page.TaskFacts.Where(x => x.Value.Contains("fileCleanupNeedsReview")).Select(x => x.Key).ToArray());
+        CollectionAssert.AreEquivalent(new[] {pending.Id, deliveryOnly.Id},
+            page.TaskFacts.Where(x => x.Value.Contains("awaitingFileRelease")).Select(x => x.Key).ToArray());
+        Assert.AreEqual(2, page.FactCounts["awaitingFileRelease"]);
+
+        pending.DeletedCleanupReasons = DeferredStageCleanup.RequiresReview;
+        deliveryOnly.DeletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        var refreshed = await _search.SearchAsync(new(Stage: "completed"));
+        Assert.AreEqual(7, refreshed.TotalCount);
+        Assert.AreEqual(2, refreshed.FactCounts["fileCleanupNeedsReview"]);
+        Assert.IsFalse(refreshed.TaskFacts[pending.Id].Contains("awaitingFileRelease"));
+        Assert.IsFalse(refreshed.TaskFacts.ContainsKey(deliveryOnly.Id));
+        Assert.AreEqual(0, refreshed.FactCounts["awaitingFileRelease"]);
+    }
+
+    [TestMethod]
     public async Task LocalStorageFacetIncludesHistoricalWriteFailuresWithoutMixingCloudCapacityOrShareExpiry()
     {
         var ids = new List<int>();
@@ -318,9 +357,46 @@ public sealed partial class AcquisitionAttentionSearchTests
         _db.AcquisitionTasks.Add(new() {Title = "Draft", BuilderId = "test", Phase = "preparing", Status = AcquisitionStatus.Waiting});
         await _db.SaveChangesAsync();
         var page = await _search.SearchAsync(new());
-        Assert.AreEqual(1, page.AttentionCounts["fileProcessing"]); Assert.AreEqual(1, page.AttentionCounts["planNeedsInput"]);
+        Assert.AreEqual(1, page.AttentionCounts["fileProcessing"]); Assert.AreEqual(1, page.AttentionCounts["configurationRequired"]);
         Assert.AreEqual(1, page.StageCounts["preparing"]);
         Assert.AreEqual(0, page.Items.Single(t => t.Title == "Draft").AttentionTags.Count);
+    }
+
+    [TestMethod]
+    public async Task UnsupportedSourceTasksAreFilterableWithoutInventingDownloadsOrBlockingProcessingProblems()
+    {
+        var unsupported = new[] {"transfer.it", "weiyun"}.Select(provider => new AcquisitionTaskDbModel
+        {
+            Title = provider, BuilderId = "test", Phase = "attention", Status = AcquisitionStatus.Waiting,
+            BuilderStateJson = JsonSerializer.Serialize(new
+            {
+                issues = new[]
+                {
+                    new {code = "SOURCE_UNSUPPORTED", message = "No adapter", blocking = true},
+                    new {code = "PROCESSING_CONFIRMATION_REQUIRED", message = "Review later", blocking = false}
+                }
+            }, Json)
+        }).ToArray();
+        _db.AcquisitionTasks.AddRange(unsupported);
+        _db.AcquisitionTasks.Add(new()
+        {
+            Title = "No download information", BuilderId = "test", Phase = "attention", Status = AcquisitionStatus.Waiting,
+            BuilderStateJson = "{\"issues\":[{\"code\":\"BUILDER_NO_RESULTS\",\"message\":\"No candidates\",\"blocking\":true}]}"
+        });
+        await _db.SaveChangesAsync();
+        var page = await _search.SearchAsync(new(AttentionTag: "downloadSourceUnsupported", PageSize: 1));
+        Assert.AreEqual(2, page.TotalCount);
+        Assert.AreEqual(1, page.Items.Count);
+        CollectionAssert.AreEquivalent(unsupported.Select(t => t.Id).ToArray(), page.FilteredTaskIds.ToArray());
+        CollectionAssert.AreEqual(new[] {"downloadSourceUnsupported"}, page.Items.Single().AttentionTags.ToArray());
+        Assert.AreEqual(2, page.AttentionCounts["downloadSourceUnsupported"]);
+        Assert.AreEqual(1, page.AttentionCounts["downloadInfoMissing"]);
+        Assert.AreEqual(0, page.AttentionCounts["sourceUnavailable"]);
+        Assert.AreEqual(0, page.AttentionCounts["fileProcessing"]);
+        Assert.IsFalse(page.AttentionCounts.ContainsKey("planNeedsInput"));
+        Assert.AreEqual(0, page.FactCounts["downloadedPending"]);
+        Assert.AreEqual(0, (await _search.SearchAsync(new(AttentionTag: "downloadSourceUnsupported", Facts: ["downloadedPending"]))).TotalCount);
+        Assert.AreEqual("No download information", (await _search.SearchAsync(new(AttentionTag: "downloadInfoMissing"))).Items.Single().Title);
     }
 
     [TestMethod]
@@ -390,6 +466,7 @@ public sealed partial class AcquisitionAttentionSearchTests
     [DataRow("BAIDU_SHARE_EXPIRED", "SOURCE_SHARE_EXPIRED", "confirmedUnavailable", "sourceUnavailable")]
     [DataRow("BAIDU_SHARE_ACCESS_CODE_REJECTED", "SOURCE_ACCESS_CODE_REJECTED", "accessRequired", "accessRequired")]
     [DataRow("PIXELDRAIN_NETWORK_ERROR", "SOURCE_NETWORK_ERROR", "temporarilyUnavailable", "networkIssue")]
+    [DataRow("PIXELDRAIN_TRANSFER_QUOTA_EXCEEDED", "SOURCE_DOWNLOAD_QUOTA_EXCEEDED", "unknown", "downloadQuotaExceeded")]
     [DataRow("BAIDU_SHARE_NETWORK_REQUIRES_PROXY", "SOURCE_NETWORK_REQUIRES_PROXY", "unknown", "networkIssue")]
     public void ProviderAndNormalizedReasonsShareOneClassification(string raw, string normalized, string status, string tag)
     {

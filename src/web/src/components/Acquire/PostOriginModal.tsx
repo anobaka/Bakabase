@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Modal, Spinner } from "@/components/bakaui";
 import ExternalLink from "@/components/ExternalLink";
+import NavigateButton from "@/components/NavigateButton";
 import BApi from "@/sdk/BApi";
 import PostDetails from "@/pages/post-parser/components/PostDetails";
 import { getDownloadInfo } from "@/pages/post-parser/results";
 import type { PostParserTask } from "@/core/models/PostParserTask";
+import { browserExternalUrl } from "@/utils/openExternalUrl";
 
 function storedCredentials(post: PostParserTask) {
   const info = getDownloadInfo(post);
@@ -46,10 +48,14 @@ export default function PostOriginModal({ id, revision, href, onClose }: {
     return () => controller.abort();
   }, [id, retry]);
   const credentials = post && storedCredentials(post);
+  const originalUrl = href ?? (post?.link ? browserExternalUrl(post.link) : undefined);
   return (
     <Modal visible size="4xl" title={t("acquisition.origin.postTask", { id })}
       onClose={onClose} footer={<Button variant="light" onPress={onClose}>{t("common.action.close")}</Button>}>
-      {href && <ExternalLink href={href} className="w-fit text-sm">{t("acquisition.origin.openPost")}</ExternalLink>}
+      <div className="flex flex-wrap items-center gap-2">
+        {originalUrl && <ExternalLink href={originalUrl} className="text-sm">{t("acquisition.origin.openPost")}</ExternalLink>}
+        <NavigateButton to={`/post-parser?taskId=${id}`}>{t("acquisition.origin.openPostTask")}</NavigateButton>
+      </div>
       {failed ? (
         <div role="alert" className="flex items-center gap-2 text-sm">
           {t("acquisition.origin.postUnavailable")}

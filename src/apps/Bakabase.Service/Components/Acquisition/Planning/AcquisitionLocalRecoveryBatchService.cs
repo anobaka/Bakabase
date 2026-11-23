@@ -27,6 +27,7 @@ using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.FileProcessing;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
@@ -37,22 +38,32 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
     AcquisitionLocalFilesRecoveryService localFiles, AcquisitionPlanService plans,
     IBOptions<AcquisitionOptions> options, IUserStoragePolicy storage, IAcquisitionBatchCapacityReader capacity,
     AcquisitionLocalRecoveryBatchPreviewStore previews, BTaskManager? tasks = null,
-    AcquisitionContinuationService? continuations = null)
+    AcquisitionContinuationService? continuations = null, IServiceScopeFactory? scopeFactory = null,
+    IEnumerable<IAcquisitionBatchActionProvider>? actionProviders = null)
 {
+    private const int PreviewConcurrency = 4;
+    private readonly IReadOnlyDictionary<string, IAcquisitionBatchActionProvider> _actions =
+        (actionProviders ?? []).ToDictionary(provider => provider.Action, StringComparer.Ordinal);
+
     private sealed record Checked(AcquisitionLocalRecoveryBatchPreviewRow Row,
-        AcquisitionLocalRecoveryBatchPreviewStore.Evidence? Evidence = null, string? ProcessingPlacementStamp = null);
+        AcquisitionLocalRecoveryBatchPreviewStore.Evidence? Evidence = null, string? ProcessingPlacementStamp = null,
+        AcquisitionRecoveryRow? WorkflowRow = null);
+    private sealed record CheckedResult(
+        IReadOnlyList<AcquisitionLocalRecoveryBatchPreviewRow> Rows,
+        IReadOnlyDictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence> Evidence,
+        IReadOnlyDictionary<string, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>? Alternatives = null);
 
     public async Task<AcquisitionLocalRecoveryBatchCapacityPreview> PreviewCapacityAsync(AcquisitionLocalRecoveryBatchCapacityInput input,
         CancellationToken ct = default, Func<string?, Task>? guardDirectory = null)
     {
-        var ids = Ids(input.TaskIds).Order().ToArray();
-        var entry = previews.Get(input.PreviewToken);
-        if (ids.Any(id => !entry.Evidence.ContainsKey(id))) throw new ArgumentException("LOCAL_BATCH_SELECTION_INVALID");
+        var selections = Selections(input.TaskIds, input.Selections);
+        var ids = selections.Select(s => s.TaskId).ToArray();
+        var entry = ForSelection(previews.Get(input.PreviewToken), selections);
         RequireCurrentReserve(entry);
         foreach (var path in ids.SelectMany(id => entry.Evidence[id].WorkingDirectories.Concat(entry.Evidence[id].DeliveryDirectories)).Distinct())
         {ct.ThrowIfCancellationRequested(); if (guardDirectory != null) await guardDirectory(path);}
         var volumes = SelectionCapacity(entry, ids, input.ReserveMode ?? AcquisitionSpaceReserve.Inherit);
-        return new(input.PreviewToken, ids, volumes, volumes.Any(v => v.ExceedsUsable), volumes.Any(v => v.EstimateIncomplete));
+        return new(input.PreviewToken, ids, volumes, volumes.Any(v => v.BlocksAdmission), volumes.Any(v => v.EstimateIncomplete), selections);
     }
 
     public async Task<AcquisitionLocalRecoveryBatchPreview> PreviewAsync(AcquisitionLocalRecoveryBatchPreviewInput input,
@@ -60,7 +71,8 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
     {
         var ids = Ids(input.TaskIds);
         var capacityOnly = input.Mode == "capacityOnly";
-        if (capacityOnly && ids.Length != 1 || input.Mode is not ("localOnly" or "automatic" or "capacityOnly") ||
+        var maxAdaptiveIterations = input.MaxAdaptiveIterations ?? 3;
+        if (maxAdaptiveIterations is < 1 or > 5 || capacityOnly && ids.Length != 1 || input.Mode is not ("localOnly" or "automatic" or "capacityOnly") ||
             input.Order is not ("sizeAsc" or "sizeDesc" or "selection"))
             throw new ArgumentException("LOCAL_BATCH_SELECTION_INVALID");
         var mode = capacityOnly ? "automatic" : input.Mode;
@@ -69,31 +81,49 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
         var estimates = await new AcquisitionSizeEstimateProjection(db).ReadAsync(ids, ct);
         var rows = new List<AcquisitionLocalRecoveryBatchPreviewRow>();
         var evidence = new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>();
+        var alternatives = new Dictionary<(int, string), AcquisitionLocalRecoveryBatchPreviewStore.Evidence>();
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(TimeSpan.FromSeconds(45));
-        foreach (var id in ids)
+        // Each item can touch its own scoped DbContext and capability readers. Keep the
+        // bounded deadline, but run independent checks in a few child scopes so a slow
+        // provider does not serialize the whole selection. The parent request scope is
+        // never used concurrently (EF DbContext is not thread-safe).
+        var itemResults = new CheckedResult[ids.Length];
+        var next = -1;
+        var workers = Enumerable.Range(0, scopeFactory == null ? 1 : Math.Min(PreviewConcurrency, ids.Length))
+            .Select(_ => PreviewWorkerAsync()).ToArray();
+        await Task.WhenAll(workers);
+        foreach (var result in itemResults)
         {
-            var estimate = estimates.GetValueOrDefault(id) ?? new(null, "unknown");
-            try
+            rows.AddRange(result.Rows.Select(r => r.AvailableActions != null ? r : r with {AvailableActions = []}));
+            foreach (var pair in result.Evidence) evidence[pair.Key] = pair.Value;
+            if (result.Alternatives != null)
+                foreach (var pair in result.Alternatives) alternatives[(result.Rows.Single().TaskId, pair.Key)] = pair.Value;
+        }
+
+        async Task PreviewWorkerAsync()
+        {
+            while (true)
             {
-                using var item = CancellationTokenSource.CreateLinkedTokenSource(budget.Token);
-                item.CancelAfter(TimeSpan.FromSeconds(4));
-                var (task, run) = await CurrentAsync(id, item.Token);
-                if (task == null) {rows.Add(new(id, null, null, false, "ACQUISITION_TASK_NOT_FOUND", null, true, null, null, null)); continue;}
-                var queue = queueStatuses == null ? null : await QueueReference(task, run, queueStatuses, item.Token);
-                if (queue != null && (mode != "automatic" || !queue.CanRequeue))
-                {rows.Add(new(id, task.Title, run?.Id, false, "LOCAL_BATCH_ALREADY_QUEUED", estimate.Bytes, estimate.Partial, null, null, null, Queue: queue)); continue;}
-                if (!capacityOnly && !await CanReplaceQueue(task, run, item.Token))
-                {rows.Add(new(id, task.Title, run?.Id, false, "LOCAL_BATCH_OUTCOME_UNKNOWN", estimate.Bytes, estimate.Partial, null, null, null, Queue: queue)); continue;}
-                var checkedTask = capacityOnly && AcquisitionContinuationReserve.IsDownload(run)
-                    ? await DownloadCapacityAsync(task, run!, estimate, item.Token, guardDirectory)
-                    : await CheckAsync(task, run, estimate, item.Token, guardDirectory, mode,
-                        verifyFiles: mode != "automatic", restricted: restricted);
-                rows.Add(checkedTask.Row with {Queue = queue});
-                if (checkedTask.Evidence is { } valid) evidence[id] = valid with {QueueStamp = QueueStamp(task)};
+                var index = Interlocked.Increment(ref next);
+                if (index >= ids.Length) return;
+                var id = ids[index];
+                var estimate = estimates.GetValueOrDefault(id) ?? new(null, "unknown");
+                CheckedResult result;
+                if (scopeFactory == null)
+                {
+                    result = await PreviewItemAsync(id, estimate, queueStatuses, capacityOnly, mode, restricted, maxAdaptiveIterations,
+                        budget.Token, ct, guardDirectory);
+                }
+                else
+                {
+                    await using var scope = scopeFactory.CreateAsyncScope();
+                    var worker = scope.ServiceProvider.GetRequiredService<AcquisitionLocalRecoveryBatchService>();
+                    result = await worker.PreviewItemAsync(id, estimate, queueStatuses, capacityOnly, mode, restricted, maxAdaptiveIterations,
+                        budget.Token, ct, guardDirectory);
+                }
+                itemResults[index] = result;
             }
-            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-            {rows.Add(new(id, null, null, false, "RECOVERY_CHECK_INCOMPLETE", estimate.Bytes, true, null, null, null));}
         }
         var ordered = input.Order == "selection" ? rows.ToArray() : rows.OrderBy(r => r.EstimatedBytes == null)
             .ThenBy(r => input.Order == "sizeDesc" ? -r.EstimatedBytes : r.EstimatedBytes).ThenBy(r => r.TaskId).ToArray();
@@ -109,27 +139,85 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
         {
             // Missing/unmounted volumes have no override path. Do not report an unknown
             // capacity as zero free bytes or invite a reserve exemption for an I/O failure.
-            ordered = ordered.Select(r => r.CanQueue ? r with {CanQueue = false, ReasonCode = "LOCAL_BATCH_CAPACITY_UNKNOWN"} : r).ToArray();
-            evidence.Clear(); volumes = [];
+            ordered = ordered.Select(r => r.AvailableActions?.Count > 0
+                ? r with {CanQueue = false, ReasonCode = "LOCAL_BATCH_CAPACITY_UNKNOWN", AvailableActions = [], DefaultAction = null} : r).ToArray();
+            evidence.Clear(); alternatives.Clear(); volumes = [];
         }
         if (capacityOnly)
         {
             // A live capacity read never admits a queue entry or consumes a confirmation token.
-            return new("", DateTimeOffset.UtcNow, ordered.Select(r => r with {CanQueue = false}).ToArray(),
-                volumes, volumes.Any(v => v.ExceedsUsable), volumes.Any(v => v.EstimateIncomplete),
+            return new("", DateTimeOffset.UtcNow, ordered.Select(r => r with {CanQueue = false, AvailableActions = [], DefaultAction = null}).ToArray(),
+                volumes, volumes.Any(v => v.BlocksAdmission), volumes.Any(v => v.EstimateIncomplete),
                 settings.UseEmergencySpaceReserve, settings.MinimumFreeSpaceBytes);
         }
         var preview = new AcquisitionLocalRecoveryBatchPreview(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddMinutes(10),
-            ordered, volumes, volumes.Any(v => v.ExceedsUsable), volumes.Any(v => v.EstimateIncomplete),
+            ordered, volumes, volumes.Any(v => v.BlocksAdmission), volumes.Any(v => v.EstimateIncomplete),
             settings.UseEmergencySpaceReserve, settings.MinimumFreeSpaceBytes);
-        previews.Add(new(preview, evidence, settings.MinimumFreeSpaceBytes));
+        previews.Add(new(preview, evidence, settings.MinimumFreeSpaceBytes) {Alternatives = alternatives, MaxAdaptiveIterations = maxAdaptiveIterations});
         return preview;
+    }
+
+    private async Task<CheckedResult> PreviewItemAsync(int id, AcquisitionSizeEstimate estimate,
+        IReadOnlyDictionary<string, string>? queueStatuses, bool capacityOnly, string mode, bool restricted, int maxAdaptiveIterations,
+        CancellationToken budgetToken, CancellationToken requestToken, Func<string?, Task>? guardDirectory)
+    {
+        try
+        {
+            using var item = CancellationTokenSource.CreateLinkedTokenSource(budgetToken, requestToken);
+            item.CancelAfter(TimeSpan.FromSeconds(4));
+            var (task, run) = await CurrentAsync(id, item.Token);
+            if (task == null)
+                return new([new(id, null, null, false, "ACQUISITION_TASK_NOT_FOUND", null, true, null, null, null)],
+                    new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>());
+            if (mode == "automatic" && IsTransferCursor(run)) item.CancelAfter(TimeSpan.FromSeconds(10));
+            var queue = queueStatuses == null ? null : await QueueReference(task, run, queueStatuses, item.Token);
+            if (queue != null && (mode != "automatic" || !queue.CanRequeue))
+                return new([new(id, task.Title, run?.Id, false, "LOCAL_BATCH_ALREADY_QUEUED", estimate.Bytes,
+                    estimate.Partial, null, null, null, Queue: queue)],
+                    new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>());
+            if (!capacityOnly && !await CanReplaceQueue(task, run, item.Token))
+                return new([new(id, task.Title, run?.Id, false, "LOCAL_BATCH_OUTCOME_UNKNOWN", estimate.Bytes,
+                    estimate.Partial, null, null, null, Queue: queue)],
+                    new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>());
+            var checkedTask = capacityOnly && AcquisitionContinuationReserve.IsDownload(run)
+                ? await DownloadCapacityAsync(task, run!, estimate, item.Token, guardDirectory)
+                : await CheckAsync(task, run, estimate, item.Token, guardDirectory, mode,
+                    verifyFiles: mode != "automatic", restricted: restricted);
+            var evidence = new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>();
+            if (checkedTask.Evidence is { } valid) evidence[id] = valid with {QueueStamp = QueueStamp(task)};
+            var alternatives = new Dictionary<string, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>();
+            if (mode == "automatic" && !capacityOnly && !budgetToken.IsCancellationRequested)
+            {
+                foreach (var action in _actions.Keys)
+                {
+                    try
+                    {
+                        using var limit = CancellationTokenSource.CreateLinkedTokenSource(budgetToken, requestToken);
+                        limit.CancelAfter(TimeSpan.FromSeconds(4));
+                        var option = await CheckActionAsync(task, run, estimate, mode, action, maxAdaptiveIterations,
+                            false, restricted, guardDirectory, limit.Token);
+                        if (option.Evidence != null) alternatives.Add(action, option.Evidence with {QueueStamp = QueueStamp(task)});
+                    }
+                    catch (OperationCanceledException) when (!requestToken.IsCancellationRequested) { }
+                }
+            }
+            var available = evidence.Count == 0 ? alternatives.Keys.ToArray() : alternatives.Keys.Prepend(ContinueAction).ToArray();
+            return new([checkedTask.Row with {Queue = queue, AvailableActions = available,
+                DefaultAction = evidence.Count != 0 ? ContinueAction : null}], evidence, alternatives);
+        }
+        catch (OperationCanceledException) when (!requestToken.IsCancellationRequested)
+        {
+            return new([new(id, null, null, false, "RECOVERY_CHECK_INCOMPLETE", estimate.Bytes, true, null, null, null)],
+                new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>());
+        }
     }
 
     public async Task<AcquisitionLocalRecoveryBatch> ApplyAsync(AcquisitionLocalRecoveryBatchApplyInput input,
         CancellationToken ct = default, Func<string?, Task>? guardDirectory = null, bool restricted = false)
     {
-        var selected = Ids(input.TaskIds).Order().ToArray();
+        var selections = Selections(input.TaskIds, input.Selections);
+        var selected = selections.Select(s => s.TaskId).ToArray();
+        var byId = selections.ToDictionary(s => s.TaskId, s => s.Action);
         var mode = input.ReserveMode ?? (input.AllowStorageOverride ? AcquisitionSpaceReserve.Emergency : AcquisitionSpaceReserve.Inherit);
         if (input.AllowStorageOverride && mode != AcquisitionSpaceReserve.Emergency) throw new ArgumentException("LOCAL_BATCH_SELECTION_INVALID");
         await AcquisitionLocalRecoveryBatchPreviewStore.Gate.WaitAsync(ct);
@@ -137,13 +225,13 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
         var runLocks = new List<SemaphoreSlim>();
         try
         {
-            var entry = previews.Get(input.PreviewToken);
-            if (selected.Any(id => !entry.Evidence.ContainsKey(id))) throw new ArgumentException("LOCAL_BATCH_SELECTION_INVALID");
-            if (entry.BatchId != null)
+            var stored = previews.Get(input.PreviewToken);
+            var entry = ForSelection(stored, selections);
+            if (stored.BatchId != null)
             {
-                if (entry.ReserveMode != mode || !selected.SequenceEqual(entry.Selected!))
+                if (stored.ReserveMode != mode || !selections.SequenceEqual(stored.Selected!))
                     throw new ArgumentException("LOCAL_BATCH_SELECTION_INVALID");
-                return await GetAsync(entry.BatchId, ct);
+                return await GetAsync(stored.BatchId, ct);
             }
             foreach (var id in selected)
             {
@@ -165,6 +253,16 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                     AcquisitionLocalRecoveryQueueEntry.ContentVersion(task, run) != entry.Evidence[id].Version)
                     throw new ArgumentException("ACQUISITION_TASK_CHANGED");
                 var e = entry.Evidence[id];
+                if (e.RecheckCompletedPlacement || e.CheckpointWrite != null)
+                {
+                    // The provider receipt and workspace locators have independent lifetimes
+                    // from the task revision. Recheck both before committing the selected queue.
+                    var checkedTask = await CheckAsync(task, run, new(null, "unknown"), ct, guardDirectory,
+                        e.Mode, verifyFiles: e.CheckpointWrite != null && e.Mode != "automatic", restricted: restricted || e.Restricted);
+                    if (checkedTask.Row.ReasonCode == "LOCAL_BATCH_PATH_FORBIDDEN") throw new UnauthorizedAccessException();
+                    if (checkedTask.Evidence?.StorageStamp != e.StorageStamp || checkedTask.Evidence.CheckpointWrite != e.CheckpointWrite)
+                        throw new ArgumentException("ACQUISITION_TASK_CHANGED");
+                }
                 if (e.AuthorizationStamp != null)
                 {
                     if (continuations == null) throw new ArgumentException("ACQUISITION_TASK_CHANGED");
@@ -209,19 +307,21 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                 var permit = rowMode != AcquisitionSpaceReserve.Inherit;
                 var state = new AcquisitionLocalRecoveryQueueEntry {BatchId = batchId, Version = e.Version, Signal = e.Signal,
                     RecoveryScope = e.Scope, Mode = e.Mode, ActionCategory = e.ActionCategory, VerificationPending = e.VerificationPending,
+                    SelectedAction = byId[row.TaskId], MaxAdaptiveIterations = entry.MaxAdaptiveIterations,
+                    TransferRetryConfirmed = byId[row.TaskId] == AcquisitionTransferReplayAction.Id,
                     AuthorizationStamp = e.AuthorizationStamp, Restricted = restricted || e.Restricted, StorageStamp = e.StorageStamp, WorkingDirectories = e.WorkingDirectories,
                     DeliveryDirectories = e.DeliveryDirectories, CreatedAt = now, UpdatedAt = now, Order = index,
                     WorkflowRunId = task.WorkflowRunId, PlanRevision = task.PlanRevision,
                     AllowStorageOverride = rowMode == AcquisitionSpaceReserve.Emergency, ReserveMode = rowMode, CanOverrideStorage = e.CanOverrideStorage,
                     OverrideExpiresAt = permit ? now.AddHours(24) : null, EstimatedBytes = row.EstimatedBytes,
-                    EstimateIncomplete = e.EstimateIncomplete, MinimumFreeBytes = entry.MinimumFreeBytes};
+                    EstimateIncomplete = e.EstimateIncomplete, CheckpointWrite = e.CheckpointWrite, MinimumFreeBytes = entry.MinimumFreeBytes};
                 var (_, run) = await CurrentAsync(task.Id, ct);
                 state = state with {Version = AcquisitionLocalRecoveryQueueEntry.ContentVersion(task with
                     {BuilderStateJson = AcquisitionLocalRecoveryQueueEntry.Write(task.BuilderStateJson, state)}, run)};
                 await SaveAsync(task, state, ct);
             }
             await transaction.CommitAsync(ct);
-            entry.Selected = selected; entry.ReserveMode = mode; entry.BatchId = batchId;
+            stored.Selected = selections; stored.ReserveMode = mode; stored.BatchId = batchId;
             return await GetAsync(batchId, ct);
         }
         finally
@@ -265,6 +365,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                     await guardDirectory(path);
             foreach (var original in rows)
             {
+                if (AcquisitionLocalRecoveryQueueEntry.Read(original)!.Status is "starting" or "running") continue;
                 var gate = AcquisitionTaskGate.For(original.Id); await gate.WaitAsync(ct);
                 try
                 {
@@ -282,12 +383,13 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                         // A new explicit continue may refresh evidence for the same execution;
                         // it never renews an expired exemption or adopts another revision.
                         if (task!.WorkflowRunId != state.WorkflowRunId || task.PlanRevision != state.PlanRevision)
-                        {await SaveAsync(task, state with {Status = "skipped", ReasonCode = "ACQUISITION_TASK_CHANGED"}, ct); continue;}
-                        var check = await CheckAsync(task, run, new(state.EstimatedBytes, "retained", state.EstimateIncomplete), ct, guardDirectory, state.Mode, restricted: state.Restricted);
+                        {await SaveAsync(task, state.Superseded(), ct); continue;}
+                        var check = await CheckActionAsync(task, run, new(state.EstimatedBytes, "retained", state.EstimateIncomplete),
+                            state.Mode, state.SelectedAction, state.MaxAdaptiveIterations, true, state.Restricted, guardDirectory, ct);
                         if (check.Evidence is not { } e)
                         {await SaveAsync(task, state with {Status = "attention", ReasonCode = check.Row.ReasonCode}, ct); continue;}
                         await SaveAsync(task, state with {Status = "queued", Version = e.Version, Signal = e.Signal,
-                            RecoveryScope = e.Scope, ReasonCode = null, AttemptVersion = null, StorageStamp = e.StorageStamp,
+                            RecoveryScope = e.Scope, ReasonCode = null, AttemptVersion = null, StorageStamp = e.StorageStamp, CheckpointWrite = e.CheckpointWrite,
                             WorkingDirectories = e.WorkingDirectories, DeliveryDirectories = e.DeliveryDirectories,
                             AuthorizationStamp = e.AuthorizationStamp, ActionCategory = e.ActionCategory, VerificationPending = e.VerificationPending}, ct);
                     }
@@ -300,7 +402,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
     }
 
     private async Task<Checked> CheckAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run, AcquisitionSizeEstimate estimate,
-        CancellationToken ct, Func<string?, Task>? guardDirectory = null, string mode = "localOnly", bool verifyFiles = true, bool restricted = false)
+        CancellationToken ct, Func<string?, Task>? guardDirectory = null, string mode = "localOnly", bool verifyFiles = true, bool restricted = false, AcquisitionRecoveryDiagnosis? offered = null, string? offeredScope = null)
     {
         Checked Block(string reason) => new(new(task.Id, task.Title, run?.Id, false, reason, estimate.Bytes, estimate.Partial, null, null, null));
         if (task.DeletedAt != null) return Block("ACQUISITION_TASK_DELETED");
@@ -338,10 +440,11 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             // Changed workspace defaults must not turn an original download retry into adoption
             // of files that do not exist yet. Metadata previews defer the provider recheck to dispatch.
             AcquisitionRecoveryDiagnosis? originalDownloadDiagnosis = null;
-            if (mode == "automatic" && continuations != null && preferCurrentStorage &&
+            if (offered == null && mode == "automatic" && continuations != null && preferCurrentStorage &&
                 run != null && AcquisitionLocalFilesRecoveryReceipt.Awaiting(run))
             {
-                var candidate = await diagnostics.DiagnoseAsync(task, run, ct, verifyFiles);
+                var candidate = await diagnostics.DiagnoseAsync(task, run, ct, verifyFiles,
+                    deferCompletedDownloadVerification: true);
                 if (!candidate.Row.CanContinue && candidate.Row.ManualAction == "inspectSource" &&
                     candidate.Row.CurrentProblemCode != null)
                     return Block(candidate.Row.ReasonCode == "RECOVERY_SOURCE_STILL_BLOCKED"
@@ -352,7 +455,14 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                         verificationOnly: candidate.Row.ReasonCode == "RECOVERY_EXISTING_FILES_VERIFY_REQUIRED") != null)
                     originalDownloadDiagnosis = candidate;
             }
-            if (originalDownloadDiagnosis != null)
+            if (offered != null)
+            {
+                if (run == null || continuations == null) return Block("RECOVERY_CHECKPOINT_UNSUPPORTED");
+                diagnosis = offered;
+                if (!diagnosis.Row.CanContinue) return Block(diagnosis.Row.ReasonCode);
+                scope = offeredScope!; category = "workflow";
+            }
+            else if (originalDownloadDiagnosis != null)
             {
                 diagnosis = originalDownloadDiagnosis;
                 scope = "workflow"; category = "workflow";
@@ -360,7 +470,8 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             else if (mode == "automatic" && run != null && !IsLocalRemainder(run))
             {
                 if (continuations == null) return Block("RECOVERY_CHECKPOINT_UNSUPPORTED");
-                diagnosis = await diagnostics.DiagnoseAsync(task, run, ct, verifyFiles);
+                diagnosis = await diagnostics.DiagnoseAsync(task, run, ct, verifyFiles || IsTransferCursor(run),
+                    deferCompletedDownloadVerification: true);
                 if (!(diagnosis.Row.CanContinue && diagnosis.Row.Action is "resume" or "retry") &&
                     !(mode == "automatic" && !verifyFiles && diagnosis.Row.ReasonCode is "RECOVERY_VERIFY_FILES" or "RECOVERY_RECHECK_SOURCE"))
                     return Block(diagnosis.Row.ReasonCode);
@@ -368,7 +479,8 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             }
             else if (IsLocalRemainder(run) && !preferCurrentStorage)
             {
-                diagnosis = await diagnostics.DiagnoseAsync(task, run, ct, verifyFiles);
+                diagnosis = await diagnostics.DiagnoseAsync(task, run, ct, verifyFiles,
+                    deferCompletedDownloadVerification: true);
                 var pending = mode == "automatic" && !verifyFiles && diagnosis.Row.ReasonCode is "RECOVERY_VERIFY_FILES" or "RECOVERY_RECHECK_SOURCE";
                 if (!pending && (!diagnosis.Row.CanContinue || diagnosis.Row.Action is not ("resume" or "retry")))
                     return Block(diagnosis.Row.ReasonCode);
@@ -382,12 +494,14 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             else
             {
                 diagnosis = await localFiles.DiagnoseAsync(task, run, verifyFiles, ct, guardDirectory);
-                if ((!diagnosis.Row.CanContinue && !(mode == "automatic" && !verifyFiles && diagnosis.Row.ReasonCode == "RECOVERY_VERIFY_FILES" && diagnosis.Row.LocalFiles != null)) || diagnosis.Row.Action != "localFiles")
+                var pending = !verifyFiles && diagnosis.Row.ReasonCode == "RECOVERY_VERIFY_FILES" && diagnosis.Row.LocalFiles != null;
+                if ((!diagnosis.Row.CanContinue && !pending) || diagnosis.Row.Action != "localFiles")
                     return Block(preferCurrentStorage ? "LOCAL_BATCH_STORAGE_REVIEW_REQUIRED" : diagnosis.Row.ReasonCode);
                 scope = "localFiles";
             }
             string[] working, delivery;
             string storageStamp;
+            var completedPlacement = false;
             var firstDownload = diagnosis.InitialDownloadTargets.Count > 0;
             if (firstDownload)
             {
@@ -423,43 +537,71 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                 working = processing ? plan.Parts.Select(p => ArtifactStoragePolicies.Resolve(plan.StoragePolicy ?? new(), p.StoragePolicy).ProcessingWorkspaceDirectory)
                     .Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(ArtifactManifestFiles.PathComparer).ToArray() : [];
                 delivery = plan.DeliveryLayout?.PartDirectories.Values.Distinct(ArtifactManifestFiles.PathComparer).ToArray() ?? [];
-                if (diagnosis.ProcessingStorageRoots.Count > 0)
+                if (processing && diagnosis.ProcessingStorageRoots.Count == 0 && plan.Parts.Any(part =>
+                        string.IsNullOrWhiteSpace(ArtifactStoragePolicies.Resolve(plan.StoragePolicy ?? new(), part.StoragePolicy).ProcessingWorkspaceDirectory)))
                 {
-                    var placement = InspectCheckpointPlacement(run, remainder, diagnosis);
+                    diagnosis = await diagnostics.WithCompletedDownloadPlacementAsync(run, diagnosis, ct);
+                    completedPlacement = diagnosis.CompletedDownloads.Count > 0;
+                }
+                if (diagnosis.ProcessingStorageRoots.Count > 0 || completedPlacement)
+                {
+                    var placement = await InspectCheckpointPlacementAsync(task, run, remainder, diagnosis, ct);
                     if (placement.Reason != null) return Block(placement.Reason);
                     (working, delivery) = (placement.Working, placement.Delivery);
                 }
-                storageStamp = diagnosis.ProcessingPlacementStamp ?? Hash(new {plan.StoragePolicy, plan.DeliveryLayout});
-                if (processing && working.Length == 0) return Block("RECOVERY_LOCAL_STORAGE_REQUIRED");
+                storageStamp = completedPlacement ? Hash(new {Working = working, Delivery = delivery, Receipts =
+                    diagnosis.CompletedDownloads.OrderBy(e => e.Key).Select(e => e.Value.Key)}) :
+                    diagnosis.ProcessingPlacementStamp ?? Hash(new {plan.StoragePolicy, plan.DeliveryLayout});
+                // At a transfer cursor the download destination is already pinned. Older plans
+                // can choose their processing workspace from the resulting download's location.
+                if (processing && working.Length == 0 && !IsTransferCursor(run) && offered == null)
+                    return Block("RECOVERY_LOCAL_STORAGE_REQUIRED");
             }
+            if (offered != null)
+                working = working.Concat(offered.InitialDownloadDirectories).Distinct(ArtifactManifestFiles.PathComparer).ToArray();
             if (!firstDownload && category == "workflow" && AcquisitionContinuationReserve.IsDownload(run))
                 working = working.Concat(await DownloadDirectoriesAsync(run!, ct))
                     .Distinct(ArtifactManifestFiles.PathComparer).ToArray();
-            if (delivery.Length == 0 && originalDownloadDiagnosis == null && !firstDownload)
+            if (delivery.Length == 0 && originalDownloadDiagnosis == null && !firstDownload && offered == null)
                 return Block("RECOVERY_LOCAL_STORAGE_REQUIRED");
             foreach (var path in working.Concat(delivery))
             {
                 storage.EnsurePathAllowed(path); ArtifactManifestFiles.RejectLinks(path);
                 if (guardDirectory != null) await guardDirectory(path);
             }
+            AcquisitionCheckpointWrite? checkpointWrite = null;
+            if (offered == null && scope == "workflow" && diagnosis.CheckpointWrite is {} write &&
+                working.Contains(write.StorageRoot, ArtifactManifestFiles.PathComparer))
+            {
+                if (restricted && continuations != null) await continuations.Guard([write.WritePath], true, ct);
+                if (guardDirectory != null) await guardDirectory(write.WritePath);
+                checkpointWrite = AcquisitionLocalRecoveryBatchCapacity.Bind(write, capacity, storage);
+            }
             var incomplete = estimate.Partial || estimate.Bytes == null || working.Length > 0;
-            return new(new(task.Id, task.Title, run?.Id, true, "LOCAL_BATCH_READY", estimate.Bytes, incomplete, scope,
-                working.FirstOrDefault(), delivery.FirstOrDefault(), category, CanOverrideStorage: category == "localProcessing" || AcquisitionContinuationReserve.IsDownload(run),
-                CurrentStepKind: diagnosis.Row.CurrentStepKind, RecoveryAction: diagnosis.Row.Action ?? "verifyAndResume"),
+            var readyReason = diagnosis.Row.ReasonCode is AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired or
+                "RECOVERY_TRANSFER_RECOVERY_READY" or "RECOVERY_COMPLETED_DOWNLOAD_READY" ? diagnosis.Row.ReasonCode : "LOCAL_BATCH_READY";
+            return new(new(task.Id, task.Title, run?.Id, true, readyReason, estimate.Bytes, incomplete, scope,
+                working.FirstOrDefault(), delivery.FirstOrDefault(), category, CanOverrideStorage: offered == null && (category == "localProcessing" || AcquisitionContinuationReserve.IsDownload(run)),
+                CurrentStepKind: diagnosis.Row.CurrentStepKind, RecoveryAction: diagnosis.TransferRetryTargets.Count > 0
+                    ? "retryTransfer" : diagnosis.Row.Action ?? "verifyAndResume"),
                 new(AcquisitionLocalRecoveryQueueEntry.ContentVersion(task, run), diagnosis.SignalJson, scope,
                     storageStamp, working, delivery, incomplete, mode, category, VerificationPending: !diagnosis.Row.CanContinue,
                     AuthorizationStamp: authorizationStamp, Restricted: restricted,
-                    CanOverrideStorage: category == "localProcessing" || AcquisitionContinuationReserve.IsDownload(run)), diagnosis.ProcessingPlacementStamp);
+                    CanOverrideStorage: offered == null && (category == "localProcessing" || AcquisitionContinuationReserve.IsDownload(run)),
+                    RecheckCompletedPlacement: completedPlacement, CheckpointWrite: checkpointWrite), diagnosis.ProcessingPlacementStamp, diagnosis.Row);
         }
         catch (UnauthorizedAccessException) {return Block("LOCAL_BATCH_PATH_FORBIDDEN");}
         catch (Exception e) when (e is JsonException or ArgumentException or IOException or InvalidOperationException)
         {return Block("RECOVERY_LOCAL_FILES_UNAVAILABLE");}
     }
 
+    private bool IsTransferCursor(WorkflowRunDbModel? run) => run?.CurrentStepIndex is {} index &&
+        diagnostics.IsTransferStep(WorkflowRunPlans.Read(run.PlanSnapshotJson)?.Nodes.ElementAtOrDefault(index)?.Kind);
+
     // Use the same frozen publication and target overrides as the running activities.
     // The editable task plan and today's defaults do not own an existing attempt.
-    private static (string[] Working, string[] Delivery, string? Reason) InspectCheckpointPlacement(
-        WorkflowRunDbModel run, WorkflowRunPlanNode[] remainder, AcquisitionRecoveryDiagnosis diagnosis)
+    private async Task<(string[] Working, string[] Delivery, string? Reason)> InspectCheckpointPlacementAsync(
+        AcquisitionTaskDbModel task, WorkflowRunDbModel run, WorkflowRunPlanNode[] remainder, AcquisitionRecoveryDiagnosis diagnosis, CancellationToken ct)
     {
         var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson);
         var publication = remainder.SingleOrDefault(n => n.Kind == "fs.publishArtifacts");
@@ -473,6 +615,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
         var delivery = targets.Select(t => t.PublishedDirectory ?? t.PublicationTargetDirectory ??
             PublishFileArtifactsActivity.CloudTargetDirectory(workset, t, destination)).Distinct(ArtifactManifestFiles.PathComparer).ToArray();
         var roots = new HashSet<string>(diagnosis.ProcessingStorageRoots, ArtifactManifestFiles.PathComparer);
+        var reviewedInputs = new HashSet<string>(StringComparer.Ordinal);
         foreach (var node in remainder.Where(n => n.Kind is AcquisitionPlanProcessingActivity.ActivityKind or AssessFileArtifactDeliveryActivity.ActivityKind))
         {
             var config = node.Kind == AcquisitionPlanProcessingActivity.ActivityKind ?
@@ -481,9 +624,16 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             var target = workset.Targets.SingleOrDefault(t => t.Id == targetId);
             if (target == null) return ([], [], "RECOVERY_CHECKPOINT_UNSUPPORTED");
             if (target.Excluded) continue;
-            var path = (config?.StoragePolicy ?? target.StoragePolicy)?.ProcessingWorkspaceDirectory;
+            var path = target.ProcessingDirectoryScope?.Directory ?? (config?.StoragePolicy ?? target.StoragePolicy)?.ProcessingWorkspaceDirectory;
             if (!string.IsNullOrWhiteSpace(path)) roots.Add(path);
-            else if (target.Id != diagnosis.ProcessingPartId) return ([], [], "RECOVERY_LOCAL_STORAGE_REQUIRED");
+            else if (target.Id != diagnosis.ProcessingPartId)
+            {
+                if (config == null && reviewedInputs.Contains(target.Id)) continue;
+                var future = config == null ? null : await diagnostics.InspectUpcomingProcessingRootsAsync(task, run, workset, target, config, diagnosis, ct);
+                if (future is not {Count: > 0}) return ([], [], "RECOVERY_LOCAL_STORAGE_REQUIRED");
+                roots.UnionWith(future);
+                reviewedInputs.Add(target.Id);
+            }
         }
         return (roots.Order(ArtifactManifestFiles.PathComparer).ToArray(), delivery, null);
     }
@@ -513,7 +663,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
         if (WorkflowRunPlans.Read(run.PlanSnapshotJson)!.Nodes[run.CurrentStepIndex!.Value].Kind != "download.awaitCompletion") return true;
         using var json = JsonDocument.Parse(signal);
         return json.RootElement.TryGetProperty("observeExistingOnly", out var observe) && observe.ValueKind == JsonValueKind.True &&
-               json.RootElement.EnumerateObject().All(p => p.Name == "observeExistingOnly");
+               json.RootElement.EnumerateObject().All(p => p.Name is "observeExistingOnly" or "completedDownloadReceipts");
     }
     private IReadOnlyList<AcquisitionLocalRecoveryBatchVolume> CapacityFor(IEnumerable<AcquisitionLocalRecoveryBatchCapacity.Item> items, long minimum) =>
         AcquisitionLocalRecoveryBatchCapacity.Inspect(items, minimum, capacity, storage);
@@ -525,7 +675,8 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
     }
 
     private static string ModeFor(AcquisitionLocalRecoveryBatchPreviewStore.Evidence evidence, string mode) =>
-        evidence.ActionCategory == "localProcessing" || evidence.CanOverrideStorage ? mode : AcquisitionSpaceReserve.Inherit;
+        mode == AcquisitionSpaceReserve.Configured || evidence.ActionCategory == "localProcessing" || evidence.CanOverrideStorage
+            ? mode : AcquisitionSpaceReserve.Inherit;
 
     private IReadOnlyList<AcquisitionLocalRecoveryBatchVolume> SelectionCapacity(AcquisitionLocalRecoveryBatchPreviewStore.Entry entry,
         int[] ids, string mode)
@@ -544,7 +695,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
     }
 
     private static AcquisitionLocalRecoveryBatchCapacity.Item Item(AcquisitionLocalRecoveryBatchPreviewStore.Evidence evidence, long? bytes) =>
-        new(evidence.WorkingDirectories, evidence.DeliveryDirectories, bytes, evidence.EstimateIncomplete);
+        new(evidence.WorkingDirectories, evidence.DeliveryDirectories, bytes, evidence.EstimateIncomplete, CheckpointWrite: evidence.CheckpointWrite);
     private static string Hash(object value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value, WorkflowJson.Options))));
     private static int[] Ids(IReadOnlyList<int>? ids)
     {

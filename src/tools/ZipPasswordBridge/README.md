@@ -14,8 +14,9 @@ version is **0.4.0**, checked against the upstream release and source on
 
 ## Supported scope
 
-- Ordinary single-volume ZIP, with its first local header at byte zero, for an
-  explicit password encoding.
+- Ordinary single-volume ZIP and ZIP64 starting at byte zero with an explicit
+  password encoding. ZIP64 requires consistent single-disk entries, a fixed-size
+  end record and locator, and matching central and local headers.
 - A structurally verified media-wrapped single-disk ZIP or ZIP64 through an
   internal read-only seek window, excluding its prefix and bounded trailing data.
 - WinZip AES AE-1/AE-2, 128/192/256-bit encryption; stored and deflate members.
@@ -29,9 +30,9 @@ version is **0.4.0**, checked against the upstream release and source on
 
 Split input volumes, parser mode, other compression/encryption methods, more than
 10,000 entries, a central directory above 8 MiB, or declared expanded contents
-above 64 GiB are rejected. Plain password-encoding mode still rejects ZIP64 and
-prefixes. Rejection retains the input and requires a different processing plan;
-it is never interpreted as a bad password.
+above 64 GiB are rejected. Plain password-encoding mode requires the central
+directory to end exactly at the recorded boundary and the archive to end at EOF.
+Rejection retains the input and reports the format or integrity problem.
 
 The verified media-wrapper path is narrower: at most 128 entries, 64 KiB of
 central-directory metadata, 32 KiB of trailing data, four end-record candidates

@@ -51,6 +51,34 @@ public sealed partial class AcquisitionReplanTests
         await Assert.ThrowsExactlyAsync<ArgumentException>(() => migration.ApplyAsync(preview.Token));
     }
 
+    [TestMethod]
+    public async Task Queued_analysis_keeps_its_reviewed_inputs_options_and_exact_started_run()
+    {
+        var (task, previous, original) = await Failed();
+        var artifact = await ProcessedInput(previous.Id, original);
+        var prepared = await Plans.ReplanAsync(task.Id, ContinueInput(task, previous.Id, artifact.Id), default);
+        var service = new AcquisitionAdaptiveMigrationService(Db, null!, Plans);
+        var row = await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
+        var option = await service.PreviewForBatchAsync(row, null, 4, default);
+        Assert.IsNotNull(option);
+        Assert.IsFalse(option.Value.UseCurrentStorage);
+        var entry = new AcquisitionLocalRecoveryQueueEntry {BatchId = "review", Status = "starting",
+            Version = "v", RecoveryScope = "workflow", Signal = "", StorageStamp = "s"};
+        var queued = AcquisitionLocalRecoveryQueueEntry.Write(row.BuilderStateJson, entry);
+        await Db.AcquisitionTasks.Where(t => t.Id == task.Id).ExecuteUpdateAsync(s => s.SetProperty(t => t.BuilderStateJson, queued));
+        var differentChoice = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            service.ApplyForBatchAsync(task.Id, option.Value.Fingerprint, 2, default));
+        Assert.AreEqual("ADAPTIVE_MIGRATION_CHANGED", differentChoice.Message);
+        var started = await service.ApplyForBatchAsync(task.Id, option.Value.Fingerprint, 4, default);
+        var stored = await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
+        Assert.AreEqual(prepared.Task.PlanRevision + 1, started.PlanRevision);
+        Assert.AreEqual(stored.WorkflowRunId, started.WorkflowRunId);
+        Assert.AreNotEqual(previous.Id, started.WorkflowRunId);
+        Assert.AreEqual("ADAPTIVE_MIGRATION_CHANGED", (await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            service.ApplyForBatchAsync(task.Id, option.Value.Fingerprint, 4, default))).Message);
+        Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
+    }
+
     [DataTestMethod]
     [DataRow("missing")] [DataRow("foreign")] [DataRow("mixed")] [DataRow("new-download")] [DataRow("already-started")]
     public async Task Prepared_local_AI_requires_every_part_and_rejects_unowned_missing_and_active_work(string condition)

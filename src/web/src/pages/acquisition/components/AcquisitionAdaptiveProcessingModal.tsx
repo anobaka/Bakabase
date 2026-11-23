@@ -1,4 +1,3 @@
-import AcquisitionContinuationMethodTabs from "./AcquisitionContinuationMethodTabs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Checkbox, Chip, Modal, Select, Spinner, Tooltip } from "@/components/bakaui";
@@ -35,25 +34,40 @@ export default function AcquisitionAdaptiveProcessingModal({
   const [maxIterations, setMaxIterations] = useState(3);
   const attempted = useRef(false);
 
-  const load = useCallback(async (signal: AbortSignal) => {
-    if (!captured.current.length) { setLoading(false); return; }
-    setLoading(true);
-    setPreview(undefined);
-    setError(undefined);
-    try {
-      const next = await acquisitionAdaptiveProcessingApi.preview(captured.current, maxIterations, signal);
-      if (signal.aborted) return;
-      const returned = new Set(next.rows.map(r => r.taskId));
-      if (!next.token || next.rows.length !== returned.size || next.rows.some(r => !captured.current.includes(r.taskId)))
-        throw new Error("ADAPTIVE_MIGRATION_INVALID_PREVIEW");
-      setPreview(next);
-      setSelected(new Set(next.rows.filter((row) => row.canMigrate).map((row) => row.taskId)));
-    } catch (e) {
-      if (!signal.aborted) setError(e instanceof Error ? e.message : "ADAPTIVE_MIGRATION_PREVIEW_FAILED");
-    } finally {
-      if (!signal.aborted) setLoading(false);
-    }
-  }, [maxIterations]);
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      if (!captured.current.length) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setPreview(undefined);
+      setError(undefined);
+      try {
+        const next = await acquisitionAdaptiveProcessingApi.preview(
+          captured.current,
+          maxIterations,
+          signal,
+        );
+        if (signal.aborted) return;
+        const returned = new Set(next.rows.map((r) => r.taskId));
+        if (
+          !next.token ||
+          next.rows.length !== returned.size ||
+          next.rows.some((r) => !captured.current.includes(r.taskId))
+        )
+          throw new Error("ADAPTIVE_MIGRATION_INVALID_PREVIEW");
+        setPreview(next);
+        setSelected(new Set(next.rows.filter((row) => row.canMigrate).map((row) => row.taskId)));
+      } catch (e) {
+        if (!signal.aborted)
+          setError(e instanceof Error ? e.message : "ADAPTIVE_MIGRATION_PREVIEW_FAILED");
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    },
+    [maxIterations],
+  );
   useEffect(() => {
     const controller = new AbortController();
     void load(controller.signal);
@@ -127,7 +141,9 @@ export default function AcquisitionAdaptiveProcessingModal({
     >
       <div className="space-y-2">
         {onBackToSelection && !result && (
-          <AcquisitionContinuationMethodTabs value="adaptive" disabled={submitting} onSwitch={onBackToSelection} />
+          <Button size="sm" variant="light" isDisabled={submitting} onPress={onBackToSelection}>
+            {t("acquisition.continueActions.back")}
+          </Button>
         )}
         <div className="rounded-lg border border-primary-200 bg-primary-50 p-3 text-sm text-primary-900">
           <p className="font-medium">{t("acquisition.adaptive.whatItDoes")}</p>
@@ -173,8 +189,11 @@ export default function AcquisitionAdaptiveProcessingModal({
         </div>
       )}
       {loading ? (
-        <div className="flex min-h-48 items-center justify-center">
+        <div className="flex min-h-48 flex-col items-center justify-center gap-2">
           <Spinner />
+          <p className="text-center text-xs text-default-500">
+            {t("acquisition.adaptive.previewing", { count: captured.current.length })}
+          </p>
         </div>
       ) : result ? (
         <div className="space-y-3 py-4">

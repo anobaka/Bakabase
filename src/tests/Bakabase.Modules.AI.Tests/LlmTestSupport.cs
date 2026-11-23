@@ -120,14 +120,15 @@ internal sealed class LlmHarness
     internal readonly AiProviderDbModel Provider;
     internal LlmService Service { get; }
 
-    internal LlmHarness(string endpoint, bool enableCache = true)
+    internal LlmHarness(string endpoint, bool enableCache = true, ILlmFeatureExecutionPolicy? executionPolicy = null)
     {
         Provider = new() { Id = 2, Kind = AiProviderKind.OpenAI, Endpoint = endpoint, ApiKey = "test-key", LlmEnabled = true };
         var providers = new Providers(Provider);
         var options = new Options(new AiModuleOptions { EnableCache = enableCache });
         var usage = new Usage();
         Service = new LlmService(providers, providers, usage, Cache, new LlmQuotaManager(options, usage),
-            new Features(DefaultConfig), options, Coordinator, NullLogger<LlmService>.Instance);
+            new Features(DefaultConfig), options, Coordinator, NullLogger<LlmService>.Instance,
+            [executionPolicy ?? new FileProcessorLlmExecutionPolicy()]);
     }
 
     internal Task<ChatResponse> CompleteAsync(AiFeature feature = AiFeature.PostParser, int? maxTokens = null,

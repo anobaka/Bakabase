@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Downloader.Models;
@@ -50,6 +51,59 @@ public abstract class ResolvedShareCloudProvider : ICloudDownloadProvider, IClou
 
     public virtual bool CanRevalidateDownloadFailure(string exactCode) => false;
 
+    // Opt-in for concrete adapters that only read from the provider. Source revision separately
+    // checks the stopped task, operation ownership and the entire local output directory.
+    protected async Task<CloudReadiness> CheckNoRetainedOperationStateAsync(CloudDownloadRequest request, CancellationToken ct)
+    {
+        var review = new CloudReadiness(false, "SOURCE_REVISION_PROVIDER_REVIEW_REQUIRED");
+        ct.ThrowIfCancellationRequested();
+        if (request.Source.ProviderId != ProviderId || request.Source.Kind != "share" || request.RemoteEntry != null ||
+            !string.IsNullOrWhiteSpace(request.AccountId) || !string.IsNullOrWhiteSpace(request.Source.AccountId) ||
+            string.IsNullOrWhiteSpace(request.OperationId) || !Path.IsPathFullyQualified(request.OutputDirectory)) return review;
+
+        var key = Hash(request.OperationId);
+        var gate = _operations.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+        if (!await gate.WaitAsync(0, ct)) return review;
+        try
+        {
+            ValidateSource(request.Source);
+            var root = ArtifactManifestFiles.Absolute(_appData());
+            ArtifactManifestFiles.RejectLinks(root);
+            if (!File.GetAttributes(root).HasFlag(FileAttributes.Directory)) return review;
+            var state = root;
+            foreach (var segment in StateDirectorySegments(key))
+            {
+                ct.ThrowIfCancellationRequested();
+                state = Path.Combine(state, segment);
+                ArtifactManifestFiles.RejectLinks(state);
+                try
+                {
+                    if (!File.GetAttributes(state).HasFlag(FileAttributes.Directory)) return review;
+                }
+                catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+                {
+                    return ArtifactManifestFiles.IsMissingFileConfirmed(root, state, ct) ? new(true) : review;
+                }
+            }
+
+            // A failed discovery can leave an empty lock file. A manifest, receipt, temporary
+            // journal or other entry requires review even when the output directory is empty.
+            foreach (var entry in Directory.EnumerateFileSystemEntries(state))
+            {
+                ct.ThrowIfCancellationRequested();
+                if (Path.GetFileName(entry) != "operation.lock") return review;
+                ArtifactManifestFiles.RejectLinks(entry);
+                var file = new FileInfo(entry);
+                if ((file.Attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint | FileAttributes.Device)) != 0 ||
+                    file.Length != 0) return review;
+            }
+            return new(true);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or InvalidDataException)
+        { return review; }
+        finally { gate.Release(); }
+    }
+
     /// <summary>Recheck an immutable stopped operation without creating directories, receipts,
     /// download tasks, or opening payload URLs. Listing visibility alone is not download readiness.</summary>
     public async Task<CloudReadiness> RevalidateDownloadAsync(CloudDownloadRequest request, CancellationToken ct)
@@ -66,8 +120,7 @@ public abstract class ResolvedShareCloudProvider : ICloudDownloadProvider, IClou
             using var client = _clients.CreateClient(ClientName);
             var resolution = await ResolveAsync(request.Source, client, ct);
             var files = ValidateManifest(resolution.Files);
-            var manifestPath = Path.Combine(_appData(), "cloud-downloads", "resolved", ProviderId,
-                Hash(request.OperationId), "manifest.json");
+            var manifestPath = Path.Combine([_appData(), .. StateDirectorySegments(Hash(request.OperationId)), "manifest.json"]);
             NoLinks(manifestPath);
             if (File.Exists(manifestPath))
             {
@@ -109,7 +162,7 @@ public abstract class ResolvedShareCloudProvider : ICloudDownloadProvider, IClou
         await gate.WaitAsync(ct);
         try
         {
-            var state = PrivateDirectory(_appData(), "cloud-downloads", "resolved", ProviderId, key);
+            var state = PrivateDirectory(_appData(), StateDirectorySegments(key));
             await using var lease = await LeaseAsync(Path.Combine(state, "operation.lock"), ct);
             var output = Path.GetFullPath(request.OutputDirectory);
             NoLinks(output);
@@ -296,6 +349,7 @@ public abstract class ResolvedShareCloudProvider : ICloudDownloadProvider, IClou
     private string ManifestIdentity(CloudSource source, string output) => Hash(JsonSerializer.Serialize(new[]
         {ProviderId, source.Url, Hash(source.AccessCode ?? ""), output}));
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+    private string[] StateDirectorySegments(string key) => ["cloud-downloads", "resolved", ProviderId, key];
     private static string Destination(string root, string path)
     {
         var result = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar));

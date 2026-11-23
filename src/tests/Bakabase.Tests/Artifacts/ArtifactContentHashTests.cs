@@ -54,6 +54,53 @@ public sealed class ArtifactContentHashTests
         Assert.IsTrue(source.CanRead);
     }
 
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(2 * ArtifactContentHash.BufferSize + 17)]
+    public async Task Read_activity_counts_real_bytes_inside_one_file_without_changing_the_digest(int length)
+    {
+        var bytes = new byte[length]; new Random(23).NextBytes(bytes);
+        using var source = new Observed(bytes) {MaximumRead = 1024 * 1024};
+        var reads = new List<int>();
+        CollectionAssert.AreEqual(SHA256.HashData(bytes),
+            await ArtifactContentHash.ComputeAsync(source, default, reads.Add));
+        Assert.AreEqual((long)length, reads.Sum(read => (long)read));
+        Assert.IsTrue(reads.All(read => read is > 0 and <= 1024 * 1024));
+        Assert.AreEqual(source.Requests.Count - 1, reads.Count, "EOF is not an activity update.");
+        if (length > 0) Assert.IsTrue(reads.Count > 1, "A single large file must report before it finishes.");
+    }
+
+    [TestMethod]
+    public async Task A_blocked_or_failed_read_cannot_refresh_activity()
+    {
+        using var cancel = new CancellationTokenSource();
+        using var blocked = new BlockedRead();
+        var reports = 0;
+        var hashing = ArtifactContentHash.ComputeAsync(blocked, cancel.Token, _ => reports++).AsTask();
+        await blocked.Waiting.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await Task.Delay(30);
+        Assert.AreEqual(0, reports);
+        cancel.Cancel();
+        await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => hashing);
+        Assert.AreEqual(0, reports);
+
+        using var failed = new Observed([1, 2, 3]) {Failure = new IOException("fixture read failure")};
+        await Assert.ThrowsExceptionAsync<IOException>(() =>
+            ArtifactContentHash.ComputeAsync(failed, default, _ => reports++).AsTask());
+        Assert.AreEqual(0, reports);
+    }
+
+    private sealed class BlockedRead : MemoryStream
+    {
+        internal TaskCompletionSource Waiting {get;} = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken ct = default)
+        {
+            Waiting.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            return 0;
+        }
+    }
+
     private sealed class Observed(byte[] bytes) : MemoryStream(bytes, writable: false)
     {
         internal List<int> Requests {get;} = [];

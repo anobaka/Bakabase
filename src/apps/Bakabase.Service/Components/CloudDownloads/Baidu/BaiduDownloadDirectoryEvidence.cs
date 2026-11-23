@@ -26,7 +26,8 @@ internal static class BaiduDownloadDirectoryEvidence
         try
         {
             var wrapper = Path.GetRelativePath(artifactRoot, owned).Replace('\\', '/');
-            var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(request.OperationId))).ToLowerInvariant();
+            var layout = CloudDownloadDestinations.ExecutionRequest(request).LayoutOperationId;
+            var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(layout))).ToLowerInvariant();
             var path = Path.Combine(accountDirectory, "operations", key + ".paths-v1.json");
             ArtifactManifestFiles.RejectLinks(path);
             var info = new FileInfo(path);
@@ -36,8 +37,8 @@ internal static class BaiduDownloadDirectoryEvidence
             using var journal = JsonDocument.Parse(await File.ReadAllTextAsync(path, ct));
             using var manifest = JsonDocument.Parse(remote.ManifestJson!);
             var root = journal.RootElement;
-            if (root.GetProperty("version").GetInt32() != 1 || root.GetProperty("uid").GetString() != uid ||
-                root.GetProperty("fingerprint").GetString() != Fingerprint(request.OperationId, uid,
+            if (root.GetProperty("version").GetInt32() is not (1 or 2) || root.GetProperty("uid").GetString() != uid ||
+                root.GetProperty("fingerprint").GetString() != Fingerprint(layout, uid,
                     CloudDownloadDestinations.ExecutionDirectory(request), remote.Path, manifest.RootElement)) return null;
             var mapping = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (var pair in root.GetProperty("paths").EnumerateArray())

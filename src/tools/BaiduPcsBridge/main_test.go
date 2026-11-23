@@ -16,6 +16,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/qjfoidnh/BaiduPCS-Go/baidupcs"
+	"github.com/qjfoidnh/BaiduPCS-Go/baidupcs/pcserror"
 	"github.com/qjfoidnh/BaiduPCS-Go/internal/pcsconfig"
 	"github.com/qjfoidnh/BaiduPCS-Go/internal/pcsfunctions/pcsdownload"
 	"github.com/qjfoidnh/BaiduPCS-Go/requester"
@@ -31,6 +33,29 @@ import (
 )
 
 type fixtureTransport func(*http.Request) (*http.Response, error)
+
+func TestTransferRecoveryRequiresExplicitMissingMetadata(t *testing.T) {
+	metadata := pcserror.NewPCSErrorInfo(baidupcs.OperationFilesDirectoriesMeta)
+	metadata.ErrCode = 31066
+	metadata.SetRemoteError()
+	if !isMissingTransferTarget(metadata) {
+		t.Fatal("explicit missing metadata was not recognized")
+	}
+	metadata.SetNetError(errors.New("connection reset"))
+	if isMissingTransferTarget(metadata) {
+		t.Fatal("network failure was treated as missing metadata")
+	}
+	metadata.SetRemoteError()
+	metadata.ErrCode = 31045
+	if isMissingTransferTarget(metadata) {
+		t.Fatal("account failure was treated as a missing directory")
+	}
+	metadata.ErrCode = 31066
+	metadata.Operation = "list"
+	if isMissingTransferTarget(metadata) {
+		t.Fatal("unrelated operation error was treated as missing metadata")
+	}
+}
 
 func (f fixtureTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
@@ -595,7 +620,7 @@ func TestDownloadResumeSkipsVerifiedFilesAndPreservesPartialState(t *testing.T) 
 	var progress [][2]int64
 	calls := 0
 	files, err := downloadManifestFiles(root, "/remote", []*baidupcs.FileDirectory{resumeFixture("part.bin", "part"), resumeFixture("complete.bin", "done")}, nil,
-		func(fd *baidupcs.FileDirectory, local string) error {
+		func(fd *baidupcs.FileDirectory, local string, checkpointProgress func(int64)) error {
 			calls++
 			if local != partial {
 				t.Fatal("completed file downloaded again")
@@ -604,12 +629,14 @@ func TestDownloadResumeSkipsVerifiedFilesAndPreservesPartialState(t *testing.T) 
 			if string(state) != string(checkpoint) {
 				t.Fatal("partial checkpoint replaced")
 			}
+			checkpointProgress(3)
+			checkpointProgress(3) // Idle heartbeat lets the caller clear stale speed.
 			return os.WriteFile(local, []byte("part"), 0600)
 		}, func(done, total int64) { progress = append(progress, [2]int64{done, total}) })
 	if err != nil || calls != 1 || len(files) != 2 {
 		t.Fatalf("calls=%d files=%d err=%v", calls, len(files), err)
 	}
-	if len(progress) != 2 || progress[0] != [2]int64{6, 8} || progress[1] != [2]int64{8, 8} {
+	if !slices.Equal(progress, [][2]int64{{6, 8}, {7, 8}, {7, 8}, {8, 8}}) {
 		t.Fatalf("progress=%v", progress)
 	}
 	after, _ := os.Stat(complete)
@@ -640,7 +667,10 @@ func TestDownloadDoesNotSkipSameSizeCorruptionOrUnsupportedChecksum(t *testing.T
 		calls := 0
 		var first int64 = -1
 		_, err := downloadManifestFiles(root, "/remote/file.bin", []*baidupcs.FileDirectory{fd}, nil,
-			func(*baidupcs.FileDirectory, string) error { calls++; return os.WriteFile(local, []byte("good"), 0600) },
+			func(*baidupcs.FileDirectory, string, func(int64)) error {
+				calls++
+				return os.WriteFile(local, []byte("good"), 0600)
+			},
 			func(done, total int64) {
 				if first < 0 {
 					first = done
@@ -666,18 +696,26 @@ func multipartFixture(name string, contents []byte, blockSize int64) *baidupcs.F
 }
 
 func TestMultipartChecksumUsesKnownBoundariesAndCompleteTail(t *testing.T) {
-	for _, blockSize := range []int64{baidupcs.MinUploadBlockSize, baidupcs.MiddleUploadBlockSize, baidupcs.MaxUploadBlockSize} {
+	for _, blockSize := range []int64{baidupcs.MinUploadBlockSize, 8 << 20, baidupcs.MiddleUploadBlockSize, 32 << 20, baidupcs.MaxUploadBlockSize} {
 		fd := &baidupcs.FileDirectory{Size: blockSize + 7, BlockListJSON: baidupcs.BlockListJSON{BlockList: []string{strings.Repeat("0", 32), strings.Repeat("1", 32)}}}
 		plan := trustedDownloadChecksums(fd)
 		if plan == nil || plan.blockSize != blockSize || len(plan.hashes) != 2 {
 			t.Fatalf("boundary %d not retained", blockSize)
 		}
 	}
-	// A 32 MiB layout is not one of the pinned upstream upload boundaries. Never
-	// guess a block size from the file size divided by the number of checksums.
-	unknown := &baidupcs.FileDirectory{Size: 32<<20 + 7, BlockListJSON: baidupcs.BlockListJSON{BlockList: []string{strings.Repeat("0", 32), strings.Repeat("1", 32)}}}
+	// Several arbitrary block sizes could produce this count. No supported
+	// boundary fits, so the verifier must not guess one from the average.
+	unknown := &baidupcs.FileDirectory{Size: 128<<20 + 7, BlockListJSON: baidupcs.BlockListJSON{BlockList: []string{strings.Repeat("0", 32), strings.Repeat("1", 32)}}}
 	if trustedDownloadChecksums(unknown) != nil {
 		t.Fatal("unsupported block layout accepted")
+	}
+}
+
+func TestAmbiguousMultipartBlockBoundaries(t *testing.T) {
+	// Both boundaries produce two blocks for this file. The verifier cannot
+	// infer the original upload boundary from the file length and list alone.
+	if got := uniqueMultipartBlockSize(40<<20, 2, 24<<20, 32<<20); got != 0 {
+		t.Fatalf("ambiguous block boundary accepted: %d", got)
 	}
 }
 
@@ -757,7 +795,7 @@ func TestDownloadReusesMultipartMetadataAndResumesOnlyIncompleteFile(t *testing.
 			}
 			return fresh, nil
 		},
-		func(_ *baidupcs.FileDirectory, local string) error {
+		func(_ *baidupcs.FileDirectory, local string, _ func(int64)) error {
 			executed++
 			if local != partial {
 				t.Fatal("completed multipart file downloaded again")
@@ -805,7 +843,7 @@ func TestMultipartResumeCannotPublishCorruptCompletedRange(t *testing.T) {
 			fd := multipartFixture("multi.bin", original, baidupcs.MinUploadBlockSize)
 			calls := 0
 			result, err := downloadManifestFiles(root, fd.Path, []*baidupcs.FileDirectory{fd}, nil,
-				func(_ *baidupcs.FileDirectory, p string) error {
+				func(_ *baidupcs.FileDirectory, p string, _ func(int64)) error {
 					calls++
 					f, e := os.OpenFile(p, os.O_WRONLY, 0600)
 					if e != nil {
@@ -853,6 +891,84 @@ func (r timedVerificationReader) Read(p []byte) (int, error) {
 	*r.now = r.now.Add(r.delay)
 	return r.reader.Read(p)
 }
+
+type verificationProbeReader func([]byte) (int, error)
+
+func (r verificationProbeReader) Read(p []byte) (int, error) { return r(p) }
+
+func TestVerificationUsesOneLargeBufferAndStopsAtEachChecksumBoundary(t *testing.T) {
+	const chunk = 4 << 20
+	large := bytes.Repeat([]byte{0x35}, 2*chunk+23)
+	for i := chunk; i < len(large); i++ {
+		large[i] = 0x82
+	}
+	for _, tc := range []struct {
+		name     string
+		data     []byte
+		file     *baidupcs.FileDirectory
+		requests []int
+	}{
+		{"multipart", large, multipartFixture("large.bin", large, baidupcs.MinUploadBlockSize), []int{chunk, chunk, 23}},
+		{"short file", []byte("verified"), resumeFixture("short.bin", "verified"), []int{8}},
+		{"empty file", nil, resumeFixture("empty.bin", ""), nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			checksums := trustedDownloadChecksums(tc.file)
+			if checksums == nil {
+				t.Fatal("fixture must have trusted checksums")
+			}
+			source := bytes.NewReader(tc.data)
+			var requests []int
+			var firstBuffer *byte
+			probe := verificationProbeReader(func(p []byte) (int, error) {
+				if firstBuffer == nil {
+					firstBuffer = &p[0]
+				} else if firstBuffer != &p[0] {
+					t.Fatal("verification allocated another read buffer")
+				}
+				requests = append(requests, len(p))
+				return source.Read(p)
+			})
+			size, matches, err := verifyChecksumBlocks(newVerificationReader(probe, tc.file.Size, verificationProgress{}), checksums)
+			if err != nil || !matches || size != tc.file.Size || !slices.Equal(requests, tc.requests) {
+				t.Fatalf("bytes=%d matches=%v err=%v requests=%v, want %v", size, matches, err, requests, tc.requests)
+			}
+		})
+	}
+}
+
+func TestVerificationPreservesShortReadAndExactCopyErrorSemantics(t *testing.T) {
+	const data = "original"
+	checksums := trustedDownloadChecksums(resumeFixture("file.bin", data))
+	var reports []int64
+	source := strings.NewReader(data)
+	probe := verificationProbeReader(func(p []byte) (int, error) { return source.Read(p[:min(len(p), 2)]) })
+	progress := verificationProgress{Clock: func() time.Time { return time.Unix(0, 0) },
+		Report: func(read, total int64) { reports = append(reports, read) }}
+	n, matches, err := verifyChecksumBlocks(newVerificationReader(probe, int64(len(data)), progress), checksums)
+	if err != nil || !matches || n != int64(len(data)) || !slices.Equal(reports, []int64{0, int64(len(data))}) {
+		t.Fatalf("short reads lost data or progress: bytes=%d matches=%v err=%v reports=%v", n, matches, err, reports)
+	}
+	for _, tc := range []struct {
+		name    string
+		data    string
+		readErr error
+		wantErr error
+	}{
+		{"early EOF", data[:3], io.EOF, io.EOF},
+		{"other read failure", data[:3], io.ErrClosedPipe, io.ErrClosedPipe},
+		{"error with complete block", data, io.ErrUnexpectedEOF, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			probe := verificationProbeReader(func(p []byte) (int, error) { return copy(p, tc.data), tc.readErr })
+			n, matches, err := verifyChecksumBlocks(newVerificationReader(probe, int64(len(data)), verificationProgress{}), checksums)
+			if !errors.Is(err, tc.wantErr) || n != int64(len(tc.data)) || matches != (tc.wantErr == nil) {
+				t.Fatalf("bytes=%d matches=%v err=%v, want %v", n, matches, err, tc.wantErr)
+			}
+		})
+	}
+}
+
 func TestVerificationReadActivityIsThrottledAndCancellationIsObserved(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -893,7 +1009,7 @@ func TestChecksumActivityCoversBothPreflightAndFinalVerificationWithoutDownloadA
 	var progress [][2]int64
 	downloads := 0
 	files, err := downloadManifestFiles(root, "/remote", []*baidupcs.FileDirectory{existing, pending}, nil,
-		func(fd *baidupcs.FileDirectory, local string) error {
+		func(fd *baidupcs.FileDirectory, local string, _ func(int64)) error {
 			downloads++
 			return os.WriteFile(local, []byte(data), 0600)
 		},
@@ -910,6 +1026,99 @@ func TestChecksumActivityCoversBothPreflightAndFinalVerificationWithoutDownloadA
 		t.Fatalf("verification inflated download accounting: %v", progress)
 	}
 }
+
+func TestPostTransportVerificationRetriesOnlyChangedLocalIdentityOnce(t *testing.T) {
+	for _, tc := range []struct {
+		name                 string
+		wantError            error
+		wantReads, downloads int
+	}{
+		{"settled", nil, 2, 1},
+		{"still changing", errLocalFileChanged, 2, 1},
+		{"replaced with unrelated bytes", errLocalFileChanged, 2, 1},
+		{"cancelled on retry", context.Canceled, 2, 1},
+		{"ordinary read error", nil, 1, 1},
+		{"pre-existing file changes", errLocalFileChanged, 1, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			local := filepath.Join(root, "remote", "payload.bin")
+			if err := os.Mkdir(filepath.Dir(local), 0700); err != nil {
+				t.Fatal(err)
+			}
+			data := strings.Repeat("original", 1024)
+			corrupt := strings.Repeat("modified", 1024)
+			file := resumeFixture(filepath.Base(local), data)
+			if tc.name == "pre-existing file changes" {
+				if err := os.WriteFile(local, []byte(data), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			reads, downloads := 0, 0
+			files, err := downloadManifestFiles(root, "/remote", []*baidupcs.FileDirectory{file}, nil,
+				func(_ *baidupcs.FileDirectory, destination string, _ func(int64)) error {
+					downloads++
+					return os.WriteFile(destination, []byte(data), 0600)
+				}, func(int64, int64) {}, verificationProgress{Context: ctx, Report: func(read, total int64) {
+					if read == 0 {
+						reads++
+						if tc.name == "cancelled on retry" && reads == 2 {
+							cancel()
+						}
+						if tc.name == "ordinary read error" {
+							if err := os.Truncate(local, 0); err != nil {
+								t.Fatal(err)
+							}
+						}
+						return
+					}
+					if read != total || (reads != 1 && tc.name != "still changing") {
+						return
+					}
+					if tc.name == "replaced with unrelated bytes" {
+						replacement := filepath.Join(root, "replacement.bin")
+						if err := os.WriteFile(replacement, []byte(corrupt), 0600); err != nil {
+							t.Fatal(err)
+						}
+						if err := os.Rename(replacement, local); err != nil {
+							t.Fatal(err)
+						}
+					} else {
+						stamp := time.Unix(1700000000+int64(reads), 0)
+						if err := os.Chtimes(local, stamp, stamp); err != nil {
+							t.Fatal(err)
+						}
+					}
+				}})
+			if reads != tc.wantReads || downloads != tc.downloads {
+				t.Fatalf("reads=%d downloads=%d error=%v", reads, downloads, err)
+			}
+			if tc.name == "ordinary read error" {
+				var storage *storageFailure
+				if !errors.As(err, &storage) || storage.code != "BAIDU_OUTPUT_FILE_READ_FAILED" {
+					t.Fatalf("expected original read failure, got %v", err)
+				}
+			} else if !errors.Is(err, tc.wantError) {
+				t.Fatalf("expected %v, got %v", tc.wantError, err)
+			}
+			if err == nil {
+				if len(files) != 1 || files[0] != local {
+					t.Fatalf("expected exact existing payload, got %v", files)
+				}
+			} else if len(files) != 0 {
+				t.Fatalf("unproven payload returned: %v", files)
+			}
+			if tc.name == "replaced with unrelated bytes" {
+				if bytes, err := os.ReadFile(local); err != nil || string(bytes) != corrupt {
+					t.Fatalf("retry modified the replacement: %v", err)
+				}
+			}
+		})
+	}
+}
+
 func TestCancellationDuringChecksumNeverStartsDownloadOrDeliversFiles(t *testing.T) {
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, "remote"), 0700); err != nil {
@@ -925,7 +1134,7 @@ func TestCancellationDuringChecksumNeverStartsDownloadOrDeliversFiles(t *testing
 	now := time.Unix(0, 0)
 	downloads := 0
 	files, err := downloadManifestFiles(root, "/remote", []*baidupcs.FileDirectory{file}, nil,
-		func(*baidupcs.FileDirectory, string) error { downloads++; return nil }, func(int64, int64) {},
+		func(*baidupcs.FileDirectory, string, func(int64)) error { downloads++; return nil }, func(int64, int64) {},
 		verificationProgress{Context: ctx, Clock: func() time.Time { now = now.Add(time.Second); return now }, Report: func(read, total int64) {
 			if read > 0 {
 				cancel()
@@ -941,7 +1150,7 @@ func TestCancellationAfterPreflightNeverStartsUpstreamDownload(t *testing.T) {
 	defer cancel()
 	downloads := 0
 	files, err := downloadManifestFiles(t.TempDir(), "/remote", []*baidupcs.FileDirectory{resumeFixture("missing.bin", "data")}, nil,
-		func(*baidupcs.FileDirectory, string) error { downloads++; return nil },
+		func(*baidupcs.FileDirectory, string, func(int64)) error { downloads++; return nil },
 		func(int64, int64) { cancel() }, verificationProgress{Context: ctx})
 	if !errors.Is(err, context.Canceled) || len(files) != 0 || downloads != 0 {
 		t.Fatalf("cancelled preflight started download: %v %v %d", err, files, downloads)
@@ -1713,15 +1922,65 @@ func TestPortableMapNeverAdoptsUnjournaledPayloadOrChangesLegacyPaths(t *testing
 			t.Fatal("legacy map should not be frozen to a new algorithm")
 		}
 	})
-	t.Run("unverified partial", func(t *testing.T) {
-		root, profile, r, entries := portableFixture(t)
-		entries = append(entries, entry{3, r.RemotePath + "/old.bin", 4, false})
-		_ = os.MkdirAll(filepath.Join(root, "transfer"), 0700)
-		_ = os.WriteFile(filepath.Join(root, "transfer", "old.bin"), []byte("d"), 0600)
-		if _, err := resolveDownloadPaths(context.Background(), profile, "17", root, r, entries, true); err == nil {
-			t.Fatal("partial silently remapped")
-		}
-	})
+	for _, scenario := range []struct {
+		name       string
+		checkpoint bool
+		incomplete bool
+		unexpected bool
+		code       string
+	}{
+		{"unverified partial", false, false, false, "BAIDU_DOWNLOAD_PARTIAL_UNVERIFIED"},
+		{"invalid checkpoint", true, false, false, "BAIDU_DOWNLOAD_CHECKPOINT_INVALID"},
+		{"invalid checkpoint with another unverified partial", true, true, false, "BAIDU_DOWNLOAD_CHECKPOINT_INVALID"},
+		{"partial with unrelated payload", false, false, true, "BAIDU_LOCAL_PATH_MAPPING_CONFLICT"},
+		{"invalid checkpoint with unrelated payload", true, false, true, "BAIDU_LOCAL_PATH_MAPPING_CONFLICT"},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			root, profile, r, entries := portableFixture(t)
+			entries = append(entries, entry{3, r.RemotePath + "/old.bin", 4, false})
+			directory := filepath.Join(root, "transfer")
+			if err := os.MkdirAll(directory, 0700); err != nil {
+				t.Fatal(err)
+			}
+			local := filepath.Join(directory, "old.bin")
+			if err := os.WriteFile(local, []byte("d"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if scenario.checkpoint {
+				if err := os.WriteFile(local+pcsdownload.DownloadSuffix, nil, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if scenario.incomplete {
+				entries = append(entries, entry{4, r.RemotePath + "/incomplete.bin", 4, false})
+				if err := os.WriteFile(filepath.Join(directory, "incomplete.bin"), []byte("d"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if scenario.unexpected {
+				if err := os.WriteFile(filepath.Join(directory, "unknown.bin"), []byte("unrelated"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			for _, persist := range []bool{false, true} {
+				mapped, err := resolveDownloadPaths(context.Background(), profile, "17", root, r, entries, persist)
+				if mapped != nil || err == nil || err.Error() != scenario.code {
+					t.Fatalf("expected %s, got %v (persist=%v)", scenario.code, err, persist)
+				}
+			}
+			if b, err := os.ReadFile(local); err != nil || string(b) != "d" {
+				t.Fatal("legacy payload was modified")
+			}
+			if scenario.checkpoint {
+				if b, err := os.ReadFile(local + pcsdownload.DownloadSuffix); err != nil || len(b) != 0 {
+					t.Fatal("legacy checkpoint was modified")
+				}
+			}
+			if files, err := os.ReadDir(profile); err != nil || len(files) != 0 {
+				t.Fatal("failed inspection created a path journal")
+			}
+		})
+	}
 }
 
 func TestPortableMapUsesOriginalRemotePathAndReusesVerifiedPayload(t *testing.T) {
@@ -1734,7 +1993,7 @@ func TestPortableMapUsesOriginalRemotePathAndReusesVerifiedPayload(t *testing.T)
 	files := []*baidupcs.FileDirectory{{FsID: 1, Path: r.RemotePath, Isdir: true}, {FsID: 2, Path: entries[1].Path, Size: 4}}
 	files[1].BlockList = []string{hex.EncodeToString(hash[:])}
 	calls := 0
-	execute := func(fd *baidupcs.FileDirectory, local string) error {
+	execute := func(fd *baidupcs.FileDirectory, local string, _ func(int64)) error {
 		calls++
 		if fd.Path != entries[1].Path {
 			t.Fatal("PcsPath mutated")
@@ -1803,6 +2062,46 @@ func TestExistingCompletionVerifiesAllBytesAndRetainsFiles(t *testing.T) {
 		t.Fatal("verification modified payload")
 	}
 }
+
+func TestExistingCompletionVerifiesProviderBlocksAndTail(t *testing.T) {
+	for _, size := range []int{8, 32} {
+		t.Run(fmt.Sprintf("%dMiB", size), func(t *testing.T) {
+			blockSize := size << 20
+			contents := make([]byte, 2*blockSize+23)
+			contents[0], contents[blockSize], contents[2*blockSize] = 1, 2, 3
+			local := filepath.Join(t.TempDir(), "multipart.bin")
+			fd := multipartFixture("multipart.bin", contents, int64(blockSize))
+			expected := entry{fd.FsID, fd.Path, fd.Size, false}
+			metadata := func() (*baidupcs.FileDirectory, error) { return fd, nil }
+			if err := os.WriteFile(local, contents, 0600); err != nil {
+				t.Fatal(err)
+			}
+			result, err := verifyExistingFile(context.Background(), local, expected, metadata)
+			digest := sha256.Sum256(contents)
+			if err != nil || result.Sha256 != hex.EncodeToString(digest[:]) || result.Length != fd.Size {
+				t.Fatalf("valid block list verification failed: length=%d err=%v", result.Length, err)
+			}
+			for _, offset := range []int{blockSize + 1, len(contents) - 1} {
+				// Change one byte without altering the file length or the other blocks.
+				contents[offset] ^= 1
+				if err := os.WriteFile(local, contents, 0600); err != nil {
+					t.Fatal(err)
+				}
+				result, err = verifyExistingFile(context.Background(), local, expected, metadata)
+				if err == nil || err.Error() != "BAIDU_DOWNLOAD_CHECKSUM_MISMATCH" || result.Sha256 != "" {
+					t.Fatalf("corruption at offset %d: result=%+v err=%v", offset, result, err)
+				}
+				var mismatch *existingChecksumMismatch
+				if !errors.As(err, &mismatch) || mismatch.blocks != 3 || mismatch.bad != 1 ||
+					mismatch.first != offset/blockSize+1 || mismatch.firstBytes != min(int64(blockSize), fd.Size-int64(offset/blockSize*blockSize)) {
+					t.Fatalf("wrong block coordinates at offset %d", offset)
+				}
+				contents[offset] ^= 1
+			}
+		})
+	}
+}
+
 func TestExistingCompletionRejectsUnprovenOrChangedFiles(t *testing.T) {
 	for _, mode := range []string{"missingHash", "corrupt", "partial", "remoteIdentity", "remoteChanged", "unknownBlocks", "cancel"} {
 		t.Run(mode, func(t *testing.T) {
@@ -1847,5 +2146,740 @@ func TestExistingCompletionRejectsUnprovenOrChangedFiles(t *testing.T) {
 				t.Fatal("failed verification modified payload")
 			}
 		})
+	}
+}
+
+func TestLegacyDirectoryDownloadResumesBesideSmbDeleteMarker(t *testing.T) {
+	const marker = ".smbdeleteAAA59fc4.4"
+	root, profile := t.TempDir(), t.TempDir()
+	entries := []entry{{1, "/remote", 0, true}, {2, "/remote/甲.zip", 4, false}, {3, "/remote/乙.zip", 4, false}}
+	r := request{OperationID: "existing-directory", ExpectedUID: "17", RemotePath: "/remote", OutputDirectory: root, ExpectedManifest: entries}
+	payload := filepath.Join(root, "remote")
+	if err := os.Mkdir(payload, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(payload, "甲.zip"), []byte("kept"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	sibling := filepath.Join(root, marker)
+	if err := os.WriteFile(sibling, []byte("externally held"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	portable, err := portableManifestPaths(r.RemotePath, entries)
+	if err != nil || portable[entries[1].Path] == "remote/甲.zip" {
+		t.Fatal("fixture did not require a legacy map", err)
+	}
+	var paths map[string]string
+	for _, persist := range []bool{false, true} {
+		paths, err = resolveDownloadPaths(context.Background(), profile, "17", root, r, entries, persist)
+		if err != nil || paths[entries[1].Path] != "remote/甲.zip" || paths[entries[2].Path] != "remote/乙.zip" {
+			t.Fatalf("legacy map: %v", err)
+		}
+		if err = inspectLocalDownloadWithPaths(context.Background(), root, r.RemotePath, entries, paths); err != nil {
+			t.Fatal(err)
+		}
+	}
+	fetched := 0
+	files, err := downloadManifestFilesWithPaths(root, r.RemotePath, []*baidupcs.FileDirectory{resumeFixture("甲.zip", "kept"), resumeFixture("乙.zip", "more")}, paths, nil,
+		func(fd *baidupcs.FileDirectory, local string, _ func(int64)) error {
+			if local != filepath.Join(payload, "乙.zip") {
+				t.Fatalf("unexpected transfer %s", local)
+			}
+			fetched++
+			return os.WriteFile(local, []byte("more"), 0600)
+		}, func(int64, int64) {})
+	if err != nil || fetched != 1 || len(files) != 2 || slices.Contains(files, sibling) {
+		t.Fatalf("downloaded %d, returned %v: %v", fetched, files, err)
+	}
+	if b, err := os.ReadFile(sibling); err != nil || string(b) != "externally held" {
+		t.Fatal("marker changed", err)
+	}
+	if b, err := os.ReadFile(filepath.Join(payload, "甲.zip")); err != nil || string(b) != "kept" {
+		t.Fatal("existing file changed", err)
+	}
+}
+
+func TestDirectoryInspectionKeepsUnexpectedSiblingsAndRealRemoteMarkerNamesProtected(t *testing.T) {
+	const marker = ".smbdeleteAAA59fc4.4"
+	for _, scenario := range []string{"unrelated", "lookalike", "no-complete-payload", "directory", "symlink", "inside-payload", "remote-same-name", "single-file"} {
+		t.Run(scenario, func(t *testing.T) {
+			root := t.TempDir()
+			dir := filepath.Join(root, "remote")
+			if err := os.Mkdir(dir, 0700); err != nil {
+				t.Fatal(err)
+			}
+			entries := []entry{{1, "/remote", 0, true}, {2, "/remote/a", 4, false}}
+			if scenario != "no-complete-payload" {
+				if err := os.WriteFile(filepath.Join(dir, "a"), []byte("kept"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			remote := "/remote"
+			name := filepath.Join(root, marker)
+			switch scenario {
+			case "unrelated":
+				name = filepath.Join(root, ".notes")
+			case "lookalike":
+				name += ".extra"
+			case "inside-payload":
+				name = filepath.Join(dir, marker)
+			case "remote-same-name":
+				entries = append(entries, entry{3, "/remote/" + strings.ToUpper(marker), 1, false})
+			case "single-file":
+				remote = "/remote/a"
+				entries = entries[1:]
+			}
+			var err error
+			switch scenario {
+			case "directory":
+				err = os.Mkdir(name, 0700)
+			case "symlink":
+				err = os.Symlink(filepath.Join(dir, "a"), name)
+				if err != nil {
+					t.Skip("no symlink support")
+				}
+			default:
+				err = os.WriteFile(name, []byte("untouched"), 0600)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = inspectLocalDownload(context.Background(), root, remote, entries); err == nil {
+				t.Fatal("unexpected input was accepted")
+			}
+			if _, err := os.Lstat(name); err != nil {
+				t.Fatal("input changed", err)
+			}
+		})
+	}
+	root := t.TempDir()
+	name := filepath.Join(root, marker)
+	if err := os.WriteFile(name, []byte("short"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	// A source that actually has a marker-shaped name is verified as ordinary payload.
+	err := inspectLocalDownload(context.Background(), root, "/"+marker, []entry{{1, "/" + marker, 9, false}})
+	if err == nil || err.Error() != "BAIDU_DOWNLOAD_PARTIAL_UNVERIFIED" {
+		t.Fatalf("unexpected manifest validation %v", err)
+	}
+}
+
+func TestRetainedWriteAdmissionRequiresChecksumsAndForbidsRewritingCreditedMembers(t *testing.T) {
+	root := t.TempDir()
+	files := []*baidupcs.FileDirectory{}
+	paths := map[string]string{}
+	for i, name := range []string{"missing", "good", "wrong", "short", "unknown"} {
+		fd := resumeFixture(name, "data")
+		fd.FsID = int64(i + 1)
+		files = append(files, fd)
+		paths[fd.Path] = name
+		if name == "unknown" {
+			fd.BlockList = nil
+		}
+		if name != "missing" {
+			data := map[string]string{"good": "data", "wrong": "xxxx", "short": "da", "unknown": "data"}[name]
+			if err := os.WriteFile(filepath.Join(root, name), []byte(data), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	ids, err := verifiedRetainedFileIDs(root, files, paths, nil, verificationProgress{Context: context.Background()})
+	if err != nil || !slices.Equal(ids, []string{"2"}) {
+		t.Fatalf("verified ids=%v err=%v", ids, err)
+	}
+	before, err := os.Stat(filepath.Join(root, "good"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writes := 0
+	run := func(readOnly []string) error {
+		_, err := downloadManifestFilesWithReadOnly(root, "/remote", files, paths, readOnly, nil,
+			func(fd *baidupcs.FileDirectory, local string, report func(int64)) error {
+				if fd.FsID == 2 {
+					t.Fatal("credited file opened for writing")
+				}
+				writes++
+				return os.WriteFile(local, []byte("data"), 0600)
+			}, func(int64, int64) {})
+		return err
+	}
+	if err := run(ids); err != nil || writes != 4 {
+		t.Fatalf("ordinary resume writes=%d err=%v", writes, err)
+	}
+	after, err := os.Stat(filepath.Join(root, "good"))
+	if err != nil || !sameLocalFile(before, after) {
+		t.Fatal("credited file changed")
+	}
+	for _, id := range [][]string{{"99"}, {"2", "2"}} {
+		if err := run(id); err == nil || writes != 4 {
+			t.Fatalf("invalid credit permitted writes: %v %v", id, err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "good"), []byte("oops"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(ids); !errors.Is(err, errLocalFileChanged) || writes != 4 {
+		t.Fatalf("corrupt protected member was not stopped before writing: %v", err)
+	}
+	if err := os.Remove(filepath.Join(root, "good")); err != nil {
+		t.Fatal(err)
+	}
+	if err := run(ids); !errors.Is(err, errLocalFileChanged) || writes != 4 {
+		t.Fatalf("missing protected member was not stopped before writing: %v", err)
+	}
+}
+
+func TestRetainedManifestRejectsChangesAfterChecksum(t *testing.T) {
+	for _, tc := range []struct{ action, code string }{
+		{"remove", "BAIDU_VERIFIED_FILE_MISSING"}, {"replace", "BAIDU_VERIFIED_FILE_REPLACED"},
+		{"link", "BAIDU_VERIFIED_FILE_REPLACED"}, {"truncate", "BAIDU_VERIFIED_FILE_SIZE_CHANGED"},
+		{"timestamp", "BAIDU_VERIFIED_FILE_TIME_CHANGED"},
+	} {
+		t.Run(tc.action, func(t *testing.T) {
+			root := t.TempDir()
+			file := resumeFixture("retained", "data")
+			file.FsID = 51
+			abs := filepath.Join(root, "retained")
+			if err := os.WriteFile(abs, []byte("data"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			original, _ := os.Lstat(abs)
+			results, err := downloadManifestFilesWithReadOnly(root, "/remote", []*baidupcs.FileDirectory{file},
+				map[string]string{file.Path: "retained"}, []string{"51"}, nil,
+				func(*baidupcs.FileDirectory, string, func(int64)) error {
+					t.Fatal("protected writer called")
+					return nil
+				},
+				func(int64, int64) {
+					var err error
+					switch tc.action {
+					case "remove":
+						err = os.Remove(abs)
+					case "replace":
+						replacement := filepath.Join(root, "new-inode")
+						if err = os.WriteFile(replacement, []byte("data"), 0600); err == nil {
+							err = os.Chtimes(replacement, original.ModTime(), original.ModTime())
+						}
+						if err == nil {
+							err = os.Rename(replacement, abs)
+						}
+					case "link":
+						other := filepath.Join(root, "other")
+						if err = os.Rename(abs, other); err == nil {
+							err = os.Symlink(other, abs)
+						}
+					case "truncate":
+						err = os.Truncate(abs, 1)
+					case "timestamp":
+						stamp := original.ModTime().Add(-time.Hour)
+						err = os.Chtimes(abs, stamp, stamp)
+					}
+					if err != nil {
+						t.Fatal(err)
+					}
+				})
+			if err == nil || len(results) != 0 {
+				t.Fatalf("accepted changed input: %v", err)
+			}
+			event := errorEvent(err)
+			if event["code"] != tc.code || event["manifestFileNumber"] != 1 {
+				t.Fatalf("unsafe/uninformative event: %v", event)
+			}
+			body, _ := json.Marshal(event)
+			if strings.Contains(string(body), root) || strings.Contains(string(body), "retained") {
+				t.Fatalf("path leaked in event: %s", body)
+			}
+		})
+	}
+}
+
+func TestRetainedRecheckClassifiesStatFaultsAndRehashesOnlyOnRecovery(t *testing.T) {
+	root := t.TempDir()
+	p := filepath.Join(root, "payload")
+	original := []byte("data")
+	if err := os.WriteFile(p, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	proof, err := os.Lstat(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	fd := resumeFixture("payload", string(original))
+	for _, tc := range []struct {
+		name          string
+		fault         error
+		fails         int
+		expected      string
+		stats, hashes int
+	}{
+		{"healthy", nil, 0, "", 1, 0}, {"io recovers", syscall.EIO, 1, "", 2, 1},
+		{"stale twice", syscall.ESTALE, 2, "", 3, 1}, {"persistent timeout", syscall.ETIMEDOUT, 9, "BAIDU_OUTPUT_FILE_READ_FAILED", 3, 0},
+		{"permission", syscall.EACCES, 9, "BAIDU_OUTPUT_FILE_READ_FAILED", 1, 0}, {"removed", os.ErrNotExist, 9, "BAIDU_VERIFIED_FILE_MISSING", 1, 0},
+		{"cancelled", syscall.EIO, 9, "context canceled", 1, 0}, {"modified bytes with restored timestamp", syscall.EIO, 1, "BAIDU_DOWNLOAD_CHECKSUM_MISMATCH", 2, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			stats, hashes := 0, 0
+			err := recheckRetainedFile(ctx, proof, f, func() (os.FileInfo, error) {
+				stats++
+				if tc.name == "cancelled" {
+					cancel()
+				}
+				if stats <= tc.fails {
+					if tc.name == "modified bytes with restored timestamp" {
+						if err := os.WriteFile(p, []byte("xxxx"), 0600); err != nil {
+							t.Fatal(err)
+						}
+						if err := os.Chtimes(p, proof.ModTime(), proof.ModTime()); err != nil {
+							t.Fatal(err)
+						}
+					}
+					return nil, tc.fault
+				}
+				return os.Lstat(p)
+			}, func() (os.FileInfo, error) { hashes++; return verifiedLocalDownload(p, fd, nil) })
+			got := ""
+			if err != nil {
+				got = err.Error()
+			}
+			if got != tc.expected || stats != tc.stats || hashes != tc.hashes {
+				t.Fatalf("error=%s stats=%d hashes=%d", got, stats, hashes)
+			}
+			if tc.expected == "BAIDU_OUTPUT_FILE_READ_FAILED" {
+				var storage *storageFailure
+				if !errors.As(err, &storage) || storage.operation != "recheckVerifiedFile" || !errors.Is(err, tc.fault) {
+					t.Fatalf("dropped storage cause: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestVerifiedHandleRemainsReadOnlyAndBelongsToOriginal(t *testing.T) {
+	root := t.TempDir()
+	file := filepath.Join(root, "member")
+	if err := os.WriteFile(file, []byte("data"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var witness *os.File
+	retain := func(f *os.File) { witness = f }
+	if info, err := verifyLocalDownload(file, resumeFixture("member", "xxxx"), nil, retain); info != nil || err != nil || witness != nil {
+		t.Fatalf("unverified file pinned: %v", err)
+	}
+	proof, err := verifyLocalDownload(file, resumeFixture("member", "data"), nil, retain)
+	if err != nil || witness == nil {
+		t.Fatalf("missing verified handle: %v", err)
+	}
+	defer witness.Close()
+	info, err := witness.Stat()
+	if err != nil || !sameLocalFile(proof, info) {
+		t.Fatalf("witness lost verified identity: %v", err)
+	}
+	if _, err = witness.Write([]byte("x")); err == nil {
+		t.Fatal("witness admitted a write")
+	}
+	data, err := os.ReadFile(file)
+	if err != nil || string(data) != "data" {
+		t.Fatalf("verified bytes changed: %v", err)
+	}
+}
+
+func TestRetainedPrefixHandlesReleaseOnFailureAndBeforeWriter(t *testing.T) {
+	// Inspect only this test's private file descriptors, never the user's file paths.
+	dir := "/proc/self/fd"
+	if _, err := os.Stat(dir); err != nil {
+		dir = "/dev/fd"
+	}
+	if _, err := os.Stat(dir); err != nil {
+		t.Skip("descriptor enumeration unavailable")
+	}
+	for _, cancelAtReport := range []bool{false, true} {
+		root := t.TempDir()
+		file := filepath.Join(root, "start")
+		files := []*baidupcs.FileDirectory{}
+		paths := map[string]string{}
+		for i, n := range []string{"start", "missing", "late"} {
+			fd := resumeFixture(n, "data")
+			fd.FsID = int64(i + 1)
+			files = append(files, fd)
+			paths[fd.Path] = n
+			if n != "missing" {
+				if err := os.WriteFile(filepath.Join(root, n), []byte("data"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		proof, err := os.Stat(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		count := func() int {
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			n := 0
+			for _, entry := range entries {
+				info, err := os.Stat(filepath.Join(dir, entry.Name()))
+				if err == nil && os.SameFile(info, proof) {
+					n++
+				}
+			}
+			return n
+		}
+		probe, err := os.Open(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		visible := count()
+		probe.Close()
+		if visible == 0 {
+			t.Skip("filesystem does not expose descriptor identity")
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		reports, writes := 0, 0
+		_, err = downloadManifestFilesWithReadOnly(root, "/remote", files, paths, []string{"1", "3"}, nil,
+			func(fd *baidupcs.FileDirectory, path string, _ func(int64)) error {
+				writes++
+				if fd.FsID != 2 || count() != 0 {
+					t.Fatal("verified handle held during payload transfer")
+				}
+				return os.WriteFile(path, []byte("data"), 0600)
+			}, func(int64, int64) {
+				reports++
+				if reports == 1 {
+					if count() != 1 {
+						t.Fatal("original handle not held at verified acceptance")
+					}
+					if cancelAtReport {
+						cancel()
+					}
+				}
+			}, verificationProgress{Context: ctx})
+		cancel()
+		if count() != 0 || cancelAtReport && (!errors.Is(err, context.Canceled) || writes != 0) || !cancelAtReport && (err != nil || writes != 1) {
+			t.Fatalf("leaked descriptors or writes after cancellation: %v %d", err, writes)
+		}
+	}
+}
+
+func TestLargeRetainedPrefixSurvivesDescriptorLimits(t *testing.T) {
+	root := t.TempDir()
+	var files []*baidupcs.FileDirectory
+	var credits []string
+	paths := map[string]string{}
+	const count = maxRetainedWitnesses + 11
+	for i := 0; i <= count; i++ {
+		name := fmt.Sprintf("file-%d", i+1)
+		fd := resumeFixture(name, "data")
+		fd.FsID = int64(i + 1)
+		files = append(files, fd)
+		paths[fd.Path] = name
+		if i < count {
+			credits = append(credits, fmt.Sprint(fd.FsID))
+			if err := os.WriteFile(filepath.Join(root, name), []byte("data"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	writes := 0
+	results, err := downloadManifestFilesWithReadOnly(root, "/remote", files, paths, credits, nil,
+		func(fd *baidupcs.FileDirectory, local string, _ func(int64)) error {
+			if fd.FsID != count+1 {
+				t.Fatal("verified file was offered to the writer")
+			}
+			writes++
+			return os.WriteFile(local, []byte("data"), 0600)
+		}, func(int64, int64) {})
+	if err != nil || writes != 1 || len(results) != len(files) {
+		t.Fatalf("writes=%d results=%d error=%v", writes, len(results), err)
+	}
+}
+
+func TestExistingVerificationBesideReleasedNestedCheckpoints(t *testing.T) {
+	const marker = ".smbdeleteAAA59fc4.4"
+	for _, scenario := range []string{"verified", "nonempty", "unrelated-name", "wrong-parent", "symlink", "directory", "missing-member", "live-checkpoint", "remote-collision"} {
+		t.Run(scenario, func(t *testing.T) {
+			root, profile := t.TempDir(), t.TempDir()
+			t.Setenv(pcsconfig.EnvConfigDir, profile)
+			payload := filepath.Join(root, "remote", "albums")
+			if err := os.MkdirAll(payload, 0700); err != nil {
+				t.Fatal(err)
+			}
+			members := []entry{{1, "/remote", 0, true}, {2, "/remote/albums", 0, true}, {3, "/remote/albums/甲.zip", 4, false}, {4, "/remote/albums/乙.zip", 4, false}}
+			real := filepath.Join(payload, "甲.zip")
+			write := func(path string, data []byte) {
+				t.Helper()
+				if err := os.WriteFile(path, data, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			write(real, []byte("kept"))
+			if scenario != "missing-member" {
+				write(filepath.Join(payload, "乙.zip"), []byte("kept"))
+			}
+			tombstone := filepath.Join(payload, marker)
+			switch scenario {
+			case "nonempty":
+				write(tombstone, []byte("unexpected"))
+			case "directory":
+				if err := os.Mkdir(tombstone, 0700); err != nil {
+					t.Fatal(err)
+				}
+			case "symlink":
+				if err := os.Symlink(real, tombstone); err != nil {
+					t.Skip(err)
+				}
+			case "unrelated-name":
+				write(tombstone+".note", nil)
+			case "wrong-parent":
+				foreign := filepath.Join(root, "other")
+				if err := os.Mkdir(foreign, 0700); err != nil {
+					t.Fatal(err)
+				}
+				write(filepath.Join(foreign, marker), nil)
+			case "live-checkpoint":
+				write(tombstone, nil)
+				write(real+pcsdownload.DownloadSuffix, nil)
+			case "remote-collision":
+				write(tombstone, nil)
+				members = append(members, entry{5, "/remote/" + strings.ToUpper(marker), 1, false})
+				write(filepath.Join(root, "remote", strings.ToUpper(marker)), []byte("x"))
+			default:
+				write(tombstone, nil)
+			}
+			r := request{Command: "verify-existing", ExpectedUID: "17", OperationID: "read-only", RemotePath: "/remote", OutputDirectory: root, ExpectedManifest: members}
+			files, err := verifyExistingDownload(context.Background(), r, nil)
+			if scenario != "verified" {
+				if err == nil || len(files) != 0 {
+					t.Fatalf("unconfirmed recovery: %v %v", files, err)
+				}
+				return
+			}
+			if err != nil || len(files) != 2 {
+				t.Fatalf("verification: %v %v", files, err)
+			}
+			for _, file := range files {
+				if file.Length != 4 || file.Sha256 != "" || file.Path == tombstone {
+					t.Fatalf("unexpected preview member: %+v", file)
+				}
+			}
+			for _, command := range []string{"inspect-download", "download", "inspect-retained-writes"} {
+				r.Command = command
+				if _, err = resolveDownloadPaths(context.Background(), profile, r.ExpectedUID, root, r, members, false); err == nil {
+					t.Fatalf("nested marker enabled %s", command)
+				}
+			}
+			if _, err = os.Stat(tombstone); err != nil {
+				t.Fatal(err)
+			}
+			if entries, err := os.ReadDir(profile); err != nil || len(entries) != 0 {
+				t.Fatalf("preview wrote provider state: %v %v", entries, err)
+			}
+		})
+	}
+}
+
+func TestExistingMemberMismatchReportsOnlyStableNumericEvidence(t *testing.T) {
+	for _, mode := range []string{"single", "unavailable", "unknownBoundary", "missing", "short", "long",
+		"replaced", "disappeared", "resized", "modified", "changedProvider", "lostProvider", "metadataReadFailed", "cancelled"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			root := t.TempDir()
+			front := resumeFixture("first", "good")
+			last := resumeFixture("private-member", "keep")
+			last.FsID++
+			r := request{VerifyRemote: true, OutputDirectory: root, ExpectedManifest: []entry{
+				{42, "/remote", 0, true}, {front.FsID, front.Path, front.Size, false},
+				{last.FsID, last.Path, last.Size, false}}}
+			paths := map[string]string{front.Path: "first", last.Path: "private-member"}
+			if err := os.WriteFile(filepath.Join(root, "first"), []byte("good"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			local := filepath.Join(root, "private-member")
+			data := "oops"
+			switch mode {
+			case "short":
+				data = "bad"
+			case "long":
+				data = "extra"
+			case "unavailable":
+				last.BlockList = nil
+			case "unknownBoundary":
+				last.BlockList = append(last.BlockList, last.BlockList[0])
+			}
+			if mode != "missing" {
+				if err := os.WriteFile(local, []byte(data), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			calls := 0
+			result, err := verifyExistingMembers(ctx, r, paths, func(remote string) (*baidupcs.FileDirectory, error) {
+				if remote == front.Path {
+					return front, nil
+				}
+				calls++
+				if calls == 2 {
+					switch mode {
+					case "replaced":
+						if err := os.Rename(local, local+".old"); err != nil {
+							t.Fatal(err)
+						}
+						if err := os.WriteFile(local, []byte(data), 0600); err != nil {
+							t.Fatal(err)
+						}
+					case "disappeared":
+						if err := os.Remove(local); err != nil {
+							t.Fatal(err)
+						}
+					case "resized":
+						if err := os.Truncate(local, 2); err != nil {
+							t.Fatal(err)
+						}
+					case "modified":
+						now := time.Now().Add(-time.Hour)
+						if err := os.Chtimes(local, now, now); err != nil {
+							t.Fatal(err)
+						}
+					case "changedProvider":
+						changed := *last
+						changed.BlockList = []string{strings.Repeat("1", 32)}
+						return &changed, nil
+					case "lostProvider":
+						changed := *last
+						changed.BlockList = nil
+						return &changed, nil
+					case "metadataReadFailed":
+						return nil, errors.New("private path and transport credentials")
+					case "cancelled":
+						cancel()
+					}
+				}
+				return last, nil
+			})
+			if err == nil || len(result) != 0 {
+				t.Fatalf("expected no partial result: %v", err)
+			}
+			want := map[string]string{"single": "BAIDU_DOWNLOAD_CHECKSUM_MISMATCH", "unavailable": "BAIDU_EXISTING_CHECKSUM_UNAVAILABLE",
+				"unknownBoundary": "BAIDU_EXISTING_CHECKSUM_UNAVAILABLE", "missing": "BAIDU_VERIFIED_FILE_MISSING", "short": "BAIDU_VERIFIED_FILE_SIZE_CHANGED", "long": "BAIDU_VERIFIED_FILE_SIZE_CHANGED",
+				"replaced": "BAIDU_VERIFIED_FILE_REPLACED", "disappeared": "BAIDU_VERIFIED_FILE_MISSING", "resized": "BAIDU_VERIFIED_FILE_SIZE_CHANGED",
+				"modified": "BAIDU_VERIFIED_FILE_TIME_CHANGED", "changedProvider": "BAIDU_REMOTE_MANIFEST_CHANGED", "lostProvider": "BAIDU_REMOTE_MANIFEST_CHANGED",
+				"metadataReadFailed": "BAIDU_MANIFEST_FAILED", "cancelled": context.Canceled.Error()}[mode]
+			ev := errorEvent(err)
+			if ev["code"] != want || ev["manifestFileNumber"] != 2 || ev["manifestFileCount"] != 2 {
+				t.Fatalf("%+v", ev)
+			}
+			if mode == "single" {
+				if len(ev) != 9 || ev["mismatchedBlockCount"] != 1 || ev["firstMismatchedBlockNumber"] != 1 || ev["checksumBlockCount"] != 1 || ev["firstMismatchedBlockBytes"] != int64(4) || calls != 2 {
+					t.Fatalf("wrong public mismatch data: %+v", ev)
+				}
+				info, err := verifiedLocalDownload(local, last, nil)
+				if err != nil || info != nil {
+					t.Fatalf("normal download behavior changed: %v", err)
+				}
+			} else if len(ev) != 5 {
+				t.Fatalf("unexpected error fields %+v", ev)
+			}
+		})
+	}
+}
+
+func TestVerificationRecordsFirstBadBlockAndCompleteCount(t *testing.T) {
+	// Scale the block boundary so the 885th of 951 can be tested in-memory.
+	data := bytes.Repeat([]byte("ab"), 951)
+	data = data[:len(data)-1]
+	hashes := make([][]byte, 951)
+	for i := range hashes {
+		part := data[2*i : min(2*i+2, len(data))]
+		sum := md5.Sum(part)
+		hashes[i] = sum[:]
+	}
+	data[884*2] ^= 1
+	cases := []struct {
+		count  int
+		second bool
+	}{{1, false}, {2, true}}
+	for _, tc := range cases {
+		if tc.second {
+			data[len(data)-1] ^= 1
+		}
+		mismatch := &existingChecksumMismatch{blocks: 951}
+		reader := newVerificationReader(bytes.NewReader(data), int64(len(data)), verificationProgress{mismatch: mismatch})
+		n, ok, err := verifyChecksumBlocks(reader, &downloadChecksums{blockSize: 2, hashes: hashes})
+		if err != nil || ok || n != int64(len(data)) || mismatch.bad != tc.count || mismatch.first != 885 || mismatch.firstBytes != 2 {
+			t.Fatalf("wrong block evidence: %+v %v", mismatch, err)
+		}
+	}
+}
+
+func TestVerifyOnlyLayoutOrdersSizeEvidenceAfterStructuralConflicts(t *testing.T) {
+	entries := []entry{{1, "/remote", 0, true}, {2, "/remote/first", 4, false}, {3, "/remote/last", 5, false}}
+	for _, state := range []string{"missing", "short", "long", "invalidCheckpoint", "unexpected", "symlink"} {
+		t.Run(state, func(t *testing.T) {
+			root := t.TempDir()
+			dir := filepath.Join(root, "remote")
+			if err := os.Mkdir(dir, 0700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(dir, "first"), []byte("good"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			last := filepath.Join(dir, "last")
+			if state != "missing" {
+				contents := "bad"
+				if state == "long" {
+					contents = "too-long"
+				}
+				if err := os.WriteFile(last, []byte(contents), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if state == "invalidCheckpoint" {
+				if err := os.WriteFile(last+pcsdownload.DownloadSuffix, []byte("broken"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if state == "unexpected" {
+				if err := os.WriteFile(filepath.Join(dir, "unknown"), []byte("user"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if state == "symlink" {
+				if err := os.Symlink(last, filepath.Join(dir, "link")); err != nil {
+					t.Skip("no symlink support")
+				}
+			}
+			err := inspectDownloadTree(context.Background(), root, "/remote", entries, nil, true)
+			want := map[string]string{"missing": "BAIDU_VERIFIED_FILE_MISSING", "short": "BAIDU_VERIFIED_FILE_SIZE_CHANGED", "long": "BAIDU_VERIFIED_FILE_SIZE_CHANGED", "invalidCheckpoint": "BAIDU_DOWNLOAD_CHECKPOINT_INVALID", "unexpected": "BAIDU_OUTPUT_UNEXPECTED_FILE", "symlink": "BAIDU_UNSAFE_REMOTE_PATH"}[state]
+			if err == nil || err.Error() != want {
+				t.Fatalf("unexpected %v", err)
+			}
+			event := errorEvent(err)
+			if state == "missing" || state == "short" || state == "long" {
+				if event["manifestFileNumber"] != 2 || event["manifestFileCount"] != 2 {
+					t.Fatalf("bad file ordinal %+v", event)
+				}
+			}
+		})
+	}
+}
+
+type failingVerificationRead struct{}
+
+func (failingVerificationRead) Read(b []byte) (int, error) { return copy(b, "bad"), syscall.EIO }
+func TestVerificationCannotConcludeMismatchAfterDeviceReadError(t *testing.T) {
+	match := md5.Sum([]byte("yes"))
+	mismatch := &existingChecksumMismatch{blocks: 1}
+	reader := newVerificationReader(failingVerificationRead{}, 3, verificationProgress{mismatch: mismatch})
+	_, ok, err := verifyChecksumBlocks(reader, &downloadChecksums{blockSize: 3, hashes: [][]byte{match[:]}})
+	if ok || !errors.Is(err, syscall.EIO) || mismatch.bad != 0 {
+		t.Fatalf("accepted partial evidence: %v %v", ok, err)
 	}
 }

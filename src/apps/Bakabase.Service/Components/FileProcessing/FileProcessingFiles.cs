@@ -13,6 +13,31 @@ public static class FileProcessingFiles
     public static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
+    internal static bool ContainsOnlySmbDeleteMarkers(string path)
+    {
+        if (!Directory.Exists(path) || (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) return false;
+        var found = false;
+        var directories = new Stack<DirectoryInfo>();
+        directories.Push(new DirectoryInfo(path));
+        while (directories.TryPop(out var directory))
+        {
+            foreach (var entry in directory.EnumerateFileSystemInfos())
+            {
+                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0) return false;
+                if (entry is DirectoryInfo child) directories.Push(child);
+                else if (entry is FileInfo && IsSmbDeleteMarker(entry.Name)) found = true;
+                else return false;
+            }
+        }
+        return found;
+    }
+
+    // Darwin's smbfs_delete_openfile increments each of the three collision
+    // counters from ASCII A through z, including the punctuation between Z and a.
+    internal static bool IsSmbDeleteMarker(string name) =>
+        Regex.IsMatch(name, @"^\.smbdelete(?:[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)?|[\x41-\x7A]{3}[0-9a-fA-F]{4,8}4\.4)\z",
+            RegexOptions.CultureInvariant);
+
     public static string Within(string path, string root)
     {
         var fullRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));

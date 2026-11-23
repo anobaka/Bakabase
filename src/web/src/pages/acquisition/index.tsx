@@ -24,30 +24,30 @@ import AcquisitionSettingsModal from "./components/AcquisitionSettingsModal";
 import AcquisitionReserveSetting from "./components/AcquisitionReserveSetting";
 import AcquisitionAttentionFilters from "./components/AcquisitionAttentionFilters";
 import AcquisitionTaskSearch from "./components/AcquisitionTaskSearch";
+import DeletedAcquisitionTasksModal from "./components/DeletedAcquisitionTasksModal";
 import DeleteAcquisitionTasksModal from "./components/DeleteAcquisitionTasksModal";
 import AcquisitionContinueModal from "./components/AcquisitionContinueModal";
 import AcquisitionSelectionButtons from "./components/AcquisitionSelectionButtons";
 import { acquisitionActionLimits, acquisitionSelectionLimit } from "./acquisitionSelection";
 import { normalizeAcquisitionFilters, type AcquisitionFilterSelection } from "./acquisitionFilters";
-import { readAcquisitionListPreferences, writeAcquisitionListPreferences, type AcquisitionListPreferences } from "./listPreferences";
+import {
+  readAcquisitionListPreferences,
+  writeAcquisitionListPreferences,
+  type AcquisitionListPreferences,
+} from "./listPreferences";
 import AcquisitionDownloadDestinationModal from "./components/AcquisitionDownloadDestinationModal";
 import AcquisitionStorageMaintenanceModal from "./components/AcquisitionStorageMaintenanceModal";
 import useAcquisitionTasks from "./useAcquisitionTasks";
 import RecipeCatalog from "./components/RecipeCatalog";
 import AcquisitionStageFilters from "./components/AcquisitionStageFilters";
+import AcquisitionDownloadSourceFilter from "./components/AcquisitionDownloadSourceFilter";
+import AcquisitionRuntimeCapabilityFilters from "./components/AcquisitionRuntimeCapabilityFilters";
+import { downloadSourceLabel } from "@/components/DownloadSource";
 import SourceAvailabilityReviewModal from "@/components/SourceAvailability/SourceAvailabilityReviewModal";
 
 import BApi from "@/sdk/BApi";
 import { HelpCenterButton } from "@/components/HelpCenter";
-import {
-  Button,
-  Badge,
-  Checkbox,
-  Pagination,
-  Select,
-  Spinner,
-  Tooltip,
-} from "@/components/bakaui";
+import { Button, Badge, Checkbox, Pagination, Select, Spinner, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PlanTaskRow from "@/components/Acquire/PlanTask/PlanTaskRow";
 import PlanTaskDetailModal from "@/components/Acquire/PlanTask/PlanTaskDetailModal";
@@ -76,9 +76,15 @@ const AcquisitionPage: React.FC = () => {
       : saved;
   });
   const [stage, setStage] = useState<AcquisitionStageFilter>(initialPreferences.stage);
+  const [downloadSource, setDownloadSource] = useState(initialPreferences.downloadSource);
+  const [capabilityId, setCapabilityId] = useState(initialPreferences.capabilityId);
+  const [executionState, setExecutionState] = useState(initialPreferences.executionState);
   const [keyword, setKeyword] = useState(initialPreferences.keyword);
   const [searchKeyword, setSearchKeyword] = useState(initialPreferences.keyword.trim());
-  const [filters, setFilters] = useState<AcquisitionFilterSelection>({ attentionTags: initialPreferences.attentionTags, facts: initialPreferences.facts });
+  const [filters, setFilters] = useState<AcquisitionFilterSelection>({
+    attentionTags: initialPreferences.attentionTags,
+    facts: initialPreferences.facts,
+  });
   const filtersKey = JSON.stringify(filters);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<AcquisitionListPreferences["sort"]>(initialPreferences.sort);
@@ -91,12 +97,19 @@ const AcquisitionPage: React.FC = () => {
     stageCounts,
     attentionCounts,
     factCounts,
+    runtimeCapabilityCounts,
+    runtimeExecutionStateCounts,
+    runtimeCapabilities,
+    taskRuntimeFacets,
     queueTaskCount,
     loading,
     failed: loadFailed,
     refresh: load,
   } = useAcquisitionTasks({
     keyword: searchKeyword,
+    ...(downloadSource ? { downloadSource } : {}),
+    ...(capabilityId ? { capabilityId } : {}),
+    ...(executionState ? { executionState } : {}),
     stage,
     ...filters,
     page,
@@ -112,10 +125,16 @@ const AcquisitionPage: React.FC = () => {
   // Local selection can remain editable; execution gets its own fixed-ID preview.
   // A new scope has no data, and a failed refresh remains protected until reloaded.
   const selectionDisabled = !data || loadFailed || filterPending;
+  const runtimeCapabilityLabel = capabilityId
+    ? Object.values(taskRuntimeFacets ?? {}).find((facet) => facet.capabilityId === capabilityId)?.capabilityName || capabilityId
+    : undefined;
   const scopeLabel = [
     t(`acquisition.stage.${stage}`),
-    ...filters.attentionTags.map(tag => t(`acquisition.attention.tag.${tag}`)),
-    ...filters.facts.map(fact => t(`acquisition.filters.fact.${fact}`)),
+    downloadSource && downloadSourceLabel(downloadSource, t),
+    runtimeCapabilityLabel,
+    executionState && t(`acquisition.runtime.executionState.${executionState}`, { defaultValue: executionState }),
+    ...filters.attentionTags.map((tag) => t(`acquisition.attention.tag.${tag}`)),
+    ...filters.facts.map((fact) => t(`acquisition.filters.fact.${fact}`)),
     filters.attentionTags.length + filters.facts.length > 1 && t("acquisition.filters.matchAll"),
     searchKeyword,
   ]
@@ -131,12 +150,20 @@ const AcquisitionPage: React.FC = () => {
     return () => clearTimeout(timer);
   }, [keyword, searchKeyword]);
   useEffect(() => {
-    writeAcquisitionListPreferences({ stage, keyword: searchKeyword, sort, ...filters });
-  }, [stage, searchKeyword, sort, filtersKey]);
+    writeAcquisitionListPreferences({
+      stage,
+      keyword: searchKeyword,
+      downloadSource,
+      capabilityId,
+      executionState,
+      sort,
+      ...filters,
+    });
+  }, [stage, searchKeyword, downloadSource, capabilityId, executionState, sort, filtersKey]);
   // Pagination and sorting preserve the explicit selection; changing its scope does not.
   useEffect(() => {
     setSelectedTaskIds(new Set());
-  }, [stage, filtersKey, searchKeyword]);
+  }, [stage, downloadSource, capabilityId, executionState, filtersKey, searchKeyword]);
   useEffect(() => {
     if (!data || loading || loadFailed || data.taskIdsTruncated) return;
     const current = new Set(data.filteredTaskIds ?? []);
@@ -149,6 +176,8 @@ const AcquisitionPage: React.FC = () => {
     const requested = searchParams.get("stage");
     if (["all", ...acquisitionStages].includes(requested ?? "")) {
       setStage(requested as AcquisitionStageFilter);
+      setCapabilityId(undefined);
+      setExecutionState(undefined);
       setFilters({ attentionTags: [], facts: [] });
       setPage(1);
     }
@@ -179,14 +208,17 @@ const AcquisitionPage: React.FC = () => {
     },
     [createPortal, load, navigate, recipes],
   );
-  const openTaskById = useCallback((id: number) => {
-    void BApi.acquisition
-      .getAcquisition(id, { sensitiveResponse: true, showErrorToast: false })
-      .then((result) => {
-        if (!result.code && result.data) openTask(result.data as PlanTask);
-      })
-      .catch(() => {});
-  }, [openTask]);
+  const openTaskById = useCallback(
+    (id: number) => {
+      void BApi.acquisition
+        .getAcquisition(id, { sensitiveResponse: true, showErrorToast: false })
+        .then((result) => {
+          if (!result.code && result.data) openTask(result.data as PlanTask);
+        })
+        .catch(() => {});
+    },
+    [openTask],
+  );
 
   useEffect(() => {
     const taskId = searchParams.get("taskId");
@@ -228,32 +260,122 @@ const AcquisitionPage: React.FC = () => {
   };
   const selectedIds = [...selectedTaskIds];
   const checkableSet = new Set(checkableIds);
-  const selectedSourceIds = selectedIds.filter(id => checkableSet.has(id));
-  const hasScopedFilter = stage !== "all" || filters.attentionTags.length > 0 || filters.facts.length > 0 ||
+  const selectedSourceIds = selectedIds.filter((id) => checkableSet.has(id));
+  const hasScopedFilter =
+    !!downloadSource ||
+    !!capabilityId ||
+    !!executionState ||
+    stage !== "all" ||
+    filters.attentionTags.length > 0 ||
+    filters.facts.length > 0 ||
     searchKeyword.trim().length > 0;
   const scopeLoading = loading && !data;
   // Both continuation methods use the same captured selection or complete narrowed filter.
   const filteredAnalysis = selectedIds.length === 0 && hasScopedFilter;
-  const continuationIds = selectedIds.length ? selectedIds :
-    filteredAnalysis && !data?.taskIdsTruncated ? filteredIds : [];
-  const selectedScopeLabel = (ids: number[]) => `${t("acquisition.actionbar.selectedScope", { count: ids.length })} · ${scopeLabel}`;
-  const taskActions: { key: keyof typeof acquisitionActionLimits; label: string; ids: number[]; limit: number;
-    color?: "primary" | "danger"; icon?: React.ReactNode; open: (ids: number[]) => void }[] = [
-    { key: "continue", label: "acquisition.continueEntry.open", ids: continuationIds,
+  const continuationIds = selectedIds.length
+    ? selectedIds
+    : filteredAnalysis && !data?.taskIdsTruncated
+      ? filteredIds
+      : [];
+  const selectedScopeLabel = (ids: number[]) =>
+    `${t("acquisition.actionbar.selectedScope", { count: ids.length })} · ${scopeLabel}`;
+  const taskActions: {
+    key: keyof typeof acquisitionActionLimits;
+    label: string;
+    ids: number[];
+    limit: number;
+    color?: "primary" | "danger";
+    icon?: React.ReactNode;
+    open: (ids: number[]) => void;
+  }[] = [
+    {
+      key: "continue",
+      label: "acquisition.continueEntry.open",
+      ids: continuationIds,
       limit: acquisitionActionLimits.continue,
-      color: "primary", open: ids => createPortal(AcquisitionContinueModal, { taskIds: ids,
-        scopeLabel: filteredAnalysis ? `${t("acquisition.actionbar.filteredScope", { count: ids.length })} · ${scopeLabel}` : selectedScopeLabel(ids),
-        filteredAnalysis, onChanged: load, onOpenTask: openTaskById }) },
-    { key: "checkSources", label: "acquisition.actionbar.checkSources", ids: selectedSourceIds, limit: acquisitionActionLimits.checkSources,
-      icon: <AiOutlineLink aria-hidden />, open: ids => createPortal(SourceAvailabilityReviewModal, { taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
-    { key: "downloadDestination", label: "acquisition.actionbar.downloadDestination", ids: selectedIds, limit: acquisitionActionLimits.downloadDestination,
-      icon: <AiOutlineFolderOpen aria-hidden />, open: ids => createPortal(AcquisitionDownloadDestinationModal, { taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
-    { key: "storagePolicy", label: "acquisition.actionbar.storagePolicy", ids: selectedIds, limit: acquisitionActionLimits.storagePolicy,
-      icon: <AiOutlineSetting aria-hidden />, open: ids => createPortal(AcquisitionStorageMaintenanceModal, { mode: "policy", taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
-    { key: "workspaceCleanup", label: "acquisition.actionbar.workspaceCleanup", ids: selectedIds, limit: acquisitionActionLimits.workspaceCleanup,
-      icon: <AiOutlineFolderOpen aria-hidden />, open: ids => createPortal(AcquisitionStorageMaintenanceModal, { mode: "cleanup", taskIds: ids, scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
-    { key: "delete", label: "acquisition.actionbar.delete", ids: selectedIds, limit: acquisitionActionLimits.delete, color: "danger",
-      icon: <AiOutlineDelete aria-hidden />, open: ids => createPortal(DeleteAcquisitionTasksModal, { taskIds: ids, taskNames: Object.fromEntries(tasks.map(task => [task.id, task.title?.trim() || task.resourceName?.trim() || ""])), scopeLabel: selectedScopeLabel(ids), onChanged: load }) },
+      color: "primary",
+      open: (ids) =>
+        createPortal(AcquisitionContinueModal, {
+          taskIds: ids,
+          scopeLabel: filteredAnalysis
+            ? `${t("acquisition.actionbar.filteredScope", { count: ids.length })} · ${scopeLabel}`
+            : selectedScopeLabel(ids),
+          filteredAnalysis,
+          onChanged: load,
+          onOpenTask: openTaskById,
+        }),
+    },
+    {
+      key: "checkSources",
+      label: "acquisition.actionbar.checkSources",
+      ids: selectedSourceIds,
+      limit: acquisitionActionLimits.checkSources,
+      icon: <AiOutlineLink aria-hidden />,
+      open: (ids) =>
+        createPortal(SourceAvailabilityReviewModal, {
+          taskIds: ids,
+          scopeLabel: selectedScopeLabel(ids),
+          onChanged: load,
+        }),
+    },
+    {
+      key: "downloadDestination",
+      label: "acquisition.actionbar.downloadDestination",
+      ids: selectedIds,
+      limit: acquisitionActionLimits.downloadDestination,
+      icon: <AiOutlineFolderOpen aria-hidden />,
+      open: (ids) =>
+        createPortal(AcquisitionDownloadDestinationModal, {
+          taskIds: ids,
+          scopeLabel: selectedScopeLabel(ids),
+          onChanged: load,
+        }),
+    },
+    {
+      key: "storagePolicy",
+      label: "acquisition.actionbar.storagePolicy",
+      ids: selectedIds,
+      limit: acquisitionActionLimits.storagePolicy,
+      icon: <AiOutlineSetting aria-hidden />,
+      open: (ids) =>
+        createPortal(AcquisitionStorageMaintenanceModal, {
+          mode: "policy",
+          taskIds: ids,
+          scopeLabel: selectedScopeLabel(ids),
+          onChanged: load,
+        }),
+    },
+    {
+      key: "workspaceCleanup",
+      label: "acquisition.actionbar.workspaceCleanup",
+      ids: selectedIds,
+      limit: acquisitionActionLimits.workspaceCleanup,
+      icon: <AiOutlineFolderOpen aria-hidden />,
+      open: (ids) =>
+        createPortal(AcquisitionStorageMaintenanceModal, {
+          mode: "cleanup",
+          taskIds: ids,
+          scopeLabel: selectedScopeLabel(ids),
+          onChanged: load,
+        }),
+    },
+    {
+      key: "delete",
+      label: "acquisition.actionbar.delete",
+      ids: selectedIds,
+      limit: acquisitionActionLimits.delete,
+      color: "danger",
+      icon: <AiOutlineDelete aria-hidden />,
+      open: (ids) =>
+        createPortal(DeleteAcquisitionTasksModal, {
+          taskIds: ids,
+          taskNames: Object.fromEntries(
+            tasks.map((task) => [task.id, task.title?.trim() || task.resourceName?.trim() || ""]),
+          ),
+          scopeLabel: selectedScopeLabel(ids),
+          onChanged: load,
+        }),
+    },
   ];
   const {
     overviews,
@@ -276,10 +398,21 @@ const AcquisitionPage: React.FC = () => {
         </div>
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
           <AcquisitionReserveSetting revision={settingsRevision} />
-          <Tooltip content={t("acquisition.continueEntry.queueCountHint", { count: queueTaskCount })}>
-            <Badge content={queueTaskCount} color="primary" size="sm" isInvisible={!queueTaskCount} showOutline={false}>
-              <Button size="sm" variant="flat"
-                onPress={() => createPortal(AcquisitionContinueModal, { onChanged: load })}>
+          <Tooltip
+            content={t("acquisition.continueEntry.queueCountHint", { count: queueTaskCount })}
+          >
+            <Badge
+              content={queueTaskCount}
+              color="primary"
+              size="sm"
+              isInvisible={!queueTaskCount}
+              showOutline={false}
+            >
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={() => createPortal(AcquisitionContinueModal, { onChanged: load })}
+              >
                 {t("acquisition.continueEntry.queue")}
               </Button>
             </Badge>
@@ -313,12 +446,23 @@ const AcquisitionPage: React.FC = () => {
                 {t<string>("acquisition.inbox.open")}
               </Button>
             </Tooltip>
+            <Button size="sm" variant="light" startContent={<AiOutlineDelete aria-hidden className="text-base" />}
+              onPress={() => createPortal(DeletedAcquisitionTasksModal, { onOpenTask: openTaskById })}>
+              {t<string>("acquisition.delete.history.title")}
+            </Button>
             <Tooltip content={t<string>("acquisition.settings.description")}>
               <Button
                 size="sm"
                 startContent={<AiOutlineSetting aria-hidden className="text-base" />}
                 variant="light"
-                onPress={() => createPortal(AcquisitionSettingsModal, { onDone: () => { setSettingsRevision(n => n + 1); void load(); } })}
+                onPress={() =>
+                  createPortal(AcquisitionSettingsModal, {
+                    onDone: () => {
+                      setSettingsRevision((n) => n + 1);
+                      void load();
+                    },
+                  })
+                }
               >
                 {t<string>("acquisition.settings.title")}
               </Button>
@@ -346,6 +490,8 @@ const AcquisitionPage: React.FC = () => {
           loading={!stageCounts}
           onChange={(value) => {
             setStage(value);
+            setCapabilityId(undefined);
+            setExecutionState(undefined);
             setFilters({ attentionTags: [], facts: [] });
             setPage(1);
           }}
@@ -363,7 +509,12 @@ const AcquisitionPage: React.FC = () => {
             }))}
             onSelectionChange={(keys) => {
               const value = Array.from(keys)[0];
-              if (value === "newest" || value === "lastProcessed" || value === "sizeAsc" || value === "sizeDesc") {
+              if (
+                value === "newest" ||
+                value === "lastProcessed" ||
+                value === "sizeAsc" ||
+                value === "sizeDesc"
+              ) {
                 setSort(value);
                 setPage(1);
               }
@@ -378,6 +529,9 @@ const AcquisitionPage: React.FC = () => {
                 onStarted: (taskId: number) => {
                   void load();
                   setStage("all");
+                  setDownloadSource(undefined);
+                  setCapabilityId(undefined);
+                  setExecutionState(undefined);
                   setFilters({ attentionTags: [], facts: [] });
                   setKeyword("");
                   setPage(1);
@@ -390,9 +544,37 @@ const AcquisitionPage: React.FC = () => {
           </Button>
         </div>
       </div>
+      <AcquisitionDownloadSourceFilter
+        value={downloadSource}
+        onChange={(value) => {
+          setDownloadSource(value);
+          setPage(1);
+          setSelectedTaskIds(new Set());
+        }}
+      />
+      <AcquisitionRuntimeCapabilityFilters
+        capabilityCounts={runtimeCapabilityCounts}
+        executionStateCounts={runtimeExecutionStateCounts}
+        capabilities={runtimeCapabilities}
+        facets={taskRuntimeFacets}
+        capabilityId={capabilityId}
+        executionState={executionState}
+        disabled={loadFailed || filterPending}
+        onCapabilityChange={(value) => {
+          setCapabilityId(value);
+          setPage(1);
+          setSelectedTaskIds(new Set());
+        }}
+        onExecutionStateChange={(value) => {
+          setExecutionState(value);
+          setPage(1);
+          setSelectedTaskIds(new Set());
+        }}
+      />
       {attentionCounts &&
         (stage === "attention" ||
-          filters.attentionTags.length || filters.facts.length ||
+          filters.attentionTags.length ||
+          filters.facts.length ||
           Object.values(attentionCounts).some((count) => count > 0) ||
           Object.values(factCounts ?? {}).some((count) => count > 0)) && (
           <AcquisitionAttentionFilters
@@ -419,50 +601,100 @@ const AcquisitionPage: React.FC = () => {
       )}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs">
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-          <Checkbox size="sm"
+          <Checkbox
+            size="sm"
             isSelected={!!visibleTaskIds.length && selectedOnPage === visibleTaskIds.length}
             isIndeterminate={selectedOnPage > 0 && selectedOnPage < visibleTaskIds.length}
-            isDisabled={selectionDisabled || !visibleTaskIds.length ||
-              (selectedOnPage < visibleTaskIds.length && pageSelectionExceedsLimit)}
-            onValueChange={changePageSelection}>
+            isDisabled={
+              selectionDisabled ||
+              !visibleTaskIds.length ||
+              (selectedOnPage < visibleTaskIds.length && pageSelectionExceedsLimit)
+            }
+            onValueChange={changePageSelection}
+          >
             {t("acquisition.selection.page", { count: visibleTaskIds.length })}
           </Checkbox>
-          <AcquisitionSelectionButtons pageIds={visibleTaskIds} filteredIds={filteredIds}
-            totalCount={data?.totalCount ?? 0} truncated={data?.taskIdsTruncated === true}
-            disabled={selectionDisabled} otherPagesSelected={selectedTaskIds.size > selectedOnPage}
-            onSelect={ids => setSelectedTaskIds(new Set(ids))} />
+          <AcquisitionSelectionButtons
+            pageIds={visibleTaskIds}
+            filteredIds={filteredIds}
+            totalCount={data?.totalCount ?? 0}
+            truncated={data?.taskIdsTruncated === true}
+            disabled={selectionDisabled}
+            otherPagesSelected={selectedTaskIds.size > selectedOnPage}
+            showCrossPageSelection={
+              pageCount > 1 && selectedOnPage === visibleTaskIds.length && visibleTaskIds.length > 0
+            }
+            onSelect={(ids) => setSelectedTaskIds(new Set(ids))}
+          />
           <Tooltip content={t("acquisition.selection.hint")} delay={1000} placement="bottom">
             <span className="text-default-500" aria-live="polite">
-              {t("acquisition.selection.summary", { total: data?.totalCount ?? "—", count: selectedTaskIds.size })}
+              {t("acquisition.selection.summary", {
+                total: data?.totalCount ?? "—",
+                count: selectedTaskIds.size,
+              })}
             </span>
           </Tooltip>
-          {!!selectedTaskIds.size && <Button size="sm" variant="light" onPress={() => setSelectedTaskIds(new Set())}>
-            {t("acquisition.selection.clear")}
-          </Button>}
+          {!!selectedTaskIds.size && (
+            <Button size="sm" variant="light" onPress={() => setSelectedTaskIds(new Set())}>
+              {t("acquisition.selection.clear")}
+            </Button>
+          )}
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-1">
-          {taskActions.map(action => {
+          {taskActions.map((action) => {
             const overLimit = action.ids.length > action.limit;
             const disabled = selectionDisabled || scopeLoading || !action.ids.length || overLimit;
-            const hint = action.key === "continue" && filteredAnalysis && data?.taskIdsTruncated
-              ? t("acquisition.continueActions.narrowFilter") : overLimit ? t("acquisition.actionbar.limit", { count: action.ids.length, limit: action.limit }) : action.key === "continue" && filteredAnalysis && action.ids.length
-              ? t("acquisition.actionbar.filteredScope", { count: action.ids.length }) :
-              !selectedTaskIds.size ? t("acquisition.actionbar.selectFirst") : action.key === "checkSources"
-                ? t("acquisition.actionbar.checkable", { count: action.ids.length, total: selectedTaskIds.size })
-                : selectedTaskIds.size ? t("acquisition.actionbar.selectedScope", { count: action.ids.length })
-                  : t("acquisition.actionbar.filteredScope", { count: action.ids.length });
-            return <Tooltip key={action.key} content={hint} delay={1000} placement="bottom">
-              <span><Button size="sm" variant="flat" color={action.color} startContent={action.icon}
-                isDisabled={disabled} onPress={() => {
-                  if (!disabled) action.open([...action.ids]);
-                }}>{t(action.label)}</Button></span>
-            </Tooltip>;
+            const hint =
+              action.key === "continue" && filteredAnalysis && data?.taskIdsTruncated
+                ? t("acquisition.continueActions.narrowFilter")
+                : overLimit
+                  ? t("acquisition.actionbar.limit", {
+                      count: action.ids.length,
+                      limit: action.limit,
+                    })
+                  : action.key === "continue" && filteredAnalysis && action.ids.length
+                    ? t("acquisition.actionbar.filteredScope", { count: action.ids.length })
+                    : !selectedTaskIds.size
+                      ? t("acquisition.actionbar.selectFirst")
+                      : action.key === "checkSources"
+                        ? t("acquisition.actionbar.checkable", {
+                            count: action.ids.length,
+                            total: selectedTaskIds.size,
+                          })
+                        : selectedTaskIds.size
+                          ? t("acquisition.actionbar.selectedScope", { count: action.ids.length })
+                          : t("acquisition.actionbar.filteredScope", { count: action.ids.length });
+            return (
+              <Tooltip key={action.key} content={hint} delay={1000} placement="bottom">
+                <span>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    color={action.color}
+                    startContent={action.icon}
+                    isDisabled={disabled}
+                    onPress={() => {
+                      if (!disabled) action.open([...action.ids]);
+                    }}
+                  >
+                    {t(action.label)}
+                  </Button>
+                </span>
+              </Tooltip>
+            );
           })}
         </div>
-        {data?.taskIdsTruncated && <span className="text-warning-600">{t("acquisition.selection.truncated")}</span>}
-        {runtimeFailed && <span role="status" className="text-warning-600">{t("acquisition.runtime.refreshFailed")}</span>}
-        {runtimeLoading && !visibleTasks.some(task => overviews[task.id]) &&
-          <span className="text-default-500">{t("acquisition.runtime.loading")}</span>}
+        {data?.taskIdsTruncated && (
+          <span className="text-warning-600">{t("acquisition.selection.truncated")}</span>
+        )}
+        {runtimeFailed && (
+          <span role="status" className="text-warning-600">
+            {t("acquisition.runtime.refreshFailed")}
+          </span>
+        )}
+        {runtimeLoading && !visibleTasks.some((task) => overviews[task.id]) && (
+          <span className="text-default-500">{t("acquisition.runtime.loading")}</span>
+        )}
       </div>
       {loading && !data ? (
         <div className="flex justify-center py-10">
@@ -509,7 +741,15 @@ const AcquisitionPage: React.FC = () => {
                     sizeEstimate={data?.sizeEstimates?.[task.id]}
                     facts={data?.taskFacts?.[task.id]}
                     onOpen={() => openTask(task)}
-                    onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], taskNames: { [task.id]: task.title?.trim() || task.resourceName?.trim() || "" }, onChanged: load })}
+                    onDelete={() =>
+                      createPortal(DeleteAcquisitionTasksModal, {
+                        taskIds: [task.id],
+                        taskNames: {
+                          [task.id]: task.title?.trim() || task.resourceName?.trim() || "",
+                        },
+                        onChanged: load,
+                      })
+                    }
                   />
                 ) : (
                   <AcquisitionRow
@@ -521,7 +761,15 @@ const AcquisitionPage: React.FC = () => {
                     facts={data?.taskFacts?.[task.id]}
                     onChanged={load}
                     onOpen={() => openTask(task)}
-                    onDelete={() => createPortal(DeleteAcquisitionTasksModal, { taskIds: [task.id], taskNames: { [task.id]: task.title?.trim() || task.resourceName?.trim() || "" }, onChanged: load })}
+                    onDelete={() =>
+                      createPortal(DeleteAcquisitionTasksModal, {
+                        taskIds: [task.id],
+                        taskNames: {
+                          [task.id]: task.title?.trim() || task.resourceName?.trim() || "",
+                        },
+                        onChanged: load,
+                      })
+                    }
                     onEditRecipe={(id) => navigate(`/workflows/editor?id=${id}`)}
                   />
                 )}

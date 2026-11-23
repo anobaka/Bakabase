@@ -1,6 +1,6 @@
 import type { WorkflowActivityUI } from "../types";
 import { downloadWorksetExecutionLabels } from "../executionLabels";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Accordion,
@@ -24,6 +24,7 @@ import AcquisitionSourceDetails, {
 import DownloadToolProxies from "@/components/ProxySelector/DownloadToolProxies";
 import { dependencyManagerPath } from "@/components/Dependency/routes";
 import ResumeActions from "../../ResumeActions";
+import { ResumeSubmissionContext } from "../../ResumeSubmissionContext";
 import {
   ResumeDetails,
   ResumeGuidance,
@@ -58,6 +59,7 @@ export interface CloudTarget {
   selectedSourceId?: string;
   accountId?: string;
   problem?: string;
+  transferDiagnostic?: { code: string; providerCode?: number | null; itemCodes?: number[]; fileCount?: number | null; fileLimit?: number | null };
   downloadTaskId?: number;
   transportTaskId?: string;
   downloadOperationId?: string;
@@ -127,8 +129,10 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
   const canChooseSources = prompt.reason === "chooseSources";
   const isTransfer = activityKind === "baidu.transfer";
   const isAwait = activityKind === "download.awaitCompletion";
-  const groupedRetry = isAwait && targets.length > 1;
-  const downloadTargets = useDownloadResumeTargets(runId, targets, groupedRetry);
+  const owner = useContext(ResumeSubmissionContext);
+  const selectOriginals = isAwait && (targets.length > 1 ||
+    owner?.runId === runId && owner?.downloadTargets?.some(target => target.downloadId?.startsWith("bt:")) === true);
+  const downloadTargets = useDownloadResumeTargets(runId, targets, selectOriginals);
   const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
   const liveTargets = new Map(downloadTargets?.map(row => [row.targetId, row]));
   const currentDownload = (target: CloudTarget) => {
@@ -141,7 +145,7 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
       live?.canRetry === true && ["failed", "stopped"].includes(live.status);
   };
   const resumeTargetIds = targets.filter(target => selectedTargets.includes(target.id) && canRetryTarget(target)).map(target => target.id);
-  const canObserve = groupedRetry && targets.some(target => !target.excluded) && targets.every(target =>
+  const canObserve = selectOriginals && targets.some(target => !target.excluded) && targets.every(target =>
     target.excluded || target.downloadArtifactId || target.processedArtifactId || target.publishedArtifactId ||
       ["completed", "running", "queued"].includes(currentDownload(target)?.status ?? ""));
   const problems = [
@@ -151,7 +155,7 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
     .filter(Boolean)
     .join("\n");
   const originalUnavailable = problems.includes("PIKPAK_ORIGINAL_FILE_UNAVAILABLE");
-  const approvingUnavailableOriginal = groupedRetry
+  const approvingUnavailableOriginal = selectOriginals
     ? targets.some(target => resumeTargetIds.includes(target.id) &&
         (currentDownload(target)?.problem || target.problem)?.includes("PIKPAK_ORIGINAL_FILE_UNAVAILABLE"))
     : originalUnavailable;
@@ -199,7 +203,7 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
   }, [downloadTargets, promptJson, activityKind]);
   const needsApproval = originalUnavailable || isTransfer || isAwait;
   const submitAnswer = () => {
-    if (groupedRetry) {
+    if (selectOriginals) {
       onSubmit(JSON.stringify(canObserve ? { observeExistingOnly: true } : { observeExistingOnly: true, resumeTargetIds }));
       return;
     }
@@ -215,7 +219,7 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
     (!canChooseSources || selected.length > 0) &&
     (prompt.reason !== "chooseDirectory" || !!outputDirectory.trim()) &&
     (!needsApproval || canObserve || retryApproved) &&
-    (!groupedRetry || canObserve || resumeTargetIds.length > 0);
+    (!selectOriginals || canObserve || resumeTargetIds.length > 0);
   return (
     <div className={fileTask ? "min-w-0 space-y-3" : "min-w-0 space-y-5"}>
       {fileTask ? !targets.some(target => target.problem) && (
@@ -226,19 +230,23 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
         action={t(`cloudDownload.resumeGuide.${guide}.action`)}
         next={t(`cloudDownload.resumeGuide.${guide}.next`)}
       />}
-      {groupedRetry && !canObserve && <p className="text-sm text-default-600">{t("cloudDownload.resumeGuide.chooseRetryTargets")}</p>}
+      {selectOriginals && !canObserve && <p className="text-sm text-default-600">{t("cloudDownload.resumeGuide.chooseRetryTargets")}</p>}
       <div className="space-y-4">
         {targets.map((target, targetIndex) => {
           const title = target.title || t("cloudDownload.resumeGuide.content", { number: targetIndex + 1 });
-          const live = groupedRetry ? currentDownload(target) : undefined;
+          const live = selectOriginals ? currentDownload(target) : undefined;
           const status = target.downloadArtifactId || target.processedArtifactId || target.publishedArtifactId ? "completed" : live?.status;
-          const problem = !groupedRetry || !status || ["failed", "stopped", "unavailable"].includes(status)
+          const problem = !selectOriginals || !status || ["failed", "stopped", "unavailable"].includes(status)
             ? live?.problem || target.problem : undefined;
+          const report = target.transferDiagnostic?.code === problem && problem?.startsWith("BAIDU_TRANSFER_")
+            ? target.transferDiagnostic : undefined;
+          const itemCodes = Array.isArray(report?.itemCodes)
+            ? report.itemCodes.filter(code => Number.isInteger(code) && Math.abs(code) <= 999999).slice(0, 8) : [];
           return <section
             key={target.id}
             className={fileTask ? "min-w-0 space-y-3" : "min-w-0 space-y-3 rounded-xl border border-default-200 p-4"}
           >
-            {groupedRetry ? (
+            {selectOriginals ? (
               <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                 <Checkbox isDisabled={submitting || !canRetryTarget(target)}
                   isSelected={resumeTargetIds.includes(target.id)}
@@ -259,6 +267,15 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
                 problem={problem}
                 fallback={t(`cloudDownload.resumeGuide.${guide}.why`)}
               />
+            )}
+            {report && typeof report.providerCode === "number" && Number.isInteger(report.providerCode) && Math.abs(report.providerCode) <= 999999 && (
+              <div className="text-xs text-default-600">
+                <p>{t("cloudDownload.transferReport.providerCode", { code: report.providerCode })}</p>
+                {!!itemCodes?.length && <p>{t("cloudDownload.transferReport.itemCodes", { codes: itemCodes.join(", ") })}</p>}
+                {report.fileCount != null && report.fileLimit != null && Number.isInteger(report.fileCount) && Number.isInteger(report.fileLimit)
+                  && report.fileCount > report.fileLimit && report.fileLimit > 0 && report.fileCount <= 100000000 &&
+                  <p>{t("cloudDownload.transferReport.countLimit", { count: report.fileCount, limit: report.fileLimit })}</p>}
+              </div>
             )}
             {(target.transportTaskId || target.downloadTaskId != null) && (
               <Button
@@ -460,7 +477,7 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
         )}
         {needsApproval && !canObserve && (!approvingUnavailableOriginal || retryOpen) && (
           <Checkbox
-            isDisabled={submitting || groupedRetry && !resumeTargetIds.length}
+            isDisabled={submitting || selectOriginals && !resumeTargetIds.length}
             isSelected={retryApproved}
             onValueChange={setRetryApproved}
           >
@@ -468,7 +485,7 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
               {t(
                 approvingUnavailableOriginal
                   ? "cloudDownload.resumeGuide.confirmUnavailableRetry"
-                  : groupedRetry
+                  : selectOriginals
                     ? "cloudDownload.resumeGuide.confirmSelectedDownloads"
                     : isTransfer
                       ? "cloudDownload.resumeGuide.confirmTransfer"

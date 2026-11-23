@@ -12,7 +12,8 @@ internal static class ArtifactContentHash
 {
     internal const int BufferSize = 4 * 1024 * 1024;
 
-    internal static async ValueTask<byte[]> ComputeAsync(Stream source, CancellationToken ct)
+    internal static async ValueTask<byte[]> ComputeAsync(Stream source, CancellationToken ct,
+        Action<int>? onBytesRead = null, Func<CancellationToken, ValueTask>? onReadCheckpoint = null)
     {
         ct.ThrowIfCancellationRequested();
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -25,6 +26,10 @@ internal static class ArtifactContentHash
                 var read = await source.ReadAsync(buffer.AsMemory(0, BufferSize), ct).ConfigureAwait(false);
                 if (read == 0) break;
                 hash.AppendData(buffer, 0, read);
+                // A successful read is evidence of work even inside one very large file.
+                // Never turn a blocked read, EOF or a timer into an activity heartbeat.
+                onBytesRead?.Invoke(read);
+                if (onReadCheckpoint != null) await onReadCheckpoint(ct).ConfigureAwait(false);
             }
             ct.ThrowIfCancellationRequested();
             return hash.GetHashAndReset();

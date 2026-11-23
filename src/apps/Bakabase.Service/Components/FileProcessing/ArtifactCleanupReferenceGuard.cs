@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
@@ -18,6 +19,9 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.FileProcessing;
+
+internal sealed record HistoricalProcessingStepReference(int RunId, string TargetId, string StepId, string ArtifactId,
+    string DownloadId, string CurrentArtifactId, string DownloadRoot);
 
 /// <summary>Durable path references outlive consumer leases. Shared by registered-artifact
 /// retirement and executor-private reclamation, including completed tasks and relocated roots.</summary>
@@ -41,7 +45,7 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
         IReadOnlyList<string>? privatePaths = null, IReadOnlyList<int>? previewSupersededRuns = null,
         int? directoryOwnerTaskId = null, int? directoryOwnerRunId = null, bool deletedDirectoryOwner = false,
         int? directoryDownloadTaskId = null, bool explicitTaskDirectoryCleanup = false, bool abandonUnfinishedFiles = false,
-        string? processingPartId = null)
+        string? processingPartId = null, bool publicationStageFiles = false, HistoricalProcessingStepReference? reviewedBoundary = null)
     {
         bool Found(string location) { referenceFound?.Invoke(location); return true; }
         var aliases = workspaces?.ReadRelocations() ?? [];
@@ -134,6 +138,8 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
                         if (revision.ValueKind != JsonValueKind.Object) return Refers(json, true);
                         var fields = revision.EnumerateObject().Select(p => p.Name).ToArray();
                         var contract = new[] {"revisionId", "previousDirectory", "directory", "rootDirectory", "appliedAt", "previousFingerprint"};
+                        if (fields.Contains("reuseInventoryFingerprint", StringComparer.OrdinalIgnoreCase))
+                            contract = [..contract, "reuseInventoryFingerprint"];
                         if (fields.Length != contract.Length || fields.Distinct(StringComparer.OrdinalIgnoreCase).Count() != fields.Length ||
                             fields.Any(name => !contract.Contains(name, StringComparer.OrdinalIgnoreCase))) return Refers(json, true);
                     }
@@ -191,6 +197,13 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
             !await db.AcquisitionTasks.AnyAsync(t => t.Id == directoryOwner && (t.DeletedAt != null) == deletedDirectoryOwner &&
                 (t.WorkflowRunId == null || owners.Contains(t.WorkflowRunId.Value)), ct)))
             return Found("invalid-directory-task-scope");
+        // A stage with a proven publication can retire its manifest while its container remains shared.
+        // Only this complete file set receives stage capacity-field semantics, never a transport exemption.
+        if (publicationStageFiles && (directoryOwnerTaskId == null || owners.Count == 0 || directoryOwnerRunId != null || directoryDownloadTaskId != null ||
+            source.Kind != "publishedFiles" || source.State is ArtifactLocationState.Quarantined or ArtifactLocationState.Retired ||
+            source.Fingerprint != source.Manifest.Fingerprint || privatePaths is not {Count: > 0} ||
+            !ArtifactManifestFiles.ResolveFiles(source.RootDirectory, source.Manifest).ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(privatePaths)))
+            return Found("invalid-publication-file-scope");
         // Runtime stage commits read their own current stage while moving its exact output
         // selection. This is not a cleanup exemption: the caller must prove this task's
         // current run, and all foreign runs/resources/configuration remain references.
@@ -210,6 +223,7 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
                 (r.Status == WorkflowRunStatus.Pending || r.Status == WorkflowRunStatus.Running || r.PendingSignalJson != null ||
                  r.Status == WorkflowRunStatus.Waiting && !(previewSupersededRuns ?? Array.Empty<int>()).Contains(r.Id)), ct)))
             return Found("invalid-directory-cleanup-scope");
+        var privateTransport = await OwnedWorkspaceTransportAsync(source, owners, roots, ct);
         var privateAllocation = await PrivateProcessingAllocationAsync(source, privatePaths, ownership, ct);
         var previewInactive = previewSupersededRuns ?? [];
         var active = await ReadAsync("active:" + ScopeKey(previewInactive), () => db.WorkflowRuns.AsNoTracking().Where(r => r.Status == WorkflowRunStatus.Pending ||
@@ -237,9 +251,17 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
             }
             if (Refers(plan.PlanJson, allocationContract: document => WithPrivateAllocation(document,
                     ArtifactAcquisitionAllocationReferences.PlanValues(document, ct, plan.Id)))) return Found($"task:{plan.Id}:plan");
-            if (Refers(plan.BuilderStateJson, allocationContract: document => WithPrivateAllocation(document,
-                    ArtifactAcquisitionAllocationReferences.QueueValues(document,
-                    new(plan.Id, plan.WorkflowRunId, plan.PlanRevision, plan.PlanJson, plan.PlanHistoryJson), ownership, ct)))) return Found($"task:{plan.Id}:builder");
+            var taskContext = new ArtifactAcquisitionAllocationReferences.TaskContext(plan.Id, plan.WorkflowRunId,
+                plan.PlanRevision, plan.PlanJson, plan.PlanHistoryJson);
+            bool BuilderRefers(bool verifiedPendingRecovery = false) => Refers(plan.BuilderStateJson, allocationContract:
+                document => WithPrivateAllocation(document, ArtifactAcquisitionAllocationReferences.QueueValues(document,
+                    taskContext, ownership, ct, explicitTaskDirectoryCleanup || publicationStageFiles, verifiedPendingRecovery)));
+            // Both a running stage and a validated publication manifest can distinguish
+            // a sibling's configured workspace from the files its pending recovery uses.
+            var canVerifyPendingAllocation = directoryOwnerRunId != null || publicationStageFiles;
+            if (BuilderRefers() && (!canVerifyPendingAllocation ||
+                !await ArtifactAcquisitionAllocationReferences.HasVerifiedPendingRecoveryAsync(db, taskContext, plan.BuilderStateJson, ownership, ct) ||
+                BuilderRefers(verifiedPendingRecovery: true))) return Found($"task:{plan.Id}:builder");
             if (Refers(plan.PreparedContextJson)) return Found($"task:{plan.Id}:prepared");
             if (plan.TargetDirectory != null && RefersPath(plan.TargetDirectory, false)) return Found($"task:{plan.Id}:target");
         }
@@ -255,8 +277,33 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
                     new(owner.Id, owner.WorkflowRunId, owner.PlanRevision, owner.PlanJson, owner.PlanHistoryJson),
                     run.Id, binding.Revision, ownership, ct)
                 : null;
-            bool Workset(string? json, string field) => allocation == null ? Refers(json) : Refers(json,
-                allocationContract: document => ArtifactAcquisitionAllocationReferences.WorksetValues(document, field, allocation, ct));
+            bool Workset(string? json, string field)
+            {
+                // An already consumed boundary stays in the immutable stage history.
+                // Only that one field of the exact reviewed target may be discounted.
+                if (json != null && reviewedBoundary is {} step && run.Id == step.RunId && step.ArtifactId == source.Id &&
+                    field is "payload" or "currentItem")
+                {
+                    var root = JsonNode.Parse(json);
+                    var item = root is JsonObject wrapped && wrapped["item"] is JsonObject value ? value : root as JsonObject;
+                    if (item?["targets"] is JsonArray targets)
+                    {
+                        foreach (var target in targets.OfType<JsonObject>().Where(t => (string?)t["id"] == step.TargetId &&
+                                     (string?)t["downloadArtifactId"] == step.DownloadId && (string?)t["processedArtifactId"] == step.CurrentArtifactId))
+                        {
+                            if (target["processingStepArtifacts"] is JsonObject steps && (string?)steps[step.StepId] == step.ArtifactId)
+                                steps.Remove(step.StepId);
+                            if (privateTransport is {} transport && (int?)target["downloadTaskId"] == transport.Id &&
+                                (string?)target["downloadDirectory"] is {} allocated && Same(allocated, step.DownloadRoot) &&
+                                Same(allocated, transport.Directory) && ArtifactCleanupPathReferences.StrictlyUnder(source.RootDirectory, allocated))
+                                target.Remove("downloadDirectory");
+                        }
+                        json = root!.ToJsonString();
+                    }
+                }
+                return allocation == null ? Refers(json) : Refers(json, allocationContract: document =>
+                    ArtifactAcquisitionAllocationReferences.WorksetValues(document, field, allocation, ct));
+            }
             if (Workset(run.PayloadJson, "payload") || Workset(run.CurrentItemJson, "currentItem") || Workset(run.WaitPromptJson, "waitPrompt") ||
                 Refers(run.PlanSnapshotJson, frozenWorkflowPlan: true) || Refers(run.PendingSignalJson)) return Found($"run:{run.Id}");
         }
@@ -286,12 +333,11 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
                 exact.SetEquals(recorded.SelectMany(r => JsonSerializer.Deserialize<string[]>(r.FilesJson) ?? []).Select(Relocate)) &&
                 files.Where(f => f.DownloadTaskId == downloadId).All(f => exact.Contains(Relocate(f.Path)))) ownDownload = downloadId;
         }
-        // A completed native download may release its historical receipts. For an unfinished
-        // task, only explicit, quiesced task deletion can release a failed/disabled native
-        // writer, and its persisted dispatch and concrete destination must still match.
-        var allowStoppedDownload = explicitTaskDirectoryCleanup && abandonUnfinishedFiles;
+        // A stopped native writer may belong to an abandoned task or an earlier attempt of
+        // a completed task. Only explicit, quiesced task-directory cleanup can release it,
+        // and its persisted dispatch and concrete destination must still match.
         bool ReleasableNativeState(DownloadTaskDbModelStatus status) => status == DownloadTaskDbModelStatus.Complete ||
-            allowStoppedDownload && status is DownloadTaskDbModelStatus.Failed or DownloadTaskDbModelStatus.Disabled;
+            explicitTaskDirectoryCleanup && status is DownloadTaskDbModelStatus.Failed or DownloadTaskDbModelStatus.Disabled;
         bool MatchesStoppedDispatch(string? options, string? journal, string id, string path)
         {
             if (string.IsNullOrEmpty(options) || string.IsNullOrEmpty(journal)) return false;
@@ -322,7 +368,6 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
                 return Found("invalid-stage-download-owner");
             ownDownload = stageDownload;
         }
-        var privateTransport = await OwnedWorkspaceTransportAsync(source, owners, roots, ct);
         var releasedDownloads = ownDownload is { } released ? new HashSet<int> {released} : [];
         if (explicitTaskDirectoryCleanup)
         {

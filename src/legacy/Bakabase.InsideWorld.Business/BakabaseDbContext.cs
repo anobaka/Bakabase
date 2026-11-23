@@ -311,6 +311,7 @@ namespace Bakabase.InsideWorld.Business
                 // The acquisitions page opens on "what is happening now", and every resource card
                 // asks "is this one being got?" — both are one indexed lookup.
                 t.HasIndex(a => a.Status);
+                t.HasIndex(a => new {a.DeletedAt, a.Id});
                 t.HasIndex(a => a.ResourceId);
             });
 

@@ -17,11 +17,11 @@ public sealed partial class FileProcessingPlanExecutor
     // never manufacture a parent edge or infer replacement from equal hashes alone.
     internal static async Task<string?> BoundaryPublicationProofAsync(IArtifactOperationStore store,
         ArtifactRecord source, ArtifactRecord publication, IReadOnlyDictionary<string, ArtifactRecord> ancestors,
-        IReadOnlyList<ArchiveQuarantineReceipt> receipts, CancellationToken ct)
+        IReadOnlyList<ArchiveQuarantineReceipt> receipts, CancellationToken ct, bool reviewedProcessingBoundary = false)
     {
         try
         {
-            if (source.Kind != "processedFiles" || !source.Managed || publication.Kind != "publishedFiles" ||
+            if (source.Kind != "processedFiles" || !source.Managed || publication.Kind != (reviewedProcessingBoundary ? "processedFiles" : "publishedFiles") ||
                 source.MetadataJson == null || source.Manifest.Entries.Count == 0) return null;
             var metadata = JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(source.MetadataJson, Json);
             if (metadata?.InputArtifactId == null || metadata.CompletedThroughStepId == null ||
@@ -50,8 +50,8 @@ public sealed partial class FileProcessingPlanExecutor
                 break;
             }
             if (directory == null || state is not {Completed: true, LineageVersion: 1, PendingOperation: null} ||
-                state.StoragePolicy?.CleanupIntermediates != true || state.StepPolicies == null ||
-                state.StepPolicies.Values.Any(p => p == null || !p.CleanupIntermediates) ||
+                state.StepPolicies == null || !reviewedProcessingBoundary && (state.StoragePolicy?.CleanupIntermediates != true ||
+                state.StepPolicies.Values.Any(p => p == null || !p.CleanupIntermediates)) ||
                 state.BoundaryResults == null || state.Outputs == null || state.FileContents == null || state.FileTransitions == null ||
                 state.Active == null || state.FinalFiles == null || state.RetainedFiles == null ||
                 state.InputManifest == null || state.FinalManifest == null || !SameManifestContents(state.InputManifest, input.Manifest) ||
@@ -62,17 +62,17 @@ public sealed partial class FileProcessingPlanExecutor
                     .SetEquals(ArtifactManifestFiles.ResolveFiles(sourceRoot, source.Manifest))) return null;
             state.ExecutionRoot = directory;
             var plan = JsonSerializer.Deserialize<FileProcessingPlan>(metadata.PlanJson, Json);
-            if (plan?.Steps == null || !state.StepPolicies.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(plan.Steps.Select(s => s.Id)) ||
-                plan.Steps.Any(s => s.StoragePolicy?.SourceCleanup is not (null or "delete"))) return null;
+            if (plan?.Steps == null || !reviewedProcessingBoundary && (!state.StepPolicies.Keys.ToHashSet(StringComparer.Ordinal).SetEquals(plan.Steps.Select(s => s.Id)) ||
+                plan.Steps.Any(s => s.StoragePolicy?.SourceCleanup is not (null or "delete")))) return null;
             // Keeping the original download is independent of reclaiming processing copies.
             // Explicit per-step retention still wins, and frozen resolved policies must agree
             // with their recorded recipe instead of silently inheriting today's defaults.
             var resolved = NewState(plan, state.StoragePolicy, null, state.ExtractionContentsAsRoot, null).StepPolicies;
-            if (resolved.Any(p => p.Value.SourceCleanup != state.StepPolicies[p.Key].SourceCleanup ||
+            if (!reviewedProcessingBoundary && resolved.Any(p => p.Value.SourceCleanup != state.StepPolicies[p.Key].SourceCleanup ||
                 p.Value.CleanupIntermediates != state.StepPolicies[p.Key].CleanupIntermediates)) return null;
             var order = new[] {"download"}.Concat(plan.Steps.Select(s => s.Id)).ToArray();
             var boundaryIndex = Array.IndexOf(order, metadata.CompletedThroughStepId);
-            if (boundaryIndex < 1 || order.Distinct(StringComparer.Ordinal).Count() != order.Length) return null;
+            if (boundaryIndex < 1 || reviewedProcessingBoundary && boundaryIndex == order.Length - 1 || order.Distinct(StringComparer.Ordinal).Count() != order.Length) return null;
             // The anchor must be an actual publication ancestor committed by this exact
             // completed execution. A retired anchor can still prove lineage via its durable
             // quarantine receipt and immutable manifest; its payload need not be recreated.
@@ -91,7 +91,7 @@ public sealed partial class FileProcessingPlanExecutor
                     committed.InputFingerprint == input.Fingerprint)
                     anchors.Add(anchor);
             }
-            if (anchors.Count != 1 || !(await ArtifactFileCoverage.EvaluateAsync(store, anchors[0], [publication.Id], ct)).Complete) return null;
+            if (anchors.Count != 1 || !(reviewedProcessingBoundary && anchors[0].Id == publication.Id) && !(await ArtifactFileCoverage.EvaluateAsync(store, anchors[0], [publication.Id], ct)).Complete) return null;
             var entries = source.Manifest.Entries.ToDictionary(e => e.RelativePath, StringComparer.Ordinal);
             if (boundary.Files.Count != entries.Count) return null;
             var coverage = new ReplacementCoverage(state, ct);

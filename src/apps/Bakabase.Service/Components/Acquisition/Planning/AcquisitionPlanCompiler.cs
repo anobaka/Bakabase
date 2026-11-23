@@ -26,8 +26,8 @@ public static class AcquisitionPlanCompiler
         if (plan.Version != 1 || plan.Delivery != "files" || string.IsNullOrWhiteSpace(plan.Title) || plan.Title.Length > 512 ||
             plan.Parts.Count is 0 or > 100 || plan.Parts.Select(p => p.Id).Distinct().Count() != plan.Parts.Count)
             throw new ArgumentException("Provide a supported acquisition plan with a title and explicitly selected parts.");
-        if (plan.AdaptiveFileProcessingMaxIterations is < 1 or > 5)
-            throw new ArgumentException("Adaptive file processing must use between one and five assessment rounds.");
+        if (plan.AdaptiveFileProcessingMaxIterations is < 1 or > AdaptiveFileProcessingAssessmentService.MaxCallsPerTask)
+            throw new ArgumentException($"Adaptive file processing must use between one and {AdaptiveFileProcessingAssessmentService.MaxCallsPerTask} assessment rounds.");
         if (plan.CoverCandidates == null || plan.CoverCandidates.Count > 128 || plan.CoverCandidates.Any(c => c == null ||
             string.IsNullOrWhiteSpace(c.Url) || c.Url.Length > 2048 || !Uri.TryCreate(c.Url, UriKind.Absolute, out var uri) ||
             uri.Scheme is not ("http" or "https") || uri.UserInfo.Length != 0 || c.Kind is not ("cover" or "preview") ||
@@ -162,7 +162,8 @@ public static class AcquisitionPlanCompiler
                     ExtractionLayout: plan.ExtractionLayout,
                     EnableAdaptiveAssessment: Adaptive(plan, part),
                     RequiresAdaptiveDecision: part.UseAdaptiveAssessment == true,
-                    MaxAdaptiveIterations: Math.Clamp(plan.AdaptiveFileProcessingMaxIterations, 1, 5),
+                    MaxAdaptiveIterations: Math.Clamp(plan.AdaptiveFileProcessingMaxIterations, 1,
+                        AdaptiveFileProcessingAssessmentService.MaxCallsPerTask),
                     AdaptiveContext: plan.AdaptiveFileProcessingContext), WorkflowJson.Options)});
         var targetDirectories = plan.Parts.ToDictionary(p => p.Id, p =>
             plan.StageDirectories?.Parts.GetValueOrDefault(p.Id)?.Delivery is {BindingId: not null} binding

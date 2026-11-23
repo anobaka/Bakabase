@@ -1,17 +1,24 @@
 using System.Text.Json;
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Bittorrent.Components;
 using Bakabase.Modules.HttpDownloads.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Components;
+using Bakabase.Modules.Workflow.Extensions;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.Service.Components.FileProcessing;
+using Bakabase.Modules.AI.Services;
 using Bakabase.Service.Components.SourceAvailability;
 using Bakabase.TestKit.Utils;
 using Microsoft.EntityFrameworkCore;
@@ -33,18 +40,142 @@ public sealed class AcquisitionRuntimeOverviewTests
     private static readonly DateTime At = new(2026, 10, 25, 9, 0, 0, DateTimeKind.Local);
 
     [TestMethod]
-    public void FileProgressOnlyReportsTheCurrentArchiveAndNeverBorrowsWorkflowPercentages()
+    public async Task FileProgressOnlyReportsTheCurrentArchiveAndNeverBorrowsWorkflowPercentages()
     {
+        static async Task<(string? Stage, int? Progress)> Read(int runId, int? step, string kind, WorkflowTaskProgress live)
+        {
+            var result = await new FileProcessingActivityRuntimeProvider([]).ReadAsync(new(runId, step, kind,
+                WorkflowRunStatus.Running, live, []));
+            return (result.Stage, (int?)result.Progress);
+        }
         const string kind = "acquisition.plan.process";
         var live = new WorkflowTaskProgress(17, kind, "extractingArchive", 1, 62);
-        Assert.AreEqual(("extractingArchive", (int?)62), AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, kind, live));
-        Assert.AreEqual(("preparingFiles", (int?)null), AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, kind,
+        Assert.AreEqual(("extractingArchive", (int?)62), await Read(17, 1, kind, live));
+        Assert.AreEqual(("preparingFiles", (int?)null), await Read(17, 1, kind,
             live with {Stage = "preparingFiles"}));
-        Assert.AreEqual(("extractingArchive", (int?)null), AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, kind,
+        Assert.AreEqual(("extractingArchive", (int?)null), await Read(17, 1, kind,
             live with {StageProgress = 120}));
-        Assert.IsNull(AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 2, kind, live).Stage);
-        Assert.IsNull(AcquisitionRuntimeOverviewService.CurrentFileProgress(17, 1, "download.wait", live).Stage);
-        Assert.IsNull(AcquisitionRuntimeOverviewService.CurrentFileProgress(18, 1, kind, live).Stage);
+        Assert.IsNull((await Read(17, 2, kind, live)).Stage);
+        Assert.IsNull((await Read(17, 1, "download.wait", live)).Stage);
+        Assert.IsNull((await Read(18, 1, kind, live)).Stage);
+    }
+
+    [TestMethod]
+    public async Task FileCapabilityReportsOnlyItsExplicitAiQueueStateAndAuthoritativeLimit()
+    {
+        var provider = new FileProcessingActivityRuntimeProvider([new FileProcessorLlmExecutionPolicy()]);
+        var progress = new WorkflowTaskProgress(17, "fs.assessDelivery", "waitingForAi", 1, 50);
+        var queued = await provider.ReadAsync(new(17, 1, progress.ActivityKind, WorkflowRunStatus.Running, progress, []));
+        Assert.AreEqual("waitingForAi", queued.Stage);
+        Assert.AreEqual("ai.fileProcessor", queued.Capability!.Id);
+        Assert.AreEqual("queued", queued.Capability.Status);
+        Assert.AreEqual("capacity", queued.Capability.WaitReason);
+        Assert.AreEqual(1, queued.Capability.MaximumParallelism);
+        Assert.IsNull(queued.Progress, "Waiting is not measured progress.");
+        var absent = await provider.ReadAsync(new(17, 1, progress.ActivityKind, WorkflowRunStatus.Running, null, []));
+        Assert.IsNull(absent.Capability!.Status, "A running workflow does not prove an AI call is active or queued.");
+        var stale = await provider.ReadAsync(new(17, 2, progress.ActivityKind, WorkflowRunStatus.Running, progress, []));
+        Assert.IsNull(stale.Stage);
+        Assert.IsNull(stale.Capability!.MaximumParallelism);
+    }
+
+    [TestMethod]
+    public async Task RegisteredThirdCapabilityReachesTheOverviewWithoutAcquisitionSpecificCases()
+    {
+        var (task, _) = await Seed([], "test.renderFrames", WorkflowRunStatus.Running);
+        using var services = ThirdCapabilityServices();
+        await using var scope = services.CreateAsyncScope();
+        var reader = scope.ServiceProvider.GetRequiredService<ThirdCapabilityReader>();
+        var overview = scope.ServiceProvider.GetRequiredService<AcquisitionRuntimeOverviewService>();
+        var pending = overview.GetAsync([task.Id]);
+        await reader.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.IsFalse(pending.IsCompleted, "The overview must await the capability's asynchronous snapshot reader.");
+        reader.Release.TrySetResult();
+        var runtime = (await pending).Single();
+        Assert.AreEqual("renderer", runtime.Capability!.Id);
+        Assert.AreEqual("Frame renderer", runtime.Capability.DisplayName);
+        Assert.AreEqual("queued", runtime.Capability.Status);
+        Assert.AreEqual(3, runtime.Capability.MaximumParallelism);
+        Assert.AreEqual("waitingForRenderer", runtime.Stage);
+        Assert.AreEqual("frames", runtime.ProgressScope);
+        Assert.AreEqual(25d, runtime.Progress);
+        Assert.AreEqual(0, runtime.DownloadCount);
+        Assert.AreEqual(1, _reader.Calls, "The existing download snapshot read remains batched.");
+        Assert.AreEqual(0, _probe.Calls, "Runtime readers must not probe sources.");
+    }
+
+    [TestMethod]
+    public async Task ScopedCapabilityReaderHonorsRequestCancellationAndIsDisposedWithItsScope()
+    {
+        var (task, _) = await Seed([], "test.renderFrames", WorkflowRunStatus.Running);
+        using var services = ThirdCapabilityServices();
+        Assert.ThrowsExactly<InvalidOperationException>(() => services.GetRequiredService<WorkflowActivityRuntimeRegistry>());
+        ThirdCapabilityReader reader;
+        await using (var scope = services.CreateAsyncScope())
+        {
+            reader = scope.ServiceProvider.GetRequiredService<ThirdCapabilityReader>();
+            using var cancelled = new CancellationTokenSource();
+            var pending = scope.ServiceProvider.GetRequiredService<AcquisitionRuntimeOverviewService>()
+                .GetAsync([task.Id], cancelled.Token);
+            await reader.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            cancelled.Cancel();
+            await Assert.ThrowsAsync<OperationCanceledException>(() => pending);
+            Assert.IsFalse(reader.Disposed);
+            await using var otherScope = services.CreateAsyncScope();
+            Assert.AreNotSame(reader, otherScope.ServiceProvider.GetRequiredService<ThirdCapabilityReader>());
+            Assert.AreNotSame(scope.ServiceProvider.GetRequiredService<WorkflowActivityRuntimeRegistry>(),
+                otherScope.ServiceProvider.GetRequiredService<WorkflowActivityRuntimeRegistry>());
+        }
+        Assert.IsTrue(reader.Disposed);
+    }
+
+    private ServiceProvider ThirdCapabilityServices()
+    {
+        // Validate the actual workflow/runtime registrations without constructing unrelated subsystems.
+        var registrations = new ServiceCollection().AddWorkflow<BakabaseDbContext>();
+        IServiceCollection services = new ServiceCollection();
+        services.Add(registrations.Single(d => d.ServiceType == typeof(WorkflowActivityRuntimeRegistry)));
+        foreach (var descriptor in new ServiceCollection().AddCloudDownloads()
+                     .Where(d => d.ServiceType == typeof(IWorkflowActivityRuntimeProvider)))
+            services.Add(descriptor);
+        services.AddScoped(_ => new BakabaseDbContext(new DbContextOptionsBuilder<BakabaseDbContext>()
+            .UseSqlite(_db.Database.GetConnectionString()).Options));
+        services.AddScoped<ThirdCapabilityReader>();
+        services.AddScoped<IWorkflowActivityRuntimeProvider, ThirdCapability>();
+        services.AddSingleton<IAcquisitionRuntimeDownloadReader>(_reader);
+        services.AddSingleton(_availability);
+        services.AddScoped<AcquisitionRuntimeOverviewService>();
+        return services.BuildServiceProvider(new ServiceProviderOptions {ValidateScopes = true, ValidateOnBuild = true});
+    }
+
+    private sealed class ThirdCapabilityReader(BakabaseDbContext db) : IDisposable
+    {
+        internal TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal bool Disposed { get; private set; }
+
+        internal async Task ReadAsync(int runId, CancellationToken ct)
+        {
+            Started.TrySetResult();
+            await Release.Task.WaitAsync(ct);
+            Assert.IsTrue(await db.WorkflowRuns.AsNoTracking().AnyAsync(r => r.Id == runId, ct));
+        }
+        public void Dispose() => Disposed = true;
+    }
+
+    private sealed class ThirdCapability(ThirdCapabilityReader reader) : IWorkflowActivityRuntimeProvider
+    {
+        public bool CanHandle(string kind) => kind == "test.renderFrames";
+        public async ValueTask<WorkflowActivityRuntimeSnapshot> ReadAsync(WorkflowActivityRuntimeContext context,
+            CancellationToken ct = default)
+        {
+            await reader.ReadAsync(context.WorkflowRunId, ct);
+            return new()
+            {
+                Capability = new("renderer", "Frame renderer", Status: "queued", WaitReason: "gpu", ExecutionPolicy: "bounded", MaximumParallelism: 3),
+                Stage = "waitingForRenderer", Progress = 25, ProgressScope = "frames"
+            };
+        }
     }
 
     [TestInitialize]
@@ -55,7 +186,8 @@ public sealed class AcquisitionRuntimeOverviewTests
         _root = Path.Combine(Path.GetTempPath(), "runtime-overview-" + Guid.NewGuid().ToString("N"));
         _reader = new(); _probe = new();
         _availability = new(new SourceAvailabilityStore(_root), [_probe]);
-        _overview = new(_db, _reader, _availability);
+        _overview = new(_db, _reader, _availability,
+            runtimeProviders: _services.GetRequiredService<WorkflowActivityRuntimeRegistry>());
     }
     [TestCleanup]
     public void Cleanup() { (_services as IDisposable)?.Dispose(); if (Directory.Exists(_root)) Directory.Delete(_root, true); }
@@ -85,6 +217,194 @@ public sealed class AcquisitionRuntimeOverviewTests
         await _db.SaveChangesAsync(); return (task, run);
     }
     private async Task<AcquisitionRuntimeOverview> Read(int id) => (await _overview.GetAsync([id])).Single();
+
+    [TestMethod]
+    public async Task ConfirmationRuntimePreservesDownloadHistoryAndDisappearsOnRevisionChangeOrDeletion()
+    {
+        var (task, run) = await Seed([Target(download: 42)], "download.awaitCompletion");
+        _reader.Values = [new("site:42", null, run.Id, "completed", 100, 1200, 1200, At, null)];
+        var confirmations = new AcquisitionConfirmationRuntime();
+        _overview = new(_db, _reader, _availability, runtimeProviders: _services.GetRequiredService<WorkflowActivityRuntimeRegistry>(),
+            confirmations: confirmations);
+        var original = await Read(task.Id);
+        Assert.AreEqual(1200L, original.TotalBytes);
+        Assert.AreEqual(1, original.CompletedDownloadCount);
+        using var active = confirmations.Observe(task, FileProcessingActivityRuntimeProvider.ConfirmingExistingFiles, default);
+        var observed = await Read(task.Id);
+        Assert.AreEqual("confirmation", observed.ProgressScope);
+        Assert.AreEqual(original.WorkflowStatus, observed.WorkflowStatus);
+        Assert.AreEqual(original.CompletedDownloadCount, observed.CompletedDownloadCount);
+        CollectionAssert.AreEqual(original.Sources.ToArray(), observed.Sources.ToArray());
+        Assert.IsNull(observed.Progress);
+        Assert.IsNull(observed.CompletedBytes);
+        Assert.IsNull(observed.TotalBytes);
+        Assert.IsNull(observed.SpeedBytesPerSecond);
+        Assert.IsFalse(observed.BytesPartial);
+        task.PlanRevision++;
+        await _db.SaveChangesAsync();
+        var next = await Read(task.Id);
+        Assert.AreNotEqual("confirmation", next.ProgressScope);
+        Assert.AreEqual(task.PlanRevision, next.PlanRevision);
+        Assert.AreEqual(original.TotalBytes, next.TotalBytes);
+        using var newer = confirmations.Observe(task, FileProcessingActivityRuntimeProvider.ConfirmingExistingFiles, default);
+        task.DeletedAt = DateTime.Now;
+        await _db.SaveChangesAsync();
+        Assert.AreEqual(0, (await _overview.GetAsync([task.Id])).Count);
+        Assert.AreEqual(0, _probe.Calls);
+    }
+
+    [DataTestMethod]
+    [DataRow("live")]
+    [DataRow("legacy")]
+    [DataRow("no-progress")]
+    [DataRow("old-progress")]
+    [DataRow("wrong-run")]
+    [DataRow("wrong-step")]
+    [DataRow("wrong-kind")]
+    [DataRow("other-node")]
+    [DataRow("other-invocation-kind")]
+    [DataRow("ambiguous")]
+    [DataRow("finished")]
+    [DataRow("superseded")]
+    [DataRow("waiting")]
+    [DataRow("checkpoint")]
+    public async Task RunningInvocationBeforeCheckpointUsesOnlyMatchingWorkflowProgress(string scenario)
+    {
+        const string kind = "acquisition.plan.continueFiles";
+        var (task, run) = await Seed([], kind, scenario == "waiting" ? WorkflowRunStatus.Waiting : WorkflowRunStatus.Running);
+        run.CurrentStepIndex = scenario == "checkpoint" ? 1 : null;
+        run.PlanSnapshotJson = WorkflowRunPlans.Serialize(new() {Name = "fixture", TriggerKind = "manual",
+            Nodes = [new() {NodeId = "node", Kind = kind}, new() {NodeId = "next", Kind = "fs.publishArtifacts"}]});
+        var active = await _db.WorkflowNodeExecutions.SingleAsync();
+        active.Status = "running";
+        active.CompletedAt = scenario == "finished" ? DateTime.UtcNow : null;
+        active.StartedAt = DateTime.UtcNow.AddMinutes(scenario == "old-progress" ? 1 : -1);
+        if (scenario == "other-node") active.NodeId = "not-in-this-plan";
+        if (scenario == "other-invocation-kind") active.Kind = "fs.publishArtifacts";
+        if (scenario == "legacy")
+        {
+            var definition = new WorkflowDefinitionDbModel {Name = "legacy", TriggerKind = "manual"};
+            _db.Add(definition);
+            await _db.SaveChangesAsync();
+            var activity = new WorkflowActivityDbModel {WorkflowDefinitionId = definition.Id, Order = 0, Kind = kind};
+            _db.Add(activity);
+            await _db.SaveChangesAsync();
+            run.WorkflowDefinitionId = definition.Id;
+            run.PlanSnapshotJson = null;
+            active.NodeId = "activity:" + activity.Id;
+        }
+        if (scenario == "ambiguous") _db.WorkflowNodeExecutions.Add(new() {WorkflowRunId = run.Id, NodeId = "next",
+            StepIndex = 1, Kind = "fs.publishArtifacts", Attempt = 1, Status = "running", StartedAt = active.StartedAt});
+        if (scenario == "superseded") _db.WorkflowNodeExecutions.Add(new() {WorkflowRunId = run.Id, NodeId = active.NodeId,
+            StepIndex = 0, Kind = kind, Attempt = 2, Status = "failed", StartedAt = active.StartedAt, CompletedAt = DateTime.UtcNow});
+        await _db.SaveChangesAsync();
+        var tasks = _services.GetRequiredService<BTaskManager>();
+        _overview = new(_db, _reader, _availability, backgroundTasks: tasks,
+            runtimeProviders: _services.GetRequiredService<WorkflowActivityRuntimeRegistry>());
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (scenario != "no-progress")
+        {
+            var id = $"workflow.run.{run.Id}";
+            var live = new WorkflowTaskProgress(scenario == "wrong-run" ? run.Id + 1 : run.Id,
+                scenario == "wrong-kind" ? "fs.publishArtifacts" : kind, "verifyingFiles", scenario == "wrong-step" ? 1 : 0);
+            await tasks.Enqueue(BTaskBuilder.Create(id).Run(async args =>
+            {
+                await args.UpdateTask(t => t.Data = live);
+                ready.TrySetResult();
+                await release.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            }).WhenStatusChanges((_, t) =>
+            {
+                if (t.Status == BTaskStatus.Completed) done.TrySetResult();
+                return Task.CompletedTask;
+            }));
+            await tasks.Start(id);
+        }
+        try
+        {
+            if (scenario != "no-progress") await ready.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var observed = await Read(task.Id);
+            var hasNode = scenario is "live" or "legacy" or "no-progress" or "old-progress" or "wrong-run" or "wrong-step" or "wrong-kind";
+            Assert.AreEqual(scenario == "checkpoint" ? 1 : hasNode ? 0 : (int?)null, observed.CurrentStepIndex);
+            Assert.AreEqual(scenario == "checkpoint" ? "fs.publishArtifacts" : hasNode ? kind : null, observed.CurrentNodeKind);
+            Assert.AreEqual(scenario is "live" or "legacy" ? "verifyingFiles" : null, observed.Stage);
+            Assert.AreEqual(scenario is "live" or "legacy" ? "processing" : null, observed.ProgressScope);
+            Assert.AreEqual(scenario == "waiting" ? "waiting" : "running", observed.WorkflowStatus);
+            Assert.IsNull(observed.Progress);
+            if (hasNode) Assert.AreEqual("fileProcessing", observed.Capability!.Id);
+            Assert.AreEqual(scenario == "checkpoint" ? 1 : (int?)null,
+                (await _db.WorkflowRuns.AsNoTracking().SingleAsync()).CurrentStepIndex);
+        }
+        finally
+        {
+            release.TrySetResult();
+            if (scenario != "no-progress") await done.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    [TestMethod]
+    public async Task UnsupportedSourcePreparationDoesNotBecomeAProcessingOrDownloadFailure()
+    {
+        var task = new AcquisitionTaskDbModel
+        {
+            Title = "Unsupported source", BuilderId = "test", Phase = "attention", Status = AcquisitionStatus.Waiting,
+            BuilderStateJson = JsonSerializer.Serialize(new
+            {
+                issues = new[]
+                {
+                    new {code = "PROCESSING_CONFIRMATION_REQUIRED", message = "Review later", blocking = false},
+                    new {code = "SOURCE_UNSUPPORTED", message = "No automatic download adapter", blocking = true}
+                }
+            }, Json)
+        };
+        _db.AcquisitionTasks.Add(task); await _db.SaveChangesAsync();
+        var result = await Read(task.Id);
+        CollectionAssert.AreEqual(new[] {"downloadSourceUnsupported"}, result.AttentionTags.ToArray());
+        Assert.AreEqual("SOURCE_UNSUPPORTED", result.ProblemCode);
+        Assert.AreEqual(0, result.DownloadCount);
+        Assert.AreEqual(0, result.CompletedDownloadCount);
+        Assert.AreEqual(0, result.FailedDownloadCount);
+        Assert.IsFalse(result.DownloadsCompletedAwaitingWorkflow);
+    }
+
+    [TestMethod]
+    public async Task RuntimeTagsAndSearchIncludeEveryBlockingPreparationIssue()
+    {
+        var task = new AcquisitionTaskDbModel
+        {
+            Title = "Several preparation blockers", BuilderId = "test", Phase = "attention", Status = AcquisitionStatus.Waiting,
+            BuilderStateJson = JsonSerializer.Serialize(new
+            {
+                issues = new[]
+                {
+                    new {code = "OUTPUT_DIRECTORY_REQUIRED", message = "Choose a directory", blocking = true},
+                    new {code = "SOURCE_UNSUPPORTED", message = "No automatic download adapter", blocking = true},
+                    new {code = "PROCESSING_CONFIRMATION_REQUIRED", message = "Review later", blocking = false}
+                }
+            }, Json)
+        };
+        _db.AcquisitionTasks.Add(task); await _db.SaveChangesAsync();
+        var result = await Read(task.Id);
+        var search = new AcquisitionTaskSearchService(_db, _services.GetRequiredService<IAcquisitionService>());
+        var page = await search.SearchAsync(new(AttentionTag: "downloadSourceUnsupported"));
+        Assert.AreEqual(task.Id, page.Items.Single().Id);
+        CollectionAssert.AreEqual(new[] {"downloadSourceUnsupported", "configurationRequired"}, result.AttentionTags.ToArray());
+        CollectionAssert.AreEqual(page.Items.Single().AttentionTags.ToArray(), result.AttentionTags.ToArray());
+        Assert.AreEqual("OUTPUT_DIRECTORY_REQUIRED", result.ProblemCode);
+        Assert.AreEqual(0, result.DownloadCount);
+        Assert.AreEqual(0, page.FactCounts["downloadedPending"]);
+    }
+
+    [TestMethod]
+    public async Task CurrentExecutionDoesNotRestoreResolvedPreparationBlockers()
+    {
+        var (task, _) = await Seed([Target(problem: "BAIDU_SHARE_EXPIRED")]);
+        task.BuilderStateJson = "{\"issues\":[{\"code\":\"SOURCE_UNSUPPORTED\",\"blocking\":true},{\"code\":\"OUTPUT_DIRECTORY_REQUIRED\",\"blocking\":true}]}";
+        await _db.SaveChangesAsync();
+        var result = await Read(task.Id);
+        CollectionAssert.AreEqual(new[] {"sourceUnavailable"}, result.AttentionTags.ToArray());
+    }
 
     [TestMethod]
     public async Task AmbiguousShareFailureIsHistoricalAndPreciselySourceBoundWithoutMutationOrProbe()
@@ -221,6 +541,28 @@ public sealed class AcquisitionRuntimeOverviewTests
         Assert.IsNull(result.CompletedBytes);
         Assert.IsTrue(result.BytesPartial);
         Assert.AreEqual(25L, result.EstimatedRemainingSeconds);
+    }
+
+    [DataTestMethod]
+    [DataRow("VerifyingSource")]
+    [DataRow("VerifyingLocalFiles")]
+    public async Task VerifyingExistingFilesShowsTheActiveStageWhileAnotherPartStillNeedsAttention(string stage)
+    {
+        var first = Target("first") with {DownloadTaskId = 11};
+        var second = Target("second") with {DownloadTaskId = 12, Problem = "BAIDU_SHARE_EXPIRED"};
+        var (task, run) = await Seed([first, second], "download.awaitCompletion", WorkflowRunStatus.Waiting);
+        _reader.Values = [new("site:11", null, run.Id, "running", null, null, null, DateTimeOffset.UtcNow, null, Stage: stage),
+            new("site:12", null, run.Id, "failed", 100, 50, 50, DateTimeOffset.UtcNow, "BAIDU_SHARE_EXPIRED")];
+        var row = await Read(task.Id);
+        Assert.AreEqual("waiting", row.WorkflowStatus);
+        Assert.AreEqual("running", row.Capability?.Status);
+        Assert.AreEqual(stage, row.Stage);
+        Assert.IsNull(row.Progress);
+        Assert.IsNull(row.SpeedBytesPerSecond);
+        Assert.IsNull(row.EstimatedRemainingSeconds);
+        Assert.AreEqual(1, row.ActiveDownloadCount);
+        Assert.AreEqual(1, row.FailedDownloadCount);
+        Assert.AreEqual("BAIDU_SHARE_EXPIRED", row.ProblemCode);
     }
 
     [TestMethod]

@@ -27,12 +27,14 @@ internal sealed record AcquisitionExecutionFactScope(string PartId, string NodeI
 internal sealed record AcquisitionExecutionFacts(bool AllRequiredInputsLocal,
     IReadOnlyList<AcquisitionExecutionFactScope> Scopes)
 {
+    internal string? FileCleanupFact { get; init; }
     internal static readonly AcquisitionExecutionFacts Unknown = new(false, []);
     internal IReadOnlyList<string> Tags => AcquisitionExecutionFactProjection.FactTags.Where(MatchesOne).ToArray();
     private bool MatchesOne(string value) => value switch
     {
         "downloadedPending" => AllRequiredInputsLocal && Scopes.Any(s => s.LocalInput),
         "spaceInsufficient" => Scopes.Any(s => s.SpaceInsufficient),
+        "awaitingFileRelease" or "fileCleanupNeedsReview" => FileCleanupFact == value,
         _ => false,
     };
     internal bool Matches(IReadOnlyCollection<string> filters)
@@ -53,7 +55,7 @@ internal sealed record AcquisitionExecutionFacts(bool AllRequiredInputsLocal,
 /// filesystem inspection. SQLite reduces bounded private checkpoints/manifests before returning compact rows.</summary>
 public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext db, IArtifactOperationStore? store = null)
 {
-    public static readonly string[] FactTags = ["downloadedPending", "spaceInsufficient"];
+    public static readonly string[] FactTags = ["downloadedPending", "spaceInsufficient", "awaitingFileRelease", "fileCleanupNeedsReview"];
     internal async Task<Dictionary<int, AcquisitionExecutionFacts>> ReadAsync(IReadOnlyCollection<int> ids, CancellationToken ct,
         IReadOnlyDictionary<int, AcquisitionDownloadActivity>? downloads = null, IReadOnlyCollection<int>? preparedIds = null)
     {
@@ -96,6 +98,22 @@ public sealed partial class AcquisitionExecutionFactProjection(BakabaseDbContext
                 catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or IOException)
                 { /* Missing/inconsistent historical evidence remains unknown. */ }
             }
+        }
+        var cleanups = await db.AcquisitionTasks.AsNoTracking().Where(t => ids.Contains(t.Id) &&
+                t.DeletedAt == null && t.Status == AcquisitionStatus.Completed &&
+                (t.DeletedCleanupReasons == DeferredStageCleanup.AwaitRemoval || t.DeletedCleanupReasons == DeferredStageCleanup.RequiresReview))
+            .Select(t => new {t.Id, t.DeletedCleanupReasons, t.DeletedIntermediateCleanup, t.DeletedDeliveryCleanup}).ToListAsync(ct);
+        foreach (var task in cleanups)
+        {
+            var fact = task.DeletedCleanupReasons switch
+            {
+                DeferredStageCleanup.AwaitRemoval when DeferredStageCleanup.HasPendingRemovalReceipts(
+                    task.DeletedIntermediateCleanup, task.DeletedDeliveryCleanup) => "awaitingFileRelease",
+                DeferredStageCleanup.RequiresReview when task.DeletedIntermediateCleanup != null && task.DeletedDeliveryCleanup != null
+                    => "fileCleanupNeedsReview",
+                _ => null
+            };
+            result[task.Id] = result[task.Id] with {FileCleanupFact = fact};
         }
         return result;
     }

@@ -95,7 +95,7 @@ public sealed class TeraBoxRoutingTests
         Assert.AreEqual(0, account.ResolveCalls);
         Assert.AreEqual(SourceAvailabilityStatuses.Unknown,
             ExecutionProblemClassifier.AvailabilityStatus(result.Requirements.Single().Code));
-        CollectionAssert.AreEqual(new[] {"planNeedsInput"},
+        CollectionAssert.AreEqual(new[] {"downloadSourceUnsupported"},
             ExecutionProblemClassifier.Classify(result.Requirements.Select(r => r.Code)).ToArray());
     }
     [TestMethod]

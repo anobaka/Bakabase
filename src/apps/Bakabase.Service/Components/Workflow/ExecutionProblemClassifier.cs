@@ -9,7 +9,7 @@ namespace Bakabase.Service.Components.Workflow;
 /// <summary>One semantic boundary for provider diagnostics and generic execution attention tags.</summary>
 public static class ExecutionProblemClassifier
 {
-    public static readonly string[] AttentionTags = ["sourceUnavailable", "sourceNeedsVerification", "accessRequired", "cloudStorageFull", "localStorage", "networkIssue", "dependencyMissing", "planNeedsInput", "fileProcessing", "other"];
+    public static readonly string[] AttentionTags = ["sourceUnavailable", "sourceNeedsVerification", "accessRequired", "cloudStorageFull", "downloadQuotaExceeded", "localStorage", "networkIssue", "dependencyMissing", "downloadInfoMissing", "downloadSourceUnsupported", "sourceSelectionRequired", "configurationRequired", "fileProcessing", "other"];
     private sealed record Rule(string Status, string Tag, string? NormalizedReason = null);
     private static readonly Dictionary<string, Rule> Rules = CreateRules();
     public static bool IsKnown(string code) => Rules.ContainsKey(code);
@@ -25,6 +25,8 @@ public static class ExecutionProblemClassifier
         ? rule.Status : SourceAvailabilityStatuses.Unknown;
     public static string? NormalizedReason(string? code) => code != null && Rules.TryGetValue(code, out var rule)
         ? rule.NormalizedReason ?? code : null;
+    public static bool RequiresTransferTargetReview(string code) => code is
+        "BAIDU_TRANSFER_FAILED_CONFIRM_TARGET" or "BAIDU_TRANSFER_INCOMPLETE_CONFIRM_TARGET";
     /// <summary>Capacity evidence is narrower than the local-storage attention category.
     /// Missing mounts, permissions and ambiguous write failures never imply a full disk.</summary>
     public static bool IsSpaceInsufficient(string? code) => NormalizedReason(code) is
@@ -40,13 +42,16 @@ public static class ExecutionProblemClassifier
             case "cloud.fileProcessing": case "cloud.publicationConflict": case "cloud.publicationAttention":
             case "artifacts.publication":
                 tags.Add("fileProcessing"); break;
-            case "cloud.chooseSources": case "cloud.chooseDirectory": case "cloud.chooseMethod":
-                tags.Add("planNeedsInput"); break;
+            case "cloud.chooseSources": case "cloud.chooseMethod":
+                tags.Add("sourceSelectionRequired"); break;
+            case "cloud.chooseDirectory":
+                tags.Add("configurationRequired"); break;
         }
         switch (legacyWaitReason)
         {
             case AcquisitionWaitReason.PaidContent: tags.Add("accessRequired"); break;
-            case AcquisitionWaitReason.NoLinks: case AcquisitionWaitReason.ChooseLink: tags.Add("planNeedsInput"); break;
+            case AcquisitionWaitReason.NoLinks: tags.Add("downloadInfoMissing"); break;
+            case AcquisitionWaitReason.ChooseLink: tags.Add("sourceSelectionRequired"); break;
             case AcquisitionWaitReason.WaitingForFile: case AcquisitionWaitReason.AmbiguousInboxFile:
             case AcquisitionWaitReason.PasswordUnknown: case AcquisitionWaitReason.TargetExists:
             case AcquisitionWaitReason.PickDirectory: case AcquisitionWaitReason.ExtractionPlanUnknown:
@@ -79,6 +84,7 @@ public static class ExecutionProblemClassifier
         _ when code is "FILE_DELIVERY_INPUT_CHANGED" or "FILE_DELIVERY_REVIEW_CHANGED" or "FILE_DELIVERY_REVIEW_INVALID" => "The delivery-review input or answer has changed. Refresh the current files and review them again; no earlier answer will be applied to changed content.",
         _ when code == "FILE_CLEANUP_COVERAGE_INCOMPLETE" => "Some original files lack verified preservation or replacement evidence in the final output. The files were retained for review.",
         _ when code != null && Rules.TryGetValue(code, out var capacity) && capacity.Tag == "cloudStorageFull" => "Cloud storage is insufficient. Free space in the provider's official client, then diagnose and continue this task. Existing transfers must be checked before another save.",
+        _ when code != null && Rules.TryGetValue(code, out var quota) && quota.Tag == "downloadQuotaExceeded" => "The provider reported that the current download account or free plan has insufficient transfer quota. Wait for the quota to reset or configure a supported account, then diagnose and continue.",
         _ when code != null && Rules.TryGetValue(code, out var rule) && rule.Tag == "sourceNeedsVerification" => "This source could not be verified. This does not establish that the link has expired.",
         _ => "This task needs attention. Open its execution details to review the current step."
     };
@@ -125,11 +131,18 @@ public static class ExecutionProblemClassifier
         Add("dependencyMissing", SourceAvailabilityStatuses.Unknown,
             "DEPENDENCY_REQUIRED", "DEPENDENCY_UNAVAILABLE", "PLATFORM_UNSUPPORTED", "RCLONE_DEPENDENCY_REQUIRED",
             "PIKPAK_CLI_DEPENDENCY_REQUIRED", "MEGA_DEPENDENCY_REQUIRED", "MEGA_ISOLATED_RUNTIME_REQUIRED", "TERABOX_DEPENDENCY_REQUIRED");
-        Add("planNeedsInput", SourceAvailabilityStatuses.Unknown,
-            "OUTPUT_DIRECTORY_REQUIRED", "TITLE_REQUIRED", "SOURCE_SELECTION_REQUIRED", "SELECTION_INVALID", "ONE_LIBRARY_TARGET",
-            "ONE_MIRROR_PER_GROUP", "SOURCE_DISABLED", "SOURCE_INVALID", "SOURCE_UNSUPPORTED", "ADAPTER_NOT_READY", "DOWNLOAD_METHOD_UNAVAILABLE",
-            "BUILDER_NO_RESULTS", "BUILDER_FAILED", "BUILDER_SEARCH_FAILED", "WORKFLOW_INCOMPATIBLE", "PLAN_REPLAN_SOURCE_CHANGED", "SOURCE_URL_INVALID",
-            "SOURCE_CHECK_PASSED_RETRY_REQUIRED", "TERABOX_SHARE_INVALID", "TERABOX_SOURCE_INVALID");
+        // Source support is independent of link health and tool/account setup. A known
+        // integration limitation cannot be fixed by adding download or processing instructions.
+        Add("downloadSourceUnsupported", SourceAvailabilityStatuses.Unknown,
+            "SOURCE_UNSUPPORTED", "DOWNLOAD_METHOD_UNAVAILABLE", "NATIVE_DOCUMENT_EXPORT_UNSUPPORTED", "SHAREPOINT_FOLDER_REQUIRED");
+        Add("downloadInfoMissing", SourceAvailabilityStatuses.Unknown,
+            "SOURCE_INVALID", "SOURCE_URL_INVALID", "BUILDER_NO_RESULTS", "TERABOX_SHARE_INVALID", "TERABOX_SOURCE_INVALID",
+            "MEGA_SHARE_INVALID");
+        Add("sourceSelectionRequired", SourceAvailabilityStatuses.Unknown,
+            "SOURCE_SELECTION_REQUIRED", "SELECTION_INVALID", "ONE_MIRROR_PER_GROUP", "SOURCE_DISABLED", "PLAN_REPLAN_SOURCE_CHANGED",
+            "PIXELDRAIN_SHARE_REQUIRED", "PIXELDRAIN_DIRECTORY_REQUIRED");
+        Add("configurationRequired", SourceAvailabilityStatuses.Unknown,
+            "OUTPUT_DIRECTORY_REQUIRED", "TITLE_REQUIRED", "ONE_LIBRARY_TARGET", "WORKFLOW_INCOMPATIBLE", "ADAPTER_NOT_READY");
         Add("fileProcessing", SourceAvailabilityStatuses.Unknown,
             "PROCESSING_PLAN_INCOMPLETE", "PROCESSING_PLAN_INVALID", "PROCESSING_PLAN_REQUIRED", "PROCESSING_PLAN_UNKNOWN",
             "PROCESSING_CONFIRMATION_REQUIRED", "PROCESSING_STEPS_MISSING", "FILE_CLEANUP_COVERAGE_INCOMPLETE",
@@ -142,12 +155,15 @@ public static class ExecutionProblemClassifier
             "INCOMPLETE_FILE_INVENTORY", "ARCHIVE_FAMILY_REVIEW_REQUIRED", "ARCHIVE_PACKAGING_REVIEW_REQUIRED");
         Add("cloudStorageFull", SourceAvailabilityStatuses.Unknown,
             "CLOUD_STORAGE_QUOTA_EXCEEDED", "PIKPAK_STORAGE_QUOTA_EXCEEDED");
+        Add("downloadQuotaExceeded", SourceAvailabilityStatuses.Unknown,
+            "SOURCE_DOWNLOAD_QUOTA_EXCEEDED", "PIXELDRAIN_TRANSFER_QUOTA_EXCEEDED", "PIXELDRAIN_DOWNLOAD_QUOTA_EXCEEDED");
         Add("localStorage", SourceAvailabilityStatuses.Unknown,
             "LOCAL_STORAGE_FULL", "LOCAL_STORAGE_WRITE_FAILED", "LOCAL_STORAGE_ACCESS_DENIED", "LOCAL_STORAGE_UNAVAILABLE", "LOCAL_STORAGE_RESERVE_LOW",
             "BT_LOCAL_FILE_MISSING", "BT_LOCAL_DISK_READ_ONLY", "BT_LOCAL_FILE_READ_FAILED", "BT_LOCAL_FILE_WRITE_FAILED",
             "BAIDU_OUTPUT_DIRECTORY_FAILED", "BAIDU_OUTPUT_FILE_INVALID", "BAIDU_LOCAL_PATH_TOO_LONG",
             "BAIDU_LOCAL_PATH_MAPPING_CONFLICT", "BAIDU_LOCAL_PATH_MAPPING_INVALID", "PUBLICATION_IO_ERROR", "RECOVERY_STORAGE_UNAVAILABLE", "StorageUnavailable", "DiskSpaceLimit");
         Add("other", SourceAvailabilityStatuses.Unknown, "RECOVERY_DOWNLOAD_REVIEW_REQUIRED", "RECOVERY_TRANSFER_REVIEW_REQUIRED",
+            "BUILDER_FAILED", "BUILDER_SEARCH_FAILED", "SOURCE_CHECK_PASSED_RETRY_REQUIRED",
             "BAIDU_DOWNLOAD_PARTIAL_UNVERIFIED", "BAIDU_DOWNLOAD_CHECKPOINT_INVALID", "BAIDU_OUTPUT_UNEXPECTED_FILE",
             "RECOVERY_DOWNLOAD_HAS_OUTPUT", "RECOVERY_DOWNLOAD_IDENTITY_CHANGED", "RECOVERY_CHECK_INCOMPLETE",
             "PIKPAK_RESTORE_PENDING", "PIKPAK_RESTORE_REVIEW_REQUIRED", "PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED",
@@ -185,6 +201,7 @@ public static class ExecutionProblemClassifier
         Normalize("SOURCE_NETWORK_ERROR", "BAIDU_SHARE_NETWORK_ERROR", "PUBLIC_SHARE_NETWORK_ERROR", "CLOUD_NETWORK_ERROR", "PIXELDRAIN_NETWORK_ERROR", "RCLONE_CONFIGURATION_NETWORK_FAILED", "TERABOX_NETWORK_UNAVAILABLE");
         Normalize("SOURCE_RATE_OR_SERVICE_LIMIT", "CLOUD_RATE_LIMITED", "PIXELDRAIN_RATE_LIMITED", "RCLONE_CONFIGURATION_RATE_LIMITED", "SOURCE_RATE_LIMITED",
             "SOURCE_SERVICE_UNAVAILABLE", "RCLONE_CONFIGURATION_SERVICE_UNAVAILABLE");
+        Normalize("SOURCE_DOWNLOAD_QUOTA_EXCEEDED", "PIXELDRAIN_TRANSFER_QUOTA_EXCEEDED", "PIXELDRAIN_DOWNLOAD_QUOTA_EXCEEDED");
         Normalize("SOURCE_NETWORK_REQUIRES_PROXY", "BAIDU_SHARE_NETWORK_REQUIRES_PROXY");
         Normalize("SOURCE_PROBE_DEPENDENCY_REQUIRED", "BAIDU_DEPENDENCY_REQUIRED");
         Normalize("SOURCE_PROBE_DEPENDENCY_UPDATE_REQUIRED", "BAIDU_UNKNOWN_COMMAND");

@@ -40,8 +40,9 @@ public sealed partial class FileProcessingPlanExecutor
     {
         var directory = CheckpointInputDirectory(checkpointRoot, plan, input, identityPath);
         var state = await ReadPinnedStateAsync(directory, ct);
-        // Old states do not acquire new trust from current files or instructions.
-        if (state.LineageVersion != 1 || state.InputManifest == null ||
+        // Read-only archive volumes still belong to their registered source. The normal continuation
+        // re-pins that input until the operation finishes; the private snapshot cannot replace it.
+        if (state.ReadOnlyVolumeArtifactId != null || state.LineageVersion != 1 || state.InputManifest == null ||
             !state.BoundaryResults.TryGetValue(previousStep, out var boundary) || boundary.Manifest == null)
             return null;
         if (!SameManifestContents(state.InputManifest, input.Manifest) ||
@@ -56,6 +57,32 @@ public sealed partial class FileProcessingPlanExecutor
             if (moved == null) return null;
         }
         return new(directory, input.Manifest, previousStep, previous.RootDirectory, previous.Fingerprint) {MovedInputs = moved};
+    }
+
+    internal static async Task<FileProcessingCheckpointInput?> ReadReclaimableInputAsync(string root,
+        FileProcessingPlan plan, ArtifactRecord input, ArtifactRecord produced, string step,
+        Func<string, string>? identityPath, CancellationToken ct, string sourceCleanup = "delete")
+    {
+        var directory = CheckpointInputDirectory(root, plan, input, identityPath);
+        var state = await ReadCleanupEvidenceAsync(directory, step, ct);
+        // An input path in the journal can refer to a borrowed volume or an earlier move. Only an
+        // unchanged, privately materialized input set from this completed checkpoint is eligible.
+        if (state.LineageVersion != 1 || !state.Completed || state.PendingOperation != null ||
+            state.ReadOnlyVolumeArtifactId != null || state.ReadOnlyVolumeMembers != null ||
+            state.StoragePolicy is not {CleanupIntermediates: true} || state.StoragePolicy.SourceCleanup != sourceCleanup ||
+            state.StepPolicies.Values.Any(p => !p.CleanupIntermediates || (sourceCleanup == "keep" ? p.SourceCleanup != "keep" : p.SourceCleanup == "keep")) ||
+            plan.Steps.Any(s => s.StoragePolicy is {CleanupIntermediates: false} or {SourceCleanup: "keep"}) ||
+            state.Operations.Values.SelectMany(o => o.RenameFiles ?? []).Any(f => f.Move) ||
+            !FileDispositionProofs.SameManifest(state.InputManifest, input.Manifest) ||
+            !state.BoundaryResults.TryGetValue(step, out var boundary) ||
+            !FileProcessingFiles.PathComparer.Equals(boundary.Directory, produced.RootDirectory) ||
+            !FileDispositionProofs.SameManifest(boundary.Manifest, produced.Manifest) ||
+            !state.Outputs.TryGetValue("download", out var files)) return null;
+        var inputs = Path.Combine(directory, "inputs");
+        var paths = ArtifactManifestFiles.ResolveFiles(inputs, input.Manifest).ToHashSet(FileProcessingFiles.PathComparer);
+        if (files.Count != paths.Count || !paths.SetEquals(files.Select(f => f.Path)) ||
+            state.RetainedFiles.Any(paths.Contains)) return null;
+        return new(directory, input.Manifest, step, produced.RootDirectory, produced.Fingerprint);
     }
 
     private static async Task<State> ReadPinnedStateAsync(string directory, CancellationToken ct)

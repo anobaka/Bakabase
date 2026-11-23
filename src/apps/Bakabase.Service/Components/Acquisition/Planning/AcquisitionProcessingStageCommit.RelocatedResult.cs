@@ -17,7 +17,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
 internal sealed record AcquisitionStageMovedEntries(string JournalId, string SourceArtifactId, string SourceFingerprint,
-    string CanonicalArtifactId, string OriginalRoot, IReadOnlyList<string> RelativePaths, int TaskId, int RunId, string PartId);
+    string CanonicalArtifactId, string OriginalRoot, IReadOnlyList<string> RelativePaths, IReadOnlyList<string> EmptyDirectories,
+    int TaskId, int RunId, string PartId, bool TargetQuarantined);
 
 internal static partial class AcquisitionProcessingStageCommit
 {
@@ -29,24 +30,34 @@ internal static partial class AcquisitionProcessingStageCommit
         (await ReadCompletedCommitAsync(db, store, workspaces, source, verifyCurrentFiles: true, ct))?.Proof;
 
     internal static async Task<AcquisitionStageMovedEntries?> ReadMovedEntriesAsync(BakabaseDbContext db,
-        IArtifactOperationStore store, FileProcessingWorkspaceResolver workspaces, ArtifactRecord source, CancellationToken ct)
+        IArtifactOperationStore store, FileProcessingWorkspaceResolver workspaces, ArtifactRecord source, CancellationToken ct,
+        bool includeQuarantinedTargetForPreview = false)
     {
-        var verified = await ReadCompletedCommitAsync(db, store, workspaces, source, verifyCurrentFiles: false, ct);
+        var verified = await ReadCompletedCommitAsync(db, store, workspaces, source, verifyCurrentFiles: false, ct,
+            includeQuarantinedTargetForPreview);
         if (verified == null) return null;
         var journal = verified.Journal;
+        var directories = source.Manifest.Directories ?? [];
+        // A mixed stage may borrow existing entries. Only a fully owned handoff proves
+        // that it recreated and pruned these exact manifest directories.
+        var movedDirectories = verified.Canonical.Managed && journal.ReusedFiles.Count == 0 &&
+            journal.Move.EmptyDirectories is {} moved && moved.Count == directories.Count &&
+            moved.ToHashSet(StringComparer.Ordinal).SetEquals(directories) ? directories : [];
         return new(journal.Id, source.Id, source.Fingerprint, verified.Canonical.Id, source.RootDirectory,
-            journal.Move.Files.Select(f => f.RelativePath).ToArray(), journal.TaskId, journal.RunId, journal.PartId);
+            journal.Move.Files.Select(f => f.RelativePath).ToArray(), movedDirectories, journal.TaskId, journal.RunId,
+            journal.PartId, verified.Canonical.State == ArtifactLocationState.Quarantined);
     }
 
     private static async Task<CompletedStageCommit?> ReadCompletedCommitAsync(BakabaseDbContext db,
         IArtifactOperationStore store, FileProcessingWorkspaceResolver workspaces, ArtifactRecord source,
-        bool verifyCurrentFiles, CancellationToken ct)
+        bool verifyCurrentFiles, CancellationToken ct, bool includeQuarantinedTargetForPreview = false)
     {
         if (!source.Managed || source.Kind != "processedFiles" || verifyCurrentFiles && source.State != ArtifactLocationState.Available ||
             source.State is not (ArtifactLocationState.Available or ArtifactLocationState.Quarantined or ArtifactLocationState.Retired)) return null;
         try
         {
-            var children = await db.ArtifactLineage.AsNoTracking().Where(l => l.ParentArtifactId == source.Id)
+            var children = await db.ArtifactLineage.AsNoTracking().Where(l => l.ParentArtifactId == source.Id &&
+                    db.Artifacts.Any(a => a.Id == l.ChildArtifactId && a.Kind == "processedFiles"))
                 .Select(l => l.ChildArtifactId).Distinct().ToArrayAsync(ct);
             foreach (var id in children)
             {
@@ -54,7 +65,8 @@ internal static partial class AcquisitionProcessingStageCommit
                 var evidence = current == null ? null : ReadMetadata(current)?.StageCommit;
                 if (current is not {Kind: "processedFiles"} ||
                     (verifyCurrentFiles ? current.State != ArtifactLocationState.Available && !(current.State == ArtifactLocationState.Retired && !current.Managed)
-                        : current.State is not (ArtifactLocationState.Available or ArtifactLocationState.Retired)) ||
+                        : current.State is not (ArtifactLocationState.Available or ArtifactLocationState.Retired) &&
+                          !(includeQuarantinedTargetForPreview && current.State == ArtifactLocationState.Quarantined)) ||
                     evidence is not {Version: 1} || evidence.SourceArtifactId != source.Id ||
                     evidence.SourceFingerprint != source.Fingerprint || string.IsNullOrWhiteSpace(evidence.SourceDirectory) ||
                     !Same(evidence.SourceDirectory, source.RootDirectory) || string.IsNullOrWhiteSpace(evidence.Directory) ||
@@ -70,11 +82,7 @@ internal static partial class AcquisitionProcessingStageCommit
                     journal.ArtifactId != current.Id || journal.Fingerprint != source.Fingerprint ||
                     journal.Directory != evidence.Directory || journal.SourceDirectory != evidence.SourceDirectory ||
                     journal.Move.SourceDirectory != source.RootDirectory || journal.Move.Directory != evidence.Directory ||
-                    !journal.Move.Files.All(f => f != null && f.Completed && source.Manifest.Entries.Any(e =>
-                        e.RelativePath == f.RelativePath && e.Length == f.Length)) ||
-                    !journal.Move.Files.Select(f => f.RelativePath).Concat(journal.ReusedFiles).ToHashSet(StringComparer.Ordinal)
-                        .SetEquals(source.Manifest.Entries.Select(e => e.RelativePath)) ||
-                    journal.Move.Files.Count + journal.ReusedFiles.Count != source.Manifest.Entries.Count) continue;
+                    !MatchesMovedFiles(source.Manifest.Entries, journal.Move.Files, journal.ReusedFiles)) continue;
                 var proof = new FileProcessingRelocatedResult(source.RootDirectory, evidence.Directory, current.Manifest);
                 if (!proof.Matches(source.RootDirectory, source.Manifest)) continue;
                 var ownerSources = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking().Where(s =>
@@ -124,6 +132,24 @@ internal static partial class AcquisitionProcessingStageCommit
         { /* Missing/corrupt provenance leaves all original cleanup protection in place. */ }
         return null;
     }
+
+    internal static bool MatchesMovedFiles(IReadOnlyList<ArtifactManifestEntry> entries,
+        IReadOnlyList<AcquisitionStageDirectoryMoveFile> moved, IReadOnlyList<string> reused)
+    {
+        if (moved.Count + reused.Count != entries.Count ||
+            FileProcessingRelocatedResult.IndexEntries(entries) is not {} remaining) return false;
+        foreach (var file in moved)
+        {
+            if (file is not {Completed: true, RelativePath: not null} ||
+                !remaining.Remove(file.RelativePath, out var entry) || file.Length != entry.Length) return false;
+        }
+        foreach (var path in reused)
+        {
+            if (path == null || !remaining.Remove(path)) return false;
+        }
+        return remaining.Count == 0;
+    }
+
     internal static async Task<bool> IsCommittedStageOutputAsync(BakabaseDbContext db, IArtifactOperationStore store,
         FileProcessingWorkspaceResolver workspaces, ArtifactRecord artifact, CancellationToken ct)
     {
@@ -149,7 +175,7 @@ internal static partial class AcquisitionProcessingStageCommit
                     !proof.Matches(source.RootDirectory, full.Manifest)) continue;
                 if (artifact.Id == full.Id) return true;
                 if (journal.OwnedArtifactId != artifact.Id || !artifact.Managed || !full.ParentArtifactIds.Contains(artifact.Id) ||
-                    artifact.Manifest.Entries.Any(e => !full.Manifest.Entries.Any(f => FileDispositionProofs.SameEntry(e, f)))) continue;
+                    !FileProcessingRelocatedResult.CoversEntries(full.Manifest.Entries, artifact.Manifest.Entries)) continue;
                 var producer = await store.GetOperationAsync(artifact.OperationId, ct);
                 if (producer is not {Kind: "files.process", State: ArtifactOperationState.Completed} || producer.OutputArtifactId != artifact.Id) continue;
                 var bindings = await db.ArtifactOperationBindings.AsNoTracking().Where(b => b.OperationId == artifact.OperationId).ToListAsync(ct);

@@ -171,15 +171,6 @@ public sealed partial class AcquisitionContinuationService(BakabaseDbContext db,
         AcquisitionTaskDbModel? selected = null; AcquisitionContinuationEntry? dispatch = null;
         try
         {
-            if (await db.AcquisitionTasks.AsNoTracking().AnyAsync(t => t.BuilderStateJson != null &&
-                    (t.BuilderStateJson.Contains("\"localRecoveryQueue\"") &&
-                     (t.BuilderStateJson.Contains("\"status\":\"running\"") || t.BuilderStateJson.Contains("\"status\":\"starting\""))), ct))
-            {
-                // Inspect the typed current entry; history may also contain the same words.
-                var local = await db.AcquisitionTasks.AsNoTracking().Where(t => t.BuilderStateJson != null && t.BuilderStateJson.Contains("\"localRecoveryQueue\""))
-                    .ToArrayAsync(ct);
-                if (local.Any(t => AcquisitionLocalRecoveryQueueEntry.Read(t)?.Status is "starting" or "running")) return;
-            }
             var rows = await Rows(ct);
             foreach (var interrupted in rows.Where(t => AcquisitionContinuationEntry.Read(t)!.Status == "checking"))
                 await Save(interrupted, AcquisitionContinuationEntry.Read(interrupted)! with

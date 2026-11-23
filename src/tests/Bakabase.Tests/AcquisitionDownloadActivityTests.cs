@@ -137,6 +137,23 @@ public sealed class AcquisitionDownloadActivityTests
         Assert.AreEqual(1, page.AttentionCounts["sourceUnavailable"]);
     }
 
+    [TestMethod]
+    public async Task LiveVerificationSupersedesOnlyTheBoundRunsTargetAndKeepsAnotherPartsFailure()
+    {
+        var (current, run) = await Seed([Target("verified", 11, problem: "LOCAL_STORAGE_FULL"),
+            Target("unavailable", 12, problem: "BAIDU_SHARE_EXPIRED")]);
+        var (other, _) = await Seed([Target("earlier", 11, problem: "LOCAL_STORAGE_FULL")]);
+        _reader.Values = [new("site:11", null, run.Id, "running", null, null, null,
+            DateTimeOffset.UtcNow, null, Stage: "VerifyingSource"), Download("site:12", "failed", run.Id)];
+        var activities = await _activity.ReadAsync([current.Id, other.Id]);
+        Assert.AreEqual("running", activities[current.Id].Activity);
+        CollectionAssert.AreEquivalent(new[] {"verified"}, activities[current.Id].RecoveredPartIds.ToArray());
+        Assert.IsFalse(activities.ContainsKey(other.Id));
+        var unavailable = await _search.SearchAsync(new(AttentionTag: "sourceUnavailable"));
+        Assert.AreEqual(current.Id, unavailable.Items.Single().Id);
+        Assert.AreEqual(2, await _db.WorkflowRuns.CountAsync(r => r.Status == WorkflowRunStatus.Waiting));
+    }
+
     [DataTestMethod]
     [DataRow("UNRECOGNIZED_PROVIDER_DIAGNOSTIC")]
     [DataRow(null)]

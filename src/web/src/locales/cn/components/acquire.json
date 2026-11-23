@@ -233,5 +233,10 @@
   "acquire.requirement.TERABOX_SHARE_EXPIRED": "TeraBox 已确认分享过期，请使用其他来源或联系分享者。",
   "acquire.requirement.TERABOX_SHARE_DELETED": "TeraBox 已确认分享被删除，请使用其他来源或联系分享者。",
   "acquire.requirement.DOWNLOAD_METHOD_UNAVAILABLE": "当前下载方案暂不可用，请选择其他来源，或手动下载后继续处理。账号授权与分享有效性不受此状态影响。",
-  "acquire.readiness.unavailable": "下载方案暂不可用"
+  "acquire.readiness.unavailable": "下载方案暂不可用",
+  "acquire.requirement.SOURCE_SELECTION_REQUIRED": "请选择可用的下载来源；每个必需的内容组都需要一个来源。",
+  "acquire.requirement.SOURCE_RELATIONSHIP_REQUIRED": "请选择这些链接是同一内容的备选来源，还是需要分别下载。",
+  "acquire.requirement.DOWNLOAD_INFO_MISSING": "尚无下载来源，请添加链接或搜索来源。",
+  "acquire.requirement.SOURCE_PROCESSING_INVALID": "此来源保留的处理信息需要检查，请修正后再选择。",
+  "acquire.requirement.SOURCE_REPLACEMENT_LOCAL_FILES": "此任务已有本地文件，请从下载阶段继续处理，再调整来源。"
 }

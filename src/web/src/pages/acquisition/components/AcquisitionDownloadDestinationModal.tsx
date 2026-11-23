@@ -6,6 +6,7 @@ import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import StorageCapacitySummary from "@/components/FileSystemSelector/components/StorageCapacitySummary";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { millisecondsUntil } from "@/core/serverTime";
+import { formatBtBytes } from "@/pages/bt-downloads/format";
 import AcquisitionRecoveryModal from "./AcquisitionRecoveryModal";
 import {
   acquisitionDownloadDestinationApi as api,
@@ -15,15 +16,17 @@ import {
 } from "./acquisitionDownloadDestinationApi";
 
 const pageSize = 20;
+type ReuseScope = { taskId: number; downloadTaskId: number };
 const requestErrorCode = (failure: unknown) =>
   failure instanceof Error &&
   /^(DOWNLOAD_DESTINATION|ACQUISITION_TASK|LOCAL_STORAGE)_[A-Z_]+$/.test(failure.message)
     ? failure.message
     : undefined;
-const eligibleRow = (row: DownloadDestinationRow) =>
-  row.canApply === true &&
-  row.downloads.length > 0 &&
-  row.downloads.every((download) => download.canApply === true && !!download.newDirectory?.trim());
+const eligibleDownload = (download: DownloadDestinationRow["downloads"][number]) =>
+  download.canApply === true && !!download.newDirectory?.trim();
+const eligibleDownloadCount = (row: DownloadDestinationRow) =>
+  row.canApply === true ? row.downloads.filter(eligibleDownload).length : 0;
+const eligibleRow = (row: DownloadDestinationRow) => eligibleDownloadCount(row) > 0;
 
 /** Captures the filter once. Changing a directory only requests a new preview, never a download. */
 export default function AcquisitionDownloadDestinationModal({
@@ -39,6 +42,7 @@ export default function AcquisitionDownloadDestinationModal({
   const [loadingDefaults, setLoadingDefaults] = useState(true);
   const [defaultsFailed, setDefaultsFailed] = useState(false);
   const [target, setTarget] = useState("");
+  const [reuseScope, setReuseScope] = useState<ReuseScope | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [preview, setPreview] = useState<DownloadDestinationPreview>();
@@ -90,9 +94,10 @@ export default function AcquisitionDownloadDestinationModal({
     setLoading(false);
     setPage(1);
   };
-  const load = async () => {
+  const load = async (scope = reuseScope) => {
     if (busy.current || loadingDefaults || !target.trim() || !captured.current.length) return;
     const request = ++sequence.current;
+    setReuseScope(scope);
     setLoading(true);
     setPreview(undefined);
     setSelected(new Set());
@@ -101,8 +106,24 @@ export default function AcquisitionDownloadDestinationModal({
     setResult(undefined);
     setPage(1);
     try {
-      const next = await api.preview(captured.current, target.trim());
+      const next = scope
+        ? await api.previewReuse(scope.taskId, scope.downloadTaskId, target.trim())
+        : await api.preview(captured.current, target.trim());
       if (!mounted.current || request !== sequence.current) return;
+      if (scope) {
+        const [row] = next.rows;
+        const download = row?.downloads[0];
+        if (
+          next.rows.length !== 1 ||
+          row.taskId !== scope.taskId ||
+          (row.canApply &&
+            (row.downloads.length !== 1 ||
+              download?.downloadTaskId !== scope.downloadTaskId ||
+              !download.reuseEstimate))
+        ) {
+          throw new Error("DOWNLOAD_DESTINATION_PREVIEW_CHANGED");
+        }
+      }
       setPreview(next);
       setSelected(
         new Set(
@@ -159,8 +180,10 @@ export default function AcquisitionDownloadDestinationModal({
     submittedIds.current.includes(id),
   );
   const shown = rows.slice((page - 1) * pageSize, page * pageSize);
+  const downloadCount = rows.reduce((count, row) => count + row.downloads.length, 0);
+  const eligibleDownloads = eligible.reduce((count, row) => count + eligibleDownloadCount(row), 0);
   const selectedDownloadCount = selectedRows.reduce(
-    (count, row) => count + row.downloads.length,
+    (count, row) => count + eligibleDownloadCount(row),
     0,
   );
   const partiallyApplied = result?.skipped.some(
@@ -184,7 +207,18 @@ export default function AcquisitionDownloadDestinationModal({
             {t("common.action.close")}
           </Button>
           {result ? (
-            resultIds.length > 0 && (
+            resultIds.length > 0 &&
+            (reuseScope ? (
+              <a
+                className="text-sm text-primary"
+                href={`#/downloader?id=${encodeURIComponent(`site:${reuseScope.downloadTaskId}`)}`}
+                onClick={() => setVisible(false)}
+              >
+                {t("acquisition.downloadDestination.viewSelectedDownload", {
+                  id: reuseScope.downloadTaskId,
+                })}
+              </a>
+            ) : (
               <Button
                 color="primary"
                 onPress={() => {
@@ -199,7 +233,7 @@ export default function AcquisitionDownloadDestinationModal({
               >
                 {t("acquisition.downloadDestination.diagnose", { count: resultIds.length })}
               </Button>
-            )
+            ))
           ) : (
             <Button
               color="primary"
@@ -207,10 +241,16 @@ export default function AcquisitionDownloadDestinationModal({
               isDisabled={locked || !selectedRows.length}
               onPress={() => void submit()}
             >
-              {t("acquisition.downloadDestination.apply", {
-                count: selectedRows.length,
-                downloads: selectedDownloadCount,
-              })}
+              {t(
+                reuseScope
+                  ? "acquisition.downloadDestination.applyReuse"
+                  : "acquisition.downloadDestination.apply",
+                {
+                  id: reuseScope?.downloadTaskId,
+                  count: selectedRows.length,
+                  downloads: selectedDownloadCount,
+                },
+              )}
             </Button>
           )}
         </div>
@@ -219,7 +259,9 @@ export default function AcquisitionDownloadDestinationModal({
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-default-500">
           <span>
-            {t("acquisition.downloadDestination.scope", { count: captured.current.length })}
+            {reuseScope
+              ? t("acquisition.downloadDestination.download", { id: reuseScope.downloadTaskId })
+              : t("acquisition.downloadDestination.scope", { count: captured.current.length })}
             {scopeLabel ? ` · ${scopeLabel}` : ""}
           </span>
           <Tooltip
@@ -242,7 +284,11 @@ export default function AcquisitionDownloadDestinationModal({
               })}
             </p>
             <p className="text-xs text-default-500">
-              {t("acquisition.downloadDestination.resultHint")}
+              {t(
+                reuseScope
+                  ? "acquisition.downloadDestination.resumeHint"
+                  : "acquisition.downloadDestination.resultHint",
+              )}
             </p>
             {partiallyApplied && (
               <p role="alert" className="text-sm text-warning">
@@ -309,6 +355,16 @@ export default function AcquisitionDownloadDestinationModal({
                 </Button>
               </div>
               <StorageCapacitySummary path={target} />
+              {reuseScope && (
+                <Button
+                  size="sm"
+                  variant="light"
+                  isDisabled={submitting}
+                  onPress={() => void load(null)}
+                >
+                  {t("acquisition.downloadDestination.backToSelection")}
+                </Button>
+              )}
               <p className="text-xs text-default-500">
                 {t("acquisition.downloadDestination.targetHint")}
               </p>
@@ -335,15 +391,18 @@ export default function AcquisitionDownloadDestinationModal({
                     <Chip size="sm" variant="flat">
                       {t("acquisition.downloadDestination.total", {
                         count: rows.length,
-                        downloads: preview.downloadCount,
+                        downloads: downloadCount,
                       })}
                     </Chip>
                     <Chip size="sm" variant="flat" color="success">
-                      {t("acquisition.downloadDestination.eligible", { count: eligible.length })}
+                      {t("acquisition.downloadDestination.eligible", {
+                        count: eligible.length,
+                        downloads: eligibleDownloads,
+                      })}
                     </Chip>
                     <Chip size="sm" variant="flat">
                       {t("acquisition.downloadDestination.protected", {
-                        count: rows.length - eligible.length,
+                        count: downloadCount - eligibleDownloads,
                       })}
                     </Chip>
                   </div>
@@ -372,75 +431,137 @@ export default function AcquisitionDownloadDestinationModal({
                   </p>
                 )}
                 <div className="divide-y divide-default-200 rounded-lg border border-default-200">
-                  {shown.map((row) => (
-                    <div key={row.taskId} className="flex items-start gap-2 p-3">
-                      <Checkbox
-                        aria-label={t("acquisition.downloadDestination.selectTask", {
-                          id: row.taskId,
-                        })}
-                        isSelected={selected.has(row.taskId) && eligibleRow(row)}
-                        isDisabled={locked || !eligibleRow(row)}
-                        onValueChange={(checked) =>
-                          setSelected((previous) => {
-                            const next = new Set(previous);
-                            if (checked && eligibleRow(row)) next.add(row.taskId);
-                            else next.delete(row.taskId);
-                            return next;
-                          })
-                        }
-                      />
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="min-w-0 flex-1 break-words text-sm font-medium">
-                            <span className="mr-2 text-default-500">#{row.taskId}</span>
-                            {row.title}
-                          </span>
-                          <span
-                            className={`text-xs ${eligibleRow(row) ? "text-success-600" : "text-default-500"}`}
-                          >
-                            {eligibleRow(row)
-                              ? t("acquisition.downloadDestination.rowEligible")
-                              : reason(row.reasonCode)}
-                          </span>
-                        </div>
-                        {row.downloads.map((download, index) => (
-                          <div
-                            key={download.downloadTaskId ?? index}
-                            className="space-y-1 rounded bg-default-100 p-2 text-xs"
-                          >
-                            <div className="flex flex-wrap justify-between gap-1 text-default-500">
-                              <span>
-                                {download.downloadTaskId != null
-                                  ? t("acquisition.downloadDestination.download", {
-                                      id: download.downloadTaskId,
-                                    })
-                                  : t("acquisition.downloadDestination.downloadUnknown")}
-                              </span>
-                              {!download.canApply && download.reasonCode && (
-                                <span>{reason(download.reasonCode)}</span>
-                              )}
-                            </div>
-                            <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1">
-                              <dt className="text-default-500">
-                                {t("acquisition.downloadDestination.oldDirectory")}
-                              </dt>
-                              <dd className="break-all">
-                                {download.oldDirectory ||
-                                  t("acquisition.downloadDestination.notSet")}
-                              </dd>
-                              <dt className="text-default-500">
-                                {t("acquisition.downloadDestination.newDirectory")}
-                              </dt>
-                              <dd className="break-all">
-                                {download.newDirectory ||
-                                  t("acquisition.downloadDestination.notProposed")}
-                              </dd>
-                            </dl>
+                  {shown.map((row) => {
+                    const count = eligibleDownloadCount(row);
+                    const canApply = count > 0;
+                    const mixed = canApply && count < row.downloads.length;
+
+                    return (
+                      <div key={row.taskId} className="flex items-start gap-2 p-3">
+                        <Checkbox
+                          aria-label={t("acquisition.downloadDestination.selectTask", {
+                            id: row.taskId,
+                          })}
+                          isSelected={selected.has(row.taskId) && canApply}
+                          isDisabled={locked || !canApply}
+                          onValueChange={(checked) =>
+                            setSelected((previous) => {
+                              const next = new Set(previous);
+                              if (checked && canApply) next.add(row.taskId);
+                              else next.delete(row.taskId);
+                              return next;
+                            })
+                          }
+                        />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="min-w-0 flex-1 break-words text-sm font-medium">
+                              <span className="mr-2 text-default-500">#{row.taskId}</span>
+                              {row.title}
+                            </span>
+                            <span
+                              className={`text-xs ${mixed ? "text-warning-600" : canApply ? "text-success-600" : "text-default-500"}`}
+                            >
+                              {mixed
+                                ? t(
+                                    "acquisition.downloadDestination.reason.DOWNLOAD_DESTINATION_ELIGIBLE_PARTS",
+                                    {
+                                      count,
+                                      downloads: row.downloads.length,
+                                    },
+                                  )
+                                : canApply
+                                  ? t("acquisition.downloadDestination.rowEligible")
+                                  : reason(row.reasonCode)}
+                            </span>
                           </div>
-                        ))}
+                          {row.downloads.map((download, index) => {
+                            const canApplyDownload = canApply && eligibleDownload(download);
+
+                            return (
+                              <div
+                                key={download.downloadTaskId ?? index}
+                                className="space-y-1 rounded bg-default-100 p-2 text-xs"
+                              >
+                                <div className="flex flex-wrap justify-between gap-1 text-default-500">
+                                  <span>
+                                    {download.downloadTaskId != null
+                                      ? t("acquisition.downloadDestination.download", {
+                                          id: download.downloadTaskId,
+                                        })
+                                      : t("acquisition.downloadDestination.downloadUnknown")}
+                                  </span>
+                                  {!canApplyDownload && (
+                                    <span>
+                                      {download.canApply !== true && download.reasonCode
+                                        ? reason(download.reasonCode)
+                                        : t("acquisition.downloadDestination.keepDirectory")}
+                                    </span>
+                                  )}
+                                </div>
+                                <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1">
+                                  <dt className="text-default-500">
+                                    {t("acquisition.downloadDestination.oldDirectory")}
+                                  </dt>
+                                  <dd className="break-all">
+                                    {download.oldDirectory ||
+                                      t("acquisition.downloadDestination.notSet")}
+                                  </dd>
+                                  {canApplyDownload && (
+                                    <>
+                                      <dt className="text-default-500">
+                                        {t("acquisition.downloadDestination.newDirectory")}
+                                      </dt>
+                                      <dd className="break-all">{download.newDirectory}</dd>
+                                    </>
+                                  )}
+                                </dl>
+                                {download.reuseEstimate && reuseScope && (
+                                  <div className="space-y-1 py-1">
+                                    <p>
+                                      {t("acquisition.downloadDestination.reuseCandidates", {
+                                        count: download.reuseEstimate.candidateFileCount,
+                                        total: download.reuseEstimate.fileCount,
+                                        bytes: formatBtBytes(download.reuseEstimate.candidateBytes),
+                                      })}
+                                    </p>
+                                    <p>
+                                      {t("acquisition.downloadDestination.reuseBudget", {
+                                        minimum: formatBtBytes(
+                                          download.reuseEstimate.requiredDownloadBytes,
+                                        ),
+                                        total: formatBtBytes(download.reuseEstimate.totalBytes),
+                                      })}
+                                    </p>
+                                    <p>{t("acquisition.downloadDestination.reuseOriginals")}</p>
+                                  </div>
+                                )}
+                                {!reuseScope &&
+                                  download.canPreviewReuse &&
+                                  download.downloadTaskId != null && (
+                                    <Button
+                                      size="sm"
+                                      variant="flat"
+                                      isDisabled={submitting}
+                                      onPress={() =>
+                                        void load({
+                                          taskId: row.taskId,
+                                          downloadTaskId: download.downloadTaskId!,
+                                        })
+                                      }
+                                    >
+                                      {t("acquisition.downloadDestination.previewReuse", {
+                                        id: download.downloadTaskId,
+                                      })}
+                                    </Button>
+                                  )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 {rows.length > pageSize && (
                   <div className="flex justify-center">

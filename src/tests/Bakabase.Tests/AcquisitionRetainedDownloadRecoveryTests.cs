@@ -10,6 +10,7 @@ using Bakabase.Modules.Workflow.Components;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.Service.Components.CloudDownloads.Baidu;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,15 +20,18 @@ public sealed partial class AcquisitionRecoveryTests
 {
     private sealed class RetainedProvider : ICloudDownloadProvider, ICloudRetainedDownloadRecoveryProvider, ICloudExistingDownloadVerificationProvider
     {
+        private static readonly BaiduCloudDownloadProvider Capabilities = new(null!, null!, null!);
         public string ProviderId => "baidu";
+        public bool SupportsExplicitStoppedCheckpointResume { get; set; }
         public List<bool> Checks = [];
         public string? Problem;
+        public string? ExistingInspectionFailure;
         public Func<Task>? DuringRemote;
         public int RetainedInspectionCalls;
-        public bool CanVerifyExistingDownloadFailure(string code) => code is
-            "BAIDU_OUTPUT_FILE_READ_FAILED" or "BAIDU_LOCAL_FILE_CHANGED" or "BAIDU_DOWNLOAD_CHECKSUM_MISMATCH";
-        public bool CanRevalidateRetainedDownloadFailure(string code) => code is "LOCAL_STORAGE_FULL" or "LOCAL_STORAGE_UNAVAILABLE" or "BAIDU_OUTPUT_DIRECTORY_FAILED" or
-            "BAIDU_OUTPUT_FILE_INVALID" or "BAIDU_LOCAL_PATH_TOO_LONG" or "BAIDU_OUTPUT_FILE_READ_FAILED";
+        public bool CanVerifyExistingDownloadFailure(string code) => Capabilities.CanVerifyExistingDownloadFailure(code);
+        public bool CanRevalidateRetainedDownloadFailure(string code) => Capabilities.CanRevalidateRetainedDownloadFailure(code);
+        public bool CanResumeIncompleteDownload(string failureCode, string? inspectionProblem) =>
+            Capabilities.CanResumeIncompleteDownload(failureCode, inspectionProblem);
         public Task<CloudReadiness> CheckReadyAsync(string? accountId, CancellationToken ct) => throw new AssertFailedException("Use read-only pinned inspection.");
         public async Task<CloudReadiness> InspectRetainedDownloadAsync(CloudDownloadRequest request, bool verifyRemote, CancellationToken ct)
         {
@@ -37,15 +41,32 @@ public sealed partial class AcquisitionRecoveryTests
             return new(Problem == null, Problem);
         }
         public Task<CloudReadiness> InspectExistingDownloadAsync(CloudDownloadRequest request, CancellationToken ct)
-        { Checks.Add(false); return Task.FromResult(new CloudReadiness(Problem == null, Problem)); }
+        {
+            Checks.Add(false);
+            var failure = ExistingInspectionFailure ?? Problem;
+            return Task.FromResult(new CloudReadiness(failure == null, failure));
+        }
         public CloudExistingDownloadVerification? ExistingProof;
+        public bool IncompleteInventory;
+        public async Task<CloudExistingDownloadInventory> InspectExistingFileInventoryAsync(CloudDownloadRequest request, CancellationToken ct)
+        {
+            var inspection = await InspectExistingDownloadAsync(request, ct);
+            return IncompleteInventory ? new(inspection.Available, inspection.Problem) : new(inspection.Available, inspection.Problem, 1, 5);
+        }
+        public Func<Task>? DuringVerification;
         public string? VerificationFailure;
+        public CloudVerificationLocation? VerificationLocation;
         public int VerificationCalls;
-        public Task<CloudExistingDownloadVerification> VerifyExistingDownloadAsync(CloudDownloadRequest request, CancellationToken ct)
+        public async Task<CloudExistingDownloadVerification> VerifyExistingDownloadAsync(CloudDownloadRequest request, CancellationToken ct)
         {
             VerificationCalls++;
-            if (VerificationFailure != null) throw new InvalidOperationException(VerificationFailure);
-            return Task.FromResult(ExistingProof ?? throw new AssertFailedException("Preview must not perform content verification."));
+            if (VerificationFailure != null)
+            {
+                if (VerificationLocation != null) throw new CloudProviderException(VerificationFailure) {VerificationLocation = VerificationLocation};
+                throw new InvalidOperationException(VerificationFailure);
+            }
+            if (DuringVerification != null) await DuringVerification();
+            return ExistingProof ?? throw new AssertFailedException("Preview must not perform content verification.");
         }
         public Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
             => throw new AssertFailedException("Recovery inspection must never download.");
@@ -92,6 +113,7 @@ public sealed partial class AcquisitionRecoveryTests
         var (run, target, download, _, _, provider, service) = await SeedRetainedDownload();
         download.Status = DownloadTaskDbModelStatus.Disabled;
         download.Message = null;
+        provider.ExistingInspectionFailure = "BAIDU_EXISTING_DOWNLOAD_UNVERIFIED";
         target = target with {Problem = "LOCAL_STORAGE_FULL"};
         var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson!)! with {Targets = [target]};
         run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
@@ -337,7 +359,8 @@ public sealed partial class AcquisitionRecoveryTests
     [DataTestMethod]
     [DataRow("BAIDU_OUTPUT_FILE_INVALID")]
     [DataRow("BAIDU_LOCAL_PATH_TOO_LONG")]
-    public async Task Retained_long_name_recovery_requires_provider_proof_and_keeps_original_download_and_transfer(string code)
+    [DataRow("BAIDU_LOCAL_PATH_MAPPING_CONFLICT")]
+    public async Task Retained_path_mapping_recovery_requires_provider_proof_and_keeps_original_download_and_transfer(string code)
     {
         var (run, target, download, operation, transfer, provider, service) = await SeedRetainedDownload();
         download.Message = code; await _db.SaveChangesAsync();
@@ -356,7 +379,7 @@ public sealed partial class AcquisitionRecoveryTests
     [DataTestMethod]
     [DataRow("BAIDU_OUTPUT_FILE_INVALID", true)]
     [DataRow("BAIDU_LOCAL_PATH_TOO_LONG", true)]
-    [DataRow("BAIDU_LOCAL_PATH_MAPPING_CONFLICT", false)]
+    [DataRow("BAIDU_LOCAL_PATH_MAPPING_CONFLICT", true)]
     [DataRow("BAIDU_LOCAL_PATH_MAPPING_INVALID", false)]
     public void Baidu_provider_allows_inspection_but_never_blind_retry_of_path_mapping_errors(string code, bool inspectable)
     {

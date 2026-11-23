@@ -314,7 +314,7 @@ export default function AcquisitionRecoveryModal({
                 defaultValue: t("acquisition.recovery.reason.unknown"),
               }),
             })
-          : t("acquisition.recovery.reason.unknown"),
+          : t(`cloudDownload.problemCode.${code}`, { defaultValue: t("acquisition.recovery.reason.unknown") }),
     });
   const shown = rows.slice((page - 1) * pageSize, page * pageSize);
   const scopePrefix =
@@ -574,11 +574,20 @@ export default function AcquisitionRecoveryModal({
                     <div key={row.taskId} className="space-y-1 p-2 text-xs">
                       <span className="font-medium">#{row.taskId}</span>
                       <div className="flex flex-wrap gap-2">
-                        <Chip size="sm" variant="flat" color="success">
-                          {t("acquisition.recovery.downloads.started", {
-                            count: row.startedDownloadTaskIds.length,
-                          })}
-                        </Chip>
+                        {(!row.verifiedDownloadTaskIds?.length || !!row.startedDownloadTaskIds.length) && (
+                          <Chip size="sm" variant="flat" color="success">
+                            {t("acquisition.recovery.downloads.started", {
+                              count: row.startedDownloadTaskIds.length,
+                            })}
+                          </Chip>
+                        )}
+                        {!!row.verifiedDownloadTaskIds?.length && (
+                          <Chip size="sm" variant="flat" color="success">
+                            {t("acquisition.recovery.downloads.verified", {
+                              ids: row.verifiedDownloadTaskIds.map((id) => `#${id}`).join(", "),
+                            })}
+                          </Chip>
+                        )}
                         {!!row.indeterminateDownloadTaskIds.length && (
                           <Chip size="sm" variant="flat" color="warning">
                             {t("acquisition.recovery.downloads.indeterminate", {

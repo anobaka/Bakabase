@@ -1,19 +1,18 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { acquisitionTaskTitle } from "@/components/Acquire/acquisitionTaskTitle";
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Input, Modal, Popover, Spinner, Tooltip } from "@/components/bakaui";
+import { Button, Chip, Modal, Popover, Spinner, Tooltip } from "@/components/bakaui";
 import { LuFolderCog, LuInfo } from "react-icons/lu";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import FileSystemSelectorButton from "@/components/FileSystemSelector/components/Button";
 import { WorkflowRunDetailContent } from "@/components/Workflow/WorkflowRunDetailModal";
 import { acquisitionStageLabel, acquisitionTaskStage, acquisitionDownloadActivity } from "../taskStage";
 import { AcquisitionStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
-import ExternalLink from "@/components/ExternalLink";
 import TaskPlanSnapshot, { type AcquisitionOptions } from "./TaskPlanSnapshot";
 import TaskPlanSources from "./TaskPlanSources";
 import TaskContinuationModal from "./TaskContinuationModal";
+import { isArchiveGroupWait } from "@/components/Workflow/Activities/IncompleteArchiveGroupRecovery";
 import TaskDiagnosticsModal, { type DiagnosticsPage } from "./TaskDiagnosticsModal";
 import { HistoryOutlined } from "@ant-design/icons";
 import { planTaskApi } from "./api";
@@ -30,11 +29,10 @@ import CompletedProcessingRevisionForm, {
   hasStageDirectoryInputs,
 } from "./CompletedProcessingRevisionForm";
 import TaskDirectoriesModal from "./TaskDirectoriesModal";
-import KeepPreparedFilesModal, { canKeepPreparedFiles } from "./KeepPreparedFilesModal";
-import DraftPreparation from "./DraftPreparation";
+import PreparedFilesModal, { canChoosePreparedFiles } from "./PreparedFilesModal";
+import TaskPreparationModal from "./TaskPreparationModal";
+import TaskPreparationSettingsModal from "./TaskPreparationSettingsModal";
 import RegisteredDownloadAction from "./RegisteredDownloadAction";
-import TaskDeliverySettings from "./TaskDeliverySettings";
-import TaskStoragePolicySettings from "./TaskStoragePolicySettings";
 import SourceCorrectionPanel from "./SourceCorrectionPanel";
 import SourceRevisionModal from "./SourceRevisionModal";
 import useSourceRevisionAvailability from "./useSourceRevisionAvailability";
@@ -45,7 +43,7 @@ import { sourceAvailabilityApi } from "@/components/SourceAvailability/api";
 import type { SourceAvailabilityRow } from "@/components/SourceAvailability/models";
 import RuntimeOverviewSummary, { RuntimeSources } from "./RuntimeOverviewSummary";
 import useRuntimeOverviews from "./useRuntimeOverviews";
-import { currentProcessingWaitExplanation, downloadContinuationLabel, hasCurrentRuntimeProblem, runtimeProblemLabel } from "./runtimeOverview";
+import { currentProcessingWaitExplanation, currentTaskRuntime, isConfirmingExistingFiles, downloadContinuationLabel, hasCurrentRuntimeProblem, runtimeProblemLabel } from "./runtimeOverview";
 import ProcessingProblemSummary from "@/components/Workflow/ProcessingProblemSummary";
 import AcquisitionAdaptiveProcessingModal from "@/pages/acquisition/components/AcquisitionAdaptiveProcessingModal";
 import AcquisitionRecoveryModal from "@/pages/acquisition/components/AcquisitionRecoveryModal";
@@ -54,6 +52,7 @@ import DeleteAcquisitionTasksModal from "@/pages/acquisition/components/DeleteAc
 import AcquisitionExecutionTimeline, {
   asAcquisitionStage,
   type AcquisitionStage,
+  type AcquisitionPresentationStage,
 } from "./AcquisitionExecutionTimeline";
 import {
   canReviseDeliveryLayout,
@@ -99,11 +98,9 @@ export default function PlanTaskDetailModal({
     };
   }, []);
   const [visible, setVisible] = useState(true);
-  const [query, setQuery] = useState("");
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionFailed, setActionFailed] = useState(false);
-  const [directoryRevision, setDirectoryRevision] = useState(0);
   const [directoriesOpen, setDirectoriesOpen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<DiagnosticsPage>();
   const [reserveSubmitting, setReserveSubmitting] = useState(false);
@@ -121,7 +118,7 @@ export default function PlanTaskDetailModal({
     inputStage: AcquisitionStage;
   }>();
   const [editor, setEditor] = useState<{
-    stage: "plan" | "delivery" | "keepPrepared";
+    stage: "plan" | "delivery" | "keepPrepared" | "deferPrepared";
     snapshot: PlanTaskDetail;
   }>();
   const replanSnapshot = editor?.snapshot;
@@ -131,6 +128,8 @@ export default function PlanTaskDetailModal({
     if (editor?.stage === "plan") formPanel.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
   }, [editor]);
   const [preparationOpen, setPreparationOpen] = useState(false);
+  const [preparationSettingsOpen, setPreparationSettingsOpen] = useState(false);
+  const [downloadStartOpen, setDownloadStartOpen] = useState(false);
   const requestId = useRef(0);
   const mutationPending = useRef(false);
   const load = useCallback(async () => {
@@ -155,9 +154,6 @@ export default function PlanTaskDetailModal({
       clearInterval(timer);
     };
   }, [load]);
-  useEffect(() => {
-    setQuery(detail?.query ?? "");
-  }, [detail?.query]);
   const mutate = async (fn: () => Promise<PlanTaskDetail | undefined>) => {
     if (mutationPending.current || detail?.task.isDeleted || detail?.task.deletedAt) return;
     mutationPending.current = true;
@@ -179,16 +175,14 @@ export default function PlanTaskDetailModal({
     } finally {
       mutationPending.current = false;
       setBusy(false);
-      setDirectoryRevision((value) => value + 1);
     }
   };
   const task = detail?.task;
   const sourceRevisionAvailable = useSourceRevisionAvailability(task);
-  const runtime = useRuntimeOverviews(task?.workflowRunId ? [task] : []);
-  const overview =
-    task?.workflowRunId && runtime.overviews[taskId]?.workflowRunId === task.workflowRunId
-      ? runtime.overviews[taskId]
-      : undefined;
+  const runtime = useRuntimeOverviews(task && (task.workflowRunId || task.phase === "ready") ? [task] : []);
+  const currentRuntime = task && currentTaskRuntime(task, runtime.overviews[taskId]);
+  const confirmation = isConfirmingExistingFiles(currentRuntime) ? currentRuntime : undefined;
+  const overview = confirmation ? undefined : currentRuntime;
   const continuationMessage = downloadContinuationLabel(t, overview);
   const processingWaitExplanation = currentProcessingWaitExplanation(detail, overview);
   const downloadActivity = task && acquisitionDownloadActivity(task, overview);
@@ -290,7 +284,7 @@ export default function PlanTaskDetailModal({
     if (!task?.waitPromptJson || task.waitPromptJson.length > 1024 * 1024) return undefined;
     try {
       const prompt = JSON.parse(task.waitPromptJson);
-      return typeof prompt?.reason === "string" && localProcessingReasons.includes(prompt.reason)
+      return typeof prompt?.reason === "string" && (localProcessingReasons.includes(prompt.reason) || isArchiveGroupWait(prompt))
         ? prompt
         : undefined;
     } catch {
@@ -343,7 +337,6 @@ export default function PlanTaskDetailModal({
     canRevisePathConflict || canReviseLocalProcessing || canRevisePublicationStorage;
   const editable =
     task && !readOnly && !task.workflowRunId && task.status !== AcquisitionStatus.Cancelled;
-  const showSelection = editable && ["selection", "attention"].includes(task.phase ?? "");
   const editorStale =
     !!replanSnapshot &&
     (task?.planRevision !== replanSnapshot.task.planRevision ||
@@ -375,6 +368,8 @@ export default function PlanTaskDetailModal({
     !!task?.workflowRunId &&
     !readOnly &&
     [AcquisitionStatus.Failed, AcquisitionStatus.Cancelled].includes(task.status);
+  const canRetryStoppedStep = stopped && !!overview?.workflowStatus &&
+    ["cancelled", "failed", "interrupted"].includes(overview.workflowStatus);
   const processingOffered =
     !!task?.workflowRunId &&
     !readOnly &&
@@ -416,15 +411,19 @@ export default function PlanTaskDetailModal({
     overview?.currentNodeKind === "acquisition.plan.process" &&
     (overview.problemReasonCode === "STAGE_COMMIT_REFERENCED" || task?.error === "STAGE_COMMIT_REFERENCED");
   const savedProcessingCheckpoint = hasSavedStorageProcessingCheckpoint(detail, overview);
-  const canAnswerProcessingPassword = currentRunMatches && localProcessingPrompt?.reason === "PasswordUnknown" &&
+  const currentPartWait = currentRunMatches && localProcessingPrompt &&
     (task?.currentStepIndex == null || overview.currentStepIndex == null || task.currentStepIndex === overview.currentStepIndex) &&
-    ["acquisition.plan.process", "fs.assessDelivery"].includes(overview.currentNodeKind ?? "") &&
     detail?.plan?.parts.some(part => part.id === localProcessingPrompt.targetId) === true;
-  const canReviewExistingOutput = overview?.currentNodeKind === "fs.assessDelivery" &&
-    localProcessingPrompt?.reason === "FILE_DELIVERY_RESULT_UNCERTAIN" &&
-    localProcessingPrompt.deliveryReview === true && !!localProcessingPrompt.artifactId &&
-    !!localProcessingPrompt.fingerprint && !!localProcessingPrompt.reviewToken &&
+  const currentProcessingNode = currentPartWait &&
+    ["acquisition.plan.process", "fs.assessDelivery"].includes(overview?.currentNodeKind ?? "");
+  const canAnswerProcessingPassword = currentProcessingNode && localProcessingPrompt.reason === "PasswordUnknown";
+  const canReviewExistingOutput = currentProcessingNode && localProcessingPrompt.deliveryReview === true &&
+    ["FILE_DELIVERY_RESULT_UNCERTAIN", "FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED"].includes(localProcessingPrompt.reason) &&
+    !!localProcessingPrompt.artifactId && !!localProcessingPrompt.fingerprint && !!localProcessingPrompt.reviewToken &&
     Array.isArray(localProcessingPrompt.allowedArchivePolicies) && localProcessingPrompt.allowedArchivePolicies.includes("keep");
+  const useCurrentProcessingWait = canAnswerProcessingPassword ||
+    (canReviewExistingOutput && localProcessingPrompt.adaptiveAssessment !== true) ||
+    (currentPartWait && overview?.currentNodeKind === "acquisition.plan.process" && isArchiveGroupWait(localProcessingPrompt));
   const latestProcessingAttempt = detail?.stageAttempts?.filter(
     (attempt) => attempt.stage === "processing" && attempt.runId === task?.workflowRunId
   ).pop();
@@ -458,6 +457,16 @@ export default function PlanTaskDetailModal({
   );
   const currentControls = (
     <>
+      {canRetryStoppedStep && (
+        <Button size="sm" color="primary" variant="flat" isDisabled={busy || replanOpen}
+          onPress={() => void mutate(async () => {
+            const result = await BApi.acquisition.retryAcquisition(taskId, { sensitiveResponse: true, showErrorToast: false });
+            if (result.code || !result.data) throw new Error(result.message || "ACQUISITION_RETRY_FAILED");
+            return undefined;
+          })}>
+          {t("acquisition.plan.retryCurrentStep")}
+        </Button>
+      )}
       {continueCurrent && (deliveryWait ? (
         <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog"
           isDisabled={busy || replanOpen} onPress={() => openContinuation("delivery")}>
@@ -484,7 +493,7 @@ export default function PlanTaskDetailModal({
           )}
         </Button>
       )}
-      {stopped && !canDiagnoseRecovery && !continueFiles && (
+      {stopped && task?.status !== AcquisitionStatus.Cancelled && !canDiagnoseRecovery && !continueFiles && (
         <Button
           size="sm"
           variant="flat"
@@ -517,13 +526,27 @@ export default function PlanTaskDetailModal({
       {t("sourceAvailability.review.one")}
     </Button>
   );
-  const stageActions: Partial<Record<AcquisitionStage, ReactNode>> = {};
-  const stageHeaderActions: Partial<Record<AcquisitionStage, ReactNode>> = {};
+  const preparationWaiting = !!task?.workflowRunId && task.status === AcquisitionStatus.Waiting &&
+    ["download.selectSources", "cloud.chooseSources", "cloud.chooseMethod"].includes(overview?.currentNodeKind ?? "");
+  const stageActions: Partial<Record<AcquisitionPresentationStage, ReactNode>> = {};
+  const stageHeaderActions: Partial<Record<AcquisitionPresentationStage, ReactNode>> = {};
+  stageHeaderActions.preparation = editable ? <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog"
+    isDisabled={busy || replanOpen} onPress={() => setPreparationOpen(true)}>{t("acquisition.continue.open")}</Button>
+    : preparationWaiting ? currentControls : undefined;
+  if (preparationWaiting && overview) stageActions.preparation = <RuntimeOverviewSummary overview={overview} showSources={false} />;
   for (const stage of ["download", "processing", "delivery"] as const) {
     stageHeaderActions[stage] = <>
-      {currentStage === stage && currentControls}
+      {currentStage === stage && !preparationWaiting && currentControls}
+      {stage === "download" && editable && (task.phase === "ready" || task.phase === "attention" && !!detail?.plan && detail.steps.length > 0) && <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog"
+        isDisabled={busy || replanOpen} onPress={() => setDownloadStartOpen(true)}>{t("acquisition.continue.open")}</Button>}
       {stage === "processing" && detail && processingOffered && (!continueCurrent || deliveryWait) && processingAction("processing")}
-      {stage === "delivery" && detail && canKeepPreparedFiles(detail) && (
+      {stage === "processing" && detail && canChoosePreparedFiles(detail, "defer") && (
+        <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog" isDisabled={busy || replanOpen}
+          onPress={() => setEditor({ stage: "deferPrepared", snapshot: detail })}>
+          {t("acquisition.deferPrepared.title")}
+        </Button>
+      )}
+      {stage === "delivery" && detail && canChoosePreparedFiles(detail, "keep") && (
         <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog" isDisabled={busy || replanOpen}
           onPress={() => setEditor({ stage: "keepPrepared", snapshot: detail })}>
           {t("acquisition.keepPrepared.title")}
@@ -538,7 +561,7 @@ export default function PlanTaskDetailModal({
     </>;
     stageActions[stage] = (
       <div className="flex flex-wrap items-center gap-2">
-        {currentStage === stage && overview && (
+        {currentStage === stage && !preparationWaiting && overview && (
           <div className="w-full">
             <RuntimeOverviewSummary overview={overview} showSources={false} problemDetail={processingWaitExplanation} />
           </div>
@@ -554,6 +577,10 @@ export default function PlanTaskDetailModal({
             ) : null}
             {sourceChange}
             {reviewAction}
+            {editable && detail && !!task.creationOrigins?.length && !detail.planHistory?.some(revision => revision.previousRunId != null) &&
+              !detail.replanArtifacts?.length && (!detail.plan || (detail.plan.parts.length === 1 && !detail.plan.parts[0].continueFrom)) &&
+              <RegisteredDownloadAction key={`${taskId}:${task.planRevision}`} taskId={taskId} revision={task.planRevision}
+                disabled={busy} onApplied={next => void mutate(async () => next)} />}
           </>
         )}
         {stage === "processing" && detail && processingOffered && (
@@ -578,7 +605,7 @@ export default function PlanTaskDetailModal({
   const title = acquisitionTaskTitle(taskId, task);
   const hasLinkedPost = continuation?.snapshot.task.creationOrigins?.some(origin => postTaskId(origin) != null) === true;
   const originLinks = !!task?.creationOrigins?.length && (
-    <AcquisitionCreationOrigin origins={task.creationOrigins} compact inspectPosts />
+    <AcquisitionCreationOrigin origins={task.creationOrigins} compact />
   );
   return (
     <>
@@ -631,30 +658,7 @@ export default function PlanTaskDetailModal({
             <Button variant="light" onPress={() => setVisible(false)}>
               {t("acquisition.plan.close")}
             </Button>
-            {editable && (task.phase === "ready" ||
-              (task.phase === "attention" && detail?.plan && detail.steps.length > 0)) && (
-              <Button
-                variant="flat"
-                isLoading={busy}
-                onPress={() => void mutate(() => planTaskApi.preflight(taskId))}
-              >
-                {t("acquisition.plan.preflight")}
-              </Button>
-            )}
-            {editable && detail && task.phase === "ready" && (
-              <Button
-                color="primary"
-                isLoading={busy}
-                isDisabled={
-                  detail.issues.some((issue) => issue.blocking !== false) || !detail.steps.length
-                }
-                onPress={() => void mutate(() => attemptRunOverride?.revision === task.planRevision
-                  ? planTaskApi.run(taskId, task.planRevision, attemptRunOverride.options.useEmergencySpaceReserve)
-                  : planTaskApi.run(taskId, task.planRevision))}
-              >
-                {t("acquisition.plan.run")}
-              </Button>
-            )}
+
           </div>
         }
         onDestroyed={onDestroyed}
@@ -674,9 +678,10 @@ export default function PlanTaskDetailModal({
             {readOnly && (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-default-100 p-3">
                 <p role="status" className="text-sm text-default-600">{t("acquisition.delete.readOnly")}</p>
-                {task?.status === AcquisitionStatus.Completed && task.workflowRunId != null && (
+                {task && (
                   <Button size="sm" variant="flat" onPress={() => createPortal(DeleteAcquisitionTasksModal, {
-                    taskIds: [taskId], taskNames: { [taskId]: task.title?.trim() || task.resourceName?.trim() || "" }, retryRetainedFiles: true, onChanged: refreshAfterAction,
+                    taskIds: [taskId], taskNames: { [taskId]: task.title?.trim() || task.resourceName?.trim() || "" },
+                    retryRetainedFiles: true, reviewWaitingRuns: true, onChanged: refreshAfterAction,
                   })}>
                     {t("acquisition.delete.retained.title")}
                   </Button>
@@ -686,10 +691,11 @@ export default function PlanTaskDetailModal({
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
               <div className="min-w-0">{originLinks}</div>
               {!readOnly && <Button size="sm" variant="light" startContent={<LuFolderCog aria-hidden size={16} />}
-                isDisabled={busy || replanOpen} onPress={() => setDirectoriesOpen(true)}>
+                isDisabled={busy || replanOpen} onPress={() => editable ? setPreparationSettingsOpen(true) : setDirectoriesOpen(true)}>
                 {t("acquisition.directories.open")}
               </Button>}
             </div>
+            {confirmation && <RuntimeOverviewSummary overview={confirmation} showSources={false} />}
             {!currentStage && <div className="flex flex-wrap gap-2">{currentControls}</div>}
             {task && (
               <AcquisitionExecutionTimeline
@@ -699,6 +705,8 @@ export default function PlanTaskDetailModal({
                 currentProblemCode={overview?.problemReasonCode ?? overview?.problemCode}
                 currentStepIndex={overview?.currentStepIndex}
                 onOpenRun={showRun}
+                preparationWaiting={preparationWaiting}
+                onPreparationHistory={() => setDiagnostics({ tab: "plan" })}
               />
             )}
             {overview && !currentStage && <RuntimeOverviewSummary overview={overview} showSources={false} problemDetail={processingWaitExplanation} />}
@@ -736,7 +744,7 @@ export default function PlanTaskDetailModal({
                 {t("acquisition.plan.actionFailed")}
               </p>
             )}
-            {!!detail.issues.length && (
+            {!editable && !!detail.issues.length && (
               <div
                 role="status"
                 className="space-y-2 rounded-lg border border-warning-200 bg-warning-50 p-3"
@@ -780,191 +788,36 @@ export default function PlanTaskDetailModal({
                 }}
               />
             )}
-            {editable && (
-              <>
-                {!!task.creationOrigins?.length && !detail.planHistory?.some(revision => revision.previousRunId != null) &&
-                  !detail.replanArtifacts?.length && (!detail.plan ||
-                    (detail.plan.parts.length === 1 && !detail.plan.parts[0].continueFrom)) && (
-                  <RegisteredDownloadAction key={`${taskId}:${task.planRevision}`}
-                    taskId={taskId} revision={task.planRevision} disabled={busy}
-                    onApplied={next => void mutate(async () => next)} />
-                )}
-                {!detail.plan && task?.builderId !== "draft" && (
-                  <Button
-                    size="sm"
-                    variant="flat"
-                    isDisabled={busy}
-                    onPress={() => setPreparationOpen((value) => !value)}
-                  >
-                    {t("acquisition.draft.changeBuilder")}
-                  </Button>
-                )}
-                {!detail.plan && (task?.builderId === "draft" || preparationOpen) && (
-                  <DraftPreparation detail={detail} busy={busy} onAction={mutate} />
-                )}
-                {task?.builderId !== "draft" && !preparationOpen && detail.query != null && (
-                  <section
-                    className="space-y-3 rounded-lg border border-default-200 p-3"
-                    aria-label={t("acquisition.plan.search")}
-                  >
-                    <p className="text-sm text-default-500">{t("acquisition.plan.searchHint")}</p>
-                    <div className="flex flex-wrap items-end gap-2">
-                      <Input
-                        className="min-w-52 flex-1"
-                        label={t("acquisition.plan.query")}
-                        value={query}
-                        onValueChange={setQuery}
-                        maxLength={512}
-                      />
-                      <Button
-                        isLoading={busy}
-                        isDisabled={!query.trim()}
-                        onPress={() => void mutate(() => planTaskApi.search(taskId, query.trim()))}
-                      >
-                        {t("acquisition.plan.search")}
-                      </Button>
-                    </div>
-                    {showSelection &&
-                      (detail.candidates.length ? (
-                        <div className="space-y-2">
-                          <p className="text-xs text-default-500">
-                            {t("acquisition.plan.chooseHint", {
-                              count: detail.candidates.length,
-                            })}
-                          </p>
-                          {detail.candidates.map((candidate) => (
-                            <div
-                              key={candidate.id}
-                              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-default-50 p-3"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <p className="break-words text-sm font-medium">{candidate.title}</p>
-                                <ExternalLink href={candidate.url} className="text-xs">
-                                  {t("acquisition.plan.candidateSource")}
-                                </ExternalLink>
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="flat"
-                                color="primary"
-                                isDisabled={busy}
-                                onPress={() =>
-                                  void mutate(() =>
-                                    planTaskApi.select(taskId, candidate.id, task!.planRevision),
-                                  )
-                                }
-                              >
-                                {t("acquisition.plan.choose")}
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-default-500">
-                          {t("acquisition.plan.noCandidates")}
-                        </p>
-                      ))}
-                  </section>
-                )}
 
-                <TaskPlanSources
-                  detail={detail}
-                  corrections={corrections.data}
-                  sourceHealth={sourceHealth}
-                  onReview={reviewSources}
-                  busy={busy}
-                  onReplace={detail.canEditStoragePolicy === false || task.workflowRunId || detail.planHistory?.some(revision => revision.previousRunId != null) || detail.replanArtifacts?.length
-                    ? undefined : async (partId, sourceId, reviewed) => {
-                      const next = await planTaskApi.replaceSource(taskId, task.planRevision,
-                        { partId, sourceId, url: reviewed.url, accessCode: reviewed.accessCode ?? undefined });
-                      await mutate(async () => next);
-                    }}
-                  onApply={
-                    task.phase === "ready"
-                      ? (partId, source, revision) =>
-                          mutate(() =>
-                            planTaskApi.applyProcessingRevision(
-                              taskId,
-                              task.planRevision,
-                              partId,
-                              source,
-                              revision,
-                            ),
-                          )
-                      : undefined
-                  }
-                />
-                <section className="space-y-2 rounded-lg border border-default-200 p-3">
-                  <h3 className="text-sm font-medium">{t("acquisition.plan.outputDirectory")}</h3>
-                  <p className="text-xs text-default-500">{t("acquisition.plan.outputHint")}</p>
-                  <FileSystemSelectorButton
-                    key={`${task?.targetDirectory ?? "empty"}:${directoryRevision}`}
-                    isDisabled={busy}
-                    className="h-auto max-w-full whitespace-normal break-all py-2 text-left"
-                    fileSystemSelectorProps={{
-                      targetType: "folder",
-                      defaultSelectedPath: task?.targetDirectory ?? undefined,
-                      onSelected: (entry) =>
-                        void mutate(() =>
-                          task?.builderId === "draft"
-                            ? planTaskApi.updateDraft(taskId, {
-                                expectedRevision: task.planRevision,
-                                outputDirectory: entry.path,
-                              })
-                            : planTaskApi.update(taskId, task!.planRevision, entry.path),
-                        ),
-                    }}
-                  />
-                </section>
-                {detail.canEditStoragePolicy && (
-                  <TaskStoragePolicySettings
-                    detail={detail}
-                    busy={busy}
-                    onSave={async (revision, policy, overrides) => {
-                      let saved = false;
-                      await mutate(async () => {
-                        const next = await planTaskApi.updateStorage(
-                          taskId,
-                          revision,
-                          policy,
-                          overrides.map((item) => ({ ...item, policy: item.policy ?? undefined })),
-                        );
-                        saved = true;
-                        return next;
-                      });
-                      return saved;
-                    }}
-                  />
-                )}
-                {detail.canEditDeliverySettings && (
-                  <TaskDeliverySettings
-                    key={`${taskId}:${task?.planRevision}`}
-                    detail={detail}
-                    busy={busy}
-                    editable
-                    onSave={(deliverySettings) =>
-                      mutate(() =>
-                        task?.builderId === "draft"
-                          ? planTaskApi.updateDraft(taskId, {
-                              expectedRevision: task.planRevision,
-                              deliverySettings,
-                            })
-                          : planTaskApi.updateDelivery(
-                              taskId,
-                              task!.planRevision,
-                              deliverySettings,
-                            ),
-                      )
-                    }
-                  />
-                )}
-              </>
-            )}
           </div>
         )}
       </Modal>
-      {!readOnly && editor?.stage === "keepPrepared" && replanSnapshot && (
-        <KeepPreparedFilesModal detail={replanSnapshot} stale={editorStale || !canKeepPreparedFiles(detail)}
+      {editable && detail && preparationOpen && <TaskPreparationModal detail={detail} busy={busy} onAction={mutate}
+        onClose={() => setPreparationOpen(false)} />}
+      {editable && detail && preparationSettingsOpen && <TaskPreparationSettingsModal detail={detail} busy={busy} onAction={mutate}
+        onClose={() => setPreparationSettingsOpen(false)} />}
+      {editable && detail && downloadStartOpen && <Modal visible size="3xl" title={t("acquisition.preparation.startTitle")}
+        onClose={() => setDownloadStartOpen(false)} footer={<>
+          <Button variant="light" isDisabled={busy} onPress={() => setDownloadStartOpen(false)}>{t("common.action.cancel")}</Button>
+          <Button variant="flat" isLoading={busy} onPress={() => void mutate(() => planTaskApi.preflight(taskId))}>{t("acquisition.plan.preflight")}</Button>
+          <Button color="primary" isLoading={busy} isDisabled={task.phase !== "ready" || detail.issues.some(issue => issue.blocking !== false) || !detail.steps.length}
+            onPress={() => void mutate(async () => {
+              const next = attemptRunOverride?.revision === task.planRevision
+                ? await planTaskApi.run(taskId, task.planRevision, attemptRunOverride.options.useEmergencySpaceReserve)
+                : await planTaskApi.run(taskId, task.planRevision);
+              if (next.task.workflowRunId) setDownloadStartOpen(false);
+              return next;
+            })}>{t("acquisition.plan.run")}</Button>
+        </>}>
+        <p className="mb-3 text-sm text-default-500">{t("acquisition.preparation.startHint")}</p>
+        <TaskPlanSources detail={detail} corrections={corrections.data} sourceHealth={sourceHealth} sourcesOnly />
+        {detail.issues.map(issue => <p key={issue.code} className="mt-2 text-sm text-warning-700">{t(`acquisition.plan.issue.${issue.code}`, {
+          defaultValue: t(`acquire.requirement.${issue.code}`, { defaultValue: t("acquisition.plan.issue.unknown") }),
+        })}</p>)}
+      </Modal>}
+      {!readOnly && (editor?.stage === "keepPrepared" || editor?.stage === "deferPrepared") && replanSnapshot && (
+        <PreparedFilesModal detail={replanSnapshot} choice={editor.stage === "deferPrepared" ? "defer" : "keep"}
+          stale={editorStale || !canChoosePreparedFiles(detail, editor.stage === "deferPrepared" ? "defer" : "keep")}
           onClose={closeEditor} onSaved={startRevision} onRefresh={() => void load()} />
       )}
       {!readOnly && editor?.stage === "delivery" && replanSnapshot && (
@@ -990,10 +843,7 @@ export default function PlanTaskDetailModal({
           completedDownloadWait={completedDownloadWait}
         >
           <TaskPlanSnapshot detail={detail} acquisitionOptions={acquisitionOptions} onRun={showRun}>
-            <AcquisitionCreationOrigin
-              origins={task?.creationOrigins}
-              inspectPosts
-            />
+            <AcquisitionCreationOrigin origins={task?.creationOrigins} />
             {task?.originResourceId != null && (
               <p className="text-xs text-default-500">
                 {t("acquisition.draft.originResource", { id: task.originResourceId })}
@@ -1013,7 +863,7 @@ export default function PlanTaskDetailModal({
           origin={<div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
             <div className="min-w-0">{originLinks}</div>
             <Button size="sm" variant="light" startContent={<LuFolderCog aria-hidden size={16} />}
-              isDisabled={reserveSubmitting} onPress={() => setDirectoriesOpen(true)}>{t("acquisition.directories.open")}</Button>
+              isDisabled={reserveSubmitting} onPress={() => editable ? setPreparationSettingsOpen(true) : setDirectoriesOpen(true)}>{t("acquisition.directories.open")}</Button>
           </div>}
           busy={reserveSubmitting}
           processAgain={continuation.purpose === "reprocess"}
@@ -1021,9 +871,9 @@ export default function PlanTaskDetailModal({
           reviewOutput={canReviewExistingOutput}
           passwordRequested={canAnswerProcessingPassword}
           allowModeChoice={continuation.purpose === "processing" && continuation.current && continuation.files &&
-            (canAnswerProcessingPassword || canReviewExistingOutput || (!hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) &&
+            (useCurrentProcessingWait || canReviewExistingOutput || (!hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) &&
               savedProcessingCheckpoint && hasSavedStorageProcessingCheckpoint(continuation.snapshot, overview)))}
-          preferFiles={!canAnswerProcessingPassword && continuation.purpose !== "delivery" && continuation.files &&
+          preferFiles={!useCurrentProcessingWait && continuation.purpose !== "delivery" && continuation.files &&
             (hasStageDirectoryInputs(continuation.snapshot, continuation.inputStage) ||
               hasReadableCurrentDirectoryInputs(continuation.snapshot) && !savedProcessingCheckpoint)}
           current={continuation.current && (continuationStale || continueCurrent) && (

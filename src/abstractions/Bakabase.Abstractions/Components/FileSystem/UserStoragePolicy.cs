@@ -10,7 +10,6 @@ namespace Bakabase.Abstractions.Components.FileSystem;
 /// </summary>
 public sealed class UserStoragePolicy : IUserStoragePolicy
 {
-    private const string MountsVariable = "BAKABASE_DEPLOYMENT_MOUNTS";
     private const int MaximumMountInfoLength = 4 * 1024 * 1024;
     private static readonly string[] SystemDirectories =
         ["/proc", "/sys", "/dev", "/etc", "/bin", "/sbin", "/lib", "/lib64", "/usr", "/run"];
@@ -46,7 +45,8 @@ public sealed class UserStoragePolicy : IUserStoragePolicy
         IsRestricted = isContainer;
         _appDataDirectory = appDataDirectory;
         _readMountInfo = readMountInfo ?? (() => File.ReadAllText("/proc/self/mountinfo"));
-        _readDeploymentMetadata = readDeploymentMetadata ?? (() => Environment.GetEnvironmentVariable(MountsVariable));
+        _readDeploymentMetadata = readDeploymentMetadata ??
+            (() => Environment.GetEnvironmentVariable(StorageVolumes.DeploymentMountsVariable));
         _readAttributes = readAttributes ?? File.GetAttributes;
         _clock = timeProvider ?? TimeProvider.System;
     }

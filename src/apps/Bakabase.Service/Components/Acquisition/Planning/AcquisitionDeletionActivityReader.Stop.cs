@@ -62,6 +62,7 @@ public sealed partial class AcquisitionDeletionActivityReader : IAcquisitionDele
                 (r.Status == WorkflowRunStatus.Running || r.Status == WorkflowRunStatus.Pending ||
                  r.Status == WorkflowRunStatus.Waiting && r.PendingSignalJson != null))
             .ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Cancelled)
+                .SetProperty(r => r.PendingSignalJson, (string?)null)
                 .SetProperty(r => r.CompletedAt, DateTime.Now), ct);
     }
 }

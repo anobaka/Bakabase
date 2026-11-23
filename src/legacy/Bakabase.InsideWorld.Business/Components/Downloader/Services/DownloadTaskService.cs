@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Infrastructures.Components.Gui;
@@ -154,7 +155,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             try
             {
                 var result = await StartCore(t => t.Id == id, DownloadTaskActionOnConflict.Ignore,
-                    targeted: true, taskActionLockHeld: true, validateUnderOwnerLease == null ? null : ValidateOwner);
+                    targeted: true, taskActionLockHeld: true, validateUnderOwnerLease == null ? null : ValidateOwner,
+                    preserveMountFailure: true);
                 if (validateUnderOwnerLease != null && result.Code == 0 &&
                     DownloaderManager[id]?.IsOccupyingDownloadTaskSource() != true &&
                     !await db.DownloadTasks.AsNoTracking().AnyAsync(t => t.Id == id && t.Status == DownloadTaskDbModelStatus.Complete, ct))
@@ -179,7 +181,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
         private async Task<BaseResponse> StartCore(Expression<Func<DownloadTaskDbModel, bool>>? exp,
             DownloadTaskActionOnConflict actionOnConflict, bool targeted, bool taskActionLockHeld,
-            Func<Task>? validateUnderOwnerLease = null)
+            Func<Task>? validateUnderOwnerLease = null, bool preserveMountFailure = false)
         {
             var tasks = await GetAll(exp);
             // Authorization also covers completed tasks: a targeted retry may download them again.
@@ -208,6 +210,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     if (taskActionLockHeld) await EnableTask();
                     else await DownloaderManager.WithTaskActionLock(badStatusTask.Id, EnableTask);
                 }
+                catch (UserStoragePathException error) when (preserveMountFailure && error.MountUnavailable)
+                { throw new LocalStorageException("LOCAL_STORAGE_UNAVAILABLE", error); }
                 catch (Exception error) when (error is not ConditionalStartValidationException &&
                     error is InvalidOperationException or IOException or UnauthorizedAccessException)
                 { return BaseResponseBuilder.BuildBadRequest(error.Message); }

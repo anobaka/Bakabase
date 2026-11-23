@@ -19,7 +19,8 @@ public sealed partial class AcquisitionPlanService
         Parts = plan.Parts.Select(part => part with
         {
             StoragePolicy = null, Processing = WithoutProducerStoragePolicy(part.Processing),
-            Sources = part.Sources.Select(source => source with {Processing = WithoutProducerStoragePolicy(source.Processing)}).ToList()
+            Sources = part.Sources.Select(source => source with {Processing = WithoutProducerStoragePolicy(source.Processing),
+                ManualAvailabilityOverride = null}).ToList()
         }).ToList()
     };
     private static FileProcessingPlan? WithoutProducerStoragePolicy(FileProcessingPlan? plan) => plan == null ? null :

@@ -13,6 +13,7 @@ using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.FileProcessing;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,7 +78,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         if (plan.Requirement == "unknown") return workset;
         var finalId = plan.Steps.LastOrDefault()?.Id;
         var intent = Intent(context.Services, workset, target, plan, finalId, config.ContinueFrom);
-        var processor = context.Services.GetRequiredService<FileArtifactProcessor>();
+        var processor = context.Services.GetRequiredService<IFileArtifactProcessor>();
         var artifact = await processor.ResolveAsync(intent, ct) ??
             await PublishFileArtifactsActivity.ResolveFollowingPublicationAsync(context, workset, target, intent, ct);
         if (artifact == null) return workset;
@@ -196,7 +197,9 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         if (signal == null && target.DeliveryReview is {Accepted: false} && NeedsInlineReview(ctx, workset, config))
             return await AssessFileArtifactDeliveryActivity.ReviewAsync(ctx, workset, InlineReviewConfig(config), null, ct);
         if (signal != null && signal.TargetId != target.Id) throw new ArgumentException("This answer belongs to another target.");
-        if (signal != null) FileProcessingResumeActions.Validate(ctx, target, signal, config.StopAfterStepId, allowSourceEvidence: true);
+        var groupAction = signal?.Action is FileProcessingResumeActions.InspectGroup or FileProcessingResumeActions.RetainGroup;
+        if (groupAction) FileProcessingResumeActions.ValidateGroup(ctx, target, signal!, config.StopAfterStepId);
+        else if (signal != null) FileProcessingResumeActions.Validate(ctx, target, signal, config.StopAfterStepId, allowSourceEvidence: true);
         if (signal?.StorageRecovery != null && (signal.Password != null || signal.ExtractionPlanJson != null ||
                 signal.ArchivePolicy != null || signal.ArchiveId != null || signal.RecursiveOptions != null))
             throw new ArgumentException("A storage continuation cannot change processing instructions or passwords.");
@@ -220,12 +223,12 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         await ctx.ReportStage("verifyingFiles");
         var finalId = plan.Steps.LastOrDefault()?.Id;
         var finalIntent = Intent(ctx.Services, workset, target, plan, finalId, config.ContinueFrom);
-        if (signal?.StorageRecovery == null && target.ProcessedArtifactId != null && target.ProcessingIntentKey == finalIntent)
+        if (!groupAction && signal?.StorageRecovery == null && target.ProcessedArtifactId != null && target.ProcessingIntentKey == finalIntent)
             return await CompleteProcessing(ctx, workset, target, config, plan, null, ct);
-        var processor = ctx.Services.GetRequiredService<FileArtifactProcessor>();
+        var processor = ctx.Services.GetRequiredService<IFileArtifactProcessor>();
         var boundary = config.StopAfterStepId;
         var intent = Intent(ctx.Services, workset, target, plan, boundary ?? finalId, config.ContinueFrom);
-        if (!config.UseVerifiedInput && signal?.StorageRecovery == null && await processor.ResolveAsync(intent, ct) is { } cached)
+        if (!groupAction && !config.UseVerifiedInput && signal?.StorageRecovery == null && await processor.ResolveAsync(intent, ct) is { } cached)
         {
             await Bind(ctx, target, cached, boundary, ct);
             if ((boundary == null || boundary == finalId) && ctx.Services.GetService<DownloadArtifactCoordinator>() is { } cachedCoordinator)
@@ -241,17 +244,95 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         var serialized = JsonSerializer.Serialize(plan, WorkflowJson.Options);
         var processingConfig = new FileArtifactProcessingConfig
             {StoragePolicy = config.StoragePolicy ?? target.StoragePolicy, StorageTitle = target.Title,
-                WorkspaceDirectoryScope = target.ProcessingDirectoryScope};
+                WorkspaceDirectoryScope = target.ProcessingDirectoryScope,
+                ArchiveGroupOwner = boundary != null && plan.Steps.Any(s => s.Id == boundary && s.Op == "extractArchive")
+                    ? new(ctx.RunId, target.Id, boundary) : null, RetainArchiveGroupToken = groupAction ? signal?.ArchiveGroupToken : null};
+        if (groupAction)
+        {
+            // Only server-persisted workset input and prompt identities can authorize a group lookup.
+            // GetArtifactAsync reads the registration. The regular execution path verifies actual bytes on apply.
+            if (await store.GetArtifactAsync(signal!.ArtifactId!, ct) is not {} registered || registered.Fingerprint != signal.Fingerprint)
+                throw new ArgumentException("FILE_PROCESSING_RECOVERY_WAIT_CHANGED");
+            if (signal.Action == FileProcessingResumeActions.InspectGroup)
+            {
+                try
+                {
+                    var group = FileProcessingResumeActions.IsLegacyGroupProbeWait(ctx.ResumePromptJson!)
+                        ? await processor.InspectIncompleteGroupAsync(intent, registered, plan, target.SelectedSource?.ArchivePassword,
+                            processingConfig, ct) : null;
+                    return SuspendProcessing(workset, target, config, serialized, registered,
+                        new(null, "MissingVolumes", group == null ? "The current incomplete archive group could not be verified." :
+                            "A required archive volume is missing.") {IncompleteArchiveGroup = group});
+                }
+                catch (Exception error) when (error is InvalidDataException or JsonException or InvalidOperationException)
+                {
+                    return SuspendProcessing(workset, target, config, serialized, registered,
+                        new(null, "NeedsReconciliation", "The saved archive group evidence changed. Review the original files."));
+                }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    return SuspendProcessing(workset, target, config, serialized, registered,
+                        new(null, "StorageUnavailable", "The saved archive group is unavailable. Reconnect its storage."));
+                }
+            }
+        }
         FileArtifactCheckpointContinuation? checkpoint = null;
         FileArtifactProcessingResult? checkpointFailure = null;
         ArtifactRecord? input;
         var forwardPublication = false;
+        var selectedInputId = signal?.StorageRecovery?.SelectedInputArtifactId;
+        if (selectedInputId != null && (config.ContinueFrom?.ArtifactId != selectedInputId ||
+                target.StageDirectories?.Processing?.BindingId == null))
+            throw new ArgumentException("FILE_PROCESSING_RECOVERY_WAIT_CHANGED");
+        async Task<ArtifactRecord?> ResolveProcessingInputAsync(string id, ArtifactRecord? registered = null)
+        {
+            if (signal?.StorageRecovery != null && target.StageDirectories?.Processing?.BindingId != null)
+            {
+                registered ??= await store.GetArtifactAsync(id, ct);
+                if (registered == null) return null;
+                var owner = workset.SourceRefs.Single(s => s.Module == "acquisition" && s.EntityKind == "task").EntityId;
+                var prepared = await AcquisitionProcessingStageInput.ReadPreparedAsync(ctx.Services.GetRequiredService<BakabaseDbContext>(),
+                    store, ctx.Services.GetRequiredService<FileProcessingWorkspaceResolver>(), int.Parse(owner, System.Globalization.CultureInfo.InvariantCulture),
+                    checked((int)ctx.RunId), target, registered, ct);
+                if (selectedInputId != null)
+                {
+                    if (registered.Id != selectedInputId || !AcquisitionProcessingStageInput.WaitUsedSelectedInput(
+                            target, registered, prepared, boundary, ctx.ResumePromptJson))
+                        throw new ArgumentException("FILE_PROCESSING_RECOVERY_WAIT_CHANGED");
+                }
+                else if (prepared != null) id = prepared.Id;
+            }
+            var verified = await store.ResolveByIdAsync(id, ct);
+            if (verified != null || signal == null || target.StageDirectories?.Processing?.BindingId == null)
+                return verified;
+            var unavailable = await store.GetArtifactAsync(id, ct);
+            if (unavailable?.State is not (ArtifactLocationState.Modified or ArtifactLocationState.Missing or ArtifactLocationState.StorageUnavailable))
+                return null;
+            var taskId = workset.SourceRefs.Single(s => s.Module == "acquisition" && s.EntityKind == "task").EntityId;
+            var borrowed = await AcquisitionProcessingStageInput.ReadPreparedAsync(ctx.Services.GetRequiredService<BakabaseDbContext>(),
+                store, ctx.Services.GetRequiredService<FileProcessingWorkspaceResolver>(), int.Parse(taskId, System.Globalization.CultureInfo.InvariantCulture),
+                checked((int)ctx.RunId), target, unavailable, ct, readOnlyReceiptOnly: true);
+            if (borrowed == null) return null;
+            checkpointFailure = unavailable.State == ArtifactLocationState.StorageUnavailable
+                ? new(null, "StorageUnavailable", "The registered archive storage is unavailable.")
+                : new(null, "NeedsReconciliation", "A registered archive input is missing or changed. Restore its original contents before continuing.");
+            // Only the bound identity is needed to report this suspension. Do not pass
+            // unavailable bytes to an extractor or initialize a replacement snapshot.
+            return borrowed;
+        }
         if (config.ContinueFrom is { } continuation)
         {
             var db = ctx.Services.GetRequiredService<BakabaseDbContext>();
             if (!await AcquisitionPlanArtifactInputGuard.OwnsRunAsync(db, ctx.RunId, continuation.TaskId, ct))
                 throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
             var registered = await AcquisitionPlanArtifactInputGuard.RequireAsync(db, store, continuation.TaskId, target.Id, continuation, ct);
+            // continueFiles has already hashed and pinned this part. Showing an unambiguous
+            // instructions prompt needs only its current registration and file layout. The
+            // response (including keep) still takes the original content-verification path.
+            if (signal == null && boundary == null && plan is {Requirement: "unknown", Steps.Count: 0} &&
+                processingConfig.ResolveInitialPlan(plan) == null &&
+                await CanPromptForPreparedDownloadAsync(ctx, db, continuation.TaskId, target, registered, ct))
+                return SuspendProcessing(workset, target, config, serialized, registered, FileArtifactProcessingResult.InstructionsRequired());
             if (KeepsPublishedInput(config, registered) && plan is {Requirement: "notRequired", Steps.Count: 0} &&
                 ctx.FollowingActivities is [{Kind: "fs.publishArtifacts"}] && target.StageDirectories?.Delivery?.BindingId != null)
             {
@@ -265,7 +346,7 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
                 forwardPublication = true;
             }
             var stepIndex = plan.Steps.FindIndex(s => s.Id == boundary);
-            if (stepIndex > 0 && signal?.Password == null && signal?.ExtractionPlanJson == null &&
+            if (stepIndex > 0 && selectedInputId == null && signal?.Password == null && signal?.ExtractionPlanJson == null &&
                 target.ProcessedArtifactId is { } previousId)
             {
                 var previousStep = plan.Steps[stepIndex - 1].Id;
@@ -277,8 +358,17 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
                 {
                     try
                     {
-                        checkpoint = await processor.ReadCheckpointContinuationAsync(intent, registered, serialized,
+                        // The continuation pins the selected download. A bound processing stage
+                        // can have its own copy and hence a different checkpoint input identity.
+                        var priorInput = registered;
+                        if (registered.Kind == AcquisitionCurrentDirectoryFiles.Kind && !previous.ParentArtifactIds.Contains(registered.Id) &&
+                            target.StageDirectories?.Processing?.BindingId != null)
+                            priorInput = await AcquisitionProcessingStageInput.ReadPreparedAsync(db, store,
+                                ctx.Services.GetRequiredService<FileProcessingWorkspaceResolver>(), continuation.TaskId,
+                                checked((int)ctx.RunId), target, registered, ct) ?? registered;
+                        checkpoint = await processor.ReadCheckpointContinuationAsync(intent, priorInput, serialized,
                             target.SelectedSource?.ArchivePassword, processingConfig, previous, previousStep, ct);
+                        if (checkpoint != null) registered = priorInput;
                     }
                     catch (Exception error) when (error is InvalidDataException or JsonException)
                     { checkpointFailure = new(null, "NeedsReconciliation", error.Message); }
@@ -288,14 +378,16 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
             }
             // Only an exact active continuation with a complete private snapshot may avoid
             // rereading the remote original. The executor rechecks all private SHA values.
-            input = checkpoint == null && checkpointFailure == null ? await store.ResolveByIdAsync(continuation.ArtifactId, ct) : registered;
+            input = checkpoint == null && checkpointFailure == null ? await ResolveProcessingInputAsync(continuation.ArtifactId, registered) : registered;
         }
         else
         {
             target = await coordinator.RecordAsync(ctx, target, workset.OutputDirectory, ct);
-            input = target.DownloadArtifactId == null ? null : await store.ResolveByIdAsync(target.DownloadArtifactId, ct);
+            input = target.DownloadArtifactId == null ? null : await ResolveProcessingInputAsync(target.DownloadArtifactId);
         }
         if (input == null) throw new InvalidOperationException("The downloaded file artifact is missing or modified.");
+        if (groupAction && (input.Id != signal!.ArtifactId || input.Fingerprint != signal.Fingerprint))
+            throw new ArgumentException("FILE_PROCESSING_RECOVERY_WAIT_CHANGED");
         // A pinned checkpoint has already bound and verified its private input. Do
         // not require the original selected directory again after that hand-off.
         if (checkpoint == null && checkpointFailure == null && input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
@@ -303,9 +395,19 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         if (!forwardPublication && checkpoint == null && checkpointFailure == null && signal?.StorageRecovery == null)
         {
             await ctx.ReportStage("preparingFiles");
-            input = await AcquisitionProcessingStageInput.PrepareAsync(ctx, target, input, ct, processingConfig.StoragePolicy);
+            var waitForInstructions = processingConfig.ResolveInitialPlan(plan) == null;
+            try
+            {
+                input = await AcquisitionProcessingStageInput.PrepareAsync(ctx, target, input, ct,
+                    processingConfig.StoragePolicy, plan, waitForInstructions);
+            }
+            catch (ArchiveFormatProbeIncompleteException error)
+            {
+                return SuspendProcessing(workset, target, config, serialized, input,
+                    new FileArtifactProcessingResult(null, error.Code, error.Message));
+            }
         }
-        if (config.UseVerifiedInput && config.ContinueFrom != null && input.Kind is "processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind)
+        if (checkpointFailure == null && config.UseVerifiedInput && config.ContinueFrom != null && input.Kind is "processedFiles" or "publishedFiles" or AcquisitionCurrentDirectoryFiles.Kind)
         {
             // The attachment node has already pinned this task's immutable artifact until the run ends.
             // Carry its exact directory and manifest into assessment/publication, without staging a copy.
@@ -323,27 +425,26 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
                 ExecutionStatus = "reused", ProcessingWaitReason = null, Problem = null
             }));
         }
+        if (target.StageDirectories?.Processing is {BindingId: not null} stage && ArtifactManifestFiles.PathComparer.Equals(stage.Directory, input.RootDirectory))
+            processingConfig = processingConfig with {BoundInputDirectory = stage.Directory};
+        string? originalDownloadPassword = null;
+        if (checkpointFailure == null && target.SelectedSource?.ArchivePassword is {Length: > 0} selectedPassword &&
+            plan.Steps.Any(step => (boundary == null || step.Id == boundary) && step.Op == "extractArchive" &&
+                step.Password != null && step.Password != selectedPassword && step.GetInputReferences() is ["download"]))
+        {
+            var evidence = await AcquisitionFileProcessingEvidence.ReadAsync(ctx, target.Id, target.SelectedSource.Url, ct,
+                includeDescription: false);
+            originalDownloadPassword = await AcquisitionFileProcessingEvidence.OriginalDownloadPasswordAsync(evidence, target,
+                input, store, ct, ctx.Services.GetRequiredService<BakabaseDbContext>(), checked((int)ctx.RunId));
+        }
         var result = checkpointFailure ?? await processor.ExecuteAsync(intent, input, serialized, target.SelectedSource?.ArchivePassword,
             processingConfig,
             DownloadArtifactCoordinator.Consumer(ctx, target), null, signal?.Password,
             value => ctx.ReportProgress(value, target.Title).GetAwaiter().GetResult(), ct,
             replan: false, stopAfterStepId: boundary, recovery: signal?.StorageRecovery, checkpointContinuation: checkpoint,
-            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url), reportStage: ctx.ReportStage);
-        if (result.Artifact == null)
-        {
-            var reason = result.WaitReason ?? "ExtractionPlanUnknown";
-            target = target with {ProcessingWaitReason = reason, Problem = reason, ProcessingPlanJson = serialized};
-            return WorkflowItemOutcome.Suspend(new("cloud.fileProcessing", JsonSerializer.Serialize(new
-            {
-                TargetId = target.Id, target.Title, Reason = reason, Message = result.Message ?? "Confirm the processing instructions.",
-                ExtractionPlanJson = serialized, KnownStepId = config.StopAfterStepId,
-                ArtifactId = input.Id, Fingerprint = input.Fingerprint,
-                result.RequiredComponentId, result.PathConflict,
-                CanEditPlan = config.StopAfterStepId == null, SourcePasswordEvidenceChecked = reason == "PasswordUnknown",
-                AllowedActions = FileProcessingResumeActions.Allowed(reason),
-                AllowedArchivePolicies = config.StopAfterStepId == null ? new[] {"instructions", "keep"} : new[] {"instructions"}
-            }, WorkflowJson.Options), Replace(workset, target)));
-        }
+            passwordEvidence: AcquisitionArchivePasswordEvidence.Bind(ctx, target.Id, target.SelectedSource?.Url), reportStage: ctx.ReportStage,
+            originalDownloadPassword: originalDownloadPassword);
+        if (result.Artifact == null) return SuspendProcessing(workset, target, config, serialized, input, result);
         await Bind(ctx, target, result.Artifact, boundary, ct);
         // Later boundaries still resolve their declared inputs against the original plan. Keep
         // the raw-artifact consumer alive until the entire part has completed.
@@ -355,6 +456,38 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         return await CompleteProcessing(ctx, workset, Apply(target, result.Artifact, intent, boundary),
             config, plan, result.Artifact, ct);
     }
+    private static async Task<bool> CanPromptForPreparedDownloadAsync(WorkflowExecutionContext ctx, BakabaseDbContext db,
+        int taskId, CloudDownloadTarget target, ArtifactRecord registered, CancellationToken ct)
+    {
+        if (registered is not {Kind: "download", State: ArtifactLocationState.Available} || target.StageDirectories?.Processing?.BindingId != null ||
+            target is not {ProcessingWaitReason: null, ProcessingIntentKey: null, ProcessingOperationId: null,
+                ProcessedArtifactId: null, ProcessedDirectory: null, ProcessedFiles.Count: 0, ProcessingStepArtifacts.Count: 0} ||
+            ctx.Services.GetService<IUserStoragePolicy>() is not {} storage) return false;
+        var runId = checked((int)ctx.RunId);
+        return await db.AcquisitionTasks.AnyAsync(t => t.Id == taskId && t.WorkflowRunId == runId && t.DeletedAt == null, ct) &&
+            await AcquisitionPlanArtifactInputGuard.HasPinnedContinuationAsync(db, runId, target.Id, registered.OperationId, ct) &&
+            AcquisitionPlanArtifactInputGuard.HasExpectedFileLayout(registered, storage, ct);
+    }
+
+    private static WorkflowItemOutcome SuspendProcessing(DownloadWorkset workset, CloudDownloadTarget target,
+        AcquisitionPlanProcessingConfig config, string serialized, ArtifactRecord input, FileArtifactProcessingResult result)
+    {
+        var reason = result.WaitReason ?? "ExtractionPlanUnknown";
+        target = target with {ProcessingWaitReason = reason, Problem = reason, ProcessingPlanJson = serialized};
+        return WorkflowItemOutcome.Suspend(new("cloud.fileProcessing", JsonSerializer.Serialize(new
+        {
+            TargetId = target.Id, target.Title, Reason = reason, Message = result.Message ?? "Confirm the processing instructions.",
+            ExtractionPlanJson = serialized, KnownStepId = config.StopAfterStepId,
+            ArtifactId = input.Id, Fingerprint = input.Fingerprint,
+            result.RequiredComponentId, result.PathConflict,
+            CanEditPlan = config.StopAfterStepId == null, SourcePasswordEvidenceChecked = reason == "PasswordUnknown",
+            ArchiveGroupInspected = reason == "MissingVolumes" && config.StopAfterStepId != null,
+            result.IncompleteArchiveGroup,
+            AllowedActions = result.IncompleteArchiveGroup != null ? new[] {FileProcessingResumeActions.RetainGroup} : FileProcessingResumeActions.Allowed(reason),
+            AllowedArchivePolicies = config.StopAfterStepId == null ? new[] {"instructions", "keep"} : new[] {"instructions"}
+        }, WorkflowJson.Options), Replace(workset, target)));
+    }
+
     internal static FileProcessingPlan EffectivePlan(AcquisitionPlanProcessingConfig config, CloudDownloadTarget target) =>
         config.UseVerifiedInput ? new() {Requirement = "notRequired"} :
         FileExtractionLayouts.Apply(config.StopAfterStepId == null && target.ProcessingPlanJson != null
@@ -364,14 +497,8 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         string targetId, string inputOperation, string previousOperation, string previousStep, CancellationToken ct)
     {
         var owner = runId.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        var consumer = AcquisitionPlanArtifactInputGuard.Consumer(runId, targetId);
-        if (!await AcquisitionPlanArtifactInputGuard.OwnsRunAsync(db, runId, taskId, ct) ||
-            !await db.Set<WorkflowRunDbModel>().AsNoTracking().AnyAsync(r => r.Id == runId && r.Status == WorkflowRunStatus.Running, ct) ||
-            !await db.Set<ArtifactConsumerDbModel>().AsNoTracking().AnyAsync(c => c.OperationId == inputOperation &&
-                c.ConsumerKey == consumer && c.OwnerKind == "workflow" && c.OwnerId == owner && c.ReleasedAt == null, ct))
-            return false;
-        return await db.Set<ArtifactOperationBindingDbModel>().AsNoTracking().AnyAsync(b => b.OwnerKind == "workflow" &&
-                b.OwnerId == owner && b.Slot == targetId + ":artifact.continuation" && b.OperationId == inputOperation, ct) &&
+        return await AcquisitionPlanArtifactInputGuard.OwnsRunAsync(db, runId, taskId, ct) &&
+            await AcquisitionPlanArtifactInputGuard.HasPinnedContinuationAsync(db, checked((int)runId), targetId, inputOperation, ct) &&
             await db.Set<ArtifactOperationBindingDbModel>().AsNoTracking().AnyAsync(b => b.OwnerKind == "workflow" &&
                 b.OwnerId == owner && b.Slot == targetId + ":process:" + previousStep && b.OperationId == previousOperation, ct);
     }

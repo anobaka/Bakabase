@@ -149,8 +149,18 @@ public sealed class PostAcquisitionPlanAdapter(PostDownloadIntentAdapter reader,
             .Select(s => CorrectionFingerprint(s.SourceCorrection)).Order().ToList();
         var currentCorrections = current.Parts.SelectMany(p => p.Sources).Where(s => s.SourceCorrection != null)
             .Select(s => CorrectionFingerprint(s.SourceCorrection)).Order().ToList();
+        // Prepared creation assigns the task's directories and storage defaults after it receives an ID.
+        // Compare the same frozen settings on a retry while retaining the requested output root and all source instructions.
+        var expected = current with
+        {
+            ExtractionLayout = current.ExtractionLayout ?? previous.ExtractionLayout,
+            DeliveryLayout = previous.DeliveryLayout,
+            StageDirectories = previous.StageDirectories,
+            StoragePolicy = previous.StoragePolicy
+        };
         return priorCorrections.Count > 0 && priorCorrections.All(f => f != null) && priorCorrections.SequenceEqual(currentCorrections) &&
-            JsonSerializer.Serialize(previous, JsonSerializerOptions.Web) == JsonSerializer.Serialize(current, JsonSerializerOptions.Web);
+            JsonElement.DeepEquals(JsonSerializer.SerializeToElement(previous, JsonSerializerOptions.Web),
+                JsonSerializer.SerializeToElement(expected, JsonSerializerOptions.Web));
     }
 
     private static string? CorrectionFingerprint(JsonElement? correction) =>

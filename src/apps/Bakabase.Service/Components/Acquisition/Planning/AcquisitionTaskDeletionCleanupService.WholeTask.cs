@@ -44,7 +44,10 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         var authorization = Authorization(task, consent, stopped, retryRetainedFiles);
         var roots = await PreviewStageDirectoriesForDeletionAsync(task, owners, authorization, intermediates, deliveries, ct, guard,
             directDirectoryDeletion);
-        var protectedOrSelectedRoots = roots.Select(r => r.RootDirectory).ToArray();
+        var protectedOrSelectedRoots = roots.Select(r => r.RootDirectory).OrderByDescending(p => p.Length).ToArray();
+        var coveredScopes = new Dictionary<string, AcquisitionCleanupScopes>(ArtifactManifestFiles.PathComparer);
+        void RecordCoveredScope(string directory, AcquisitionCleanupScopes scope) =>
+            coveredScopes[directory] = coveredScopes.GetValueOrDefault(directory) | scope;
         var references = new ArtifactCleanupReferenceGuard(db, workspaces, cachePreviewReads: true);
         var inputs = intermediates && !directDirectoryDeletion ? await PreviewAbandonedInputsAsync(operations, authorization, references,
             ct, guard, protectedOrSelectedRoots) : [];
@@ -56,8 +59,18 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         foreach (var id in ids)
         {
             var registered = await WholeTaskArtifactAsync(task, authorization, id, intermediates, protectedOrSelectedRoots, references, ct, guard,
-                directDirectoryDeletion);
+                directDirectoryDeletion, RecordCoveredScope);
             if (registered != null) candidates.Add(registered);
+        }
+        for (var i = 0; i < roots.Count; i++)
+        {
+            var candidate = roots[i];
+            if (!coveredScopes.TryGetValue(candidate.RootDirectory, out var scope)) continue;
+            var group = candidate.Group with {Scopes = candidate.Group.Scopes | scope};
+            // An exact publication cannot stand in for intermediate files sharing its container.
+            if (candidate.PublicationFilesOnly && scope.HasFlag(AcquisitionCleanupScopes.Intermediate))
+                group = group with {Eligible = false, ReasonCode = "CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED", SizeUnknown = true};
+            candidates[i] = candidate with {Group = group};
         }
         // Old attempts may leave registered additions in a retired, privately allocated
         // result outside the current stage tree. Its existing capture receipt proves only those leaves.
@@ -68,7 +81,9 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             .Concat(captured.Select(c => c.Group)).ToArray();
         var eligible = Unique(groups.Where(g => g.Eligible).SelectMany(g => g.Files));
         var identified = Unique(groups.SelectMany(g => g.Files));
-        return new(new(eligible.Count, eligible.Sum(f => f.Bytes), groups, IdentifiedFileCount: identified.Count,
+        return new(new(eligible.Count, eligible.Sum(f => f.Bytes), groups,
+            SupersededRuns: stopped?.Runs.Select(r => new AcquisitionTaskDeleteSupersededRun(r.RunId, r.Revision, r.ReplacedByRevision)).ToArray(),
+            IdentifiedFileCount: identified.Count,
             IdentifiedBytes: identified.Sum(f => f.Bytes), SizeIncomplete: groups.Any(g => g.SizeUnknown)),
             Version(task), consent, [], stopped, RetryRetainedFiles: retryRetainedFiles, StageDirectories: candidates, AbandonedInputs: inputs, CapturedInputs: captured);
     }
@@ -77,16 +92,28 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
     // Never adopt the container or unregistered siblings as task-owned.
     private async Task<StageDirectoryCandidate?> WholeTaskArtifactAsync(AcquisitionTaskDbModel task,
         ArtifactDeliveryCleanupAuthorization authorization, string id, bool intermediates, IReadOnlyList<string> coveredRoots,
-        ArtifactCleanupReferenceGuard references, CancellationToken ct, Func<string, Task>? guard, bool directDirectoryDeletion = false)
+        ArtifactCleanupReferenceGuard references, CancellationToken ct, Func<string, Task>? guard, bool directDirectoryDeletion = false,
+        Action<string, AcquisitionCleanupScopes>? recordCoveredScope = null, bool publicationFilesOnly = false)
     {
         var consent = authorization.Consent;
         var artifact = await artifacts.GetArtifactAsync(id, ct);
-        if (artifact == null || !consent.WholeTaskFiles || artifact.State == ArtifactLocationState.Retired) return null;
+        if (artifact == null || artifact.State == ArtifactLocationState.Retired) return null;
+        if (publicationFilesOnly)
+        {
+            if (!consent.DeleteDeliveredFiles || !await authorization.MatchesAsync(artifact, ct)) return null;
+        }
+        else if (!consent.WholeTaskFiles) return null;
         var delivery = artifact.Kind == "publishedFiles";
         if (delivery ? !consent.DeleteDeliveredFiles : !intermediates || !artifact.Managed ||
             artifact.Kind is not ("download" or "processedFiles")) return null;
         var root = artifact.RootDirectory;
-        bool Covered(string path) => coveredRoots.Any(r => SamePath(r, path) || ArtifactCleanupPathReferences.StrictlyUnder(path, r));
+        bool Covered(string path)
+        {
+            var owner = coveredRoots.FirstOrDefault(r => SamePath(r, path) || ArtifactCleanupPathReferences.StrictlyUnder(path, r));
+            if (owner == null) return false;
+            recordCoveredScope?.Invoke(owner, delivery ? AcquisitionCleanupScopes.Delivery : AcquisitionCleanupScopes.Intermediate);
+            return true;
+        }
         if (Covered(root)) return null;
         var paths = ArtifactManifestFiles.ResolveFiles(root, artifact.Manifest).Where(p => !Covered(p)).ToArray();
         if (paths.Length == 0) return null;
@@ -97,8 +124,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         StageDirectoryCandidate Result(string? reason) => new(proof, task.Id, task.PlanRevision, "", stage, root, artifact.Fingerprint,
             files, [], identities, new(proof, artifact.Kind, root, reason is null or "AlreadyAbsent", reason, [], files,
                 files.Count, files.Sum(f => f.Bytes), Shared: reason is "ReferencedPath" or "ReferencedArtifact" or "SharedOwner",
-                SizeUnknown: reason != null && reason != "AlreadyAbsent"), proof, intermediates, consent.DeleteDeliveredFiles)
-            {ManifestArtifactId = id, CoveredRoots = coveredRoots, DirectDeletion = directDirectoryDeletion};
+                SizeUnknown: reason != null && reason != "AlreadyAbsent") {RegisteredFilesOnly = true}, proof, intermediates, consent.DeleteDeliveredFiles)
+            {ManifestArtifactId = id, CoveredRoots = coveredRoots, DirectDeletion = directDirectoryDeletion, PublicationFilesOnly = publicationFilesOnly};
         await EnsureDirectoryAuthorizedAsync(root, guard);
         ArtifactManifestFiles.RejectLinks(root);
         if (!await authorization.IsCurrentAsync(ct)) return Result("SelectionChanged");
@@ -114,7 +141,10 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             return Result("ReferencedDescendant");
         if (await authorization.HasOtherRegisteredFilesAsync(paths, id, ct)) return Result("ReferencedArtifact");
         if (await references.HasReferencesAsync(artifact, consent.OwnerRunIds, ct, privatePaths: paths,
-            previewSupersededRuns: authorization.PreviewSupersededRuns)) return Result("ReferencedPath");
+            previewSupersededRuns: authorization.PreviewSupersededRuns,
+            directoryOwnerTaskId: publicationFilesOnly ? task.Id : null, deletedDirectoryOwner: task.DeletedAt != null,
+            publicationStageFiles: publicationFilesOnly))
+            return Result("ReferencedPath");
         var expected = artifact.Manifest.Entries.ToDictionary(e => e.RelativePath, StringComparer.Ordinal);
         if (!Directory.Exists(root))
         {

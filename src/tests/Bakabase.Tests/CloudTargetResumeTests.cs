@@ -1,5 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
+using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -18,6 +20,94 @@ namespace Bakabase.Tests;
 
 public sealed partial class CloudWorkflowTests
 {
+    private sealed class ResumeStoragePolicy : IUserStoragePolicy
+    {
+        private readonly UserStoragePolicy _storage = new(isContainer: false);
+        public string? BlockedPath { get; set; }
+        public UserStoragePathException? Failure { get; set; }
+        public bool IsRestricted => _storage.IsRestricted;
+        public IReadOnlyList<UserStorageRoot> GetRoots(UserStoragePurpose purpose) => _storage.GetRoots(purpose);
+        public bool IsPathAllowed(string path, UserStoragePurpose purpose) => path != BlockedPath && _storage.IsPathAllowed(path, purpose);
+        public void EnsurePathAllowed(string path, UserStoragePurpose purpose)
+        {
+            if (path == BlockedPath && Failure != null) throw Failure;
+            _storage.EnsurePathAllowed(path, purpose);
+        }
+        public void EnsureTreeMutationAllowed(string path) => _storage.EnsureTreeMutationAllowed(path);
+    }
+
+    [TestMethod]
+    public async Task Selected_resume_admits_all_originals_before_waiting_and_keeps_unselected_target()
+    {
+        var first = Chosen(Source("selected-first", "googleDrive"));
+        var second = Chosen(Source("selected-second", "gofile"));
+        var untouched = Chosen(Source("unselected", "gofile")) with {Problem = "Unselected failure"};
+        var workset = Workset(first.SelectedSource!, second.SelectedSource!, untouched.SelectedSource!);
+        first = first with {DownloadTaskId = await Operations.EnqueueAsync(7201, first, workset.OutputDirectory, default)};
+        second = second with {DownloadTaskId = await Operations.EnqueueAsync(7201, second, workset.OutputDirectory, default)};
+        untouched = untouched with {DownloadTaskId = await Operations.EnqueueAsync(7201, untouched, workset.OutputDirectory, default)};
+        var selectedIds = new[] {first.DownloadTaskId!.Value, second.DownloadTaskId!.Value};
+        var service = _services.GetRequiredService<DownloadTaskService>();
+        await service.Stop();
+        await Db.DownloadTasks.Where(t => t.Id == untouched.DownloadTaskId).ExecuteUpdateAsync(update => update
+            .SetProperty(t => t.Status, DownloadTaskDbModelStatus.Failed).SetProperty(t => t.Message, untouched.Problem));
+
+        var rows = await Db.DownloadTasks.AsNoTracking().Where(t => selectedIds.Contains(t.Id)).OrderBy(t => t.Id).ToArrayAsync();
+        var resultFiles = new List<string>();
+        foreach (var row in rows)
+        {
+            Directory.CreateDirectory(row.DownloadPath);
+            var file = Path.Combine(row.DownloadPath, "result.zip");
+            await File.WriteAllTextAsync(file, "fixture download " + row.Id);
+            resultFiles.Add(file);
+        }
+        workset = workset with {Targets = [first, second, untouched]};
+        var observedWaiting = false;
+        var context = new WorkflowExecutionContext
+        {
+            RunId = 7201, WorkflowDefinitionId = 0, TriggerKind = CloudWorkflow.Trigger, Payload = workset,
+            ActivityConfigJson = "{}", Services = _services, Logger = NullLogger.Instance,
+            ReportStage = async _ =>
+            {
+                var downloading = await Db.DownloadTasks.AsNoTracking().Where(t => t.Status == DownloadTaskDbModelStatus.InProgress)
+                    .Select(t => t.Id).ToArrayAsync();
+                CollectionAssert.AreEquivalent(selectedIds, downloading);
+                observedWaiting = true;
+                await Db.DownloadTasks.Where(t => selectedIds.Contains(t.Id))
+                    .ExecuteUpdateAsync(update => update.SetProperty(t => t.Status, DownloadTaskDbModelStatus.Complete));
+                for (var index = 0; index < rows.Length; index++)
+                {
+                    var row = rows[index];
+                    Db.DownloadResults.Add(new DownloadResultDbModel
+                    {
+                        DownloadTaskId = row.Id, ThirdPartyId = row.ThirdPartyId, SourceKey = row.Key,
+                        Name = "Fixture", Kind = DownloadResultKind.LocalFiles, Path = row.DownloadPath,
+                        DownloadDirectory = row.DownloadPath, DeduplicationKey = "resume-result-" + row.Id,
+                        FilesJson = JsonSerializer.Serialize(new[] {resultFiles[index]})
+                    });
+                }
+                await Db.SaveChangesAsync();
+            }
+        };
+        var signal = JsonSerializer.Serialize(new CloudSelectionSignal
+            {ObserveExistingOnly = true, ResumeTargetIds = [first.Id, second.Id]}, JsonSerializerOptions.Web);
+
+        var outcome = await new AwaitCloudDownloadsActivity().ResumeAsync(context, workset, signal, default);
+
+        Assert.IsTrue(observedWaiting);
+        Assert.IsNotNull(outcome.Suspension);
+        var saved = Item(outcome);
+        Assert.AreSame(untouched, saved.Targets[2]);
+        Assert.IsNull(saved.Targets[0].Problem);
+        Assert.IsNull(saved.Targets[1].Problem);
+        CollectionAssert.AreEquivalent(resultFiles, saved.Targets.Take(2).SelectMany(t => t.Files).ToArray());
+        var unselected = await Db.DownloadTasks.AsNoTracking().SingleAsync(t => t.Id == untouched.DownloadTaskId);
+        Assert.AreEqual(DownloadTaskDbModelStatus.Failed, unselected.Status);
+        Assert.AreEqual(untouched.Problem, unselected.Message);
+        Assert.AreEqual(3, await Db.CloudDownloadOperations.CountAsync());
+        Assert.AreEqual(3, await Db.DownloadTasks.CountAsync());
+    }
+
     [TestMethod]
     public async Task Selected_resume_continues_only_the_paused_download_and_preserves_the_failed_sibling()
     {
@@ -121,6 +211,101 @@ public sealed partial class CloudWorkflowTests
         Assert.AreEqual(2, await Db.DownloadTasks.CountAsync(t => t.Status == DownloadTaskDbModelStatus.Failed));
         Assert.AreEqual(1, await Db.DownloadTasks.CountAsync(t => t.Status == DownloadTaskDbModelStatus.Complete));
         Assert.AreEqual(3, await Db.CloudDownloadOperations.CountAsync());
+    }
+
+    [DataTestMethod]
+    [DataRow(true, "LOCAL_STORAGE_UNAVAILABLE")]
+    [DataRow(false, "SOURCE_ATTENTION_REQUIRED")]
+    public async Task Selected_resume_reports_detached_mounts_and_keeps_other_path_errors(bool unavailable, string code)
+    {
+        var target = Chosen(Source("guarded-destination", "gofile"));
+        var workset = Workset(target.SelectedSource!);
+        var id = await Operations.EnqueueAsync(7201, target, workset.OutputDirectory, default);
+        target = target with {DownloadTaskId = id};
+        workset = workset with {Targets = [target]};
+        var service = _services.GetRequiredService<DownloadTaskService>();
+        await service.Stop(t => t.Id == id);
+        var row = await Db.DownloadTasks.AsNoTracking().SingleAsync(t => t.Id == id);
+        var message = unavailable ? "Reconnect the mounted storage location. /fixture/mount" : "Choose a folder inside a mounted storage location.";
+        _resumeStorage.BlockedPath = row.DownloadPath;
+        _resumeStorage.Failure = new UserStoragePathException(message, mountUnavailable: unavailable);
+
+        var directStart = await service.Start(t => t.Id == id, targeted: true);
+        Assert.AreNotEqual(0, directStart.Code);
+        Assert.AreEqual(message, directStart.Message);
+
+        var signal = JsonSerializer.Serialize(new CloudSelectionSignal {ObserveExistingOnly = true, ResumeTargetIds = [target.Id]}, JsonSerializerOptions.Web);
+        var outcome = await new AwaitCloudDownloadsActivity().ResumeAsync(Context(workset), workset, signal, default);
+
+        Assert.IsNotNull(outcome.Suspension);
+        var saved = Item(outcome);
+        Assert.AreEqual(unavailable ? code : message, saved.Targets.Single().Problem);
+        Assert.AreEqual(code, saved.GetWorkflowOutputMetadata("download.awaitCompletion").Single(b => b.Kind == "warning").Code);
+        Assert.AreEqual(DownloadTaskDbModelStatus.Disabled, (await Db.DownloadTasks.AsNoTracking().SingleAsync(t => t.Id == id)).Status);
+        Assert.AreEqual(1, await Db.CloudDownloadOperations.CountAsync());
+        Assert.AreEqual(0, _gofile.DownloadCalls);
+    }
+
+    [DataTestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task Awaiting_completed_download_pauses_only_for_a_detached_mount(bool mountUnavailable)
+    {
+        var target = Chosen(Source("completed-on-mount", "gofile"));
+        var workset = Workset(target.SelectedSource!);
+        var id = await Operations.EnqueueAsync(7201, target, workset.OutputDirectory, default);
+        target = target with {DownloadTaskId = id};
+        workset = workset with {Targets = [target]};
+        await _services.GetRequiredService<DownloadTaskService>().Stop(t => t.Id == id);
+        await Db.DownloadTasks.Where(t => t.Id == id).ExecuteUpdateAsync(u =>
+            u.SetProperty(t => t.Status, DownloadTaskDbModelStatus.Complete));
+        var row = await Db.DownloadTasks.AsNoTracking().SingleAsync(t => t.Id == id);
+        Directory.CreateDirectory(row.DownloadPath);
+        var file = Path.Combine(row.DownloadPath, "retained.zip");
+        await File.WriteAllTextAsync(file, "saved content");
+        Db.DownloadResults.Add(new DownloadResultDbModel
+        {
+            DownloadTaskId = id, ThirdPartyId = ThirdPartyId.Gofile, SourceKey = row.Key,
+            Name = "Fixture", Kind = DownloadResultKind.LocalFiles, Path = row.DownloadPath,
+            DownloadDirectory = row.DownloadPath, DeduplicationKey = "completed-on-mount-result",
+            FilesJson = JsonSerializer.Serialize(new[] {file})
+        });
+        await Db.SaveChangesAsync();
+
+        _resumeStorage.BlockedPath = workset.OutputDirectory;
+        _resumeStorage.Failure = new UserStoragePathException(mountUnavailable
+            ? "Reconnect the mounted storage location. /fixture/mount"
+            : "Choose a folder inside a mounted storage location.", mountUnavailable);
+        const string observe = "{\"observeExistingOnly\":true}";
+        var activity = new AwaitCloudDownloadsActivity();
+        if (mountUnavailable)
+        {
+            var waiting = await activity.ResumeAsync(Context(workset), workset, observe, default);
+            Assert.AreEqual("cloud.cloudAttention", waiting.Suspension?.Reason);
+            var saved = Item(waiting);
+            Assert.AreEqual(workset.OutputDirectory, saved.OutputDirectory);
+            Assert.IsTrue(saved.NoRepeatExistingDownloads == true);
+            Assert.AreEqual(JsonSerializer.Serialize(target with {Problem = "LOCAL_STORAGE_UNAVAILABLE"}, JsonSerializerOptions.Web),
+                JsonSerializer.Serialize(saved.Targets.Single(), JsonSerializerOptions.Web));
+
+            _resumeStorage.BlockedPath = null;
+            _resumeStorage.Failure = null;
+            var resumed = await activity.ResumeAsync(Context(saved), saved, observe, default);
+            Assert.IsNull(resumed.Suspension);
+            Assert.AreEqual(id, Item(resumed).Targets.Single().DownloadTaskId);
+            CollectionAssert.AreEqual(new[] {file}, Item(resumed).Targets.Single().Files);
+        }
+        else
+        {
+            var denied = await Assert.ThrowsExactlyAsync<UserStoragePathException>(() =>
+                activity.ResumeAsync(Context(workset), workset, observe, default));
+            Assert.IsFalse(denied.MountUnavailable);
+        }
+
+        Assert.AreEqual(DownloadTaskDbModelStatus.Complete, (await Db.DownloadTasks.AsNoTracking().SingleAsync()).Status);
+        Assert.AreEqual(1, await Db.DownloadResults.CountAsync());
+        Assert.AreEqual(1, await Db.CloudDownloadOperations.CountAsync());
+        Assert.AreEqual(0, _gofile.DownloadCalls);
     }
 
     [TestMethod]

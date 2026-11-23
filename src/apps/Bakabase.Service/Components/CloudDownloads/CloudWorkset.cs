@@ -22,6 +22,8 @@ public sealed record CloudDownloadTarget
     public string? SelectedSourceId { get; init; }
     public string? AccountId { get; init; }
     public CloudRemoteEntry? RemoteEntry { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? ReviewedTransferId { get; init; }
     public int? DownloadTaskId { get; init; }
     public string? DownloadDirectory { get; init; }
     public string? DownloadLayout { get; init; }
@@ -52,6 +54,8 @@ public sealed record CloudDownloadTarget
     public List<string> ProcessedFiles { get; init; } = [];
     public string? ProcessedDirectory { get; init; }
     public string? Problem { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public CloudTransferDiagnostic? TransferDiagnostic { get; init; }
     public bool Excluded { get; init; }
     public string? TransportTaskId { get; init; }
     public CloudSource? SelectedSource => Sources.FirstOrDefault(s => s.Id == SelectedSourceId);
@@ -133,8 +137,12 @@ public sealed record DownloadWorkset : IWorkflowOutputSummary, IWorkflowSourcePa
 /// <summary>Current state of a previously bound download at a workflow wait.</summary>
 public sealed record CloudDownloadResumeTarget(string TargetId, string DownloadId, string Status, string? Problem, bool CanRetry);
 
+public sealed record CloudTransferReplaySignal(string RemoteDirectory, IReadOnlyDictionary<string, string> Attempts);
+
 public sealed record CloudSelectionSignal
 {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public CloudTransferReplaySignal? TransferReplay { get; init; }
     /// <summary>Frozen server proof for a transferred share whose first local enqueue has not happened.</summary>
     public string? TransferredDownloadPlacement { get; init; }
     /// <summary>Observe existing downloads and persist the no-repeat guard. Restarting selected failed
@@ -147,6 +155,8 @@ public sealed record CloudSelectionSignal
     public bool? RevalidateExistingDownloads { get; init; }
     /// <summary>Only verify and register original existing files. Never restart a downloader or transfer.</summary>
     public bool? VerifyExistingFilesOnly { get; init; }
+    /// <summary>Verify these exact completed native receipts before handing their files to processing.</summary>
+    public Dictionary<int, string>? CompletedDownloadReceipts { get; init; }
     public List<string> SourceIds { get; init; } = [];
     public Dictionary<string, string> SourceMethods { get; init; } = [];
     public Dictionary<string, string> SourceAccounts { get; init; } = [];

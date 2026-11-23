@@ -25,7 +25,12 @@ public record FileProcessingPlanResult(bool Completed, IReadOnlyList<string> Fil
     ArtifactStoragePolicy? StoragePolicy = null, IReadOnlyDictionary<string, ArtifactStoragePolicy>? FilePolicies = null, string? StorageTitle = null,
     string? FailureCode = null, FileLineage? FileLineage = null, IReadOnlyList<string>? Directories = null,
     ArtifactDirectoryProvenance? DirectoryProvenance = null, IReadOnlyDictionary<string, string>? ExtractionLayouts = null,
-    string? RequiredComponentId = null, FileProcessingPathConflict? PathConflict = null);
+    string? RequiredComponentId = null, FileProcessingPathConflict? PathConflict = null)
+{
+    internal IncompleteArchiveGroup? IncompleteArchiveGroup { get; init; }
+    internal IReadOnlyList<string>? RetainedArchiveFiles { get; init; }
+    internal IReadOnlyList<string>? RetainedGroupTokens { get; init; }
+}
 
 /// <summary>
 /// Interprets the restricted file-processing vocabulary using the shared archive service. Each run
@@ -40,6 +45,12 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new();
     private const string NoInputMatchesMessage = "No input files matched this step. Correct the selector before continuing.";
 
+    public sealed record RegisteredSnapshotSource(ArtifactRecord Registration, Func<CancellationToken, Task<ArtifactManifest>> ReadCurrentManifest)
+    {
+        internal ArchiveGroupExecution? ArchiveGroup { get; init; }
+        internal bool BorrowSelectedProcessedArchives { get; init; }
+    }
+
     public static void Validate(FileProcessingPlan plan) => FileProcessingPlanValidator.Validate(plan);
 
     public async Task<FileProcessingPlanResult> ExecuteAsync(FileProcessingPlan plan, string root,
@@ -49,7 +60,9 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         bool extractionContentsAsRoot = false, IReadOnlyList<string>? inputDirectories = null,
         FileProcessingCheckpointInput? checkpointInput = null, ArtifactDirectoryProvenance? inputDirectoryProvenance = null,
         Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence = null,
-        Func<string, Task>? reportStage = null, string? originalDownloadPassword = null)
+        Func<string, Task>? reportStage = null, string? originalDownloadPassword = null,
+        Func<CancellationToken, Task<ArtifactRecord>>? resolveReadOnlyArchiveInput = null,
+        RegisteredSnapshotSource? snapshotSource = null)
     {
         Validate(plan);
         if (reportStage != null) await reportStage("preparingFiles");
@@ -91,7 +104,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         try
         {
             if (checkpointInput != null) await ValidatePinnedInputAsync(directory, plan, checkpointInput, ct);
-            return await Run(plan, root, normalized, directory, password, progress, ct, stopAfterStepId, storagePolicy, storageTitle, extractionContentsAsRoot, directories, inputDirectoryProvenance, passwordEvidence, reportStage, originalDownloadPassword);
+            return await Run(plan, root, normalized, directory, password, progress, ct, stopAfterStepId, storagePolicy, storageTitle, extractionContentsAsRoot, directories, inputDirectoryProvenance, passwordEvidence, reportStage, originalDownloadPassword, resolveReadOnlyArchiveInput, snapshotSource);
         }
         catch (LocalStorageException error)
         { return new(false, normalized, null, error.Code, FailureCode: "StorageUnavailable"); }
@@ -113,15 +126,23 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         List<string> files, string directory, string? password, Action<int>? progress, CancellationToken ct, string? stopAfterStepId, ArtifactStoragePolicy? storagePolicy, string? storageTitle, bool extractionContentsAsRoot,
         IReadOnlyList<string> inputDirectories, ArtifactDirectoryProvenance? inputDirectoryProvenance,
         Func<string, CancellationToken, Task<IReadOnlyList<string>>>? passwordEvidence, Func<string, Task>? reportStage,
-        string? originalDownloadPassword)
+        string? originalDownloadPassword, Func<CancellationToken, Task<ArtifactRecord>>? resolveReadOnlyArchiveInput,
+        RegisteredSnapshotSource? snapshotSource)
     {
         FileProcessingFiles.Within(directory, directory);
         var stateFile = Path.Combine(directory, "state.json");
-        var state = File.Exists(stateFile)
+        var hadState = File.Exists(stateFile);
+        var state = hadState
             ? JsonSerializer.Deserialize<State>(await File.ReadAllTextAsync(stateFile, ct), Json)!
             : NewState(plan, storagePolicy, storageTitle, extractionContentsAsRoot, inputDirectoryProvenance);
         if (state.ExtractionContentsAsRoot != extractionContentsAsRoot)
             throw new InvalidOperationException("The processing checkpoint belongs to a different extraction layout.");
+        if ((state.ReadOnlyVolumeArtifactId == null) != (state.ReadOnlyVolumeMembers == null) ||
+            state.ReadOnlyVolumeMembers is { Count: 0 })
+            throw new FileProcessingInputChangedException("The registered read-only archive receipt is incomplete.");
+        if (state.SnapshotSourceArtifactId != null && (snapshotSource?.Registration.Id != state.SnapshotSourceArtifactId ||
+            !FileDispositionProofs.SameManifest(snapshotSource.Registration.Manifest, state.InputManifest)))
+            throw new FileProcessingInputChangedException("The private processing checkpoint no longer matches its registered source.");
         state.ExecutionRoot = directory;
         async Task Save()
         {
@@ -134,16 +155,21 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
             }
             File.Move(temp, stateFile, true);
         }
+        var groupScope = snapshotSource?.ArchiveGroup;
+        if (groupScope?.RequestedToken is {} requested && !state.Operations.Values.Any(o => o.RetainedGroupToken == requested) &&
+            (state.PendingOperation == null || DescribeIncompleteGroup(state, state.PendingOperation, groupScope)?.Token != requested))
+            throw new FileProcessingInputChangedException("The incomplete archive group changed. Review its checkpoint again.");
         var boundaryIndex = stopAfterStepId == null ? plan.Steps.Count - 1 : plan.Steps.FindIndex(s => s.Id == stopAfterStepId);
         var isFinalBoundary = boundaryIndex == plan.Steps.Count - 1;
         var resultDirectory = stopAfterStepId == null || isFinalBoundary ? Path.Combine(directory, "result") :
             Path.Combine(directory, "result-step-" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(stopAfterStepId)))[..16]);
         if (state.FinalAssembly != null && !state.Completed)
         {
-            if (!isFinalBoundary)
-                throw new InvalidDataException("The final result assembly must be resumed before replaying an earlier boundary.");
+            var assembling = state.FinalAssembly.BoundaryStepId;
+            if (assembling != null ? isFinalBoundary || assembling != stopAfterStepId : !isFinalBoundary)
+                throw new InvalidDataException("Resume the journaled processing boundary before entering another step.");
             await AssembleFinalAsync(state, directory, resultDirectory, Save, ct);
-            return await CommitResultAsync(state, resultDirectory, stopAfterStepId, true, Save, ct);
+            return await CommitResultAsync(state, resultDirectory, stopAfterStepId, isFinalBoundary, Save, ct);
         }
         if (stopAfterStepId != null && state.BoundaryResults.TryGetValue(stopAfterStepId, out var boundary))
         {
@@ -167,15 +193,34 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         if (!state.Outputs.ContainsKey("download"))
             PreflightKnownPaths(plan, root, files, inputDirectories, directory, boundaryIndex, state);
         var inputs = Path.Combine(directory, "inputs");
+        ReadOnlyArchiveVolumes? borrowed = null;
+        ArtifactRecord? registered = null;
+        var newSnapshot = !hadState && !Directory.Exists(inputs) && !Directory.Exists(inputs + ".pending");
+        // Never reinterpret a complete or partial legacy snapshot. A new receipt binds
+        // immutable registered volumes to this exact processing checkpoint and workflow.
+        if (resolveReadOnlyArchiveInput != null && (state.ReadOnlyVolumeArtifactId != null ||
+            newSnapshot))
+        {
+            registered = await resolveReadOnlyArchiveInput(ct);
+            if (!FileProcessingFiles.PathComparer.Equals(registered.RootDirectory, root) ||
+                !files.ToHashSet(FileProcessingFiles.PathComparer).SetEquals(registered.Files))
+                throw new FileProcessingInputChangedException("The registered archive input no longer matches this checkpoint.");
+            try { borrowed = await ReadOnlyArchiveVolumes.InspectAsync(plan, registered, storagePolicy, ct, snapshotSource?.BorrowSelectedProcessedArchives == true); }
+            catch (ArchiveFormatProbeIncompleteException error)
+            {
+                return new(false, files, null, error.Message, plan.Steps[0].Id, FailureCode: error.Code);
+            }
+        }
+        if (state.ReadOnlyVolumeArtifactId != null && (borrowed == null ||
+            state.ReadOnlyVolumeArtifactId != borrowed.Source.Id || state.InputManifest == null ||
+            !SameManifestContents(state.InputManifest, borrowed.Source.Manifest) ||
+            state.ReadOnlyVolumeMembers?.SequenceEqual(borrowed.RelativeMembers) != true))
+            throw new FileProcessingInputChangedException("The registered read-only archive volumes changed.");
+        var copyFiles = borrowed == null ? files : files.Where(path => !borrowed.Contains(path)).ToList();
         if (!Directory.Exists(inputs) && writeGuard != null)
         {
-            // An input snapshot is committed as one unit. Admit its complete known payload
-            // before hashing or copying any member, instead of filling a disposable partial
-            // snapshot up to the reserve. Auto materialization may clone, but its documented
-            // fallback is a full copy, so a new snapshot uses that conservative upper bound.
-            // Existing snapshots and completed boundaries need no second payload allocation.
             long snapshotBytes = 0;
-            foreach (var file in files)
+            foreach (var file in copyFiles)
             {
                 ct.ThrowIfCancellationRequested();
                 snapshotBytes = checked(snapshotBytes + new FileInfo(file).Length);
@@ -187,7 +232,18 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         // reusable but never acquire replacement evidence from today's instructions.
         if (state.LineageVersion == 1 && state.InputManifest == null)
         {
-            state.InputManifest = await ArtifactManifestFiles.CaptureAsync(root, files, ct,
+            state.ReadOnlyVolumeArtifactId = borrowed?.Source.Id;
+            state.ReadOnlyVolumeMembers = borrowed?.RelativeMembers;
+            var expected = borrowed?.Source.Manifest;
+            if (borrowed == null && !hadState && snapshotSource != null)
+            {
+                expected = registered?.Manifest ?? await snapshotSource.ReadCurrentManifest(ct);
+                // A fresh capture of the source would silently accept a change made after registration.
+                // Keep its frozen manifest and check every byte of the independent copy against it below.
+                ArtifactManifestFiles.VerifyDirectories(root, expected);
+                state.SnapshotSourceArtifactId = snapshotSource.Registration.Id;
+            }
+            state.InputManifest = expected ?? await ArtifactManifestFiles.CaptureAsync(root, files, ct,
                 state.DirectoryVersion == 1 ? inputDirectories : null);
             await Save();
         }
@@ -197,7 +253,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         {
             var pending = inputs + ".pending";
             ResetOwnedDirectory(pending, directory);
-            foreach (var file in files)
+            foreach (var file in copyFiles)
             {
                 ct.ThrowIfCancellationRequested();
                 if (!File.Exists(file)) throw new FileNotFoundException("An input file is no longer available.", file);
@@ -213,16 +269,39 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
             var provenance = state.GeneratedDirectoryVersion == 1 && state.InputManifest != null
                 ? FileArtifactDeliveryLayout.Index(state.InputDirectoryProvenance, state.InputManifest) :
                     new Dictionary<(string, bool), IReadOnlyList<string>>();
-            state.Outputs["download"] = FileProcessingFiles.Enumerate(inputs)
+            var localInputs = FileProcessingFiles.Enumerate(inputs);
+            var logicalInputs = borrowed == null ? localInputs : ArtifactManifestFiles.ResolveFiles(inputs, state.InputManifest!);
+            state.Outputs["download"] = logicalInputs
                 .Select(f => new Artifact(f, Path.GetRelativePath(inputs, f), Origins: state.LineageVersion == 1
                     ? [new FileOrigin(Path.GetRelativePath(inputs, f).Replace('\\', '/'))] : null,
                     GeneratedDirectories: provenance.GetValueOrDefault((Path.GetRelativePath(inputs, f).Replace('\\', '/'), false)))).ToList();
             if (state.LineageVersion == 1)
             {
-                var captured = await CaptureContents(state, inputs, state.Outputs["download"].Select(a => a.Path).ToArray(), ct,
-                    state.DirectoryVersion == 1 ? ArtifactManifestFiles.ResolveDirectories(inputs, state.InputManifest!) : null);
-                if (!SameManifestContents(captured, state.InputManifest!))
-                    throw new InvalidDataException("The processing snapshot differs from the recorded input files.");
+                var expected = state.InputManifest!;
+                if (borrowed != null)
+                {
+                    var copied = new List<ArtifactManifestEntry>();
+                    foreach (var entry in expected.Entries)
+                    {
+                        if (borrowed.TrySource(entry.RelativePath, out _))
+                            RecordFileContent(state, Path.Combine(inputs, entry.RelativePath), entry);
+                        else copied.Add(entry);
+                    }
+                    expected = new(copied, ArtifactManifestFiles.Fingerprint(copied, expected.Directories), expected.Directories);
+                }
+                if (borrowed != null && expected.Entries.Count == 0 && localInputs.Count == 0)
+                    ArtifactManifestFiles.VerifyDirectories(inputs, expected);
+                else
+                {
+                    var captured = await CaptureContents(state, inputs, localInputs, ct,
+                        state.DirectoryVersion == 1 ? ArtifactManifestFiles.ResolveDirectories(inputs, state.InputManifest!) : null);
+                    if (!SameManifestContents(captured, expected))
+                    {
+                        if (state.SnapshotSourceArtifactId != null)
+                            throw new FileProcessingInputChangedException("The private processing snapshot differs from the registered input files.");
+                        throw new InvalidDataException("The processing snapshot differs from the recorded input files.");
+                    }
+                }
             }
             state.Active = state.Outputs["download"].ToList();
             if (state.DirectoryVersion == 1)
@@ -243,6 +322,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
             if (state.Outputs.ContainsKey(step.Id)) continue;
             state.StepPolicies.TryGetValue(step.Id, out var stepPolicy);
             var inputReferences = step.GetInputReferences();
+            var directVolumes = inputReferences.SequenceEqual(["download"]) ? borrowed : null;
             var supplied = inputReferences.SelectMany(input => state.Outputs[input]).ToList();
             var suppliedDirectories = inputReferences.SelectMany(input => state.DirectoryOutputs.GetValueOrDefault(input) ?? [])
                 .Distinct().ToList();
@@ -277,7 +357,8 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                     ? pendingRename.RenameFiles.Where(f => state.FileContents.TryGetValue(ContentKey(state, f.Source), out var recorded) &&
                         SameContent(recorded, f.Content)).Select(f => f.Source).ToHashSet(FileProcessingFiles.PathComparer)
                     : new HashSet<string>(FileProcessingFiles.PathComparer);
-                await VerifyContents(state, supplied.Select(a => a.Path).Where(p => !journalInputs.Contains(p)), ct);
+                await VerifyContents(state, supplied.Where(a => directVolumes == null || !directVolumes.TrySource(a.RelativePath, out _))
+                    .Select(a => a.Path).Where(p => !journalInputs.Contains(p)), ct);
             }
             if (selected.Count == 0 && selectedDirectories.Count == 0)
                 return new(false, state.Active.Select(x => x.Path).ToList(), null,
@@ -286,6 +367,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                 state.RetainedFiles = state.RetainedFiles.Concat(supplied.Select(a => a.Path)).Distinct(FileProcessingFiles.PathComparer).ToList();
             var output = new List<Artifact>();
             var outputProjection = new Dictionary<string, FileProcessingPathProjectionEntry>(FileProcessingFiles.PathComparer);
+            var extractionReceipts = new Dictionary<string, ArtifactManifestEntry>(FileProcessingFiles.PathComparer);
             var outputDirectories = new List<DirectoryArtifact>();
             var consumed = new HashSet<string>(FileProcessingFiles.PathComparer);
             if (step.Op == "rebaseDirectory")
@@ -365,7 +447,8 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                 // selected manifest entries in a private atomic snapshot so archive tools can
                 // find companion volumes, without discovering files beside an original input.
                 var extractionInputs = inputReferences.Count > 1
-                    ? await StageExtractionInputs(selected, step.Id, directory, MaterializationMode(state, stepPolicy), ct) : selected;
+                    ? await StageExtractionInputs(selected, step.Id, directory, MaterializationMode(state, stepPolicy), ct) : directVolumes == null ? selected :
+                    selected.Select(a => directVolumes.TrySource(a.RelativePath, out var source) ? a with {Path = source} : a).ToList();
                 if (inputReferences.Count > 1)
                 {
                     state.StagedFiles = state.StagedFiles.Concat(extractionInputs.Select(a => a.Path)).Distinct(FileProcessingFiles.PathComparer).ToList();
@@ -395,7 +478,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                 var sfxCandidates = CompressedFileHelper.DetectSfxMultipartCandidates(extractionInputs.Select(a => a.Path).ToArray());
                 var oneSelectedSfxFamily = sfxCandidates.Count == 1 &&
                     sfxCandidates[0].Files.ToHashSet(FileProcessingFiles.PathComparer).SetEquals(extractionInputs.Select(a => a.Path));
-                var stepKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(step.Id)))[..16];
+                var stepKey = StepKey(step.Id);
                 if (HasUnboundArchiveResponse(state, stepKey))
                     return ArchiveGroupChanged(state, step.Id);
                 // One entry or one complete SFX family has an unambiguous group-zero answer.
@@ -423,7 +506,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                 if (sourcePassword != null && !formatPasswords.Contains(sourcePassword)) formatPasswords.Add(sourcePassword);
                 Task<IReadOnlyList<DetectedArchiveGroup>> DetectGroups() => AuthorizedArchiveDetection.DetectAsync(
                     extractionInputs.Select(a => a.Path).ToArray(), recursive: false, ct, extraction, detectionBudget,
-                    exactExtractionSelection: selected.Count == 1 || literalSelector || executableSelector || oneSelectedSfxFamily, authorizedPasswords: formatPasswords);
+                    exactExtractionSelection: selected.Count == 1 || literalSelector || executableSelector || oneSelectedSfxFamily, authorizedPasswords: formatPasswords, readOnlyVolumes: directVolumes?.Groups);
                 try
                 {
                     if (step.ArchiveOpenMode == ArchiveOpenMode.SevenZipParser)
@@ -478,7 +561,9 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                     bindingsChanged = true;
                 }
                 if (bindingsChanged) await Save();
-                FileProcessingFiles.ValidateVolumes(extractionInputs.Select(x => x.Path));
+                var recoveredPaths = groups.Where(group => group.RecoveredVolumes != null)
+                    .SelectMany(group => group.Files).ToHashSet(FileProcessingFiles.PathComparer);
+                FileProcessingFiles.ValidateVolumes(extractionInputs.Select(x => x.Path).Where(path => !recoveredPaths.Contains(path)));
                 for (var i = 0; i < groups.Count; i++)
                 {
                     var group = groups[i];
@@ -506,7 +591,21 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         state.Operations[key] = operation;
                         await Save();
                     }
-                    var extractionPending = destination + ".pending";
+                    if (operation.RetainedGroupToken != null)
+                    {
+                        if (groupScope == null || DescribeIncompleteGroup(state, key, groupScope)?.Token != operation.RetainedGroupToken)
+                            return ArchiveGroupChanged(state, step.Id);
+                        MarkRetainedGroup();
+                        continue;
+                    }
+                    void MarkRetainedGroup()
+                    {
+                        var paths = group.Files.Select(file => originalPaths[file]).ToHashSet(FileProcessingFiles.PathComparer);
+                        for (var a = 0; a < state.Active.Count; a++)
+                            if (paths.Contains(state.Active[a].Path))
+                                state.Active[a] = state.Active[a] with {RetainedIncompleteArchive = true};
+                    }
+                    var extractionPending = ExtractionStagingDirectory(destination, operation, directory);
                     if (state.LineageVersion == 1 && !Directory.Exists(destination) &&
                         operation.OutputManifest != null && Directory.Exists(extractionPending))
                     {
@@ -515,6 +614,13 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                     }
                     if (!operation.Completed && !Directory.Exists(destination))
                     {
+                        if (writeGuard != null && operation.OutputManifest == null && operation.ExpandedBytes is >= 0 &&
+                            (!Directory.Exists(extractionPending) || !Directory.EnumerateFileSystemEntries(extractionPending).Any()))
+                        {
+                            // A previously verified catalog for this bound group can rule out a retry
+                            // before another full password/data test. Stale partial output is reset below.
+                            await writeGuard.CheckAllocationAsync(extractionPending, operation.ExpandedBytes.Value, StorageWriteScope.Current, ct);
+                        }
                         if (reportStage != null) await reportStage("checkingArchive");
                         var candidates = new List<string?>();
                         if (state.Passwords.TryGetValue(key, out var answered)) candidates.Add(answered);
@@ -527,11 +633,20 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         candidates.Add(step.Password);
                         if (sourcePassword != null) candidates.Add(sourcePassword);
                         candidates = candidates.Distinct().ToList();
+                        SevenZipVolumeSet.ToolInputs? mapped;
+                        try { mapped = group.RecoveredVolumes is { } recovered ? new SevenZipVolumeSet.ToolInputs(recovered)
+                            : directVolumes?.IsStandaloneZip(group.Files) == true ? new SevenZipVolumeSet.ToolInputs(group.Files[0]) : null; }
+                        catch (ArchiveFormatProbeIncompleteException error)
+                        { return new(false, state.Active.Select(x => x.Path).ToList(), null, error.Message, step.Id, FailureCode: error.Code); }
+                        using var volumeInputs = mapped;
+                        IReadOnlyList<string> toolFiles = mapped == null ? group.Files : mapped.Files;
+                        if (mapped != null && directVolumes?.IsStandaloneZip(group.Files) == true)
+                            opening = ArchiveOpenOptions.ForStandaloneZipAlias(toolFiles[0], group.Files[0]);
                         ArchivePasswordProbe probe;
                         try
                         {
                             AuthorizedArchiveDetection.ValidateCurrentSfxFamilies(group.Files, ct);
-                            probe = await extraction.ProbePasswordAsync(group.Files[0], candidates, null, ct, opening);
+                            probe = await extraction.ProbePasswordAsync(toolFiles[0], candidates, null, ct, opening);
                         }
                         catch (ArchiveNameEncodingUnsupportedException error)
                         {
@@ -561,7 +676,8 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                             // not launch another model request or repeat a rejected set of candidates.
                             operation.SourcePasswordEvidenceChecked = true;
                             await Save();
-                            var verified = await ProbeEvidenceAsync(group.Files[0], candidates, opening, passwordEvidence, ct);
+                            volumeInputs?.Validate();
+                            var verified = await ProbeEvidenceAsync(toolFiles[0], candidates, opening, passwordEvidence, ct);
                             if (verified != null)
                             {
                                 probe = verified;
@@ -573,35 +689,83 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         {
                             state.PendingOperation = key;
                             await Save();
+                            if (probe.FailureCode == "MissingVolumes" && groupScope != null && groupScope.Owner.StepId == step.Id &&
+                                DescribeIncompleteGroup(state, key, groupScope) is {} incomplete)
+                            {
+                                if (groupScope.RequestedToken == incomplete.Token)
+                                {
+                                    // The individual archive still fails the same probe. Preserve its original
+                                    // bytes in Active without inventing an extracted output or replacement edge.
+                                    await VerifyContents(state, group.Files.Select(file => originalPaths[file]), ct);
+                                    MarkRetainedGroup();
+                                    operation.RetainedGroupToken = incomplete.Token;
+                                    state.PendingOperation = null;
+                                    await Save();
+                                    continue;
+                                }
+                                return new(false, state.Active.Select(x => x.Path).ToList(), null,
+                                    "A required archive volume is missing.", step.Id, FailureCode: "MissingVolumes")
+                                    {IncompleteArchiveGroup = incomplete};
+                            }
                             if (probe.FailureCode is "MissingVolumes" or "ArchiveInputRequired")
                                 return new(false, state.Active.Select(x => x.Path).ToList(), null,
                                     probe.FailureCode == "MissingVolumes"
-                                        ? "The archive is incomplete or a required volume could not be found. Check all volume names and parts; this does not establish a wrong password."
+                                        ? FileProcessingResumeActions.LegacyGroupMissingVolumes
                                         : "The archive tool could not open the selected file. Check the actual format and multipart filenames before retrying; this does not establish a wrong password.",
                                     step.Id, FailureCode: probe.FailureCode);
                             return new(false, state.Active.Select(x => x.Path).ToList(), null,
                                 $"Could not open {Path.GetFileName(group.Files[0])}. Check the password and all archive parts.",
                                 step.Id, true, candidates.Where(x => x != null).Cast<string>().ToList());
                         }
-                        var pending = extractionPending;
-                        ResetOwnedDirectory(pending, directory);
-                        var request = new ArchiveExtractionRequest(group.Files, pending, probe.Password,
+                        var pending = await PrepareExtractionStagingAsync(destination, operation, state, directory, Save);
+                        var request = new ArchiveExtractionRequest(toolFiles, pending, probe.Password,
                             DecompressToNewFolder: false, OpenOptions: opening);
                         ArchiveExtractionResult result;
                         try
                         {
+                            var expected = operation.UnverifiedExtractionOwner;
+                            using var staging = DeferredEmptyDirectoryTree.PinEmptyExtraction(pending, expected);
+                            if (expected != null && staging == null)
+                                throw new InvalidDataException("The prepared archive staging directory changed. Its contents were retained.");
+                            if (staging != null && expected != staging.Owner)
+                            {
+                                operation.UnverifiedExtractionOwner = staging.Owner;
+                                await Save();
+                            }
+                            var writerStarted = false;
                             async Task<ArchiveExtractionResult> Extract(CancellationToken token)
                             {
+                                volumeInputs?.Validate();
                                 AuthorizedArchiveDetection.ValidateCurrentSfxFamilies(group.Files, token);
                                 if (reportStage != null) await reportStage("extractingArchive");
+                                token.ThrowIfCancellationRequested();
+                                if (staging != null)
+                                {
+                                    staging.ConfirmEmpty();
+                                    operation.UnverifiedExtractionOwner = staging.Owner with {WriterStarted = true};
+                                    await Save();
+                                }
+                                writerStarted = true;
                                 var extracted = await extraction.ExtractAsync(request, progress, token);
+                                if (directVolumes != null && extracted.Succeeded)
+                                    await directVolumes.VerifyReadAsync(group.Files, token);
                                 if (reportStage != null) await reportStage("processingFiles");
                                 return extracted;
                             }
-                            result = writeGuard == null
-                                ? await Extract(ct)
-                                : await writeGuard.RunAsync([pending], StorageWriteScope.Current,
-                                    Extract, ct);
+                            volumeInputs?.Validate();
+                            var succeeded = false;
+                            try
+                            {
+                                result = await ExtractWithSpaceBudgetAsync(request, operation, Save, Extract, reportStage, ct);
+                                succeeded = result.Succeeded;
+                            }
+                            finally
+                            {
+                                // The guard has joined the writer and its cancellation callbacks.
+                                // Cleanup never changes the extraction's original error or cancellation.
+                                if (writerStarted && !succeeded && staging != null && operation.OutputManifest == null)
+                                    staging.Discard();
+                            }
                         }
                         catch (ArchiveNameEncodingUnsupportedException error)
                         {
@@ -627,27 +791,36 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         // Record actual content before the atomic publication. A crash followed
                         // by edits to the committed directory must not mint new replacement proof.
                         var extractedPaths = FileProcessingFiles.Enumerate(pending);
+                        // This operation already encountered an SMB deletion handle. Keep the output
+                        // uncommitted if another marker appears in its replacement staging directory.
+                        if (operation.ExtractionStagingId.HasValue && extractedPaths.Any(path => FileProcessingFiles.IsSmbDeleteMarker(Path.GetFileName(path))))
+                            throw new IOException("The extraction workspace still contains an SMB delete marker. The files were retained for review.");
                         if (state.LineageVersion == 1)
                         {
-                            await VerifyContents(state, group.Files, ct);
+                            await VerifyContents(state, group.Files.Where(f => directVolumes?.Contains(f) != true), ct);
                             operation.OutputManifest = extractedPaths.Count == 0
                                 ? new([], ArtifactManifestFiles.Fingerprint([]))
-                                : await ArtifactManifestFiles.CaptureAsync(pending, extractedPaths, ct,
+                                : await ArtifactManifestFiles.CaptureExtractedAsync(pending, extractedPaths, ct,
                                     state.DirectoryVersion == 1 ? ArtifactManifestFiles.CaptureEmptyDirectories(pending, ct) : null);
+                            operation.UnverifiedExtractionOwner = null;
                             await Save();
                         }
                         Directory.Move(pending, destination);
                     }
+                    ArtifactManifest? verifiedOutput = null;
                     if (state.LineageVersion == 1)
                     {
-                        await VerifyContents(state, group.Files, ct);
-                        if (operation.OutputManifest == null)
-                            throw new InvalidDataException("The extraction output has no committed content receipt; its files were retained.");
-                        await VerifyOutputManifest(destination, operation.OutputManifest, ct, operation.Completed ? null : group.Files);
+                        await VerifyContents(state, group.Files.Where(f => directVolumes?.Contains(f) != true), ct);
+                        var committedOutput = operation.OutputManifest ?? throw new InvalidDataException(
+                            "The extraction output has no committed content receipt; its files were retained.");
+                        await VerifyOutputManifest(destination, committedOutput, ct, operation.Completed ? null : group.Files);
+                        verifiedOutput = committedOutput;
                     }
                     var entry = extractionInputs.First(a => FileProcessingFiles.PathComparer.Equals(a.Path, group.Files[0]));
-                    var wrapperName = CompressedFileHelper.GetExtractionDirectoryName(group.Files, group.Extension);
-                    var parent = Path.GetDirectoryName(entry.RelativePath) ?? "";
+                    var wrapperName = group.RecoveredVolumes == null ? CompressedFileHelper.GetExtractionDirectoryName(group.Files, group.Extension) : group.KeyName;
+                    var familyEntry = group.RecoveredVolumes == null ? entry : extractionInputs.First(a =>
+                        FileProcessingFiles.PathComparer.Equals(a.Path, group.Files[1]));
+                    var parent = Path.GetDirectoryName(familyEntry.RelativePath) ?? "";
                     var prefix = step.ExtractionLayout == FileExtractionLayouts.CurrentDirectory ? parent :
                         state.ExtractionContentsAsRoot && step.ExtractionLayout == null ? "" : Path.Combine(parent, wrapperName);
                     var sourceArtifacts = selected.Where(a => group.Files.Any(f =>
@@ -665,6 +838,24 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                             .Distinct().ToList() : null;
                     var extracted = FileProcessingFiles.Enumerate(destination).Select(f =>
                         new Artifact(f, Path.Combine(prefix, Path.GetRelativePath(destination, f)), true, step.Id, origins, generatedDirectories, step.ExtractionLayout)).ToList();
+                    if (verifiedOutput != null)
+                    {
+                        // The committed receipt has already been verified against the output bytes. Use it
+                        // for lineage only if every path in the later directory listing still belongs to it.
+                        var receipts = verifiedOutput.Entries.ToDictionary(
+                            e => FileProcessingFiles.Within(Path.Combine(destination, e.RelativePath), destination),
+                            FileProcessingFiles.PathComparer);
+                        const string pathsChanged = "Extraction output paths changed after verification; the files were retained.";
+                        if (extracted.Count != receipts.Count) throw new InvalidDataException(pathsChanged);
+                        foreach (var file in extracted)
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            if (!receipts.Remove(file.Path, out var receipt)) throw new InvalidDataException(pathsChanged);
+                            extractionReceipts[file.Path] = receipt;
+                            RecordFileContent(state, file.Path,
+                                receipt with {RelativePath = ArtifactManifestFiles.RelativeFile(destination, file.Path)});
+                        }
+                    }
                     foreach (var extractedFile in extracted)
                         outputProjection[extractedFile.Path] = new(entry.RelativePath.Replace('\\', '/') + "!/" +
                             Path.GetRelativePath(destination, extractedFile.Path).Replace('\\', '/'), extractedFile.RelativePath);
@@ -678,7 +869,6 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         }
                     if (state.LineageVersion == 1 && extracted.Count > 0)
                     {
-                        await CaptureContents(state, destination, extracted.Select(a => a.Path).ToArray(), ct);
                         if (partialContainer)
                             state.RetainedFiles = state.RetainedFiles.Concat(group.Files)
                                 .Concat(group.Files.Select(f => originalPaths[f])).Distinct(FileProcessingFiles.PathComparer).ToList();
@@ -687,7 +877,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                                 AddTransition(state, originalPaths[file], extracted.Select(a => a.Path).ToArray());
                     }
                     operation.Completed = true;
-                    state.PendingOperation = null;
+                    if (state.PendingOperation == key) state.PendingOperation = null;
                     await Save();
                     // An empty extraction proves no replacement payload. Keep its input rather
                     // than treating a successful tool exit as permission to discard the archive.
@@ -699,6 +889,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                     CheckProjection(step.Id, output.Select(a => outputProjection.GetValueOrDefault(a.Path) ?? PathEntry(a))
                             .Concat(outputDirectories.Select(PathEntry)), portable: step.ExtractionLayout != null);
                 }
+                await CoalesceVerifiedExtractionOverlapsAsync(step, state, output, consumed, outputProjection, extractionReceipts, ct);
             }
             // Keep unrelated files and siblings; following steps can only see their declared input's results.
             var next = state.Active.Where(a => !consumed.Contains(a.Path)).Concat(output).ToList();
@@ -714,6 +905,25 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
             await Save();
         }
 
+        // Empty or partially selected containers may remain in the result. Only now do they
+        // need a private copy. The source is never handed to move/retirement code.
+        if (borrowed != null)
+            foreach (var retained in state.Active.Where(a => a.StepId == null))
+                if (borrowed.TrySource(retained.RelativePath, out var source) && !File.Exists(retained.Path))
+                {
+                    FileProcessingFiles.Within(retained.Path, inputs);
+                    var staging = Path.Combine(directory, "borrowed-retained.pending");
+                    ResetOwnedDirectory(staging, directory);
+                    var leaf = Path.Combine(staging, "file");
+                    await Materialize(source, leaf, "auto", ct);
+                    var actual = await ArtifactManifestFiles.CaptureAsync(staging, [leaf], ct);
+                    if (!SameContent(state.FileContents[ContentKey(state, retained.Path)], actual.Entries.Single()))
+                        throw new FileProcessingInputChangedException("A retained archive changed during processing.");
+                    Directory.CreateDirectory(Path.GetDirectoryName(retained.Path)!);
+                    File.Move(leaf, retained.Path);
+                    Directory.Delete(staging);
+                }
+
         // Publishing a boundary pins its files against later moves. Expose the exact committed
         // output without another complete copy when its layout contains no unrelated files.
         var reusable = stopAfterStepId != null && !isFinalBoundary &&
@@ -728,11 +938,12 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
             await Save();
             return CompletedResult(state, receipt.Files.Select(a => a.Path).ToArray(), receipt.Directory, receipt.Files);
         }
-        if (isFinalBoundary && !Directory.Exists(resultDirectory) &&
-            await PrepareFinalAssemblyAsync(state, directory, resultDirectory, Save, ct))
+        if (!Directory.Exists(resultDirectory) &&
+            await PrepareFinalAssemblyAsync(state, plan, directory, resultDirectory,
+                isFinalBoundary ? null : stopAfterStepId, Save, ct))
         {
             await AssembleFinalAsync(state, directory, resultDirectory, Save, ct);
-            return await CommitResultAsync(state, resultDirectory, stopAfterStepId, true, Save, ct);
+            return await CommitResultAsync(state, resultDirectory, stopAfterStepId, isFinalBoundary, Save, ct);
         }
         if (!Directory.Exists(resultDirectory))
         {
@@ -928,7 +1139,10 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                         new ArtifactDirectoryEntry(a.RelativePath, false, a.GeneratedDirectories ?? []))
                     .Concat((savedBoundary?.Directories ?? (savedBoundary == null ? state.ActiveDirectories : []))
                         .Where(d => (manifest.Directories ?? []).Contains(d.RelativePath.Replace('\\', '/'), StringComparer.Ordinal))
-                        .Select(d => new ArtifactDirectoryEntry(d.RelativePath, true, d.GeneratedDirectories ?? [])))));
+                        .Select(d => new ArtifactDirectoryEntry(d.RelativePath, true, d.GeneratedDirectories ?? [])))))
+            {RetainedGroupTokens = state.Operations.Values.Any(o => o.RetainedGroupToken != null)
+                ? state.Operations.Values.Select(o => o.RetainedGroupToken).OfType<string>().ToArray() : null,
+             RetainedArchiveFiles = actualFiles.Where(a => a.RetainedIncompleteArchive).Select(a => a.RelativePath.Replace('\\', '/')).ToArray()};
     }
 
     private static async Task VerifyOutputManifest(string root, ArtifactManifest expected, CancellationToken ct,
@@ -958,13 +1172,16 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
     {
         var manifest = await ArtifactManifestFiles.CaptureAsync(root, paths, ct, directories);
         foreach (var entry in manifest.Entries)
-        {
-            var path = FileProcessingFiles.Within(Path.Combine(root, entry.RelativePath), root);
-            if (state.FileContents.TryGetValue(ContentKey(state, path), out var prior) && !SameContent(prior, entry))
-                throw new InvalidDataException("A processing file changed after its execution receipt was recorded.");
-            state.FileContents[ContentKey(state, path)] = entry;
-        }
+            RecordFileContent(state, FileProcessingFiles.Within(Path.Combine(root, entry.RelativePath), root), entry);
         return manifest;
+    }
+
+    private static void RecordFileContent(State state, string path, ArtifactManifestEntry entry)
+    {
+        var key = ContentKey(state, path);
+        if (state.FileContents.TryGetValue(key, out var prior) && !SameContent(prior, entry))
+            throw new InvalidDataException("A processing file changed after its execution receipt was recorded.");
+        state.FileContents[key] = entry;
     }
 
     private static async Task VerifyContents(State state, IEnumerable<string> paths, CancellationToken ct)
@@ -1010,6 +1227,8 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         }
     }
 
+    internal static string StepKey(string stepId) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(stepId)))[..16];
+
     private static string ContentKey(State state, string path) =>
         ArtifactManifestFiles.RelativeFile(state.ExecutionRoot ?? throw new InvalidDataException("The processing checkpoint root is missing."), path);
 
@@ -1022,7 +1241,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
             if (!recorded.Contains(output, FileProcessingFiles.PathComparer)) recorded.Add(output);
     }
 
-    private static bool Matches(Artifact artifact, string? selector) => string.IsNullOrWhiteSpace(selector) ||
+    internal static bool Matches(Artifact artifact, string? selector) => string.IsNullOrWhiteSpace(selector) ||
         FileSystemName.MatchesSimpleExpression(selector.Replace('\\', '/'),
             selector.Contains('/') || selector.Contains('\\') ? artifact.RelativePath.Replace('\\', '/') : Path.GetFileName(artifact.Path),
             ignoreCase: OperatingSystem.IsWindows());
@@ -1219,7 +1438,11 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
 
     public sealed record FileOrigin(string InputRelativePath, bool Replaced = false);
     public sealed record Artifact(string Path, string RelativePath, bool Extracted = false, string? StepId = null,
-        IReadOnlyList<FileOrigin>? Origins = null, IReadOnlyList<string>? GeneratedDirectories = null, string? ExtractionLayout = null);
+        IReadOnlyList<FileOrigin>? Origins = null, IReadOnlyList<string>? GeneratedDirectories = null, string? ExtractionLayout = null)
+    {
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+        public bool RetainedIncompleteArchive { get; init; }
+    }
     public sealed record DirectoryArtifact(string Path, string RelativePath, IReadOnlyList<string>? GeneratedDirectories = null);
     public sealed record RenameFile(string Source, string RelativePath, ArtifactManifestEntry Content, bool Move);
     private async Task<ArchivePasswordProbe?> ProbeEvidenceAsync(string archive, IReadOnlyList<string?> attempted,
@@ -1253,14 +1476,24 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         public string? OutputDirectory { get; set; }
         public bool Completed { get; set; }
         public ArtifactManifest? OutputManifest { get; set; }
+        public Guid? ExtractionStagingId { get; set; }
         public List<RenameFile>? RenameFiles { get; set; }
         public List<string>? ProjectedDirectories { get; set; }
         // Entry first, then companion volumes. Paths bind group-index receipts and password
         // answers to the exact inputs; FileContents independently binds their verified bytes.
         public List<string>? ArchiveInputs { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public long? ExpandedBytes { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public ExtractionStagingIdentity? UnverifiedExtractionOwner { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public string? RetainedGroupToken { get; set; }
     }
     public sealed class State
     {
+        public string? SnapshotSourceArtifactId { get; set; }
+        public string? ReadOnlyVolumeArtifactId { get; set; }
+        public IReadOnlyList<string>? ReadOnlyVolumeMembers { get; set; }
         public bool ExtractionContentsAsRoot { get; set; }
         // Missing on old persistent states: preserve their existing copy/boundary behavior.
         public int MaterializationVersion { get; set; }

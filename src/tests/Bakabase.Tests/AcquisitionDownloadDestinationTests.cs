@@ -20,17 +20,18 @@ public sealed partial class AcquisitionRecoveryTests
         public Dictionary<int, string> Blocked = [];
         public Func<Task>? BeforeApply;
         public Task<CloudDownloadDestinationPreview> PreviewAsync(int runId, CloudDownloadTarget target,
-            string semanticOutputRoot, string newRoot, string newDirectory, CancellationToken ct)
+            string semanticOutputRoot, string newRoot, string newDirectory, CancellationToken ct, bool reuseExistingFiles = false, Func<string, Task>? guard = null)
         {
             var id = target.DownloadTaskId!.Value;
             return Task.FromResult(Blocked.TryGetValue(id, out var reason)
                 ? new CloudDownloadDestinationPreview(false, reason)
                 : new(true, "DOWNLOAD_DESTINATION_READY", "fingerprint-" + id, id, "operation-" + id,
-                    Path.Combine(semanticOutputRoot, "old-" + id), newDirectory, newRoot));
+                    Path.Combine(semanticOutputRoot, "old-" + id), newDirectory, newRoot,
+                    ReuseEstimate: reuseExistingFiles ? new(2, 100, 1, 70) : null));
         }
         public async Task<CloudDownloadDestinationRevisionReceipt> ApplyAsync(int runId, CloudDownloadTarget target,
             string semanticOutputRoot, string newRoot, string newDirectory, string expectedFingerprint,
-            string revisionId, CancellationToken ct, Func<CancellationToken, Task>? validateOwner = null)
+            string revisionId, CancellationToken ct, Func<CancellationToken, Task>? validateOwner = null, bool reuseExistingFiles = false, Func<string, Task>? guard = null)
         {
             if (BeforeApply != null) await BeforeApply();
             if (validateOwner != null) await validateOwner(ct);
@@ -42,13 +43,36 @@ public sealed partial class AcquisitionRecoveryTests
     private AcquisitionDownloadDestinationService DestinationService(DestinationCapability provider) => new(_db, provider,
         new(), new UserStoragePolicy(false), new(_services.GetRequiredService<IBOptions<AcquisitionOptions>>(), new UserStoragePolicy(false)));
     private static Task AllowDirectory(string _) => Task.CompletedTask;
-    private async Task<(int TaskId, int RunId)> SeedDestination(int downloadId)
+    private async Task<(int TaskId, int RunId)> SeedDestination(int downloadId, params int[] additionalDownloadIds)
     {
         var (task, run, workset) = await Seed("download.awaitCompletion", WorkflowRunStatus.Waiting, null);
+        var original = workset.Targets.Single();
         run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset with
-        {Targets = [workset.Targets.Single() with {DownloadTaskId = downloadId}]});
+        {
+            Targets = [original with {DownloadTaskId = downloadId}, .. additionalDownloadIds.Select(id =>
+                original with {Id = $"destination-{id}", DownloadTaskId = id})]
+        });
         await _db.SaveChangesAsync(); return (task.Id, run.Id);
     }
+    [TestMethod]
+    public async Task ReusingExistingFilesRequiresAnExplicitNativePartAndConfirmationOnlyChangesThatPart()
+    {
+        var (id, _) = await SeedDestination(701, 702);
+        var provider = new DestinationCapability();
+        var service = DestinationService(provider);
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => service.PreviewAsync(new([id], _root, true), AllowDirectory));
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => service.PreviewAsync(new([id], _root, true, [710]), AllowDirectory));
+        await Assert.ThrowsExceptionAsync<ArgumentException>(() => service.PreviewAsync(new([id], _root, true, [701, 702]), AllowDirectory));
+        var preview = await service.PreviewAsync(new([id], _root, true, [702]), AllowDirectory);
+        var row = preview.Rows.Single();
+        Assert.AreEqual("DOWNLOAD_DESTINATION_REUSE_READY", row.ReasonCode);
+        Assert.AreEqual(702, row.Downloads.Single().DownloadTaskId);
+        Assert.AreEqual(30L, row.Downloads.Single().ReuseEstimate!.RequiredDownloadBytes);
+        var result = await service.ApplyAsync(new(preview.PreviewToken, [id]), AllowDirectory);
+        Assert.AreEqual(1, result.AppliedDownloadCount);
+        CollectionAssert.AreEqual(new[] {702}, provider.Applied);
+    }
+
     [TestMethod]
     public async Task DestinationBatchFreezesIdsAndNamingAndDoesNotEditPlanHistoryOrStartDownloads()
     {
@@ -93,19 +117,31 @@ public sealed partial class AcquisitionRecoveryTests
         Assert.AreEqual(0, provider.Applied.Count); Assert.AreEqual("DOWNLOAD_DESTINATION_HAS_OUTPUT", result.Skipped.Single().ReasonCode);
     }
     [TestMethod]
-    public async Task DestinationBatchReportsPartialWritesAndProtectsTheWholeMultiSourceTaskAtPreview()
+    public async Task DestinationBatchAppliesOnlyTheEligibleDownloadsShownAtPreview()
     {
-        var (id, runId) = await SeedDestination(701);
-        var run = await _db.WorkflowRuns.SingleAsync(r => r.Id == runId);
-        var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson)!;
-        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset with {Targets = [.. workset.Targets,
-            workset.Targets[0] with {Id = "second", DownloadTaskId = 702}]});
-        await _db.SaveChangesAsync();
+        var (id, _) = await SeedDestination(701, 702);
         var provider = new DestinationCapability(); var service = DestinationService(provider);
         provider.Blocked[702] = "DOWNLOAD_DESTINATION_HAS_OUTPUT";
-        var protectedPreview = await service.PreviewAsync(new([id], _root), AllowDirectory);
-        Assert.IsFalse(protectedPreview.Rows.Single().CanApply);
+        var preview = await service.PreviewAsync(new([id], _root), AllowDirectory);
+        var row = preview.Rows.Single();
+        Assert.IsTrue(row.CanApply);
+        Assert.AreEqual("DOWNLOAD_DESTINATION_ELIGIBLE_PARTS", row.ReasonCode);
+        Assert.IsTrue(row.Downloads.Single(d => d.DownloadTaskId == 701).CanApply);
+        Assert.IsFalse(row.Downloads.Single(d => d.DownloadTaskId == 702).CanApply);
+
         provider.Blocked.Clear();
+        var result = await service.ApplyAsync(new(preview.PreviewToken, [id]), AllowDirectory);
+        CollectionAssert.AreEqual(new[] {701}, provider.Applied);
+        CollectionAssert.AreEqual(new[] {id}, result.AppliedTaskIds.ToArray());
+        Assert.AreEqual(1, result.AppliedDownloadCount);
+        Assert.AreEqual(0, result.Skipped.Count);
+    }
+
+    [TestMethod]
+    public async Task DestinationBatchReportsPartialWritesWhenAReviewedDownloadChangesDuringApply()
+    {
+        var (id, _) = await SeedDestination(701, 702);
+        var provider = new DestinationCapability(); var service = DestinationService(provider);
         var preview = await service.PreviewAsync(new([id], _root), AllowDirectory);
         provider.BeforeApply = () => provider.Applied.Count > 0
             ? throw new InvalidOperationException("DOWNLOAD_DESTINATION_PREVIEW_CHANGED") : Task.CompletedTask;

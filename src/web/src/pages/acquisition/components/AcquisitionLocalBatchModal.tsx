@@ -1,14 +1,24 @@
-import AcquisitionContinuationMethodTabs from "./AcquisitionContinuationMethodTabs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Checkbox, Chip, Modal, Pagination, Spinner, Tooltip } from "@/components/bakaui";
+import {
+  Button,
+  Checkbox,
+  Chip,
+  Modal,
+  Pagination,
+  Select,
+  Spinner,
+  Tooltip,
+} from "@/components/bakaui";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import { bytesToSize } from "@/components/utils";
 import { millisecondsUntil, parseServerTime } from "@/core/serverTime";
 import { localBatchReasonLabel } from "./localBatchReasonLabel";
 import AcquisitionQueueStatusChip from "./AcquisitionQueueStatusChip";
 import { activityDisplayName } from "@/components/Workflow/displayNames";
-import AcquisitionContinueScopeSelect, { type AcquisitionContinuationNavigation } from "./AcquisitionContinueScopeSelect";
+import AcquisitionContinueScopeSelect, {
+  type AcquisitionContinuationNavigation,
+} from "./AcquisitionContinueScopeSelect";
 import {
   acquisitionLocalBatchApi,
   localBatchSelectionLimit,
@@ -17,28 +27,81 @@ import {
   type LocalBatchCapacity,
 } from "./acquisitionLocalBatchApi";
 
-import StorageReserveCheckbox, { emergencyReserveBytes, type StorageReserveMode } from "@/components/Acquire/StorageReserveCheckbox";
+import StorageReserveCheckbox, {
+  emergencyReserveBytes,
+  type StorageReserveMode,
+} from "@/components/Acquire/StorageReserveCheckbox";
 
-const knownBatchStates = ["queued", "starting", "running", "paused", "spaceBlocked", "completed", "failed", "cancelled"];
-const knownRowStates = [...knownBatchStates, "checking", "submitted", "attention", "skipped", "superseded"];
-const actionCategories = ["localProcessing", "workflow"] as const;
-type ActionCategory = (typeof actionCategories)[number];
-const isKnownAction = (value?: string | null): value is ActionCategory => actionCategories.includes(value as ActionCategory);
-const resumesOriginalDownload = (row: LocalBatchPreview["rows"][number]) =>
-  row.actionCategory === "workflow" && row.currentStepKind === "download.awaitCompletion";
+const knownBatchStates = [
+  "queued",
+  "starting",
+  "running",
+  "paused",
+  "spaceBlocked",
+  "completed",
+  "failed",
+  "cancelled",
+];
+const knownRowStates = [
+  ...knownBatchStates,
+  "checking",
+  "submitted",
+  "attention",
+  "skipped",
+  "superseded",
+];
+const preferredActionOrder = ["continue", "retryTransfer", "reanalyze"];
+export type LocalBatchSelection = Partial<Record<number, string>>;
+type PreviewRow = LocalBatchPreview["rows"][number];
+const supportsAction = (row: PreviewRow, action: string) =>
+  row.availableActions?.includes(action) === true;
+const usesCompletedDownload = (row: PreviewRow) =>
+  row.reasonCode === "RECOVERY_COMPLETED_DOWNLOAD_READY";
+const resumesOriginalDownload = (row: PreviewRow) =>
+  row.actionCategory === "workflow" &&
+  row.currentStepKind === "download.awaitCompletion" &&
+  !usesCompletedDownload(row);
+const actionLabel = (row: PreviewRow) => {
+  if (!supportsAction(row, "continue")) return "acquisition.continueActions.action.unavailable";
+  if (row.recoveryAction === "retryTransfer")
+    return "acquisition.continueActions.action.retryTransfer";
+  if (usesCompletedDownload(row)) return "acquisition.continueActions.action.completedDownload";
+  if (row.recoveryAction === "verifyAndResume")
+    return resumesOriginalDownload(row)
+      ? "acquisition.continueActions.action.verifyDownload"
+      : "acquisition.continueActions.action.verifyStep";
+  if (resumesOriginalDownload(row)) return "acquisition.continueActions.action.resumeDownload";
+  if (row.actionCategory === "localProcessing" && row.recoveryScope === "workflow")
+    return "acquisition.continueActions.action.resumeLocal";
+  return row.actionCategory === "localProcessing"
+    ? "acquisition.continueActions.action.localProcessing"
+    : "acquisition.continueActions.action.workflow";
+};
+const previewPageSize = 20;
+const allPreviewRows = "all";
 type QueueReference = NonNullable<LocalBatchPreview["rows"][number]["queue"]>;
-export type LocalBatchSelection = { actions: string[]; excludedTaskIds: number[] };
 const measured = (value: number | null | undefined) =>
   typeof value === "number" && Number.isFinite(value) && value >= 0;
 const isFinished = (batch?: LocalBatch) =>
   batch?.status === "completed" || batch?.status === "cancelled";
-const validCapacity = (value: Pick<LocalBatchPreview, "volumes" | "requiresSpaceConfirmation" | "estimateIncomplete">) =>
-  typeof value.requiresSpaceConfirmation === "boolean" && typeof value.estimateIncomplete === "boolean" &&
-  Array.isArray(value.volumes) && value.volumes.every(volume =>
-    typeof volume.volumeId === "string" && Array.isArray(volume.paths) && volume.paths.every(path => typeof path === "string") &&
-    [volume.availableBytes, volume.totalBytes, volume.minimumFreeBytes, volume.usableBytes].every(measured) &&
-    (volume.estimatedAdditionalBytes == null || measured(volume.estimatedAdditionalBytes)) &&
-    typeof volume.exceedsUsable === "boolean" && typeof volume.estimateIncomplete === "boolean");
+const validCapacity = (
+  value: Pick<LocalBatchPreview, "volumes" | "requiresSpaceConfirmation" | "estimateIncomplete">,
+) =>
+  typeof value.requiresSpaceConfirmation === "boolean" &&
+  typeof value.estimateIncomplete === "boolean" &&
+  Array.isArray(value.volumes) &&
+  value.volumes.every(
+    (volume) =>
+      typeof volume.volumeId === "string" &&
+      Array.isArray(volume.paths) &&
+      volume.paths.every((path) => typeof path === "string") &&
+      [volume.availableBytes, volume.totalBytes, volume.minimumFreeBytes, volume.usableBytes].every(
+        measured,
+      ) &&
+      (volume.estimatedAdditionalBytes == null || measured(volume.estimatedAdditionalBytes)) &&
+      typeof volume.exceedsUsable === "boolean" &&
+      typeof volume.estimateIncomplete === "boolean",
+  );
 const validPreview = (value: LocalBatchPreview, ids: number[]) =>
   !!value.previewToken &&
   !!parseServerTime(value.expiresAt) &&
@@ -87,23 +150,24 @@ export default function AcquisitionLocalBatchModal({
   automatic = false,
   onOpenQueue,
   onShowDownloads,
-  onShowAdaptive,
+  onOpenTask,
   initialSelection,
   onSelectionChange,
-}: DestroyableProps & AcquisitionContinuationNavigation & {
-  taskIds?: number[];
-  scopeLabel?: string;
-  onChanged?: () => void;
-  onShowContinuationHistory?: () => void;
-  initialBatchId?: string;
-  onBackToSelection?: () => void;
-  automatic?: boolean;
-  onOpenQueue?: (queue: QueueReference) => void;
-  onShowDownloads?: () => void;
-  onShowAdaptive?: () => void;
-  initialSelection?: LocalBatchSelection;
-  onSelectionChange?: (selection: LocalBatchSelection) => void;
-}) {
+}: DestroyableProps &
+  AcquisitionContinuationNavigation & {
+    taskIds?: number[];
+    scopeLabel?: string;
+    onChanged?: () => void;
+    onShowContinuationHistory?: () => void;
+    initialBatchId?: string;
+    onBackToSelection?: () => void;
+    automatic?: boolean;
+    onOpenQueue?: (queue: QueueReference) => void;
+    onShowDownloads?: () => void;
+    onOpenTask?: (id: number) => void;
+    initialSelection?: LocalBatchSelection;
+    onSelectionChange?: (selection: LocalBatchSelection) => void;
+  }) {
   const { t } = useTranslation();
   const captured = useRef([
     ...new Set((taskIds ?? []).filter((id) => Number.isSafeInteger(id) && id > 0)),
@@ -122,10 +186,14 @@ export default function AcquisitionLocalBatchModal({
   const [error, setError] = useState<"preview" | "list" | "refresh" | "create" | "command">();
   const [errorCode, setErrorCode] = useState<string>();
   const [now, setNow] = useState(Date.now());
-  const [selectedActions, setSelectedActions] = useState<Set<ActionCategory>>(new Set());
-  const [excludedTasks, setExcludedTasks] = useState<Set<number>>(new Set());
+  const [selection, setSelection] = useState<LocalBatchSelection>({});
+  const [maxIterations, setMaxIterations] = useState(3);
   const [previewPage, setPreviewPage] = useState(1);
-  const [capacityResult, setCapacityResult] = useState<{ key: string; value: LocalBatchCapacity }>();
+  const [reasonFilter, setReasonFilter] = useState(allPreviewRows);
+  const [capacityResult, setCapacityResult] = useState<{
+    key: string;
+    value: LocalBatchCapacity;
+  }>();
   const [capacityError, setCapacityError] = useState<string>();
   const [capacityRetry, setCapacityRetry] = useState(0);
   const retainedSelection = useRef(initialSelection);
@@ -144,6 +212,15 @@ export default function AcquisitionLocalBatchModal({
   const labelBytes = (value?: number | null) =>
     measured(value) ? bytesToSize(value) : t("acquisition.size.unknown");
   const reason = (code?: string | null) => localBatchReasonLabel(t, code);
+  const rowHint = (row: PreviewRow) => {
+    if (row.reasonCode === "LOCAL_BATCH_READY") {
+      if (row.recoveryAction === "verifyAndResume")
+        return t(resumesOriginalDownload(row) ? "acquisition.continueActions.verifyDownloadHint" : "acquisition.continueActions.verifyStepHint");
+      if (row.actionCategory === "workflow")
+        return t(resumesOriginalDownload(row) ? "acquisition.continueActions.originalDownloadHint" : "acquisition.recovery.reason.CONTINUATION_READY");
+    }
+    return reason(row.reasonCode);
+  };
   const reportError = (kind: typeof error, failure: unknown) => {
     setError(kind);
     setErrorCode(
@@ -152,46 +229,76 @@ export default function AcquisitionLocalBatchModal({
         : undefined,
     );
   };
-  const loadPreview = useCallback(async (refresh = false) => {
-    if (mutation.current) return;
-    const sequence = ++requestSequence.current;
-    setLoading(true);
-    setPreview(undefined);
-    setReserveChoice(undefined);
-    setSelectedActions(new Set());
-    setExcludedTasks(new Set());
-    setPreviewPage(1);
-    setError(undefined);
-    setErrorCode(undefined);
-    try {
-      if (captured.current.length > localBatchSelectionLimit) return;
-      if (refresh || !initialPreview.current) {
-        previewController.current?.abort();
-        previewController.current = new AbortController();
-        initialPreview.current = automatic
-          ? acquisitionLocalBatchApi.preview(captured.current, previewController.current.signal, "automatic")
-          : acquisitionLocalBatchApi.preview(captured.current, previewController.current.signal);
+  const loadPreview = useCallback(
+    async (refresh = false) => {
+      if (mutation.current) return;
+      const sequence = ++requestSequence.current;
+      setLoading(true);
+      setPreview(undefined);
+      setReserveChoice(undefined);
+      setSelection({});
+      setPreviewPage(1);
+      setReasonFilter(allPreviewRows);
+      setError(undefined);
+      setErrorCode(undefined);
+      try {
+        if (captured.current.length > localBatchSelectionLimit) return;
+        if (refresh || !initialPreview.current) {
+          previewController.current?.abort();
+          previewController.current = new AbortController();
+          initialPreview.current = automatic
+            ? acquisitionLocalBatchApi.preview(
+                captured.current,
+                previewController.current.signal,
+                "automatic",
+                maxIterations,
+              )
+            : acquisitionLocalBatchApi.preview(captured.current, previewController.current.signal);
+        }
+        const next = await initialPreview.current;
+        if (!alive.current || requestSequence.current !== sequence) return;
+        if (!validPreview(next, captured.current)) throw new Error("LOCAL_BATCH_PREVIEW_INVALID");
+        if (
+          automatic &&
+          next.rows.some(
+            (row) =>
+              typeof row.canOverrideStorage !== "boolean" ||
+              !Array.isArray(row.availableActions) ||
+              row.availableActions.some((action) => typeof action !== "string" || !action.trim()) ||
+              (row.queue != null &&
+                (typeof row.queue.batchId !== "string" ||
+                  !row.queue.batchId ||
+                  !["localQueue", "continuation"].includes(row.queue.kind) ||
+                  typeof row.queue.canRequeue !== "boolean")),
+          )
+        )
+          throw new Error("LOCAL_BATCH_PREVIEW_INVALID");
+        setPreview(next);
+        if (automatic) {
+          const nextSelection: LocalBatchSelection = {};
+          for (const row of next.rows) {
+            const retained = retainedSelection.current;
+            const previous = retained?.[row.taskId];
+            if (previous && supportsAction(row, previous) && (!refresh || previous === "continue"))
+              nextSelection[row.taskId] = previous;
+            else if (
+              (!retained || previous) &&
+              row.defaultAction === "continue" &&
+              supportsAction(row, "continue")
+            )
+              nextSelection[row.taskId] = "continue";
+          }
+          setSelection(nextSelection);
+        }
+        setNow(Date.now());
+      } catch (failure) {
+        if (alive.current && requestSequence.current === sequence) reportError("preview", failure);
+      } finally {
+        if (alive.current && requestSequence.current === sequence) setLoading(false);
       }
-      const next = await initialPreview.current;
-      if (!alive.current || requestSequence.current !== sequence) return;
-      if (!validPreview(next, captured.current)) throw new Error("LOCAL_BATCH_PREVIEW_INVALID");
-      if (automatic && next.rows.some(row => typeof row.canOverrideStorage !== "boolean" ||
-        (row.queue != null && (typeof row.queue.batchId !== "string" || !row.queue.batchId ||
-          !["localQueue", "continuation"].includes(row.queue.kind) || typeof row.queue.canRequeue !== "boolean"))))
-        throw new Error("LOCAL_BATCH_PREVIEW_INVALID");
-      setPreview(next);
-      const available = next.rows.filter(row => row.canQueue && isKnownAction(row.actionCategory))
-        .map(row => row.actionCategory as ActionCategory);
-      setSelectedActions(new Set(retainedSelection.current
-        ? retainedSelection.current.actions.filter(isKnownAction).filter(action => available.includes(action)) : available));
-      setExcludedTasks(new Set(retainedSelection.current?.excludedTaskIds ?? []));
-      setNow(Date.now());
-    } catch (failure) {
-      if (alive.current && requestSequence.current === sequence) reportError("preview", failure);
-    } finally {
-      if (alive.current && requestSequence.current === sequence) setLoading(false);
-    }
-  }, [automatic]);
+    },
+    [automatic, maxIterations],
+  );
   const loadList = useCallback(async () => {
     if (mutation.current) return;
     const sequence = ++requestSequence.current;
@@ -278,60 +385,151 @@ export default function AcquisitionLocalBatchModal({
   }, [mode, batch?.batchId, batch?.status, visible]);
   useEffect(() => {
     if (!automatic || !preview) return;
-    const next = { actions: [...selectedActions], excludedTaskIds: [...excludedTasks] };
-    retainedSelection.current = next;
-    onSelectionChange?.(next);
-  }, [automatic, preview, selectedActions, excludedTasks, onSelectionChange]);
+    retainedSelection.current = selection;
+    onSelectionChange?.(selection);
+  }, [automatic, preview, selection, onSelectionChange]);
   const rows = preview?.rows ?? [];
-  const continuable = rows.filter((row) => row.canQueue === true && (!automatic || isKnownAction(row.actionCategory)));
-  const availableActions = actionCategories.filter(action => continuable.some(row => row.actionCategory === action));
-  const eligible = continuable.filter(row => !automatic ||
-    selectedActions.has(row.actionCategory as ActionCategory) && !excludedTasks.has(row.taskId));
-  const selectedTaskIds = new Set(eligible.map(row => row.taskId));
-  const overrideRows = eligible.filter(row => !automatic || row.canOverrideStorage);
-  const selectedIdsKey = JSON.stringify([...selectedTaskIds].sort((a, b) => a - b));
+  const blockedReasons = new Map<string, number>();
+  if (automatic) {
+    for (const row of rows) {
+      if (!supportsAction(row, "continue"))
+        blockedReasons.set(row.reasonCode, (blockedReasons.get(row.reasonCode) ?? 0) + 1);
+    }
+  }
+  const visibleRows =
+    reasonFilter === allPreviewRows
+      ? rows
+      : rows.filter((row) => !supportsAction(row, "continue") && row.reasonCode === reasonFilter);
+  const offered = new Set(rows.flatMap((row) => row.availableActions ?? []));
+  const columns = [
+    ...preferredActionOrder.filter((action) => action === "continue" || offered.has(action)),
+    ...[...offered].filter((action) => !preferredActionOrder.includes(action)).sort(),
+  ];
+  const actionableCount = rows.filter((row) => row.availableActions?.length).length;
+  const operationLabel = (action: string) => {
+    const key = `acquisition.continueActions.operation.${action}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+    const words = action
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[._:-]+/g, " ")
+      .trim();
+    return words.charAt(0).toUpperCase() + words.slice(1);
+  };
+  const eligible = rows.filter((row) => {
+    if (!automatic) return row.canQueue;
+    const action = selection[row.taskId];
+    return action && supportsAction(row, action);
+  });
+  const overrideRows = eligible.filter(
+    (row) => !automatic || (selection[row.taskId] === "continue" && row.canOverrideStorage),
+  );
+  const requestKey = JSON.stringify(
+    eligible.map((row) => ({
+      taskId: row.taskId,
+      action: automatic ? selection[row.taskId] : undefined,
+    })),
+  );
   const supportsReserveMode = typeof preview?.useEmergencySpaceReserve === "boolean";
   const globalLowered = preview?.useEmergencySpaceReserve === true;
-  const configuredMinimum = preview?.configuredMinimumFreeBytes ?? preview?.volumes[0]?.minimumFreeBytes;
+  const configuredMinimum =
+    preview?.configuredMinimumFreeBytes ?? preview?.volumes[0]?.minimumFreeBytes;
   const lowered = reserveChoice ?? globalLowered;
-  const reserveMode: StorageReserveMode = lowered === globalLowered || !overrideRows.length
-    ? "inherit" : lowered ? "emergency" : "configured";
+  const reserveMode: StorageReserveMode =
+    lowered === globalLowered || (lowered && !overrideRows.length)
+      ? "inherit"
+      : lowered
+        ? "emergency"
+        : "configured";
   const capacityMode = supportsReserveMode ? reserveMode : undefined;
   const measureSelection = automatic || (supportsReserveMode && reserveMode !== "inherit");
-  const capacityKey = JSON.stringify([preview?.previewToken, selectedIdsKey, capacityMode]);
-  const capacity = measureSelection ? capacityResult?.key === capacityKey ? capacityResult.value : undefined : preview;
+  const capacityKey = JSON.stringify([preview?.previewToken, requestKey, capacityMode]);
+  const capacity = measureSelection
+    ? capacityResult?.key === capacityKey
+      ? capacityResult.value
+      : undefined
+    : preview;
   const waitingForCapacity = measureSelection && !!preview && !!eligible.length && !capacity;
   useEffect(() => {
     if (!measureSelection || mode !== "preview" || !preview || !eligible.length) return;
     let cancelled = false;
     const controller = new AbortController();
-    const ids: number[] = JSON.parse(selectedIdsKey);
+    const choices: { taskId: number; action: string }[] = JSON.parse(requestKey);
+    const ids = choices.map((choice) => choice.taskId);
     setCapacityError(undefined);
     const timer = setTimeout(() => {
-      void acquisitionLocalBatchApi.capacity(preview.previewToken, ids, controller.signal, capacityMode).then(value => {
-        if (cancelled || !alive.current) return;
-        if (value.previewToken !== preview.previewToken || !Array.isArray(value.taskIds) ||
-          value.taskIds.length !== ids.length || new Set(value.taskIds).size !== ids.length ||
-          value.taskIds.some(id => !ids.includes(id)) || !validCapacity(value))
-          throw new Error("LOCAL_BATCH_CAPACITY_INVALID");
-        setCapacityResult({ key: capacityKey, value });
-        setCapacityError(undefined);
-      }).catch(() => { if (!cancelled && alive.current) setCapacityError(capacityKey); });
+      void acquisitionLocalBatchApi
+        .capacity(
+          preview.previewToken,
+          ids,
+          controller.signal,
+          capacityMode,
+          automatic ? choices : undefined,
+        )
+        .then((value) => {
+          if (cancelled || !alive.current) return;
+          if (
+            value.previewToken !== preview.previewToken ||
+            !Array.isArray(value.taskIds) ||
+            value.taskIds.length !== ids.length ||
+            new Set(value.taskIds).size !== ids.length ||
+            value.taskIds.some((id) => !ids.includes(id)) ||
+            (automatic &&
+              (!Array.isArray(value.selections) ||
+                value.selections.length !== choices.length ||
+                choices.some(
+                  (choice) =>
+                    !value.selections?.some(
+                      (item) => item.taskId === choice.taskId && item.action === choice.action,
+                    ),
+                ))) ||
+            !validCapacity(value)
+          )
+            throw new Error("LOCAL_BATCH_CAPACITY_INVALID");
+          setCapacityResult({ key: capacityKey, value });
+          setCapacityError(undefined);
+        })
+        .catch(() => {
+          if (!cancelled && alive.current) setCapacityError(capacityKey);
+        });
     }, 250);
-    return () => { cancelled = true; clearTimeout(timer); controller.abort(); };
-  }, [measureSelection, mode, preview?.previewToken, selectedIdsKey, capacityRetry, capacityMode]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    measureSelection,
+    mode,
+    preview?.previewToken,
+    requestKey,
+    capacityRetry,
+    capacityMode,
+    automatic,
+  ]);
   const showOverride =
-    configuredMinimum != null && configuredMinimum > emergencyReserveBytes &&
-    overrideRows.length > 0 && (globalLowered || reserveChoice != null || capacity?.requiresSpaceConfirmation ||
-      capacity?.estimateIncomplete || overrideRows.some(row => row.actionCategory === "workflow"));
+    configuredMinimum != null &&
+    configuredMinimum > emergencyReserveBytes &&
+    (overrideRows.length > 0 || (globalLowered && eligible.length > 0)) &&
+    (globalLowered ||
+      reserveChoice != null ||
+      capacity?.requiresSpaceConfirmation ||
+      capacity?.estimateIncomplete ||
+      overrideRows.some((row) => row.actionCategory === "workflow"));
   const expired = !!preview && millisecondsUntil(preview.expiresAt, now) <= 0;
   const consumed = !!preview && attempted.current.has(preview.previewToken);
-  const locked = loading || busy || !preview || expired || consumed || !eligible.length || waitingForCapacity;
   const selectionLocked = loading || busy || !preview || expired || consumed;
-  const allSelected = continuable.length > 0 && eligible.length === continuable.length;
-  const selectAll = (checked: boolean) => {
-    setSelectedActions(new Set(checked ? availableActions : []));
-    setExcludedTasks(new Set());
+  const locked = selectionLocked || !eligible.length || waitingForCapacity;
+  const selectAction = (action: string, targets: PreviewRow[], checked: boolean) => {
+    setSelection((previous) => {
+      const next = { ...previous };
+      for (const row of targets) {
+        if (!supportsAction(row, action)) continue;
+        if (checked) next[row.taskId] = action;
+        else if (next[row.taskId] === action) delete next[row.taskId];
+      }
+      return next;
+    });
     setReserveChoice(undefined);
   };
   const submit = async () => {
@@ -341,12 +539,21 @@ export default function AcquisitionLocalBatchModal({
     setBusy(true);
     setError(undefined);
     try {
-      const next = await acquisitionLocalBatchApi.create(
+      const createArgs = [
         preview.previewToken,
         eligible.map((row) => row.taskId),
         reserveMode === "emergency",
         capacityMode,
-      );
+      ] as const;
+      const next = automatic
+        ? await acquisitionLocalBatchApi.create(
+            ...createArgs,
+            eligible.map((row) => ({
+              taskId: row.taskId,
+              action: selection[row.taskId]!,
+            })),
+          )
+        : await acquisitionLocalBatchApi.create(...createArgs);
       if (alive.current) {
         ++queueGeneration.current;
         currentBatch.current = next;
@@ -408,9 +615,19 @@ export default function AcquisitionLocalBatchModal({
       visible={visible}
       size="5xl"
       scrollBehavior="inside"
-      title={t(automatic ? mode === "preview" ? "acquisition.continue.title" : "acquisition.continueMode.queueTitle" : continuationScope
-        ? mode === "preview" ? "acquisition.continueMode.title" : "acquisition.continueMode.queueTitle"
-        : mode === "preview" ? "acquisition.localBatch.title" : "acquisition.localBatch.openQueue")}
+      title={t(
+        automatic
+          ? mode === "preview"
+            ? "acquisition.continue.title"
+            : "acquisition.continueMode.queueTitle"
+          : continuationScope
+            ? mode === "preview"
+              ? "acquisition.continueMode.title"
+              : "acquisition.continueMode.queueTitle"
+            : mode === "preview"
+              ? "acquisition.localBatch.title"
+              : "acquisition.localBatch.openQueue",
+      )}
       onClose={close}
       onDestroyed={onDestroyed}
       isDismissable={!busy}
@@ -431,7 +648,9 @@ export default function AcquisitionLocalBatchModal({
               {t(
                 reserveMode === "emergency" && showOverride
                   ? "acquisition.localBatch.confirmOverride"
-                  : automatic ? "acquisition.continueActions.confirm" : "acquisition.localBatch.confirm",
+                  : automatic
+                    ? "acquisition.continueActions.confirm"
+                    : "acquisition.localBatch.confirm",
                 { count: eligible.length },
               )}
             </Button>
@@ -489,36 +708,62 @@ export default function AcquisitionLocalBatchModal({
         </div>
       }
     >
-      {onBackToSelection && <Button size="sm" variant="light" className="self-start" isDisabled={busy}
-        onPress={onBackToSelection}>{t("acquisition.continueActions.back")}</Button>}
-      {mode === "preview" && !automatic && continuationScope && onContinuationScopeChange &&
-        <AcquisitionContinueScopeSelect value={continuationScope} disabled={busy}
-          onChange={scope => { if (!mutation.current) onContinuationScopeChange(scope); }} />}
-      {automatic && mode === "preview" && (
-        <AcquisitionContinuationMethodTabs value="automatic" disabled={busy} adaptiveDisabled={!onShowAdaptive} onSwitch={onShowAdaptive} />
+      {onBackToSelection && (
+        <Button
+          size="sm"
+          variant="light"
+          className="self-start"
+          isDisabled={busy}
+          onPress={onBackToSelection}
+        >
+          {t("acquisition.continueActions.back")}
+        </Button>
+      )}
+      {mode === "preview" && !automatic && continuationScope && onContinuationScopeChange && (
+        <AcquisitionContinueScopeSelect
+          value={continuationScope}
+          disabled={busy}
+          onChange={(scope) => {
+            if (!mutation.current) onContinuationScopeChange(scope);
+          }}
+        />
       )}
       {scopeLabel && mode === "preview" && <p className="text-xs text-default-500">{scopeLabel}</p>}
-      {automatic && mode === "preview" && <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-        <p className="text-default-500">{t("acquisition.continueActions.hint")}</p>
-        {onShowDownloads && <Button size="sm" variant="light" isDisabled={busy} onPress={onShowDownloads}>
-          {t("acquisition.continueActions.downloadsOnly")}
-        </Button>}
-      </div>}
-      {automatic && mode === "preview" && !preview && <Checkbox size="sm"
-        aria-label={t("acquisition.continueActions.all")} isDisabled isSelected={false}>
-        {t("acquisition.continueActions.all")}
-      </Checkbox>}
-      {onShowContinuationHistory && <div className="flex justify-end">
-        <Button size="sm" variant="flat" isDisabled={busy} onPress={() => {
-          if (!mutation.current) onShowContinuationHistory();
-        }}>{t("acquisition.continueMode.otherHistory")}</Button>
-      </div>}
-      {mode === "preview" && captured.current.length > localBatchSelectionLimit &&
+      {automatic && mode === "preview" && (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <p className="text-default-500">{t("acquisition.continueActions.hint")}</p>
+          {onShowDownloads && (
+            <Button size="sm" variant="light" isDisabled={busy} onPress={onShowDownloads}>
+              {t("acquisition.continueActions.downloadsOnly")}
+            </Button>
+          )}
+        </div>
+      )}
+      {onShowContinuationHistory && (
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant="flat"
+            isDisabled={busy}
+            onPress={() => {
+              if (!mutation.current) onShowContinuationHistory();
+            }}
+          >
+            {t("acquisition.continueMode.otherHistory")}
+          </Button>
+        </div>
+      )}
+      {mode === "preview" && captured.current.length > localBatchSelectionLimit && (
         <p role="alert" className="rounded-lg bg-warning-50 p-3 text-sm text-warning-700">
-          {t(automatic ? "acquisition.continueActions.limit" : "acquisition.continueMode.localLimit", { count: captured.current.length, limit: localBatchSelectionLimit })}
-        </p>}
-      {!automatic && (!continuationScope || mode !== "preview") &&
-        <p className="text-xs text-default-500">{t("acquisition.localBatch.explanation")}</p>}
+          {t(
+            automatic ? "acquisition.continueActions.limit" : "acquisition.continueMode.localLimit",
+            { count: captured.current.length, limit: localBatchSelectionLimit },
+          )}
+        </p>
+      )}
+      {!automatic && (!continuationScope || mode !== "preview") && (
+        <p className="text-xs text-default-500">{t("acquisition.localBatch.explanation")}</p>
+      )}
       {error && (
         <div role="alert" className="space-y-2 text-sm text-danger">
           <p>{t(`acquisition.localBatch.error.${error}`)}</p>
@@ -546,45 +791,34 @@ export default function AcquisitionLocalBatchModal({
       {loading && (mode !== "queue" || !batch) ? (
         <div className="flex min-h-48 flex-col items-center justify-center gap-3">
           <Spinner aria-label={t("acquisition.localBatch.loading")} />
-          <p className="text-xs text-default-500">{t("acquisition.localBatch.previewOnly")}</p>
+          <p className="text-center text-xs text-default-500">
+            {automatic
+              ? t("acquisition.continueActions.previewing", { count: captured.current.length })
+              : t("acquisition.localBatch.previewOnly")}
+          </p>
         </div>
       ) : mode === "preview" && preview ? (
         <>
-          {automatic && <div className="space-y-2 rounded-lg border border-default-200 p-3">
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-              <Checkbox size="sm" aria-label={t("acquisition.continueActions.all")}
-                isSelected={allSelected} isIndeterminate={eligible.length > 0 && !allSelected}
-                isDisabled={selectionLocked || !continuable.length} onValueChange={selectAll}>
-                {t("acquisition.continueActions.all")}
-              </Checkbox>
-              {availableActions.map(action => {
-                const actionRows = continuable.filter(row => row.actionCategory === action);
-                const count = actionRows.filter(row => selectedTaskIds.has(row.taskId)).length;
-                return <Checkbox key={action} size="sm" aria-label={t(`acquisition.continueActions.category.${action}`)}
-                  isSelected={count === actionRows.length} isIndeterminate={count > 0 && count < actionRows.length}
-                  isDisabled={selectionLocked} onValueChange={checked => {
-                    setSelectedActions(previous => {
-                      const next = new Set(previous); if (checked) next.add(action); else next.delete(action); return next;
-                    });
-                    setExcludedTasks(previous => new Set([...previous].filter(id => !actionRows.some(row => row.taskId === id))));
-                    setReserveChoice(undefined);
-                  }}>
-                  {t(`acquisition.continueActions.category.${action}`)} · {actionRows.length}
-                </Checkbox>;
-              })}
-            </div>
-            <p className="text-xs text-default-500">{t("acquisition.continueActions.selectionHint")}</p>
-          </div>}
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex gap-2">
               <Chip size="sm" variant="flat">
                 {t("acquisition.localBatch.selected", { count: captured.current.length })}
               </Chip>
               <Chip size="sm" variant="flat" color="success">
-                {t("acquisition.localBatch.eligible", { count: eligible.length })}
+                {t(
+                  automatic
+                    ? "acquisition.continueActions.matrix.selected"
+                    : "acquisition.localBatch.eligible",
+                  { count: eligible.length },
+                )}
               </Chip>
               <Chip size="sm" variant="flat">
-                {t("acquisition.localBatch.skipped", { count: rows.length - eligible.length })}
+                {t(
+                  automatic
+                    ? "acquisition.continueActions.matrix.unavailable"
+                    : "acquisition.localBatch.skipped",
+                  { count: rows.length - (automatic ? actionableCount : eligible.length) },
+                )}
               </Chip>
             </div>
             <Button
@@ -596,20 +830,306 @@ export default function AcquisitionLocalBatchModal({
               {t("acquisition.localBatch.refreshPreview")}
             </Button>
           </div>
+          {automatic && !eligible.length && (
+            <p role="status" className="rounded-lg bg-default-50 p-3 text-sm text-default-600">
+              {t(
+                actionableCount > 0
+                  ? "acquisition.continueActions.noSelectionHint"
+                  : "acquisition.continueActions.noEligibleHint",
+              )}
+            </p>
+          )}
+          {automatic && blockedReasons.size > 0 && (
+            <Select
+              size="sm"
+              className="max-w-lg"
+              aria-label={t("acquisition.continueActions.reasonFilter.label")}
+              label={t("acquisition.continueActions.reasonFilter.label")}
+              disallowEmptySelection
+              isDisabled={busy}
+              selectedKeys={[reasonFilter]}
+              dataSource={[
+                {
+                  value: allPreviewRows,
+                  label: t("acquisition.continueActions.reasonFilter.all", { count: rows.length }),
+                },
+                ...[...blockedReasons.entries()]
+                  .sort((left, right) => right[1] - left[1])
+                  .map(([code, count]) => ({
+                    value: code,
+                    label: t("acquisition.continueActions.reasonFilter.reason", {
+                      count,
+                      reason: reason(code),
+                    }),
+                  })),
+              ]}
+              onSelectionChange={(keys) => {
+                const next = Array.from(keys)[0];
+                if (
+                  typeof next !== "string" ||
+                  (next !== allPreviewRows && !blockedReasons.has(next))
+                )
+                  return;
+                setReasonFilter(next);
+                setPreviewPage(1);
+              }}
+            />
+          )}
           {expired && (
             <p role="alert" className="text-sm text-warning-600">
               {t("acquisition.localBatch.expired")}
             </p>
           )}
+          {automatic && columns.includes("reanalyze") && (
+            <Select
+              size="sm"
+              className="max-w-xs"
+              label={t("acquisition.adaptive.iterations")}
+              aria-label={t("acquisition.adaptive.iterations")}
+              disallowEmptySelection
+              selectedKeys={[String(maxIterations)]}
+              isDisabled={selectionLocked}
+              dataSource={[1, 2, 3, 4, 5].map((count) => ({
+                value: String(count),
+                label: String(count),
+              }))}
+              onSelectionChange={(keys) => {
+                const count = Number(Array.from(keys)[0]);
+                if (!Number.isInteger(count) || count < 1 || count > 5 || count === maxIterations)
+                  return;
+                initialPreview.current = undefined;
+                setMaxIterations(count);
+              }}
+            />
+          )}
+          <div className="overflow-x-auto rounded-lg border border-default-200">
+            <table className="w-full border-collapse text-left text-xs">
+              {automatic && (
+                <thead className="border-b border-default-200 bg-default-100 text-default-700">
+                  <tr>
+                    <th scope="col" className="p-2.5">
+                      {t("acquisition.continueActions.matrix.task")}
+                    </th>
+                    <th scope="col" className="p-2.5 text-right">
+                      {t("acquisition.continueActions.matrix.size")}
+                    </th>
+                    {columns.map((action) => {
+                      const targets = visibleRows.filter((row) => supportsAction(row, action));
+                      const count = targets.filter(
+                        (row) => selection[row.taskId] === action,
+                      ).length;
+                      return (
+                        <th
+                          key={action}
+                          scope="col"
+                          className="w-px whitespace-nowrap px-3 py-2.5 text-center"
+                        >
+                          <Checkbox
+                            size="sm"
+                            aria-label={operationLabel(action)}
+                            isSelected={targets.length > 0 && count === targets.length}
+                            isIndeterminate={count > 0 && count < targets.length}
+                            isDisabled={selectionLocked || !targets.length}
+                            onValueChange={(checked) => selectAction(action, targets, checked)}
+                          >
+                            {operationLabel(action)}
+                          </Checkbox>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+              )}
+              <tbody className="divide-y divide-default-200">
+                {(automatic
+                  ? visibleRows.slice(
+                      (previewPage - 1) * previewPageSize,
+                      previewPage * previewPageSize,
+                    )
+                  : visibleRows
+                ).map((row, index) => (
+                  <tr
+                    key={row.taskId}
+                    data-testid={`continuation-task-${row.taskId}`}
+                    className={automatic && !selection[row.taskId] ? "bg-default-50" : ""}
+                  >
+                    <td className="min-w-48 space-y-1 p-2.5 align-top">
+                      <p className="break-words text-sm">
+                        {!automatic && <span className="mr-3 text-default-400">{index + 1}</span>}
+                        <span className="mr-2 text-default-500">#{row.taskId}</span>
+                        {row.title}
+                      </p>
+                      {automatic && (
+                        <p
+                          className={
+                            selection[row.taskId]
+                              ? "font-medium text-foreground"
+                              : "text-default-500"
+                          }
+                        >
+                          {selection[row.taskId] && selection[row.taskId] !== "continue"
+                            ? operationLabel(selection[row.taskId]!)
+                            : t(actionLabel(row))}
+                          {row.currentStepKind && (
+                            <span className="ml-2 font-normal">
+                              {activityDisplayName(t, row.currentStepKind)}
+                            </span>
+                          )}
+                          {row.defaultAction && !selection[row.taskId] && (
+                            <span className="ml-2">
+                              {t("acquisition.continueActions.excluded")}
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      <p className={row.canQueue ? "text-default-500" : "text-warning-600"}>
+                        {rowHint(row)}
+                      </p>
+                      {automatic && selection[row.taskId] === "retryTransfer" && (
+                        <p className="text-default-600">
+                          {t("acquisition.continueActions.transferRetry.hint")}
+                        </p>
+                      )}
+                      {automatic &&
+                        !supportsAction(row, "continue") &&
+                        !row.queue &&
+                        onOpenTask && (
+                          <Button
+                            size="sm"
+                            variant="light"
+                            isDisabled={busy}
+                            onPress={() => {
+                              if (mutation.current) return;
+                              close();
+                              onOpenTask(row.taskId);
+                            }}
+                          >
+                            {t("acquisition.continueActions.openTask")}
+                          </Button>
+                        )}
+                      {automatic && row.queue && (
+                        <div className="flex flex-wrap items-center gap-2 rounded-md bg-default-100 p-2">
+                          <span className="break-all">
+                            {t("acquisition.continueActions.existingQueue", {
+                              id: row.queue.batchId.slice(0, 8),
+                            })}
+                          </span>
+                          <AcquisitionQueueStatusChip
+                            status={
+                              row.queue.kind === "localQueue"
+                                ? row.queue.status
+                                : row.queue.rowStatus
+                            }
+                          >
+                            {row.queue.kind === "localQueue"
+                              ? statusLabel(row.queue.status)
+                              : t(
+                                  `acquisition.continue.status.${["queued", "checking", "submitted", "attention", "skipped", "cancelled", "failed"].includes(row.queue.rowStatus) ? row.queue.rowStatus : "unknown"}`,
+                                )}
+                          </AcquisitionQueueStatusChip>
+                          {onOpenQueue && (
+                            <Button
+                              size="sm"
+                              variant="light"
+                              isDisabled={busy}
+                              onPress={() => onOpenQueue(row.queue!)}
+                            >
+                              {t("acquisition.continueActions.viewQueue")}
+                            </Button>
+                          )}
+                          <p className="w-full text-xs text-default-500">
+                            {t(
+                              row.queue.canRequeue
+                                ? "acquisition.continueActions.requeueHint"
+                                : ["paused", "spaceBlocked"].includes(row.queue.status)
+                                  ? "acquisition.continueActions.queueNotRunning"
+                                  : "acquisition.continueActions.queueOwned",
+                            )}
+                          </p>
+                        </div>
+                      )}
+                      {row.canQueue && (
+                        <Tooltip
+                          delay={1000}
+                          placement="bottom"
+                          content={
+                            <div className="max-w-lg break-all text-xs">
+                              <p>
+                                {t("acquisition.localBatch.workingDirectory")}:{" "}
+                                {row.workingDirectory ||
+                                  t("acquisition.localBatch.noProcessingDirectory")}
+                              </p>
+                              <p>
+                                {t("acquisition.localBatch.deliveryDirectory")}:{" "}
+                                {row.deliveryDirectory}
+                              </p>
+                            </div>
+                          }
+                        >
+                          <span className="cursor-help text-default-500 underline decoration-dotted">
+                            {t("acquisition.localBatch.paths")}
+                          </span>
+                        </Tooltip>
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap p-2.5 text-right align-top text-default-500">
+                      {labelBytes(row.estimatedBytes)}
+                      {row.estimatePartial && (
+                        <span className="block">{t("acquisition.size.partial.label")}</span>
+                      )}
+                    </td>
+                    {automatic &&
+                      columns.map((action) => (
+                        <td key={action} className="px-3 py-2.5 text-center align-top">
+                          {supportsAction(row, action) ? (
+                            <Checkbox
+                              size="sm"
+                              aria-label={t("acquisition.continueActions.matrix.taskAction", {
+                                id: row.taskId,
+                                action: operationLabel(action),
+                              })}
+                              isSelected={selection[row.taskId] === action}
+                              isDisabled={selectionLocked}
+                              onValueChange={(checked) => selectAction(action, [row], checked)}
+                            />
+                          ) : (
+                            <span className="text-default-400">—</span>
+                          )}
+                        </td>
+                      ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {automatic && visibleRows.length > previewPageSize && (
+            <Pagination
+              page={previewPage}
+              total={Math.ceil(visibleRows.length / previewPageSize)}
+              onChange={setPreviewPage}
+              isDisabled={busy}
+            />
+          )}
           <div className="space-y-2">
-            {waitingForCapacity && capacityError !== capacityKey && <div role="status" className="flex items-center gap-2 text-xs text-default-500">
-              <Spinner size="sm" />{t("acquisition.continueActions.capacityLoading")}
-            </div>}
-            {waitingForCapacity && capacityError === capacityKey && <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-danger">
-              {t("acquisition.continueActions.capacityFailed")}
-              <Button size="sm" variant="light" onPress={() => setCapacityRetry(value => value + 1)}>{t("common.action.retry")}</Button>
-            </div>}
-            {(automatic && !eligible.length ? [] : capacity?.volumes ?? []).map((volume) => (
+            {waitingForCapacity && capacityError !== capacityKey && (
+              <div role="status" className="flex items-center gap-2 text-xs text-default-500">
+                <Spinner size="sm" />
+                {t("acquisition.continueActions.capacityLoading")}
+              </div>
+            )}
+            {waitingForCapacity && capacityError === capacityKey && (
+              <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-danger">
+                {t("acquisition.continueActions.capacityFailed")}
+                <Button
+                  size="sm"
+                  variant="light"
+                  onPress={() => setCapacityRetry((value) => value + 1)}
+                >
+                  {t("common.action.retry")}
+                </Button>
+              </div>
+            )}
+            {(automatic && !eligible.length ? [] : (capacity?.volumes ?? [])).map((volume) => (
               <div
                 key={volume.volumeId}
                 className="rounded-lg border border-default-200 p-3 text-xs"
@@ -666,6 +1186,13 @@ export default function AcquisitionLocalBatchModal({
                     </p>
                   </Tooltip>
                 )}
+                {typeof volume.currentWritesExceedUsable === "boolean" && (
+                  <p className="mt-2 text-xs">
+                    {t(volume.currentWritesExceedUsable
+                      ? "acquisition.localBatch.space.checkpointInsufficient"
+                      : "acquisition.localBatch.space.checkpointGuard")}
+                  </p>
+                )}
                 {(volume.exceedsUsable || volume.estimateIncomplete) && (
                   <p className="mt-2 text-warning-600">
                     {t(
@@ -679,7 +1206,11 @@ export default function AcquisitionLocalBatchModal({
             ))}
           </div>
           <p className="text-xs text-default-500">
-            {t(automatic ? "acquisition.continueActions.capacityHint" : "acquisition.localBatch.space.estimationHint")}
+            {t(
+              automatic
+                ? "acquisition.continueActions.capacityHint"
+                : "acquisition.localBatch.space.estimationHint",
+            )}
           </p>
           {capacity?.estimateIncomplete && (
             <p role="status" className="text-xs text-warning-600">
@@ -688,99 +1219,20 @@ export default function AcquisitionLocalBatchModal({
           )}
           {showOverride && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <StorageReserveCheckbox scope="operation" minimumBytes={configuredMinimum!} selected={lowered}
-                disabled={busy || expired || consumed} onChange={setReserveChoice} />
-              {automatic && overrideRows.length !== eligible.length && (
+              <StorageReserveCheckbox
+                scope="operation"
+                minimumBytes={configuredMinimum!}
+                selected={lowered}
+                disabled={busy || expired || consumed}
+                onChange={setReserveChoice}
+              />
+              {automatic && !globalLowered && overrideRows.length !== eligible.length && (
                 <span className="text-xs text-default-500">
                   {t("acquisition.continueActions.overrideScope", { count: overrideRows.length })}
                 </span>
               )}
             </div>
           )}
-          <div className="divide-y divide-default-200 rounded-lg border border-default-200">
-            {(automatic ? rows.slice((previewPage - 1) * 20, previewPage * 20) : rows).map((row, index) => (
-              <div key={row.taskId} data-testid={`continuation-task-${row.taskId}`}
-                className={`flex items-start gap-3 p-2.5 text-xs ${automatic && !selectedTaskIds.has(row.taskId) ? "bg-default-50 text-default-400" : ""}`}>
-                <span className="w-6 shrink-0 text-default-400">{(automatic ? (previewPage - 1) * 20 : 0) + index + 1}</span>
-                {automatic && <Checkbox size="sm" className="shrink-0"
-                  aria-label={t("acquisition.recovery.selectTask", { id: row.taskId })}
-                  isSelected={selectedTaskIds.has(row.taskId)}
-                  isDisabled={selectionLocked || !row.canQueue || !isKnownAction(row.actionCategory) || !selectedActions.has(row.actionCategory)}
-                  onValueChange={checked => {
-                    setExcludedTasks(previous => { const next = new Set(previous); if (checked) next.delete(row.taskId); else next.add(row.taskId); return next; });
-                    setReserveChoice(undefined);
-                  }} />}
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="break-words text-sm">
-                    <span className="mr-2 text-default-500">#{row.taskId}</span>
-                    {row.title}
-                  </p>
-                  {automatic && <p className={selectedTaskIds.has(row.taskId) ? "font-medium text-foreground" : ""}>
-                    {t(isKnownAction(row.actionCategory)
-                      ? resumesOriginalDownload(row)
-                        ? "acquisition.continueActions.action.resumeDownload"
-                        : row.actionCategory === "localProcessing" && row.recoveryScope === "workflow"
-                        ? "acquisition.continueActions.action.resumeLocal"
-                        : `acquisition.continueActions.action.${row.actionCategory}`
-                      : "acquisition.continueActions.action.unavailable")}
-                    {row.currentStepKind && <span className="ml-2 font-normal">{activityDisplayName(t, row.currentStepKind)}</span>}
-                    {row.canQueue && !selectedTaskIds.has(row.taskId) && <span className="ml-2">{t("acquisition.continueActions.excluded")}</span>}
-                  </p>}
-                  <p className={row.canQueue ? "text-default-500" : "text-warning-600"}>
-                    {row.reasonCode === "LOCAL_BATCH_READY" && row.actionCategory === "workflow"
-                      ? t(resumesOriginalDownload(row)
-                        ? "acquisition.continueActions.originalDownloadHint"
-                        : "acquisition.recovery.reason.CONTINUATION_READY")
-                      : reason(row.reasonCode)}
-                  </p>
-                  {automatic && row.queue && <div className="flex flex-wrap items-center gap-2 rounded-md bg-default-100 p-2">
-                    <span className="break-all">{t("acquisition.continueActions.existingQueue", { id: row.queue.batchId.slice(0, 8) })}</span>
-                    <AcquisitionQueueStatusChip status={row.queue.kind === "localQueue" ? row.queue.status : row.queue.rowStatus}>
-                      {row.queue.kind === "localQueue" ? statusLabel(row.queue.status) :
-                        t(`acquisition.continue.status.${["queued", "checking", "submitted", "attention", "skipped", "cancelled", "failed"].includes(row.queue.rowStatus) ? row.queue.rowStatus : "unknown"}`)}
-                    </AcquisitionQueueStatusChip>
-                    {onOpenQueue && <Button size="sm" variant="light" isDisabled={busy} onPress={() => onOpenQueue(row.queue!)}>
-                      {t("acquisition.continueActions.viewQueue")}
-                    </Button>}
-                    <p className="w-full text-xs text-default-500">{t(row.queue.canRequeue
-                      ? "acquisition.continueActions.requeueHint"
-                      : ["paused", "spaceBlocked"].includes(row.queue.status)
-                        ? "acquisition.continueActions.queueNotRunning" : "acquisition.continueActions.queueOwned")}</p>
-                  </div>}
-                  {row.canQueue && (
-                    <Tooltip
-                      delay={1000}
-                      placement="bottom"
-                      content={
-                        <div className="max-w-lg break-all text-xs">
-                          <p>
-                            {t("acquisition.localBatch.workingDirectory")}:{" "}
-                            {row.workingDirectory ||
-                              t("acquisition.localBatch.noProcessingDirectory")}
-                          </p>
-                          <p>
-                            {t("acquisition.localBatch.deliveryDirectory")}: {row.deliveryDirectory}
-                          </p>
-                        </div>
-                      }
-                    >
-                      <span className="cursor-help text-default-500 underline decoration-dotted">
-                        {t("acquisition.localBatch.paths")}
-                      </span>
-                    </Tooltip>
-                  )}
-                </div>
-                <span className="shrink-0 text-right text-default-500">
-                  {labelBytes(row.estimatedBytes)}
-                  {row.estimatePartial && (
-                    <span className="block">{t("acquisition.size.partial.label")}</span>
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
-          {automatic && rows.length > 20 && <Pagination page={previewPage} total={Math.ceil(rows.length / 20)}
-            onChange={setPreviewPage} isDisabled={busy} />}
         </>
       ) : mode === "list" ? (
         <>
@@ -813,7 +1265,9 @@ export default function AcquisitionLocalBatchModal({
                   {parseServerTime(item.createdAt)?.toLocaleString()} ·{" "}
                   {t("acquisition.localBatch.selected", { count: item.rows.length })}
                 </span>
-                <AcquisitionQueueStatusChip status={item.status}>{statusLabel(item.status)}</AcquisitionQueueStatusChip>
+                <AcquisitionQueueStatusChip status={item.status}>
+                  {statusLabel(item.status)}
+                </AcquisitionQueueStatusChip>
               </Button>
             ))}
           </div>
@@ -821,7 +1275,9 @@ export default function AcquisitionLocalBatchModal({
       ) : mode === "queue" && batch ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <AcquisitionQueueStatusChip status={batch.status}>{statusLabel(batch.status)}</AcquisitionQueueStatusChip>
+            <AcquisitionQueueStatusChip status={batch.status}>
+              {statusLabel(batch.status)}
+            </AcquisitionQueueStatusChip>
             <Button
               size="sm"
               variant="light"
@@ -835,8 +1291,13 @@ export default function AcquisitionLocalBatchModal({
               {t("acquisition.localBatch.allQueues")}
             </Button>
           </div>
-          <p className="text-xs text-default-500">{t(batch.status === "spaceBlocked" || batch.status === "paused"
-            ? "acquisition.continueActions.queueNotRunning" : "acquisition.localBatch.backgroundHint")}</p>
+          <p className="text-xs text-default-500">
+            {t(
+              batch.status === "spaceBlocked" || batch.status === "paused"
+                ? "acquisition.continueActions.queueNotRunning"
+                : "acquisition.localBatch.backgroundHint",
+            )}
+          </p>
           <p className="text-xs text-default-500" aria-live="polite">
             {t("acquisition.localBatch.progress", {
               completed: batch.rows.filter((row) => row.status === "completed").length,
@@ -888,7 +1349,9 @@ export default function AcquisitionLocalBatchModal({
                   {row.reasonCode && <p className="text-default-500">{reason(row.reasonCode)}</p>}
                 </div>
                 <span className="shrink-0 text-right">
-                  <AcquisitionQueueStatusChip status={row.status}>{statusLabel(row.status, true)}</AcquisitionQueueStatusChip>
+                  <AcquisitionQueueStatusChip status={row.status}>
+                    {statusLabel(row.status, true)}
+                  </AcquisitionQueueStatusChip>
                   <span className="text-default-500">{labelBytes(row.estimatedBytes)}</span>
                 </span>
               </div>

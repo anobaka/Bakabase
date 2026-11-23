@@ -39,7 +39,7 @@ interface Props extends DestroyableProps {
 }
 const gib = 1024 ** 3;
 const defaultMinimumFreeSpaceBytes = 100 * gib;
-const defaultConcurrency = 2;
+const defaultConcurrency = 20;
 
 /** The setup endpoint updates only these fields and preserves unrelated acquisition defaults. */
 export default function AcquisitionSettingsModal({

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
@@ -101,6 +102,37 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Explicit_stage_cleanup_logs_only_the_reference_category_and_ids(bool sharedArtifact)
+    {
+        var logger = new CleanupDiagnosticLogger();
+        var f = await StageDeletion(logger);
+        var reference = "shared-artifact-owner:run:2";
+        if (sharedArtifact) await StageReferenceArtifact(f, "foreign");
+        else
+        {
+            var task = new AcquisitionTaskDbModel
+            {
+                Title = "Foreign task",
+                Status = AcquisitionStatus.Completed,
+                TargetDirectory = f.Processing
+            };
+            db.AcquisitionTasks.Add(task);
+            await db.SaveChangesAsync();
+            reference = $"task:{task.Id}:target";
+        }
+
+        var preview = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true, DeleteDeliveredFiles: true));
+        var processing = preview.Rows.Single().Cleanup!.Groups.Single(g => g.Directory == f.Processing);
+
+        Assert.AreEqual("ReferencedPath", processing.ReasonCode);
+        CollectionAssert.AreEqual(new[] {$"Acquisition cleanup retained task {f.Task.Id} stage processing due to reference {reference}"},
+            logger.Messages);
+        Assert.IsTrue(File.Exists(Path.Combine(f.Processing, "manual.key")));
+    }
+
+    [TestMethod]
     public async Task Task_cleanup_exception_does_not_change_stage_rebinding_ownership_rules()
     {
         var f = await StageDeletion();
@@ -148,6 +180,70 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             Assert.IsTrue(await db.DownloadResults.AnyAsync(r => r.DownloadTaskId == 88));
         }
         else Assert.IsTrue(File.Exists(file));
+    }
+
+    [DataTestMethod]
+    [DataRow("cancelled", true)]
+    [DataRow("running", false)]
+    [DataRow("changed-settings", false)]
+    [DataRow("foreign-file", false)]
+    [DataRow("foreign-destination", false)]
+    [DataRow("unbound-original-run", false)]
+    public async Task Historical_deletion_rechecks_a_sibling_capacity_root_against_the_frozen_storage(string scenario, bool eligible)
+    {
+        var f = await StageDeletion();
+        const int siblingId = 73;
+        var working = Path.GetDirectoryName(f.Processing)!;
+        var delivery = Path.Combine(root, "other-delivery");
+        var destination = Path.Combine(delivery, "sibling");
+        var legacy = new AcquisitionPlan {Title = "Sibling", OutputDirectory = Path.Combine(root, "other-download"),
+            Parts = [new() {Id = "part"}]};
+        var settings = new AcquisitionDeliverySettings {RootDirectory = delivery};
+        var current = legacy with {StoragePolicy = new() {ProcessingWorkspaceDirectory = working},
+            DeliveryLayout = new() {TaskId = siblingId, RootDirectory = delivery, TaskDirectory = destination,
+                Settings = settings, PartDirectories = new() {["part"] = destination}}};
+        var history = new[] {new AcquisitionPlanRevision(1, legacy, [], DateTime.UtcNow.AddDays(-1)),
+            new AcquisitionPlanRevision(2, current, [], DateTime.UtcNow, "continueFiles", 2)};
+        var storage = new AcquisitionLocalFilesStorage(current.StoragePolicy!, settings);
+        var queue = new AcquisitionLocalRecoveryQueueEntry {BatchId = Guid.NewGuid().ToString("N"), Signal = new string('a', 64),
+            Version = new string('b', 64), RecoveryScope = "localFiles", ActionCategory = "localProcessing", WorkflowRunId = 2,
+            PlanRevision = 1, WorkingDirectories = [working], DeliveryDirectories = [destination], Status = "running",
+            StorageStamp = AcquisitionLocalFilesRecoveryReceipt.Hash(storage)};
+        db.AcquisitionTasks.Add(new() {Id = siblingId, Title = "Sibling", WorkflowRunId = 3, PlanRevision = 2,
+            PlanJson = JsonSerializer.Serialize(current, Json), PlanHistoryJson = JsonSerializer.Serialize(history, Json),
+            BuilderStateJson = AcquisitionLocalRecoveryQueueEntry.Write(null, queue)});
+        var owners = db.Set<WorkflowRunSourceDbModel>();
+        if (scenario != "unbound-original-run")
+            owners.Add(new() {WorkflowRunId = 2, EntityId = siblingId.ToString(), EntityKind = "task", Module = "acquisition", Revision = "1"});
+        owners.Add(new() {WorkflowRunId = 3, EntityId = siblingId.ToString(), EntityKind = "task", Module = "acquisition", Revision = "2"});
+        await db.SaveChangesAsync(); db.ChangeTracker.Clear();
+
+        var initial = await f.Service.PreviewAsync(new([f.Task.Id], true, SkipFileVerification: true, DeleteDeliveredFiles: true));
+        Assert.AreEqual("ReferencedPath", initial.Rows.Single().Cleanup!.Groups.Single(g => g.Directory == f.Processing).ReasonCode);
+        await f.Service.DeleteAsync(new(initial.PreviewId, RemoveTaskIfCleanupFails: true));
+        Assert.IsFalse(Directory.Exists(f.Download));
+        Assert.IsFalse(Directory.Exists(f.Delivery));
+        Assert.IsTrue(File.Exists(Path.Combine(f.Processing, "manual.key")));
+
+        queue = queue with {Status = scenario == "running" ? "running" : "cancelled",
+            StorageStamp = scenario == "changed-settings" ? AcquisitionLocalFilesRecoveryReceipt.Hash(storage with
+                {Delivery = settings with {RootDirectory = Path.Combine(root, "new-root")}}) : queue.StorageStamp,
+            DeliveryDirectories = scenario == "foreign-destination" ? [f.Processing] : [destination]};
+        var sibling = AcquisitionLocalRecoveryQueueEntry.Write(scenario == "foreign-file" ?
+            JsonSerializer.Serialize(new {input = Path.Combine(f.Processing, "manual.key")}, Json) : null, queue);
+        await db.AcquisitionTasks.Where(t => t.Id == siblingId).ExecuteUpdateAsync(u => u.SetProperty(t => t.BuilderStateJson, sibling));
+        var preview = await f.Service.PreviewAsync(new([f.Task.Id], true, RetryRetainedFiles: true));
+        var group = preview.Rows.Single().Cleanup!.Groups.Single(g => g.Directory == f.Processing);
+        Assert.AreEqual(eligible, group.Eligible, group.ReasonCode);
+        if (eligible)
+        {
+            var result = await f.Service.DeleteAsync(new(preview.PreviewId, RetryRetainedFiles: true));
+            Assert.IsTrue(result.CleanupResults!.Single().Completed);
+            Assert.IsFalse(Directory.Exists(f.Processing));
+        }
+        else Assert.IsTrue(File.Exists(Path.Combine(f.Processing, "manual.key")));
+        Assert.IsTrue(Directory.Exists(working));
+        Assert.AreEqual(sibling, await db.AcquisitionTasks.Where(t => t.Id == siblingId).Select(t => t.BuilderStateJson).SingleAsync());
     }
 
     [DataTestMethod]

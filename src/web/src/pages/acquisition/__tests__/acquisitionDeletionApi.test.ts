@@ -47,3 +47,15 @@ it("propagates failed requests without automatically retrying deletion", async (
   await expect(api.remove("fixed", [1])).rejects.toThrow("DELETION_OUTCOME_UNKNOWN");
   expect(mocks.remove).toHaveBeenCalledTimes(1);
 });
+
+it("binds historical cleanup to the reviewed scopes and submits the server preview without new task IDs", async () => {
+  const signal = new AbortController().signal;
+  const scope = { cleanupFiles: true, deleteDeliveredFiles: false, retryRetainedFiles: true };
+  mocks.preview.mockResolvedValue({ code: 0, data: { previewId: "review" } });
+  await api.previewRetained([7, 9], scope, signal);
+  expect(mocks.preview).toHaveBeenCalledWith({ taskIds: [7, 9], ...scope },
+    { sensitiveResponse: true, showErrorToast: false, signal });
+  await api.remove("review", undefined, scope);
+  expect(mocks.remove).toHaveBeenCalledExactlyOnceWith({ previewId: "review", ...scope },
+    { sensitiveResponse: true, showErrorToast: false });
+});

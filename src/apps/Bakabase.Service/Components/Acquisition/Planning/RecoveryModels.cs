@@ -27,7 +27,8 @@ public sealed record AcquisitionRecoveryPreview(string PreviewToken, DateTimeOff
     int ContinuableCount, int ManualCount, IReadOnlyList<AcquisitionRecoveryRow> Rows, string Scope = "workflow");
 public sealed record AcquisitionRecoverySkip(int TaskId, string ReasonCode);
 public sealed record AcquisitionDownloadRecoveryOutcome(int TaskId, IReadOnlyList<int> StartedDownloadTaskIds,
-    IReadOnlyList<int> IndeterminateDownloadTaskIds, string? ReasonCode = null);
+    IReadOnlyList<int> IndeterminateDownloadTaskIds, string? ReasonCode = null,
+    IReadOnlyList<int>? VerifiedDownloadTaskIds = null);
 public sealed record AcquisitionRecoveryResult(IReadOnlyList<int> ContinuedTaskIds, IReadOnlyList<AcquisitionRecoverySkip> Skipped,
     IReadOnlyList<AcquisitionDownloadRecoveryOutcome>? Downloads = null,
     IReadOnlyList<AcquisitionLocalFilesRecoveryOutcome>? LocalFiles = null);

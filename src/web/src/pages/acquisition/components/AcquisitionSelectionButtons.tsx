@@ -4,7 +4,14 @@ import { captureFilteredSelection, validSelectionSnapshot } from "../acquisition
 import { localBatchSelectionLimit } from "./acquisitionLocalBatchApi";
 
 export default function AcquisitionSelectionButtons({
-  pageIds, filteredIds, totalCount, truncated, disabled, otherPagesSelected, onSelect,
+  pageIds,
+  filteredIds,
+  totalCount,
+  truncated,
+  disabled,
+  otherPagesSelected,
+  showCrossPageSelection,
+  onSelect,
 }: {
   pageIds: number[];
   filteredIds: number[];
@@ -12,6 +19,7 @@ export default function AcquisitionSelectionButtons({
   truncated: boolean;
   disabled: boolean;
   otherPagesSelected: boolean;
+  showCrossPageSelection: boolean;
   onSelect: (ids: number[]) => void;
 }) {
   const { t } = useTranslation();
@@ -22,15 +30,17 @@ export default function AcquisitionSelectionButtons({
   };
   return (
     <>
-      <Button
-        className="h-auto min-h-8 min-w-0 max-w-full whitespace-normal"
-        size="sm"
-        variant="flat"
-        isDisabled={disabled || truncated || !valid}
-        onPress={() => selectFiltered()}
-      >
-        {t("acquisition.selection.allFiltered", { count: totalCount })}
-      </Button>
+      {showCrossPageSelection && (
+        <Button
+          className="h-auto min-h-8 min-w-0 max-w-full whitespace-normal"
+          size="sm"
+          variant="flat"
+          isDisabled={disabled || truncated || !valid}
+          onPress={() => selectFiltered()}
+        >
+          {t("acquisition.selection.allFiltered", { count: totalCount })}
+        </Button>
+      )}
       {filteredIds.length > localBatchSelectionLimit && (
         <Button
           className="h-auto min-h-8 min-w-0 max-w-full whitespace-normal"

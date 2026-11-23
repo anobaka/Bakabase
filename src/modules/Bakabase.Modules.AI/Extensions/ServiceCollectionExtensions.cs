@@ -46,6 +46,7 @@ public static class ServiceCollectionExtensions
 
         // Observation & Cache
         services.TryAddSingleton<LlmCacheRequestCoordinator>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ILlmFeatureExecutionPolicy, FileProcessorLlmExecutionPolicy>());
         services.TryAddScoped<ILlmUsageService, LlmUsageService<TDbContext>>();
         services.TryAddScoped<ILlmCacheService, LlmCacheService<TDbContext>>();
         services.TryAddScoped<LlmQuotaManager>();

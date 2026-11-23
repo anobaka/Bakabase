@@ -203,6 +203,50 @@ public sealed class BtDownloadManager(
 
     public Task<BtDownloadJob> RecheckAsync(string id, CancellationToken ct = default) => QueueAgainAsync(id, true, ct);
 
+    public async Task<BtDownloadJob?> InspectLegacyWorkflowMagnetAsync(BtLegacyWorkflowMagnet dispatch, CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+        try { return MatchLegacyWorkflowMagnet(dispatch) is { } stored ? Snapshot(stored.Job) : null; }
+        finally { _gate.Release(); }
+    }
+
+    public async Task<BtDownloadJob?> ResumeLegacyWorkflowMagnetAsync(BtLegacyWorkflowMagnet dispatch, CancellationToken ct = default)
+    {
+        await InitializeAsync(ct);
+        await _gate.WaitAsync(ct);
+        try
+        {
+            ThrowIfStopping();
+            if (MatchLegacyWorkflowMagnet(dispatch) is not { } stored || stored.Job.Status == BtDownloadStatus.Stopping)
+                return null;
+            if (stored.Job.Status is BtDownloadStatus.Stopped or BtDownloadStatus.Failed)
+            {
+                if (storageWrites != null)
+                    await storageWrites.CheckAsync(stored.Job.OutputDirectory, WriteContext(stored), ct);
+                ct.ThrowIfCancellationRequested();
+                await QueueAgainAsync(stored, false);
+            }
+            return Snapshot(stored.Job);
+        }
+        finally { _gate.Release(); }
+    }
+
+    private StoredJob? MatchLegacyWorkflowMagnet(BtLegacyWorkflowMagnet dispatch)
+    {
+        if (!_jobs.TryGetValue(dispatch.JobId, out var stored) || stored.Job is not
+                {SourceKind: "workflow", WorkflowRunId: null, WorkflowDefinitionId: null, DownloadTaskId: null, DownloadResultId: null, IsLinked: true} ||
+            stored.Job.SourceId != dispatch.OperationId || stored.IdempotencyKey !=
+                FormattableString.Invariant($"{dispatch.OperationId}:{dispatch.Attempt}") ||
+            stored.WriteContext != null || stored.MagnetUri != dispatch.MagnetUri || stored.TorrentUrl != null ||
+            stored.MetadataFile != null || stored.PayloadHash != HashPayload(new()
+                {MagnetUri = dispatch.MagnetUri, OutputDirectory = dispatch.OutputDirectory}) ||
+            !SamePath(stored.Job.OutputDirectory, dispatch.OutputDirectory) ||
+            _jobs.Values.Any(other => other != stored && (other.IdempotencyKey == stored.IdempotencyKey ||
+                other.Job.SourceId == dispatch.OperationId || DirectoriesOverlap(other.Job.OutputDirectory, dispatch.OutputDirectory))))
+            return null;
+        return stored;
+    }
+
     private async Task<BtDownloadJob> QueueAgainAsync(string id, bool recheck, CancellationToken ct)
     {
         await InitializeAsync(ct);
@@ -215,20 +259,20 @@ public sealed class BtDownloadManager(
                 throw new InvalidOperationException("Wait for the BitTorrent download to stop before continuing it.");
             if (stored.Job.Status is BtDownloadStatus.Stopped or BtDownloadStatus.Failed ||
                 recheck && stored.Job.Status == BtDownloadStatus.Completed)
-            {
-                await CommitJobAsync(stored, stored.Job with
-                {
-                    Status = BtDownloadStatus.Queued, Stage = "Queued", Error = null,
-                    SpeedBytesPerSecond = null, Peers = null, UpdatedAt = DateTime.UtcNow, CompletedAt = null,
-                    Percentage = recheck ? 0 : stored.Job.Percentage,
-                    CompletedBytes = recheck ? null : stored.Job.CompletedBytes,
-                    Files = recheck ? [] : stored.Job.Files
-                });
-            }
+                await QueueAgainAsync(stored, recheck);
             return Snapshot(stored.Job);
         }
         finally { _gate.Release(); }
     }
+
+    private Task QueueAgainAsync(StoredJob stored, bool recheck) => CommitJobAsync(stored, stored.Job with
+    {
+        Status = BtDownloadStatus.Queued, Stage = "Queued", Error = null,
+        SpeedBytesPerSecond = null, Peers = null, UpdatedAt = DateTime.UtcNow, CompletedAt = null,
+        Percentage = recheck ? 0 : stored.Job.Percentage,
+        CompletedBytes = recheck ? null : stored.Job.CompletedBytes,
+        Files = recheck ? [] : stored.Job.Files
+    });
 
     public async Task DeleteAsync(string id, CancellationToken ct = default)
     {

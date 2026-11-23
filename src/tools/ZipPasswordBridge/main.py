@@ -44,24 +44,79 @@ def no_links(path):
         path = parent
 
 
-def bounded_catalog(stream):
-    size = os.fstat(stream.fileno()).st_size
+def end_record(tail, i):
+    """Resolve the single-disk EOCD and its optional fixed ZIP64 records (APPNOTE 4.3.14–16)."""
+    disk, cd_disk, disk_count, count, length, offset, _ = struct.unpack_from("<4H2IH", tail, i+4)
+    require(disk == cd_disk == 0, "ArchiveIntegrityFailure")
+    if i < 20 or tail[i-20:i-16] != b"PK\x06\x07":
+        require(disk_count == count and count != 0xffff and length != 0xffffffff and offset != 0xffffffff,
+                "ArchiveIntegrityFailure")
+        return count, length, offset, i, False
+    z = i-76
+    require(z >= 0 and tail[z:z+4] == b"PK\x06\x06" and struct.unpack_from("<Q", tail, z+4)[0] == 44,
+            "ArchiveIntegrityFailure")
+    locator_disk, locator_offset, disks = struct.unpack_from("<IQI", tail, i-16)
+    zip_disk, zip_cd_disk, local_count, zip_count, zip_length, zip_offset = struct.unpack_from("<II4Q", tail, z+16)
+    require(locator_disk == zip_disk == zip_cd_disk == 0 and disks == 1 and local_count == zip_count,
+            "ArchiveIntegrityFailure")
+    require(disk_count in (0xffff, zip_count) and count in (0xffff, zip_count) and
+            length in (0xffffffff, zip_length) and offset in (0xffffffff, zip_offset) and
+            locator_offset == zip_offset+zip_length, "ArchiveIntegrityFailure")
+    return zip_count, zip_length, zip_offset, z, True
+
+
+def check_zip64_central(central, offset, count):
+    # Validate the raw ZIP64 fields before the reader resolves them. Only sentinel fields
+    # have replacements, in their specified order. Disk numbers and local offsets are bounded.
+    length = len(central)
+    position = 0
+    for _ in range(count):
+        require(position+46 <= length and central[position:position+4] == b"PK\x01\x02", "ArchiveIntegrityFailure")
+        packed, unpacked, name_len, extra_len, comment_len, disk = struct.unpack_from("<II4H", central, position+20)
+        local = struct.unpack_from("<I", central, position+42)[0]
+        at = position+46+name_len
+        finish = at+extra_len
+        position = finish+comment_len
+        require(0 < name_len <= 1024 and position <= length, "ArchiveIntegrityFailure")
+        sentinels = (unpacked == 0xffffffff, packed == 0xffffffff, local == 0xffffffff, disk == 0xffff)
+        fmt = "<"+"".join(field for field, needed in zip("QQQI", sentinels) if needed)
+        seen = False
+        while at < finish:
+            require(at+4 <= finish, "ArchiveIntegrityFailure")
+            tag, size = struct.unpack_from("<HH", central, at)
+            at += 4
+            require(at+size <= finish, "ArchiveIntegrityFailure")
+            if tag == 1:
+                require(not seen and size == struct.calcsize(fmt), "ArchiveIntegrityFailure")
+                seen = True
+                values = iter(struct.unpack_from(fmt, central, at))
+                unpacked, packed, local, disk = (next(values) if needed else value for value, needed in
+                                                  zip((unpacked, packed, local, disk), sentinels))
+            at += size
+        require((seen or not any(sentinels)) and disk == 0 and local+30+packed <= offset, "ArchiveIntegrityFailure")
+    require(position == length, "ArchiveIntegrityFailure")
+
+
+def bounded_catalog(stream, size):
     require(size >= 22)
     require(stream.read(4) in (b"PK\x03\x04", b"PK\x05\x06"))
-    stream.seek(max(0, size - 65557))
-    tail = stream.read(65557)
-    ends = [i for i in range(len(tail) - 21) if tail[i:i+4] == b"PK\x05\x06"
-            and i + 22 + struct.unpack_from("<H", tail, i+20)[0] == len(tail)]
+    # A maximum-length comment can place the ZIP64 locator and end record before the usual 65557-byte tail.
+    tail_size = min(size, 65557+76)
+    stream.seek(size-tail_size)
+    tail = stream.read(tail_size)
+    ends = [i for i in range(len(tail)-21) if tail[i:i+4] == b"PK\x05\x06"
+            and i+22+struct.unpack_from("<H", tail, i+20)[0] == len(tail)]
     require(len(ends) == 1)
-    i = ends[0]
-    disk, central_disk, on_disk, count, length, offset, _ = struct.unpack_from("<4H2IH", tail, i+4)
-    absolute_end = size - len(tail) + i
-    require(disk == central_disk == 0 and on_disk == count and 0 < count <= MAX_ENTRIES)
-    require(count != 65535 and length != 0xffffffff and offset != 0xffffffff)
-    require(0 < length <= MAX_CATALOG and offset + length == absolute_end)
-    # No ZIP64, split volumes, appended bytes, or a forged prefix offset in this adapter.
+    count, length, offset, end, zip64 = end_record(tail, ends[0])
+    require(0 < count <= MAX_ENTRIES and 0 < length <= MAX_CATALOG)
+    require(offset+length == size-tail_size+end, "ArchiveIntegrityFailure")
+    if zip64:
+        stream.seek(offset)
+        central = stream.read(length)
+        require(len(central) == length, "ArchiveIntegrityFailure")
+        check_zip64_central(central, offset, count)
     stream.seek(0)
-    return count, offset
+    return count, offset, zip64
 
 
 class ArchiveWindow:
@@ -109,25 +164,13 @@ def structured_catalog(stream, proof):
             continue
         seen += 1
         require(seen <= 4, "ArchiveIntegrityFailure")
-        disk, cd_disk, disk_count, count, length, offset, comment = struct.unpack_from("<4H2IH", tail, i+4)
+        disk, cd_disk = struct.unpack_from("<HH", tail, i+4)
+        comment = struct.unpack_from("<H", tail, i+20)[0]
         trailing = len(tail)-(i+22+comment)
         if not 0 <= trailing <= 32*1024 or disk != 0 or cd_disk != 0:
             continue
-        central_end = size-len(tail)+i
-        is_zip64 = i >= 76 and tail[i-20:i-16] == b"PK\x06\x07"
-        if is_zip64:
-            z = i-76
-            require(tail[z:z+4] == b"PK\x06\x06" and struct.unpack_from("<Q",tail,z+4)[0] == 44, "ArchiveIntegrityFailure")
-            locator_disk, locator_offset, disks = struct.unpack_from("<IQI",tail,i-16)
-            zip_disk, zip_cd_disk, zip_disk_count, zip_count, zip_length, zip_offset = struct.unpack_from("<II4Q",tail,z+16)
-            require(locator_disk == zip_disk == zip_cd_disk == 0 and disks == 1 and zip_disk_count == zip_count, "ArchiveIntegrityFailure")
-            require(disk_count in (65535,zip_count) and count in (65535,zip_count) and
-                    length in (0xffffffff,zip_length) and offset in (0xffffffff,zip_offset), "ArchiveIntegrityFailure")
-            count,length,offset = zip_count,zip_length,zip_offset
-            central_end = size-len(tail)+z
-            require(locator_offset == offset+length, "ArchiveIntegrityFailure")
-        else:
-            require(disk_count == count and count != 65535 and length != 0xffffffff and offset != 0xffffffff, "ArchiveIntegrityFailure")
+        count, length, offset, end, is_zip64 = end_record(tail, i)
+        central_end = size-len(tail)+end
         require(0 < count <= 128 and 0 < length <= 64*1024, "ArchiveIntegrityFailure")
         central_start = central_end-length
         prefix = central_start-offset
@@ -142,6 +185,7 @@ def structured_catalog(stream, proof):
     stream.seek(selected["centralDirectoryOffset"])
     central = stream.read(selected["centralDirectorySize"])
     require(len(central) == selected["centralDirectorySize"] and hashlib.sha256(central).hexdigest() == proof.get("centralSha256"), "ArchiveIntegrityFailure")
+    check_zip64_central(central, selected["centralDirectoryOffset"]-selected["zipOffset"], selected["entryCount"])
     window = ArchiveWindow(stream,selected["zipOffset"],selected["archiveEnd"])
     window.metadata_budget -= tail_size+len(central)
     return window, selected["entryCount"], selected["centralDirectoryOffset"]-selected["zipOffset"]
@@ -197,7 +241,9 @@ def catalog(archive, count, central_start, codepage, allow_zip64=False):
         # Explicit password-byte compatibility admits only AES or traditional ZipCrypto
         # with stored/deflate payloads. Strong encryption and masked headers stay excluded.
         require(info.compress_type in (0, 8) and not (info.flag_bits & ~0x080f))
-        require(info.volume == 0)
+        # pyzipper retains the 16-bit disk sentinel. The raw central check above
+        # already required its ZIP64 replacement to be disk zero.
+        require(info.volume == 0 or allow_zip64 and info.volume == 0xffff)
         encrypted = bool(info.flag_bits & 1)
         aes_encrypted = encrypted and info.wz_aes_version is not None
         if aes_encrypted:
@@ -362,12 +408,13 @@ def run(request):
         before = os.fstat(stream.fileno())
         proof = request.get("structure")
         if proof is None:
-            count, central = bounded_catalog(stream)
+            count, central, allow_zip64 = bounded_catalog(stream, before.st_size)
             archive_source = stream
         else:
             archive_source, count, central = structured_catalog(stream, proof)
+            allow_zip64 = True
         with BoundedArchive(archive_source, "r") as archive:
-            members, total = catalog(archive, count, central, names, allow_zip64=proof is not None)
+            members, total = catalog(archive, count, central, names, allow_zip64=allow_zip64)
             if request["operation"] == "list":
                 return {"entries": [{"path": name, "size": info.file_size} for info,name,directory in members if not directory]}
             if isinstance(archive_source, ArchiveWindow):

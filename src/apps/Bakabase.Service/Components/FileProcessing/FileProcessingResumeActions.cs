@@ -9,6 +9,47 @@ namespace Bakabase.Service.Components.FileProcessing;
 /// <summary>Recovery admission is based on the saved wait, never on a diagnostic supplied by the caller.</summary>
 internal static class FileProcessingResumeActions
 {
+    public const string InspectGroup = "inspectIncompleteArchiveGroup";
+    public const string RetainGroup = "retainIncompleteArchiveGroup";
+    internal const string LegacyGroupMissingVolumes = "The archive is incomplete or a required volume could not be found. Check all volume names and parts; this does not establish a wrong password.";
+    internal static bool IsLegacyGroupProbeWait(string prompt)
+    {
+        using var doc = JsonDocument.Parse(prompt);
+        return doc.RootElement.TryGetProperty("message", out var value) && value.ValueKind == JsonValueKind.String &&
+            value.GetString() == LegacyGroupMissingVolumes;
+    }
+
+    internal static void ValidateGroup(WorkflowExecutionContext context, CloudDownloadTarget target,
+        CloudFileProcessingSignal signal, string? knownStepId) =>
+        ValidateGroup(context.ResumePromptJson, target.Id, target.ProcessingWaitReason, signal, knownStepId);
+
+    internal static void ValidateGroup(string? savedPrompt, string targetId, string? reason,
+        CloudFileProcessingSignal signal, string? knownStepId)
+    {
+        if (reason != "MissingVolumes" || signal.TargetId != targetId ||
+            signal.StepId == null || signal.StepId != knownStepId || string.IsNullOrWhiteSpace(signal.ArtifactId) ||
+            string.IsNullOrWhiteSpace(signal.Fingerprint) || string.IsNullOrWhiteSpace(savedPrompt) ||
+            signal.Password != null || signal.ExtractionPlanJson != null || signal.ArchiveId != null || signal.UserContext != null ||
+            signal.ArchivePolicy != null || signal.RecursiveOptions != null || signal.StorageRecovery != null)
+            throw new ArgumentException("FILE_PROCESSING_RECOVERY_WAIT_CHANGED");
+        using var doc = JsonDocument.Parse(savedPrompt);
+        var p = doc.RootElement;
+        bool Matches(string name, string value) => p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String && v.GetString() == value;
+        if (!Matches("targetId", targetId) || !Matches("artifactId", signal.ArtifactId) || !Matches("fingerprint", signal.Fingerprint) ||
+            !Matches("knownStepId", knownStepId!) || !Matches("reason", "MissingVolumes"))
+            throw new ArgumentException("FILE_PROCESSING_RECOVERY_WAIT_CHANGED");
+        if (signal.Action == InspectGroup && signal.ArchiveGroupToken == null &&
+            (!p.TryGetProperty("archiveGroupInspected", out var inspected) || inspected.ValueKind is JsonValueKind.False or JsonValueKind.Null))
+            return;
+        if (signal.Action == RetainGroup && signal.ArchiveGroupToken?.Length == 64 &&
+            p.TryGetProperty("allowedActions", out var actions) && actions.ValueKind == JsonValueKind.Array &&
+            System.Linq.Enumerable.Any(actions.EnumerateArray(), a => a.ValueKind == JsonValueKind.String && a.GetString() == RetainGroup) &&
+            p.TryGetProperty("incompleteArchiveGroup", out var group) && group.ValueKind == JsonValueKind.Object &&
+            group.TryGetProperty("token", out var token) && token.ValueKind == JsonValueKind.String &&
+            token.GetString() == signal.ArchiveGroupToken) return;
+        throw new ArgumentException("FILE_PROCESSING_RECOVERY_WAIT_CHANGED");
+    }
+
     public const string RetryCurrentStep = "retryCurrentStep";
     public const string TryPostPasswordEvidence = "tryPostPasswordEvidence";
 

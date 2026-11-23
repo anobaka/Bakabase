@@ -1,3 +1,6 @@
+using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Workflow.Components;
+using Microsoft.Extensions.DependencyInjection;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +11,7 @@ public sealed partial class AcquisitionReplanTests
 {
     [DataTestMethod]
     [DataRow("stopped")]
+    [DataRow("historical-cancelled-signal")]
     [DataRow("operation-lease")]
     [DataRow("running-workflow")]
     [DataRow("pending-workflow")]
@@ -28,12 +32,23 @@ public sealed partial class AcquisitionReplanTests
             (await Db.ArtifactOperations.SingleAsync(o => o.Id == original.OperationId)).LeaseUntil = DateTime.UtcNow.AddMinutes(5);
         else if (activity == "running-workflow") run.Status = WorkflowRunStatus.Running;
         else if (activity == "pending-workflow") run.Status = WorkflowRunStatus.Pending;
-        else if (activity == "pending-signal") run.PendingSignalJson = "{}";
+        else if (activity is "pending-signal" or "historical-cancelled-signal")
+        {
+            if (activity == "pending-signal") run.Status = WorkflowRunStatus.Waiting;
+            run.PendingSignalJson = "{}";
+        }
         await Db.SaveChangesAsync();
+        if (activity is "pending-signal" or "historical-cancelled-signal")
+        {
+            await _services.GetRequiredService<WorkflowRunRehydrator<BakabaseDbContext>>().MarkInterruptedRunsAsync();
+            await Db.Entry(run).ReloadAsync();
+            Assert.AreEqual(activity == "pending-signal" ? "{}" : null, run.PendingSignalJson);
+            Assert.AreEqual(activity == "historical-cancelled-signal", (await Plans.GetStageDirectoriesAsync(task.Id, default)).CanChange);
+        }
         var savedHistory = row.PlanHistoryJson;
         var runHistory = (run.Status, run.PlanSnapshotJson, run.CurrentItemJson, run.CompletedAt);
         var request = StageRequest(task, run.Id, "processing");
-        if (activity == "stopped")
+        if (activity is "stopped" or "historical-cancelled-signal")
         {
             var revised = await Plans.ReplanAsync(task.Id, request, default);
             Assert.AreEqual(task.Task.PlanRevision + 1, revised.Task.PlanRevision);
@@ -45,8 +60,8 @@ public sealed partial class AcquisitionReplanTests
         else
         {
             var error = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => Plans.ReplanAsync(task.Id, request, default));
-            // Earlier replan validation can also reject an actually running workflow.
-            Assert.AreEqual(activity is "running-workflow" or "pending-workflow"
+            // Active and waiting workflow statuses are rejected before checking stage ownership.
+            Assert.AreEqual(activity is "running-workflow" or "pending-workflow" or "pending-signal"
                 ? "PLAN_REPLAN_NOT_STOPPED" : "STAGE_DIRECTORY_TASK_ACTIVE", error.Message);
             Assert.AreEqual(savedHistory, (await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id)).PlanHistoryJson);
         }

@@ -1,3 +1,5 @@
+import { isFileVerificationStage } from "@/pages/downloader/downloadCenter";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Chip, Popover, Progress, Tooltip } from "@/components/bakaui";
 import { activityDisplayName } from "@/components/Workflow/displayNames";
@@ -6,12 +8,12 @@ import { humanFileSize } from "@/components/utils";
 import { estimatedRemainingLabel } from "@/utils/estimatedRemainingTime";
 import { millisecondsUntil, parseServerTime } from "@/core/serverTime";
 import AcquisitionSourceDetails from "../AcquisitionSourceDetails";
-import { downloadContinuationLabel, runtimeProblemLabel, type RuntimeOverview, type RuntimeSource } from "./runtimeOverview";
+import { downloadContinuationLabel, isConfirmingExistingFiles, runtimeProblemLabel, type RuntimeOverview, type RuntimeSource } from "./runtimeOverview";
 
 const validBytes = (value?: number | null): value is number =>
   value != null && Number.isFinite(value) && value >= 0;
 
-function RuntimeSourceEvidence({ source }: { source: RuntimeSource }) {
+export function RuntimeSourceEvidence({ source, details }: { source: RuntimeSource; details?: ReactNode }) {
   const { t } = useTranslation();
   const historical =
     source.isHistorical || (!!source.expiresAt && millisecondsUntil(source.expiresAt) <= 0);
@@ -49,7 +51,7 @@ function RuntimeSourceEvidence({ source }: { source: RuntimeSource }) {
         )}
       </div>
       {reason && <p className="break-words text-xs">{reason}</p>}
-      <AcquisitionSourceDetails source={source} />
+      {details ?? <AcquisitionSourceDetails source={source} />}
       <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-default-500">
         <span>
           {t(
@@ -109,36 +111,51 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
 }) {
   const { t } = useTranslation();
   if (!overview) return <div className="min-h-8" />;
+  if (isConfirmingExistingFiles(overview)) {
+    return (
+      <div className="min-h-8 space-y-1" data-testid={`acquisition-runtime-${overview.taskId}`}>
+        <div role="status" className="flex flex-wrap items-center gap-2 text-xs text-default-700">
+          {t("acquisition.runtime.fileStage.verifyingFiles")}
+          <Progress aria-label={t("acquisition.runtime.fileVerificationProgress")} isIndeterminate size="sm" className="w-28 max-w-full sm:w-36" />
+        </div>
+        {showSources && <RuntimeSources overview={overview} />}
+      </div>
+    );
+  }
+  const verifying = isFileVerificationStage(overview.stage);
   const step = overview.currentStepIndex;
   const stepCount = overview.stepCount;
   const stepNumber =
     step != null && Number.isInteger(step) && step >= 0 && stepCount != null && step < stepCount
       ? step + 1
       : undefined;
-  const problem = runtimeProblemLabel(
+  const problem = verifying ? undefined : runtimeProblemLabel(
     t,
     overview.problemReasonCode ?? overview.problemCode,
     overview.problem,
   );
+  const capabilityName = overview.capability?.displayNameKey
+    ? t(overview.capability.displayNameKey, { defaultValue: overview.capability.displayName })
+    : overview.capability?.displayName;
   const fileScope = overview.progressScope === "processing" || overview.progressScope === "archive";
   const archiveProgress = overview.progressScope === "archive" && overview.workflowStatus === "running";
   const fileActivity = overview.workflowStatus === "running" && fileScope;
   const progress =
-    (overview.progressScope === "download" || archiveProgress) &&
+    !verifying && (overview.progressScope === "download" || archiveProgress) &&
     overview.progress != null &&
     Number.isFinite(overview.progress)
       ? Math.min(100, Math.max(0, overview.progress))
       : undefined;
-  const showProgressBar = progress != null || fileActivity;
-  const completedBytes = overview.completedBytes;
+  const showProgressBar = progress != null || fileActivity || verifying;
+  const completedBytes = verifying ? undefined : overview.completedBytes;
   const totalBytes = overview.totalBytes;
-  const hasDownloads = overview.downloadCount > 0;
-  const downloading = !fileScope && overview.activeDownloadCount > 0;
+  const hasDownloads = !verifying && overview.downloadCount > 0;
+  const downloading = !verifying && !fileScope && overview.activeDownloadCount > 0;
   const speed = downloading && validBytes(overview.speedBytesPerSecond)
     ? t("acquisition.runtime.downloadSpeed", { speed: humanFileSize(Math.round(overview.speedBytesPerSecond)) })
     : undefined;
   const remaining = downloading ? estimatedRemainingLabel(overview.estimatedRemainingSeconds, t) : undefined;
-  const continuation = downloadContinuationLabel(t, overview);
+  const continuation = verifying ? undefined : downloadContinuationLabel(t, overview);
 
   return (
     <div className="min-h-8 space-y-1" data-testid={`acquisition-runtime-${overview.taskId}`}>
@@ -151,7 +168,7 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
           >
             <span className="text-default-700">
               {t("acquisition.runtime.currentStep", {
-                name: activityDisplayName(t, overview.currentNodeKind),
+                name: activityDisplayName(t, overview.currentNodeKind, capabilityName),
               })}
             </span>
           </Tooltip>
@@ -161,10 +178,10 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
             {t("acquisition.runtime.stepNumber", { current: stepNumber, total: stepCount })}
           </span>
         )}
-        {overview.stage && overview.stage !== overview.currentNodeKind && (!fileScope || fileActivity) && (
+        {overview.stage && overview.stage !== overview.currentNodeKind && (verifying || !fileScope || fileActivity) && (
           <span>
-            {fileActivity
-              ? t(`acquisition.runtime.fileStage.${overview.stage}`)
+            {fileActivity && !verifying
+              ? t(`acquisition.runtime.fileStage.${overview.stage}`, { defaultValue: overview.stage })
               : t(`downloadCenter.stage.${overview.stage}`, { defaultValue: overview.stage })}
           </span>
         )}
@@ -197,7 +214,7 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
           {showProgressBar && (
             <Progress
               aria-label={t(archiveProgress ? "acquisition.runtime.archiveProgress" :
-                fileActivity ? "acquisition.runtime.fileProgress" : "acquisition.runtime.downloadProgress")}
+                fileActivity || verifying ? "acquisition.runtime.fileProgress" : "acquisition.runtime.downloadProgress")}
               isIndeterminate={progress == null}
               className="w-28 max-w-full sm:w-36"
               size="sm"
@@ -214,7 +231,7 @@ export default function RuntimeOverviewSummary({ overview, showSources = true, p
           {remaining && <span className="whitespace-nowrap">{remaining}</span>}
         </div>
       )}
-      {problemDetail ? <ProcessingProblemSummary message={problemDetail} summary={problem}
+      {problemDetail && !verifying ? <ProcessingProblemSummary message={problemDetail} summary={problem}
         reason={overview.problemReasonCode ?? overview.problemCode ?? undefined} /> : problem && (
         <p
           className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-warning-600"

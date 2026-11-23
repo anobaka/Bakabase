@@ -242,6 +242,8 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<Components.Downloader.DownloadTaskRegistry>();
             services.AddScoped<Bakabase.Modules.Downloader.Abstractions.IDownloadTaskRegistry>(sp =>
                 sp.GetRequiredService<Components.Downloader.DownloadTaskRegistry>());
+            services.AddMemoryCache();
+            services.AddScoped<Components.Downloader.DownloadCenterExistingFiles>();
             services.AddScoped<Components.Downloader.DownloadCenterService>();
             Components.CloudDownloads.CloudDownloadRegistration.AddCloudDownloads(services);
             services.AddWorkflow<BakabaseDbContext>();

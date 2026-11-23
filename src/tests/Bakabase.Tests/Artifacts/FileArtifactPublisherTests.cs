@@ -448,6 +448,7 @@ public sealed partial class FileArtifactPublisherTests
         var nodeConfig = JsonSerializer.Serialize(new Bakabase.Service.Components.Acquisition.Planning.AcquisitionPlanProcessingConfig("main", new() {Requirement = "notRequired"}),
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
         using var services = new ServiceCollection().AddSingleton<IArtifactOperationStore>(_store).AddSingleton(processor)
+            .AddSingleton<IFileArtifactProcessor>(processor)
             .AddSingleton(Publisher).AddSingleton<IUserStoragePolicy>(new NoUserFileAccess())
             .AddSingleton<IWorkflowActivityRegistry>(new WorkflowActivityRegistry([activity, new PublishFileArtifactsActivity()])).BuildServiceProvider();
         var context = new WorkflowExecutionContext {RunId = 902, WorkflowDefinitionId = 0, TriggerKind = CloudWorkflow.Trigger,

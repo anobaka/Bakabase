@@ -15,9 +15,12 @@ public static class AcquisitionSourceSelectionPolicy
     {
         var priority = (providerPriority ?? []).Select((id, index) => (id, index))
             .GroupBy(p => p.id, StringComparer.Ordinal).ToDictionary(g => g.Key, g => g.First().index, StringComparer.Ordinal);
+        // Eligibility excludes unsupported, disabled and confirmed-unavailable sources.
+        // An inconclusive probe or transient network problem must not override the
+        // user's provider preference; health only breaks ties at the same priority.
         return candidates.OrderBy(c => c.CanSelect ? 0 : 1)
-            .ThenBy(c => AvailabilityRank(c))
             .ThenBy(c => priority.GetValueOrDefault(c.ResolvedSource?.ProviderId ?? c.Candidate.ProviderId ?? "", int.MaxValue))
+            .ThenBy(c => AvailabilityRank(c))
             .First();
     }
 

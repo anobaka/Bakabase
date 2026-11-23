@@ -9,7 +9,8 @@ public sealed record AcquisitionTaskDeletePreviewInput(IReadOnlyList<int> TaskId
     bool? DeleteDeliveredFiles = null);
 public sealed record AcquisitionTaskDeleteInput(string PreviewId, bool? CleanupFiles = null,
     bool? AcceptDeliveredFiles = null, bool? SkipFileVerification = null, bool? RemoveTaskIfCleanupFails = null, bool? RetryRetainedFiles = null,
-    bool? DeleteDeliveredFiles = null, IReadOnlyList<int>? TaskIds = null);
+    bool? DeleteDeliveredFiles = null, IReadOnlyList<int>? TaskIds = null,
+    IReadOnlyDictionary<int, IReadOnlyList<string>>? SelectedCleanupDirectories = null);
 // Progress describes confirmed work only; it is not an authorization or a replacement for the final result.
 public sealed record AcquisitionTaskDeleteProgress(string PreviewId, string State, int TotalTasks, int FinishedTasks,
     int? CurrentTaskId, string Phase, int CompletedFiles, long CompletedBytes,
@@ -27,10 +28,22 @@ public sealed record AcquisitionTaskDeleteResult(IReadOnlyList<int> DeletedTaskI
     IReadOnlyList<string>? RemovedDirectories = null, bool FileStatisticsIncomplete = false);
 public sealed record AcquisitionTaskDeleteCleanupFile(string Path, long Bytes);
 public sealed record AcquisitionTaskDeleteCleanupNode(int RunId, string NodeId, string Kind);
+[Flags]
+internal enum AcquisitionCleanupScopes { None = 0, Intermediate = 1, Delivery = 2, Both = Intermediate | Delivery }
+
 public sealed record AcquisitionTaskDeleteCleanupGroup(string ArtifactId, string Kind, string Directory,
     bool Eligible, string? ReasonCode, IReadOnlyList<AcquisitionTaskDeleteCleanupNode> Nodes,
     IReadOnlyList<AcquisitionTaskDeleteCleanupFile> Files, int FileCount, long Bytes, bool Shared = false,
-    bool FilesTruncated = false, bool SizeUnknown = false);
+    bool FilesTruncated = false, bool SizeUnknown = false)
+{
+    public bool RegisteredFilesOnly { get; init; }
+    internal AcquisitionCleanupScopes Scopes { get; init; } = Kind switch
+    {
+        "download" or "processedFiles" or "intermediate" => AcquisitionCleanupScopes.Intermediate,
+        "publishedFiles" => AcquisitionCleanupScopes.Delivery,
+        _ => AcquisitionCleanupScopes.Both
+    };
+}
 public sealed record AcquisitionTaskDeleteCleanup(int FileCount, long Bytes,
     IReadOnlyList<AcquisitionTaskDeleteCleanupGroup> Groups, string? ReasonCode = null,
     IReadOnlyList<AcquisitionTaskDeleteSupersededRun>? SupersededRuns = null,
@@ -39,4 +52,20 @@ public sealed record AcquisitionTaskDeleteSupersededRun(int RunId, int Revision,
 public sealed record AcquisitionTaskDeleteCleanupOutcome(int TaskId, bool Completed, int RemovedFiles, long RemovedBytes,
     IReadOnlyList<string> ReasonCodes, IReadOnlyList<int>? ClosedRunIds = null,
     IReadOnlyList<string>? RetainedDirectories = null, IReadOnlyList<string>? RemovedDirectories = null,
-    bool FileStatisticsIncomplete = false);
+    bool FileStatisticsIncomplete = false)
+{
+    public IReadOnlyList<string> UnselectedDirectories { get; init; } = [];
+    internal AcquisitionCleanupScopes ManualReviewScopes { get; init; } = AcquisitionCleanupScopes.Both;
+    internal IReadOnlyList<(string Id, AcquisitionCleanupScopes Scopes)> DeferredReceipts { get; init; } = [];
+    // A plan-wide failure has no per-stage proof.
+    internal AcquisitionCleanupScopes UnconfirmedScopes { get; init; } = Completed ? AcquisitionCleanupScopes.None : AcquisitionCleanupScopes.Both;
+}
+
+public sealed record AcquisitionDeletedTaskRow(int TaskId, string? Title, DateTime DeletedAt,
+    string IntermediateCleanup, string DeliveryCleanup, IReadOnlyList<string> LastReasonCodes)
+{
+    public IReadOnlyList<string> AwaitingFileReleaseScopes { get; init; } = [];
+    public IReadOnlyList<int> WaitingRunIds { get; init; } = [];
+}
+public sealed record AcquisitionDeletedTaskPage(int PageIndex, int PageSize, int TotalCount,
+    IReadOnlyList<AcquisitionDeletedTaskRow> Items);

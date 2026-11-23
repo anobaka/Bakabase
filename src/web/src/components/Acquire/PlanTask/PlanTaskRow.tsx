@@ -6,9 +6,10 @@ import type { PlanTask } from "./models";
 import { AcquisitionStatus } from "@/sdk/constants";
 import AcquisitionTiming from "../AcquisitionTiming";
 import AcquisitionCreationOrigin from "../AcquisitionCreationOrigin";
+import AcquisitionDownloadSources from "../AcquisitionDownloadSources";
 import { acquisitionTaskStage, acquisitionStageLabel, acquisitionDownloadActivity } from "../taskStage";
 import RuntimeOverviewSummary from "./RuntimeOverviewSummary";
-import type { RuntimeOverview } from "./runtimeOverview";
+import { currentTaskRuntime, type RuntimeOverview } from "./runtimeOverview";
 import AcquisitionSizeEstimate, { type AcquisitionSizeEstimateValue } from "../AcquisitionSizeEstimate";
 
 export default function PlanTaskRow({
@@ -27,8 +28,7 @@ export default function PlanTaskRow({
   onDelete?: () => void;
 }) {
   const { t } = useTranslation();
-  const currentOverview = task.workflowRunId && overview?.taskId === task.id &&
-    overview.workflowRunId === task.workflowRunId ? overview : undefined;
+  const currentOverview = currentTaskRuntime(task, overview);
   const stage = acquisitionTaskStage(task, currentOverview);
   const downloadActivity = acquisitionDownloadActivity(task, currentOverview);
   return (
@@ -54,6 +54,7 @@ export default function PlanTaskRow({
             {task.title || task.resourceName || t("acquisition.tasks.untitled")}
           </span>
           <span className="text-xs text-default-400">#{task.id}</span>
+          <AcquisitionDownloadSources task={task} overview={overview} />
           <AcquisitionSizeEstimate estimate={sizeEstimate} />
         </div>
         <p className="text-sm text-default-500">
@@ -66,9 +67,9 @@ export default function PlanTaskRow({
               })}{" "}
           · {t("acquisition.plan.revision", { revision: task.planRevision })}
         </p>
-        <AcquisitionAttentionTags tags={currentOverview?.attentionTags ?? task.attentionTags} facts={facts} />
+        <AcquisitionAttentionTags tags={currentOverview?.attentionTags ?? task.attentionTags} facts={facts} onReviewCleanup={onDelete} />
         <AcquisitionCreationOrigin origins={task.creationOrigins} compact />
-        <RuntimeOverviewSummary overview={currentOverview} />
+        <RuntimeOverviewSummary overview={currentOverview} showSources={false} />
         <AcquisitionTiming task={task} />
       </div>
       <div className="flex flex-wrap items-center gap-2"><Button

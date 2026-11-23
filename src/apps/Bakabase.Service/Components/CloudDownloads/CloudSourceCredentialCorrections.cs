@@ -34,7 +34,9 @@ public sealed partial class CloudOperationService
     }
     // Each explicit correction gets its own immutable slot. Existing bindings and failed requests
     // remain available for diagnosis; a correction never loosens the original binding's identity.
-    internal static string OperationSlot(CloudDownloadTarget target, string kind) => target.Id + ":" + kind +
+    internal static string OperationSlot(CloudDownloadTarget target, string kind) =>
+        kind == "transfer" && target.ReviewedTransferId != null ? target.Id + ":reviewedTransfer:" + target.ReviewedTransferId :
+        target.Id + ":" + kind +
         (target.SelectedSource?.AccessCodeRevisions?.LastOrDefault() is { } revision
             ? ":credential:" + revision.CorrectionId : "");
 

@@ -54,13 +54,44 @@ public partial class CompressedFileService
         }
     }
 
+    internal async Task<long?> TryGetExpandedBytesAsync(string entry, string? password,
+        ArchiveOpenOptions? opening, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        try
+        {
+            opening = await ResolveAutomaticOpeningAsync(entry, opening, ct);
+            if (opening?.Mode != null)
+            {
+                var catalog = await ReadParserCatalogAsync(entry, ct);
+                return catalog.Selected(opening.MemberSelector).Sum(member => member.Size);
+            }
+            if (opening?.ZipFileNameCodePage != null && !opening.UsesZipCompatibilityReader)
+            {
+                using var zip = new ExplicitZipNameReader(entry, opening);
+                return zip.Entries().Sum(member => member.Size);
+            }
+            var members = await ReadManualExtractionCatalogAsync(entry, password, opening, ct);
+            return members.Sum(member => member.Size);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { return null; }
+        catch (Exception error) when (error is InvalidDataException or IOException or OverflowException or
+                                              InvalidOperationException or UnauthorizedAccessException)
+        {
+            // Listing is an optional capacity estimate. The normal extraction and its live
+            // free-space guard remain authoritative when metadata is incomplete or unsupported.
+            ct.ThrowIfCancellationRequested();
+            return null;
+        }
+    }
+
     private async Task<IReadOnlyList<ManualExtractionEntry>> ReadManualExtractionCatalogAsync(string path,
         string? password, ArchiveOpenOptions? opening, CancellationToken ct)
     {
         if (opening?.UsesZipCompatibilityReader == true)
         {
             // The compatibility reader already validates names, links and directory records.
-            var result = await RunZipCompatibilityAsync("list", path, null, null, opening, null, ct);
+            var result = await RunZipCompatibilityAsync("list", path, null, password, opening, null, ct);
             ZipPasswordCompatibility.RequireSuccess(result);
             if (result.Entries == null) throw new InvalidDataException("The archive did not provide a verifiable entry list.");
             return result.Entries.Select(e => new ManualExtractionEntry(e.Path, e.Size)).ToArray();

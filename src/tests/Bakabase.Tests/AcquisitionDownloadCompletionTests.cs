@@ -1,10 +1,13 @@
 using System.Text.Json;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Services;
+using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
+using Bakabase.Service.Components.CloudDownloads;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -67,6 +70,40 @@ public sealed partial class AcquisitionRecoveryTests
         Assert.AreEqual(1, await _db.DownloadTasks.CountAsync()); Assert.AreEqual(1, await _db.WorkflowRuns.CountAsync());
         var owner = await _db.AcquisitionTasks.AsNoTracking().SingleAsync();
         StringAssert.Contains(owner.BuilderStateJson, "unknownFutureState"); StringAssert.Contains(owner.BuilderStateJson, "keep this");
+    }
+
+    [DataTestMethod]
+    [DataRow("registered", true)]
+    [DataRow("unrecorded", false)]
+    [DataRow("different-artifact", false)]
+    [DataRow("foreign-binding", false)]
+    [DataRow("changed-file", false)]
+    public async Task AutomaticCompletionRecognizesOnlyTheOwnedRegisteredDownload(string variant, bool expected)
+    {
+        var (task, run, workset, download, operation) = await SeedRevisedCompletedDownload("download.awaitCompletion");
+        await CompletionIntent(task, "automatic");
+        var target = workset.Targets.Single();
+        var file = Path.Combine(download.DownloadPath, "official.bin");
+        var store = _services.GetRequiredService<IArtifactOperationStore>();
+        var artifact = await store.AdoptAsync(new(operation.Id, operation.Id, "download", DownloadArtifactCoordinator.Source(target)),
+            new(download.DownloadPath, [file], "download", true), "fixture");
+        Assert.IsTrue(await new ArtifactOperationBindingService(_db).BindAsync("workflow",
+            variant == "foreign-binding" ? "other" : run.Id.ToString(), target.Id + ":artifact.download", operation.Id));
+        var artifactId = variant == "different-artifact" ? "other" : artifact.Id;
+        var checkpoint = variant == "unrecorded" ? target : target with
+        {
+            DownloadArtifactId = artifactId, DownloadOperationId = operation.Id,
+            DownloadDirectory = artifact.RootDirectory, Files = artifact.Files.ToList(), ExecutionStatus = "completed"
+        };
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset with {Targets = [checkpoint with {Problem = "Previous download failed"}]});
+        await _db.SaveChangesAsync();
+        if (variant == "changed-file") await File.WriteAllTextAsync(file, "verified modified bytes");
+
+        var host = new CompletionHost(this);
+        Assert.AreEqual(expected, await CompletionCoordinator(host).ReconcileAsync(task.Id, default));
+        Assert.AreEqual(expected ? 1 : 0, host.Calls);
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+        Assert.AreEqual(1, await _db.WorkflowRuns.CountAsync());
     }
 
     [DataTestMethod]
@@ -147,9 +184,10 @@ public sealed partial class AcquisitionRecoveryTests
     [TestMethod]
     public async Task RejectedWorkflowRecoveryDoesNotReleaseDownloadsOnlyHold()
     {
-        var (task, _, _, download, _) = await SeedRevisedCompletedDownload("download.awaitCompletion");
+        var (task, _, _, _, _) = await SeedRevisedCompletedDownload("download.awaitCompletion");
         await CompletionIntent(task, "downloadsOnly");
-        var host = new RecordingHost {BeforeValidation = () => File.WriteAllTextAsync(Path.Combine(download.DownloadPath, "official.bin"), "changed")};
+        var host = new RecordingHost {BeforeValidation = () => _db.DownloadResults.ExecuteUpdateAsync(s =>
+            s.SetProperty(r => r.Fingerprint, "changed receipt"))};
         var recovery = new AcquisitionRecoveryService(_db, _diagnostics, new(), host);
         var preview = await recovery.PreviewAsync(new([task.Id]));
         var result = await recovery.ApplyAsync(new(preview.PreviewToken, [task.Id]));

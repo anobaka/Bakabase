@@ -22,6 +22,7 @@ using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.DataSync.Persistence;
@@ -64,6 +65,18 @@ namespace Bakabase.TestKit.Utils;
 /// </summary>
 public static class TestServiceBuilder
 {
+    // The wrapper owns only implicit databases and the per-testhost template. Explicit
+    // directories can outlive any provider and remain the caller's responsibility.
+    private static readonly string? TestCommandRoot = Environment.GetEnvironmentVariable("BAKABASE_TEST_FIXTURE_ROOT");
+    private static readonly Lazy<string> ImplicitDatabaseRoot = new(() =>
+    {
+        var root = TestCommandRoot;
+        if (string.IsNullOrEmpty(root)) return Path.GetTempPath();
+        if (!Path.IsPathFullyQualified(root) || !Directory.Exists(root) || new DirectoryInfo(root).LinkTarget is not null)
+            throw new DirectoryNotFoundException("The test command's database directory is unavailable.");
+        return Directory.CreateDirectory(Path.Combine(root, $"host-{Environment.ProcessId}-{Guid.NewGuid():N}")).FullName;
+    });
+
     private static readonly Lazy<Task<string>> MigratedDatabaseTemplate = new(
         CreateMigratedDatabaseTemplate, LazyThreadSafetyMode.ExecutionAndPublication);
 
@@ -82,12 +95,11 @@ public static class TestServiceBuilder
     /// </param>
     public static Task<IServiceProvider> BuildServiceProvider(
         Action<IServiceCollection>? configure = null) =>
-        BuildServiceProvider(NewTestDirectory(), configure);
+        BuildServiceProviderCore(Path.Combine(ImplicitDatabaseRoot.Value, $"BakabaseTests_{Guid.NewGuid():N}"), configure, null, true);
 
     /// <summary>
-    /// A fresh test directory under the temp folder, as <see cref="BuildServiceProvider(Action{IServiceCollection})"/>
-    /// uses: a test that restarts a provider over what an earlier one left (its <c>test.db</c> and data sync folder)
-    /// fills one and passes it to <see cref="BuildServiceProvider(string, Action{IServiceCollection})"/>.
+    /// A fresh caller-owned path under the temp folder. A test can reopen the same database and data sync
+    /// folder by passing this path to <see cref="BuildServiceProvider(string, Action{IServiceCollection})"/>.
     /// </summary>
     public static string NewTestDirectory()
     {
@@ -102,8 +114,12 @@ public static class TestServiceBuilder
     /// migrated template) is kept, not replaced.
     /// </summary>
     /// <param name="options">How the provider validates its registrations; none by default.</param>
-    public static async Task<IServiceProvider> BuildServiceProvider(string testDir,
-        Action<IServiceCollection>? configure = null, ServiceProviderOptions? options = null)
+    public static Task<IServiceProvider> BuildServiceProvider(string testDir,
+        Action<IServiceCollection>? configure = null, ServiceProviderOptions? options = null) =>
+        BuildServiceProviderCore(testDir, configure, options, false);
+
+    private static async Task<IServiceProvider> BuildServiceProviderCore(string testDir,
+        Action<IServiceCollection>? configure, ServiceProviderOptions? options, bool implicitDirectory)
     {
         ArgumentException.ThrowIfNullOrEmpty(testDir);
         var started = Stopwatch.GetTimestamp();
@@ -112,7 +128,11 @@ public static class TestServiceBuilder
         var dbFilePath = Path.Combine(testDir, "test.db");
         var templatePath = await MigratedDatabaseTemplate.Value;
         var templateReady = Stopwatch.GetTimestamp();
-        if (!File.Exists(dbFilePath)) File.Copy(templatePath, dbFilePath);
+        if (!File.Exists(dbFilePath))
+        {
+            File.Copy(templatePath, dbFilePath);
+            if (implicitDirectory) RecordOwnedDatabase(dbFilePath);
+        }
         var databaseReady = Stopwatch.GetTimestamp();
 
         var services = new ServiceCollection();
@@ -288,7 +308,7 @@ public static class TestServiceBuilder
     private static async Task<string> CreateMigratedDatabaseTemplate()
     {
         var started = Stopwatch.GetTimestamp();
-        var templateDir = Path.Combine(Path.GetTempPath(), $"BakabaseTests_Template_{Guid.NewGuid():N}");
+        var templateDir = Path.Combine(ImplicitDatabaseRoot.Value, $"BakabaseTests_Template_{Guid.NewGuid():N}");
         Directory.CreateDirectory(templateDir);
         var templatePath = Path.Combine(templateDir, "template.db");
 
@@ -332,7 +352,27 @@ public static class TestServiceBuilder
                 $"TestServiceBuilder: one-time database migration {Stopwatch.GetElapsedTime(started).TotalMilliseconds:F0} ms");
         }
 
+        RecordOwnedDatabase(templatePath);
         return templatePath;
+    }
+
+    private static void RecordOwnedDatabase(string file)
+    {
+        if (string.IsNullOrEmpty(TestCommandRoot)) return;
+        // The receipt lives outside the test's data directory. Bind it to the
+        // original filesystem object so replacement databases cannot be removed.
+        var directory = Path.GetDirectoryName(file)!;
+        var receipt = Path.Combine(ImplicitDatabaseRoot.Value, Path.GetFileName(directory) + ".sqlite-owner");
+        try
+        {
+            var identity = ArtifactFileIdentity.Read(file);
+            using var writer = new StreamWriter(new FileStream(receipt, FileMode.CreateNew, FileAccess.Write));
+            writer.Write($"{Path.GetFileName(file)}\n{identity}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine($"TestServiceBuilder: could not register the temporary database for cleanup: {ex.Message}");
+        }
     }
 
     private static void RegisterAllOptionsTypes(IServiceCollection services)

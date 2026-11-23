@@ -9,6 +9,10 @@ export type CenterFilter = {
   keyword?: string;
   id?: string;
 };
+export function isFileVerificationStage(stage?: string | null) {
+  return stage === "VerifyingSource" || stage === "VerifyingLocalFiles";
+}
+
 export const centerStatuses = [
   "preparing",
   "queued",

@@ -7,6 +7,7 @@ from pathlib import Path
 import platform
 import re
 import signal
+import stat
 import subprocess
 import sys
 from urllib.parse import urlparse
@@ -15,7 +16,7 @@ VARIABLE = "BAKABASE_DEPLOYMENT_MOUNTS"
 ENDPOINT_VARIABLE = "BAKABASE_DEPLOYMENT_ENDPOINTS"
 
 
-def mount_metadata(config):
+def mount_metadata(config, read_host_capacities=None):
     service = config["services"]["server"]
     if service.get("volumes_from"):
         # Inherited mounts are not listed in this model and may shadow a known bind.
@@ -35,23 +36,63 @@ def mount_metadata(config):
     for tmpfs in service.get("tmpfs", []):
         target, _, flags = tmpfs.replace("$$", "$").partition(":")
         mounts.append({"type": "tmpfs", "target": target, "readOnly": "ro" in flags.split(",")})
+    if len(mounts) > 256:
+        return ""
+    if read_host_capacities:
+        capacities = read_host_capacities([m["source"] for m in mounts if m["type"] == "bind"])
+        for mount in mounts:
+            if mount.get("source") in capacities:
+                mount["hostCapacity"] = capacities[mount["source"]]
     result = json.dumps({"schemaVersion": 1, "readOnlyRoot": service.get("read_only", False), "mounts": mounts},
                         ensure_ascii=True, separators=(",", ":"))
-    if len(result) > 65536 or len(mounts) > 256:
+    if len(result) > 65536:
+        if read_host_capacities:
+            return mount_metadata(config)
         return ""
     return result
 
 
-def command_metadata(config, command):
+def command_metadata(config, command, read_host_capacities=None):
     # `run -v` adds mounts outside the Compose model. Without interpreting a second mount
     # syntax, the truthful fallback is no host-path display for that one-off container.
     one_off_mounts = command[0] == "run" and any(
         arg == "--volume" or arg.startswith(("--volume=", "-v")) for arg in command[1:])
-    return "" if one_off_mounts else mount_metadata(config)
+    return "" if one_off_mounts else mount_metadata(config, read_host_capacities)
 
 
 def read_command(command):
     return subprocess.check_output(command, text=True, stderr=subprocess.DEVNULL, timeout=3)
+
+
+def host_capacities(sources):
+    capacities = {}
+    for source in dict.fromkeys(sources):
+        if not os.path.isabs(source):
+            continue
+        try:
+            root = os.path.realpath(source)
+            info = os.stat(root)
+            if not stat.S_ISDIR(info.st_mode):
+                continue
+            # Darwin's Python statvfs can truncate SMB block counts. POSIX df
+            # uses the host's full-width counters, even for very large shares.
+            lines = read_command(["/usr/bin/env", "LC_ALL=C", "/bin/df", "-kP", root]).splitlines()
+            if len(lines) != 2:
+                continue
+            blocks = re.findall(r" +([0-9]+) +-?[0-9]+ +-?[0-9]+ +-?[0-9]+% +", lines[1])
+            if len(blocks) == 1 and int(blocks[0]) > 0 and os.stat(root).st_dev == info.st_dev:
+                capacities[source] = {"root": root, "device": info.st_dev, "totalBytes": int(blocks[0]) * 1024}
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return capacities
+
+
+def read_mac_host_capacities(sources):
+    # A disconnected mount can stall statvfs. Optional metadata must not hang Compose.
+    try:
+        return json.loads(read_command([sys.executable, __file__, "--host-capacities", *sources]))
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return {}
 
 
 def local_docker_context(docker, environment):
@@ -155,7 +196,8 @@ def main():
     # literal dollars/backslashes in host paths survive without a second interpolation.
     local_context = local_docker_context(compose[0], os.environ)
     endpoints = endpoint_metadata(config, command, local_context, host_ipv4_addresses() if local_context else [])
-    environment = {**os.environ, VARIABLE: command_metadata(config, command), ENDPOINT_VARIABLE: endpoints}
+    capacity_reader = read_mac_host_capacities if local_context and platform.system() == "Darwin" else None
+    environment = {**os.environ, VARIABLE: command_metadata(config, command, capacity_reader), ENDPOINT_VARIABLE: endpoints}
     child = subprocess.Popen([*compose, *command], env=environment)
     previous = signal.signal(signal.SIGTERM, lambda sig, frame: child.send_signal(sig))
     try:
@@ -169,6 +211,9 @@ def main():
 
 if __name__ == "__main__":
     try:
+        if len(sys.argv) > 1 and sys.argv[1] == "--host-capacities":
+            print(json.dumps(host_capacities(sys.argv[2:])))
+            sys.exit(0)
         sys.exit(main())
     except subprocess.CalledProcessError as error:
         if error.stderr:

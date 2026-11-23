@@ -28,14 +28,21 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 /// Preview reads evidence; apply registers those bytes and reuses the normal replan/run protocol.</summary>
 public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, AcquisitionPlanService plans,
     IUserStoragePolicy storage, IArtifactOperationStore artifacts, DownloadArtifactCoordinator registrar,
-    IServiceProvider services, BTaskManager? tasks = null, FileProcessingWorkspaceResolver? workspaces = null)
+    IServiceProvider services, BTaskManager? tasks = null, FileProcessingWorkspaceResolver? workspaces = null,
+    AcquisitionConfirmationRuntime? confirmations = null)
 {
+    private enum FileCheck { Identify, CheckOnConfirm, Verify }
+
     private sealed record Checked(AcquisitionRecoveryDiagnosis Diagnosis, AcquisitionLocalFilesStorage? Storage = null,
-        DownloadWorkset? Workset = null, IReadOnlyList<CloudDownloadTarget>? Targets = null);
+        DownloadWorkset? Workset = null, IReadOnlyList<CloudDownloadTarget>? Targets = null, IReadOnlyDictionary<string, ArtifactManifest>? VerifiedFiles = null);
 
     public async Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
         bool verifyFiles, CancellationToken ct, Func<string?, Task>? guardDirectory = null) =>
-        (await CheckAsync(task, run, verifyFiles, guardDirectory, ct)).Diagnosis;
+        (await CheckAsync(task, run, verifyFiles ? FileCheck.Verify : FileCheck.Identify, guardDirectory, ct)).Diagnosis;
+
+    internal async Task<AcquisitionRecoveryDiagnosis> PreviewAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
+        CancellationToken ct, Func<string?, Task>? guardDirectory) =>
+        (await CheckAsync(task, run, FileCheck.CheckOnConfirm, guardDirectory, ct)).Diagnosis;
 
     internal static bool CanPrepareWithoutFileOperations(AcquisitionTaskDbModel task)
     {
@@ -48,7 +55,7 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
     }
 
     private async Task<Checked> CheckAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
-        bool verifyFiles, Func<string?, Task>? guardDirectory, CancellationToken ct)
+        FileCheck check, Func<string?, Task>? guardDirectory, CancellationToken ct)
     {
         Checked Blocked(string code) => new(new(new(task.Id, task.Title, run?.Id, false, null, code, "reviewTask")));
         if (task.DeletedAt != null) return Blocked("ACQUISITION_TASK_DELETED");
@@ -77,9 +84,18 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
                 foreach (var part in plan.Parts)
                 {
                     var artifact = await AcquisitionPlanArtifactInputGuard.RequireAsync(db, artifacts, task.Id, part.Id, part.ContinueFrom!, ct);
+                    var reviewed = receipt.Preview.Parts.SingleOrDefault(p => p.PartId == part.Id);
+                    if (reviewed?.ArtifactId != artifact.Id || reviewed.Fingerprint != artifact.Fingerprint ||
+                        !ArtifactManifestFiles.PathComparer.Equals(reviewed.SourceDirectory, artifact.RootDirectory))
+                        return Blocked("RECOVERY_FILES_UNVERIFIED");
                     if (guardDirectory != null) await guardDirectory(artifact.RootDirectory);
                     storage.EnsurePathAllowed(artifact.RootDirectory);
-                    if (verifyFiles && !(await ArtifactManifestFiles.ValidateAsync(artifact.RootDirectory, artifact.Manifest, ct)).Available)
+                    if (check == FileCheck.CheckOnConfirm)
+                    {
+                        if (!AcquisitionPlanArtifactInputGuard.HasExpectedFileLayout(artifact, storage, ct))
+                            return Blocked("RECOVERY_FILES_UNVERIFIED");
+                    }
+                    else if (check == FileCheck.Verify && !(await ArtifactManifestFiles.ValidateAsync(artifact.RootDirectory, artifact.Manifest, ct)).Available)
                         return Blocked("RECOVERY_FILES_UNVERIFIED");
                 }
                 return Ready(receipt.Preview, captured);
@@ -101,15 +117,18 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
             var parts = new List<AcquisitionLocalFilesRecoveryPart>();
             var targets = new List<CloudDownloadTarget>();
             var proofs = new List<string>();
+            var verified = new Dictionary<string, ArtifactManifest>(StringComparer.Ordinal);
             foreach (var target in selected)
             {
                 var root = await diagnosis.DownloadExecutionRoot(run.Id, target, workset!.OutputDirectory, ct,
                     requireBinding: true, allowRegisteredArtifact: true);
-                var problem = await diagnosis.CheckDownload(target.DownloadTaskId, root, verifyFiles, ct);
-                if (problem != null && problem != "RECOVERY_VERIFY_FILES") return Blocked(problem);
-                var result = await db.DownloadResults.AsNoTracking().Where(r => r.DownloadTaskId == target.DownloadTaskId)
-                    .OrderByDescending(r => r.Id).FirstAsync(ct);
-                var files = JsonSerializer.Deserialize<List<string>>(result.FilesJson, WorkflowJson.Options)!;
+                var (problem, completed) = await diagnosis.InspectCompletedDownload(target.DownloadTaskId, root, ct);
+                if (completed == null) return Blocked(problem ?? "RECOVERY_FILES_UNVERIFIED");
+                var result = completed.Result;
+                if (check == FileCheck.CheckOnConfirm &&
+                    (result.Fingerprint.Length != 64 || !result.Fingerprint.All(Uri.IsHexDigit)))
+                    return Blocked("RECOVERY_FILES_UNVERIFIED");
+                var files = completed.Files;
                 var proof = await AcquisitionLocalFilesRecoveryReceipt.DownloadEvidenceAsync(db,
                     DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory, workspaces),
                     target.DownloadTaskId!.Value, result.Id, ct);
@@ -120,21 +139,29 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
                     await guardDirectory(result.DownloadDirectory);
                     await guardDirectory(layout.PartDirectories[target.Id]);
                 }
+                if (check == FileCheck.Verify &&
+                    await AcquisitionRecoveryDiagnostics.VerifyCompletedDownloadAsync(completed, ct, manifest => verified.Add(target.Id, manifest)) is { } failure)
+                    return Blocked(failure);
                 var part = plan.Parts.Single(p => p.Id == target.Id);
                 var oldPolicy = plan.StoragePolicy == null ? null : ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy);
                 parts.Add(new(target.Id, target.DownloadTaskId!.Value, result.Id, result.Fingerprint, files.Count,
                     result.DownloadDirectory, oldPolicy?.ProcessingWorkspaceDirectory, captured.Policy.ProcessingWorkspaceDirectory,
                     plan.DeliveryLayout?.PartDirectories.GetValueOrDefault(target.Id) ?? workset.OutputDirectory,
                     layout.PartDirectories[target.Id]));
-                targets.Add(target with {DownloadDirectory = result.DownloadDirectory, Files = files,
+                targets.Add(target with {DownloadDirectory = result.DownloadDirectory, Files = files.ToList(),
                     DownloadArtifactId = null, DownloadOperationId = null});
             }
-            return Ready(new(parts), captured, workset, targets, proofs);
+            return Ready(new(parts), captured, workset, targets, proofs) with {VerifiedFiles = verified};
 
             Checked Ready(AcquisitionLocalFilesRecoveryPreview preview, AcquisitionLocalFilesStorage settings,
                 DownloadWorkset? original = null, IReadOnlyList<CloudDownloadTarget>? completed = null,
                 IReadOnlyList<string>? downloadEvidence = null) =>
-                new(new(new(task.Id, task.Title, run?.Id, verifyFiles, "localFiles", verifyFiles ? "RECOVERY_LOCAL_FILES_READY" : "RECOVERY_VERIFY_FILES",
+                new(new(new(task.Id, task.Title, run?.Id, check != FileCheck.Identify, "localFiles", check switch
+                    {
+                        FileCheck.Verify => "RECOVERY_LOCAL_FILES_READY",
+                        FileCheck.CheckOnConfirm => "RECOVERY_LOCAL_FILES_CHECK_ON_CONFIRM",
+                        _ => "RECOVERY_VERIFY_FILES"
+                    },
                     LocalFiles: preview), AcquisitionLocalFilesRecoveryReceipt.Hash(new {settings, preview, downloadEvidence})), settings, original, completed);
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or IOException or JsonException)
@@ -166,7 +193,9 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
                 throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
             if (prepareOnly && !CanPrepareWithoutFileOperations(task))
                 throw new InvalidOperationException("RECOVERY_PREPARATION_CONFLICT");
-            var check = await CheckAsync(task, run, true, guardDirectory, ct);
+            using var observation = confirmations?.Observe(task, FileProcessingActivityRuntimeProvider.ConfirmingExistingFiles, ct);
+            var check = await CheckAsync(task, run, FileCheck.Verify, guardDirectory, ct);
+            ct.ThrowIfCancellationRequested();
             if (!check.Diagnosis.Row.CanContinue) throw new InvalidOperationException(check.Diagnosis.Row.ReasonCode);
             if (expectedStorageJson != null && JsonSerializer.Serialize(check.Storage, WorkflowJson.Options) != expectedStorageJson)
                 throw new InvalidOperationException("RECOVERY_STORAGE_SETTINGS_CHANGED");
@@ -196,7 +225,8 @@ public sealed class AcquisitionLocalFilesRecoveryService(BakabaseDbContext db, A
                     var intent = DownloadArtifactCoordinator.DownloadIntent(target, check.Workset!.OutputDirectory, workspaces);
                     var evidence = await AcquisitionLocalFilesRecoveryReceipt.DownloadEvidenceAsync(db, intent,
                         part.DownloadTaskId, part.DownloadResultId, ct) ?? throw new InvalidOperationException("RECOVERY_FILES_UNVERIFIED");
-                    var registered = await registrar.RecordAsync(context, target, check.Workset.OutputDirectory, ct);
+                    var registered = await registrar.RecordAsync(context, target, check.Workset.OutputDirectory, ct, null,
+                        check.VerifiedFiles?.GetValueOrDefault(target.Id));
                     var artifact = await artifacts.GetArtifactAsync(registered.DownloadArtifactId!, ct);
                     if (artifact == null || artifact.Fingerprint != part.Fingerprint || artifact.RootDirectory != part.SourceDirectory ||
                         !artifact.Files.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(target.Files) ||

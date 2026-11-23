@@ -6,6 +6,24 @@ namespace Bakabase.Tests.Artifacts;
 public sealed partial class ArtifactOperationStoreTests
 {
     [TestMethod]
+    public async Task OnlyTheProvenFailureCanReopenItsOwnedAttempt()
+    {
+        var request = Request("reopen");
+        var first = await _store.ClaimAsync(request, "owner", LeaseTime);
+        Assert.IsTrue(await _store.FailAsync(first.Lease!, "specific failure"));
+        foreach (var (generation, reason, owner) in new[] {(2, "specific failure", "owner"), (1, "stale", "owner"), (1, "specific failure", "other")})
+            Assert.AreEqual(ArtifactClaimStatus.NeedsReconciliation,
+                (await _store.ReopenFailedAttemptAsync(request, generation, reason, owner, LeaseTime)).Status);
+        Assert.AreEqual(ArtifactClaimStatus.NeedsReconciliation, (await _store.ClaimSameAttemptAsync(request, 1, "owner", LeaseTime)).Status);
+        var claim = await _store.ReopenFailedAttemptAsync(request, 1, "specific failure", "owner", LeaseTime);
+        Assert.AreEqual(ArtifactClaimStatus.Acquired, claim.Status);
+        Assert.IsFalse(claim.StartedNewAttempt);
+        Assert.AreEqual(1, (await _store.GetOperationAsync(request.OperationKey))!.Attempt);
+        Assert.AreEqual(ArtifactClaimStatus.NeedsReconciliation,
+            (await _store.ReopenFailedAttemptAsync(request, 1, "specific failure", "owner", LeaseTime)).Status);
+    }
+
+    [TestMethod]
     public async Task New_attempt_proof_is_returned_only_by_the_generation_changing_claim()
     {
         var request = Request("new-generation-proof");

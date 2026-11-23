@@ -1,4 +1,6 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
@@ -43,6 +45,85 @@ public sealed class StructuredZipCompatibilityTests
         Assert.AreEqual(sourceSize,new FileInfo(file).Length);
         Assert.AreEqual(1,Directory.GetFiles(_root).Length); // Never materialize a stripped ZIP copy.
         Assert.AreEqual(2,Directory.GetFiles(output,"*",SearchOption.AllDirectories).Length);
+    }
+
+    [DataTestMethod]
+    [DataRow(0)]
+    [DataRow(65535)]
+    public async Task StandaloneZip64AuthenticatesItsGbkPasswordAndPreservesTheSource(int commentLength)
+    {
+        var file = await Fixture(0, true, 0, encrypted: true, centralZip64: true);
+        var bytes = await File.ReadAllBytesAsync(file);
+        var end = bytes.Length-22;
+        // A writer may retain the small values in the classic end record or use ZIP64 sentinels.
+        if (commentLength != 0)
+        {
+            bytes.AsSpan(end+8, 12).Fill(0xff);
+            BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(end+20), (ushort)commentLength);
+            Array.Resize(ref bytes, bytes.Length+commentLength);
+            await File.WriteAllBytesAsync(file, bytes);
+        }
+        var hash = SHA256.HashData(bytes);
+        var service = new Service();
+        var options = ArchiveOpenOptions.WithZipPasswordCodePage(null, ZipPasswordCodePage.SimplifiedChineseGbk)!;
+        var entries = await service.GetCompressFileEntries(file, default, options);
+        Assert.AreEqual(2, entries.Data!.Count);
+        const string password = "known-密码";
+        Assert.AreEqual(2, (await service.TestCompressedFile(file, password, null, null, null, default,
+            ArchiveOpenOptions.WithZipPasswordCodePage(null, ZipPasswordCodePage.Utf8))).ExitCode);
+        var output = Path.Combine(_root, "standalone");
+        var result = await service.ExtractWithProgress(file, output, password, true,
+            CompressedFileService.OverwriteMode.None, CompressedFileService.ProgressOutputTarget.StandardOutput,
+            null, null, null, default, options);
+        Assert.AreEqual(0, result.ExitCode);
+        Assert.AreEqual("inert payload", await File.ReadAllTextAsync(Path.Combine(output, "package", "payload.txt")));
+        Assert.AreEqual("preserve key", await File.ReadAllTextAsync(Path.Combine(output, "key.txt")));
+        CollectionAssert.AreEqual(hash, SHA256.HashData(await File.ReadAllBytesAsync(file)));
+    }
+
+    [DataTestMethod]
+    [DataRow("locatorDisk")] [DataRow("locatorOffset")] [DataRow("multipleDisks")] [DataRow("endLength")]
+    [DataRow("endDisk")] [DataRow("entryCount")] [DataRow("classicMirror")] [DataRow("centralOffset")]
+    [DataRow("memberDisk")] [DataRow("memberOffset")] [DataRow("missingSize")] [DataRow("localSize")]
+    [DataRow("memberDisk64")] [DataRow("memberOffset64")] [DataRow("memberPacked64")] [DataRow("duplicateExtra")]
+    [DataRow("trailing")]
+    public async Task StandaloneZip64RejectsInconsistentFramingBeforeOutput(string fault)
+    {
+        var expanded = fault.EndsWith("64", StringComparison.Ordinal) || fault == "duplicateExtra";
+        var file = await Fixture(0, true, 0, encrypted: true, centralZip64: expanded);
+        var bytes = await File.ReadAllBytesAsync(file);
+        var end = bytes.Length-22;
+        var zip64 = end-76;
+        var locator = end-20;
+        var central = checked((int)BinaryPrimitives.ReadUInt64LittleEndian(bytes.AsSpan(zip64+48)));
+        var nameLength = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(central+28));
+        var extraLength = BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(central+30));
+        var extra = central+46+nameLength;
+        // The fixture appends the 28-byte ZIP64 replacement to the central encryption extra.
+        var replacements = extra+extraLength-28;
+        var field = fault switch
+        {
+            "locatorDisk" => locator+4, "locatorOffset" => locator+8, "multipleDisks" => locator+16,
+            "endLength" => zip64+4, "endDisk" => zip64+16, "entryCount" => zip64+24,
+            "classicMirror" => end+10, "centralOffset" => zip64+48, "memberDisk" => central+34,
+            "memberOffset" => central+42, "missingSize" => central+24, "localSize" => 22,
+            "memberDisk64" => replacements+24, "memberOffset64" => replacements+16,
+            "memberPacked64" => replacements+8, "duplicateExtra" => extra, _ => 0
+        };
+        if (fault == "trailing") Array.Resize(ref bytes, bytes.Length+1);
+        else if (fault is "memberOffset" or "missingSize") bytes.AsSpan(field, 4).Fill(0xff);
+        else if (fault is "memberOffset64" or "memberPacked64") bytes.AsSpan(field, 8).Fill(0xff);
+        else if (fault == "duplicateExtra") BinaryPrimitives.WriteUInt16LittleEndian(bytes.AsSpan(field), 1);
+        else bytes[field] ^= 1;
+        await File.WriteAllBytesAsync(file, bytes);
+        var output = Path.Combine(_root, "rejected");
+        var options = ArchiveOpenOptions.WithZipPasswordCodePage(null, ZipPasswordCodePage.SimplifiedChineseGbk)!;
+        var error = await Assert.ThrowsExactlyAsync<ArchivePasswordEncodingException>(() =>
+            new Service().ExtractWithProgress(file, output, "known-密码", true, CompressedFileService.OverwriteMode.None,
+                CompressedFileService.ProgressOutputTarget.StandardOutput, null, null, null, default, options));
+        Assert.IsTrue(error.Code is "ArchiveIntegrityFailure" or "ArchivePasswordEncodingUnsupported", error.Code);
+        Assert.IsFalse(Directory.Exists(output));
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(file));
     }
 
     [TestMethod]
@@ -154,9 +235,9 @@ public sealed class StructuredZipCompatibilityTests
     private static Task<CompressedFileService.TestResult> Extract(CompressedFileService service,string file,string output,ArchiveOpenOptions options) =>
         service.ExtractWithProgress(file,output,null,false,CompressedFileService.OverwriteMode.None,
             CompressedFileService.ProgressOutputTarget.StandardOutput,null,null,null,default,options);
-    private async Task<string> Fixture(long prefix,bool zip64,int trailing,bool encrypted=false)
+    private async Task<string> Fixture(long prefix,bool zip64,int trailing,bool encrypted=false,bool centralZip64=false)
     {
-        var file=Path.Combine(_root,Guid.NewGuid().ToString("N")+".mp4");
+        var file=Path.Combine(_root,Guid.NewGuid().ToString("N")+(prefix == 0 ? ".zip" : ".mp4"));
         const string script="""
 import json,sys,io,zipfile,struct,pyzipper
 r=json.load(sys.stdin);b=io.BytesIO()
@@ -177,6 +258,18 @@ if r['zip64']:
   struct.pack_into('<II',data,local+18,0xffffffff,0xffffffff)
   struct.pack_into('<H',data,local+4,45);struct.pack_into('<H',data,p+6,45)
   ns,es,cs=struct.unpack_from('<HHH',data,p+28);p+=46+ns+es+cs
+ if r['centralZip64']:
+  rebuilt=bytearray();p=offset
+  while p<end:
+   n,e,c=struct.unpack_from('<HHH',data,p+28);entry=bytearray(data[p:p+46+n+e+c])
+   packed,unpacked=struct.unpack_from('<II',entry,20);local=struct.unpack_from('<I',entry,42)[0]
+   # Replace the four 16/32-bit values with their legal ZIP64 representation (disk zero).
+   replacement=struct.pack('<HHQQQI',1,28,unpacked,packed,local,0)
+   struct.pack_into('<II',entry,20,0xffffffff,0xffffffff);struct.pack_into('<I',entry,42,0xffffffff)
+   struct.pack_into('<H',entry,34,0xffff);struct.pack_into('<H',entry,30,e+len(replacement))
+   rebuilt.extend(entry[:46+n+e]+replacement+entry[46+n+e:]);p+=46+n+e+c
+  data=data[:offset]+rebuilt+data[end:];size=len(rebuilt);end=offset+size
+  struct.pack_into('<I',data,end+12,size)
  record=struct.pack('<IQHHIIQQQQ',0x06064b50,44,45,45,0,0,2,2,size,offset)
  locator=struct.pack('<IIQI',0x07064b50,0,end,1)
  data=data[:end]+record+locator+data[end:]
@@ -184,7 +277,7 @@ with open(r['file'],'wb') as f:
  f.write(b'\0\0\0\x18ftypisom');f.seek(r['prefix']);f.write(data);f.write(b'T'*r['trailing'])
 """;
         using var process=new Process{StartInfo=Runtime().StartInfo(["-I","-c",script],_root)};
-        process.Start();await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new{file,prefix,zip64,trailing,encrypted}));process.StandardInput.Close();
+        process.Start();await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new{file,prefix,zip64,trailing,encrypted,centralZip64}));process.StandardInput.Close();
         var output=process.StandardOutput.ReadToEndAsync();var error=process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();await output;Assert.AreEqual(0,process.ExitCode,await error);
         return file;

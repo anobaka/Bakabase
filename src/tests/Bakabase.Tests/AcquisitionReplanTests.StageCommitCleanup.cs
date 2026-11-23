@@ -145,6 +145,9 @@ public sealed partial class AcquisitionReplanTests
             Assert.AreEqual(ArtifactLocationState.Retired, (await Artifacts.GetArtifactAsync(owned.Id))!.State);
             var rawCandidate = (await cleanup.PreviewAsync([publication.Id], [run.Id], default)).Single(c => c.ArtifactId == source.Id);
             Assert.IsTrue(rawCandidate.Eligible, rawCandidate.Reason);
+            var remainingAtSource = source.Files.Where(File.Exists).Select(f => new FileInfo(f)).ToArray();
+            Assert.AreEqual(remainingAtSource.Length, rawCandidate.FileCount);
+            Assert.AreEqual(remainingAtSource.Sum(f => f.Length), rawCandidate.Bytes);
             var rawOutcome = await cleanup.ReclaimAutomaticAsync(rawCandidate, [run.Id], default);
             Assert.IsTrue(rawOutcome.Completed, rawOutcome.Reason);
             Assert.AreEqual(ArtifactLocationState.Retired, (await Artifacts.GetArtifactAsync(source.Id))!.State);

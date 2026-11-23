@@ -15,10 +15,12 @@ type FilterInput = {
 export function normalizeAcquisitionFilters(input: FilterInput): AcquisitionFilterSelection {
   const canonical = (values: readonly string[]) => [...new Set(values)].sort();
   return {
+    // The retired catch-all has no equivalent AND filter after splitting its causes.
+    // Discard saved selections so an older browser preference cannot reject the search.
     attentionTags: canonical([
       ...(input.attentionTags ?? []),
       ...(input.attentionTag ? [input.attentionTag] : []),
-    ]),
+    ].filter(tag => tag !== "planNeedsInput")),
     facts: canonical(input.facts ?? []),
   };
 }

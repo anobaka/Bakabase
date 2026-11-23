@@ -41,6 +41,7 @@ internal sealed class AcquisitionDeliveryRetirementWorker(IServiceScopeFactory s
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var restored = false;
+        var pendingCleanupCursor = 0;
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -65,6 +66,14 @@ internal sealed class AcquisitionDeliveryRetirementWorker(IServiceScopeFactory s
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             { logger.LogWarning(ex, "Cannot restore pending acquisition delivery retirements."); }
+            try
+            {
+                await using var scope = scopes.CreateAsyncScope();
+                pendingCleanupCursor = await scope.ServiceProvider.GetRequiredService<AcquisitionTaskDeletionCleanupService>()
+                    .FinishPendingSmbBatchAsync(pendingCleanupCursor, stoppingToken);
+            }
+            catch (Exception error) when (!stoppingToken.IsCancellationRequested)
+            { logger.LogWarning(error, "Cannot finish pending SMB directory cleanup."); }
             await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         }
     }

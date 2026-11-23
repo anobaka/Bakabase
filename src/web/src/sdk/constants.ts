@@ -5125,6 +5125,24 @@ export const WorkflowRunStatusLabel: Record<WorkflowRunStatus, string> = {
   [WorkflowRunStatus.Waiting]: 'Waiting'
 };
 
+export enum WorkflowRunActionMode {
+  Continue = 1,
+  Retry = 2,
+  Recompute = 3
+}
+
+export const workflowRunActionModes = [
+  { label: 'Continue', value: WorkflowRunActionMode.Continue },
+  { label: 'Retry', value: WorkflowRunActionMode.Retry },
+  { label: 'Recompute', value: WorkflowRunActionMode.Recompute }
+] as const;
+
+export const WorkflowRunActionModeLabel: Record<WorkflowRunActionMode, string> = {
+  [WorkflowRunActionMode.Continue]: 'Continue',
+  [WorkflowRunActionMode.Retry]: 'Retry',
+  [WorkflowRunActionMode.Recompute]: 'Recompute'
+};
+
 export enum AttachmentLayout {
   Tile = 0,
   Carousel = 1
@@ -6355,6 +6373,24 @@ export const ChatStreamEventTypeLabel: Record<ChatStreamEventType, string> = {
   [ChatStreamEventType.Error]: 'Error'
 };
 
+export enum LlmFeatureExecutionStatus {
+  Queued = 0,
+  Running = 1,
+  Released = 2
+}
+
+export const llmFeatureExecutionStatuses = [
+  { label: 'Queued', value: LlmFeatureExecutionStatus.Queued },
+  { label: 'Running', value: LlmFeatureExecutionStatus.Running },
+  { label: 'Released', value: LlmFeatureExecutionStatus.Released }
+] as const;
+
+export const LlmFeatureExecutionStatusLabel: Record<LlmFeatureExecutionStatus, string> = {
+  [LlmFeatureExecutionStatus.Queued]: 'Queued',
+  [LlmFeatureExecutionStatus.Running]: 'Running',
+  [LlmFeatureExecutionStatus.Released]: 'Released'
+};
+
 export enum AigcGeneratorComfyUIImportStatus {
   Imported = 1,
   SkippedDuplicate = 2,
@@ -6599,6 +6635,36 @@ export const HttpDownloadStatusLabel: Record<HttpDownloadStatus, string> = {
   [HttpDownloadStatus.Stopped]: 'Stopped',
   [HttpDownloadStatus.Completed]: 'Completed',
   [HttpDownloadStatus.Failed]: 'Failed'
+};
+
+export enum CloudTransferRecoveryDisposition {
+  Unavailable = 0,
+  Candidate = 1,
+  Reconcile = 2,
+  Retry = 3,
+  RequiresConfirmation = 4,
+  Authorized = 5,
+  FirstAttempt = 6
+}
+
+export const cloudTransferRecoveryDispositions = [
+  { label: 'Unavailable', value: CloudTransferRecoveryDisposition.Unavailable },
+  { label: 'Candidate', value: CloudTransferRecoveryDisposition.Candidate },
+  { label: 'Reconcile', value: CloudTransferRecoveryDisposition.Reconcile },
+  { label: 'Retry', value: CloudTransferRecoveryDisposition.Retry },
+  { label: 'RequiresConfirmation', value: CloudTransferRecoveryDisposition.RequiresConfirmation },
+  { label: 'Authorized', value: CloudTransferRecoveryDisposition.Authorized },
+  { label: 'FirstAttempt', value: CloudTransferRecoveryDisposition.FirstAttempt }
+] as const;
+
+export const CloudTransferRecoveryDispositionLabel: Record<CloudTransferRecoveryDisposition, string> = {
+  [CloudTransferRecoveryDisposition.Unavailable]: 'Unavailable',
+  [CloudTransferRecoveryDisposition.Candidate]: 'Candidate',
+  [CloudTransferRecoveryDisposition.Reconcile]: 'Reconcile',
+  [CloudTransferRecoveryDisposition.Retry]: 'Retry',
+  [CloudTransferRecoveryDisposition.RequiresConfirmation]: 'RequiresConfirmation',
+  [CloudTransferRecoveryDisposition.Authorized]: 'Authorized',
+  [CloudTransferRecoveryDisposition.FirstAttempt]: 'FirstAttempt'
 };
 
 export enum BulkModificationProcessorOptionsItemsFilterBy {

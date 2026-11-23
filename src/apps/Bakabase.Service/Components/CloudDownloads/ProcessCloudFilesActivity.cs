@@ -27,6 +27,10 @@ public sealed record CloudFileProcessingSignal
 {
     public string TargetId { get; init; } = "";
     public string? Action { get; init; }
+    public string? ArtifactId { get; init; }
+    public string? Fingerprint { get; init; }
+    public string? StepId { get; init; }
+    public string? ArchiveGroupToken { get; init; }
     public string? Password { get; init; }
     public string? ExtractionPlanJson { get; init; }
     public string? ArchiveId { get; init; }

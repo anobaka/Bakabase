@@ -211,6 +211,50 @@ public sealed class StorageWriteReservationTests
         Assert.ThrowsException<IOException>(() => StorageVolumes.LinuxCapacityIdentity("/missing", mounts));
     }
 
+    [TestMethod]
+    public void ValidatedMacBindMountsSeparateCapacityAndKeepAliasesTogether()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        string[] mounts =
+        [
+            "60 25 0:36 /host/app /data rw,relatime - virtiofs mac rw",
+            "61 25 0:36 /host/work /work/acquisitions rw,relatime - virtiofs mac rw",
+            "62 25 0:36 /host/nas /media/nas rw,relatime - virtiofs mac rw",
+            "63 25 0:36 /host/nas/acceptance /nas\\040acceptance rw,relatime - virtiofs mac rw",
+            "64 25 0:36 /host/other-nas /media/other rw,relatime - virtiofs mac rw",
+            "65 25 8:2 /host/native /native rw,relatime - ext4 /dev/sda2 rw"
+        ];
+        const string metadata = """
+            {"schemaVersion":1,"mounts":[
+               {"type":"bind","target":"/data","hostCapacity":{"root":"/host/app","device":10,"totalBytes":10000}},
+               {"type":"bind","target":"/work/acquisitions","hostCapacity":{"root":"/host/work","device":10,"totalBytes":10000}},
+               {"type":"bind","target":"/media/nas","hostCapacity":{"root":"/host/nas","device":20,"totalBytes":20000}},
+               {"type":"bind","target":"/nas acceptance","hostCapacity":{"root":"/host/nas/acceptance","device":20,"totalBytes":20000}},
+               {"type":"bind","target":"/media/other","hostCapacity":{"root":"/host/other-nas","device":30,"totalBytes":30000}},
+               {"type":"bind","target":"/native","hostCapacity":{"root":"/host/native","device":40,"totalBytes":40000}}
+            ]}
+            """;
+        string Identity(string path, long bytes, string? claims = metadata) =>
+            StorageVolumes.LinuxCapacityIdentity(path, mounts, bytes, claims);
+        Assert.AreEqual(Identity("/data", 10000), Identity("/work/acquisitions", 10000));
+        Assert.AreEqual(Identity("/media/nas", 20000), Identity("/nas acceptance", 20000));
+        Assert.AreNotEqual(Identity("/data", 10000), Identity("/media/nas", 20000));
+        Assert.AreNotEqual(Identity("/media/nas", 20000), Identity("/media/other", 30000));
+        Assert.AreEqual(Identity("/native", 40000, null), Identity("/native", 1));
+        Assert.ThrowsException<IOException>(() => Identity("/media/nas", 1));
+
+        var missingPeer = metadata.Replace("/media/other", "/stale-target", StringComparison.Ordinal);
+        var stalePeer = metadata.Replace("/host/other-nas", "/stale-source", StringComparison.Ordinal);
+        Assert.ThrowsException<IOException>(() => Identity("/media/nas", 1, missingPeer));
+        foreach (var invalidClaims in new[] { null, missingPeer, stalePeer })
+        {
+            Assert.AreEqual(Identity("/data", 10000, null), Identity("/media/nas", 20000, invalidClaims));
+            Assert.AreEqual(Identity("/data", 10000, null), Identity("/data", 10000, invalidClaims));
+        }
+        var sharedTotal = metadata.Replace("30000", "20000", StringComparison.Ordinal);
+        Assert.AreEqual(Identity("/media/nas", 20000, sharedTotal), Identity("/media/other", 20000, sharedTotal));
+    }
+
     private sealed class Policy : IStorageWritePolicyProvider
     {
         public Task<long> GetMinimumFreeBytesAsync(StorageWriteContext? context, CancellationToken ct = default) => Task.FromResult(Floor);

@@ -17,9 +17,10 @@ import { acquisitionStageLabel, acquisitionDownloadActivity } from "@/components
 import { AcquisitionStatus } from "@/sdk/constants";
 import AcquisitionTiming from "@/components/Acquire/AcquisitionTiming";
 import AcquisitionCreationOrigin from "@/components/Acquire/AcquisitionCreationOrigin";
+import AcquisitionDownloadSources from "@/components/Acquire/AcquisitionDownloadSources";
 import DownloadProblemMessage from "@/components/CloudDownload/DownloadProblemMessage";
 import RuntimeOverviewSummary from "@/components/Acquire/PlanTask/RuntimeOverviewSummary";
-import type { RuntimeOverview } from "@/components/Acquire/PlanTask/runtimeOverview";
+import { currentTaskRuntime, type RuntimeOverview } from "@/components/Acquire/PlanTask/runtimeOverview";
 import AcquisitionSizeEstimate, { type AcquisitionSizeEstimateValue } from "@/components/Acquire/AcquisitionSizeEstimate";
 
 interface Props {
@@ -29,7 +30,6 @@ interface Props {
   onEditRecipe: (definitionId: number) => void;
   inDetail?: boolean;
   onOpen?: () => void;
-  onOriginNavigate?: () => void;
   overview?: RuntimeOverview;
   sizeEstimate?: AcquisitionSizeEstimateValue;
   facts?: string[];
@@ -76,7 +76,6 @@ const AcquisitionRow: React.FC<Props> = ({
   onChanged,
   onEditRecipe,
   onOpen,
-  onOriginNavigate,
   overview,
   sizeEstimate,
   facts,
@@ -90,8 +89,7 @@ const AcquisitionRow: React.FC<Props> = ({
   const stepKind =
     task.currentStepIndex != null ? recipe?.stepKinds?.[task.currentStepIndex] : undefined;
   const ResumeForm = stepKind ? getWorkflowActivityUI(stepKind)?.ResumeForm : undefined;
-  const currentOverview = task.workflowRunId && overview?.taskId === task.id &&
-    overview.workflowRunId === task.workflowRunId ? overview : undefined;
+  const currentOverview = currentTaskRuntime(task, overview);
   const downloadActivity = acquisitionDownloadActivity(task, currentOverview);
 
   const act = async (fn: () => Promise<{ code?: number }>, successKey: string) => {
@@ -123,6 +121,7 @@ const AcquisitionRow: React.FC<Props> = ({
         {!inDetail && <span className="font-medium truncate">
           {task.resourceName ?? t<string>("acquisition.unnamed", { id: task.resourceId })}
         </span>}
+        {!inDetail && <AcquisitionDownloadSources task={task} overview={overview} />}
         {!downloadActivity && task.status === AcquisitionStatus.Waiting && waitingFor(task.waitingSince) && (
           <span className="text-xs text-secondary-600">· {waitingFor(task.waitingSince)}</span>
         )}
@@ -155,16 +154,11 @@ const AcquisitionRow: React.FC<Props> = ({
         </div>
       </div>
 
-      <AcquisitionAttentionTags tags={currentOverview?.attentionTags ?? task.attentionTags} facts={facts} />
+      <AcquisitionAttentionTags tags={currentOverview?.attentionTags ?? task.attentionTags} facts={facts} onReviewCleanup={onDelete} />
       <AcquisitionSizeEstimate estimate={sizeEstimate} />
-      <AcquisitionCreationOrigin
-        inspectPosts={inDetail}
-        origins={task.creationOrigins}
-        compact
-        onNavigate={onOriginNavigate}
-      />
+      <AcquisitionCreationOrigin origins={task.creationOrigins} compact />
       <AcquisitionTiming task={task} />
-      {currentOverview && <RuntimeOverviewSummary overview={currentOverview} />}
+      {currentOverview && <RuntimeOverviewSummary overview={currentOverview} showSources={!!inDetail} />}
       {!currentOverview && recipe && task.currentStepIndex != null && (
         <div className="flex items-center gap-2">
           <Progress

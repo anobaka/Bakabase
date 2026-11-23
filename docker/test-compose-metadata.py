@@ -125,6 +125,37 @@ print(json.dumps({{"args": args, "metadata": os.environ.get({VARIABLE!r}), "serv
         self.assertEqual(HELPER["mount_metadata"]({"services": {"server": {
             "volumes_from": ["other"], "volumes": [{"type": "bind", "source": "/host", "target": "/data"}]}}}), "")
 
+    def test_capacity_metadata_is_bound_to_the_resolved_directory(self):
+        volume = self.root / "volume"
+        volume.mkdir()
+        alias = self.root / "alias"
+        alias.symlink_to(volume)
+        config = {"services": {"server": {"volumes": [
+            {"type": "bind", "source": str(volume), "target": "/data"},
+            {"type": "bind", "source": str(alias), "target": "/alias"},
+            {"type": "bind", "source": str(self.root / "absent"), "target": "/absent"},
+            {"type": "volume", "source": "named", "target": "/named"}]}}}
+        command_metadata = HELPER["command_metadata"]
+        read_capacities = HELPER["host_capacities"]
+        mounts = json.loads(command_metadata(config, ["up"], read_capacities))["mounts"]
+        capacity = mounts[0]["hostCapacity"]
+        self.assertEqual(capacity["root"], str(volume.resolve()))
+        self.assertEqual(capacity["device"], volume.stat().st_dev)
+        self.assertGreater(capacity["totalBytes"], 0)
+        self.assertEqual(capacity, mounts[1]["hostCapacity"])
+        self.assertNotIn("hostCapacity", mounts[2])
+        self.assertNotIn("hostCapacity", mounts[3])
+        self.assertNotIn("hostCapacity", command_metadata(config, ["up"]))
+        self.assertEqual(command_metadata(config, ["run", "--volume", "/other:/data", "server"], read_capacities), "")
+
+    def test_capacity_uses_the_full_darwin_smb_block_count(self):
+        source = str(self.root)
+        report = ("Filesystem 1024-blocks Used Available Capacity Mounted on\n"
+                  "//host/share with spaces 46440288904 30000000000 16440288904 65% /mnt/share with spaces\n")
+        function = HELPER["host_capacities"]
+        with patch.dict(function.__globals__, read_command=lambda args: report):
+            self.assertEqual(function([source])[source]["totalBytes"], 46440288904 * 1024)
+
     def test_non_start_commands_do_not_require_python(self):
         # This fake Docker is a shell script, and PATH deliberately contains no Python.
         (self.bin / "docker").write_text('#!/bin/bash\nprintf "docker-called\\n"\n')

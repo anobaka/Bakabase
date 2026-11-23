@@ -45,6 +45,8 @@ public static class WorkflowSourceRunProblems
         "BAIDU_DOWNLOAD_TARGET_REQUIRED", "BAIDU_REMOTE_MANIFEST_CHANGED", "BAIDU_OUTPUT_DIRECTORY_FAILED",
         "BAIDU_DOWNLOAD_FAILED", "BAIDU_DOWNLOAD_INCOMPLETE",
         "BAIDU_OUTPUT_FILE_INVALID", "BAIDU_OUTPUT_FILE_READ_FAILED", "BAIDU_LOCAL_FILE_CHANGED",
+        "BAIDU_VERIFIED_FILE_MISSING", "BAIDU_VERIFIED_FILE_REPLACED",
+        "BAIDU_VERIFIED_FILE_SIZE_CHANGED", "BAIDU_VERIFIED_FILE_TIME_CHANGED",
         "BAIDU_LOCAL_PATH_TOO_LONG", "BAIDU_LOCAL_PATH_MAPPING_CONFLICT", "BAIDU_LOCAL_PATH_MAPPING_INVALID",
         "BAIDU_DOWNLOAD_CHECKSUM_MISMATCH", "BAIDU_EXISTING_DOWNLOAD_UNVERIFIED",
         "BAIDU_DOWNLOAD_PARTIAL_UNVERIFIED", "BAIDU_DOWNLOAD_CHECKPOINT_INVALID", "BAIDU_OUTPUT_UNEXPECTED_FILE",
@@ -52,7 +54,7 @@ public static class WorkflowSourceRunProblems
         "GOFILE_SHARE_NOT_FOUND", "GOFILE_ACCESS_REQUIRED", "CLOUD_NETWORK_ERROR", "CLOUD_RATE_LIMITED",
         CloudDownloadIntegrityFailures.PartialIdentityUnverified, "CLOUD_RANGE_UNCONFIRMED", CloudDownloadIntegrityFailures.ChecksumMismatch,
         "CLOUD_ACCESS_REQUIRED", "CLOUD_TOOL_FAILED", "PIXELDRAIN_NETWORK_ERROR", "PIXELDRAIN_NOT_FOUND",
-        "PIXELDRAIN_SHARE_UNAVAILABLE", "PIXELDRAIN_RATE_LIMITED", "PIXELDRAIN_ACCESS_REQUIRED", "PIXELDRAIN_VERIFICATION_REQUIRED",
+        "PIXELDRAIN_SHARE_UNAVAILABLE", "PIXELDRAIN_RATE_LIMITED", "PIXELDRAIN_TRANSFER_QUOTA_EXCEEDED", "PIXELDRAIN_DOWNLOAD_QUOTA_EXCEEDED", "PIXELDRAIN_ACCESS_REQUIRED", "PIXELDRAIN_VERIFICATION_REQUIRED",
         "BAIDU_SHARE_NETWORK_REQUIRES_PROXY",
         "PIKPAK_ORIGINAL_FILE_UNAVAILABLE", "PIKPAK_ACCESS_CODE_REQUIRED", "PIKPAK_PUBLIC_ACCESS_REQUIRED",
         "PIKPAK_VERIFICATION_REQUIRED", "SHAREPOINT_PUBLIC_ACCESS_REQUIRED",
@@ -83,7 +85,7 @@ public static class WorkflowSourceRunProblems
     {
         if (string.IsNullOrWhiteSpace(diagnostic)) return [];
         var codes = Regex.Matches(diagnostic, @"\b[A-Z][A-Z0-9_]{2,}\b").Select(m => m.Value)
-            .Where(code => Known.Contains(code) || ExecutionProblemClassifier.IsKnown(code)).Distinct(StringComparer.Ordinal).ToArray();
+            .Where(code => Known.Contains(code) || CloudDownloads.Baidu.BaiduTransferDiagnostics.IsKnown(code) || ExecutionProblemClassifier.IsKnown(code)).Distinct(StringComparer.Ordinal).ToArray();
         if (codes.Length > 0) return codes;
         const string legacyPixeldrainAccess = "PixelDrain password-protected shares require manual access; this adapter supports public files and folders";
         foreach (var line in diagnostic.AsSpan().EnumerateLines())

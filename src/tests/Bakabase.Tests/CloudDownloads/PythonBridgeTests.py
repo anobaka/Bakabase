@@ -1,9 +1,11 @@
 """Offline protocol fixtures. No account, browser, live share, or downloads required."""
 import contextlib
+import errno
 import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -57,8 +59,12 @@ class OriginalRanges:
         assert url == self.entry['url'] and options['allow_redirects'] is False
         headers = options['headers']
         assert headers['Accept-Encoding'] == 'identity'
-        span = headers['Range']
+        span = headers.get('Range')
         self.requests.append(span)
+        if span is None:
+            chunks = {'fresh interruption': [self.original[:4], OSError('interrupted')],
+                      'fresh mismatch': [b'Q' * len(self.original)]}.get(self.failure, [self.original])
+            return RangeSession(200, {'Content-Length': str(len(self.original))}, chunks)
         a, b = span.removeprefix('bytes=').split('-')
         start = int(a)
         end = int(b) if b else len(self.original) - 1
@@ -219,7 +225,7 @@ class BridgeTests(unittest.TestCase):
             entries, _ = bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/d/fixture"})
             self.assertEqual(["sub/file.bin"], [e["path"] for e in entries])
             child["availability"] = "transfer_limit_exceeded"
-            with self.assertRaisesRegex(bridge.BridgeError, "PIXELDRAIN_RATE_LIMITED"):
+            with self.assertRaisesRegex(bridge.BridgeError, "PIXELDRAIN_TRANSFER_QUOTA_EXCEEDED"):
                 bridge.pixeldrain_manifest({"url": "https://pixeldrain.com/d/fixture"})
 
     def test_pixeldrain_http_failures_have_stable_codes_and_never_relay_signed_urls(self):
@@ -238,7 +244,9 @@ class BridgeTests(unittest.TestCase):
 
     def test_pixeldrain_api_captcha_and_limit_flags_are_not_silently_skipped(self):
         for value, code in (("file_rate_limited_captcha_required", "VERIFICATION_REQUIRED"),
-                            ("transfer_limit_exceeded", "RATE_LIMITED"), ("hotlink_detected", "ACCESS_REQUIRED")):
+                            ("transfer_limit_exceeded", "TRANSFER_QUOTA_EXCEEDED"),
+                            ("download_limit_exceeded", "DOWNLOAD_QUOTA_EXCEEDED"),
+                            ("max_concurrent_downloads", "RATE_LIMITED"), ("hotlink_detected", "ACCESS_REQUIRED")):
             file = {"id": "fixture", "name": "a.rar", "size": 3, "availability": value}
             modules, _ = self.pixel_fixture({"file/fixture/info": file})
             with self.subTest(value=value), patch.dict(sys.modules, modules), patch.object(bridge.importlib.metadata, "version", return_value="1.32.17"):
@@ -336,6 +344,270 @@ class BridgeTests(unittest.TestCase):
             self.assertEqual(receipts['sibling.rar'], saved['sibling.rar'])
             self.assertEqual(session.entry['sha256'], saved['current.rar']['sha256'])
             self.assertFalse(staging.exists())
+
+    @contextlib.contextmanager
+    def pixeldrain_rejected_fixture(self, root, more_members=False):
+        output, state = root / 'output', root / 'private-operation'
+        staging = output / ('.bakabase-cloud-' + state.name)
+        staging.mkdir(parents=True)
+        state.mkdir()
+        request = {'provider': 'pixeldrain', 'url': 'https://pixeldrain.com/l/original',
+                   'output': str(output), 'state': str(state)}
+        identity = hashlib.sha256(json.dumps(['pixeldrain', request['url'], None, str(output.resolve())]).encode()).hexdigest()
+        session = OriginalRanges(b'original blob')
+        sibling = b'complete sibling'
+        entries = [dict(session.entry, id='sibling', path='sibling.rar', size=len(sibling),
+                        sha256=hashlib.sha256(sibling).hexdigest()),
+                   dict(session.entry, path='current.rar')]
+        if more_members:
+            entries.append(dict(session.entry, id='later', path='later.rar'))
+        manifest = [{k: entry.get(k) for k in ('id', 'path', 'size', 'md5', 'sha256')} for entry in entries]
+        (state / 'manifest.json').write_text(json.dumps({'identity': identity, 'files': manifest}))
+        receipt = {'size': len(sibling), 'sha256': entries[0]['sha256']}
+        (state / 'completed.json').write_text(json.dumps({'sibling.rar': receipt}))
+        (output / 'sibling.rar').write_bytes(sibling)
+        part = staging / (hashlib.sha256(b'current.rar').hexdigest() + '.part')
+        part.write_bytes(b'wrong')
+        class Session: pass
+        with patch.dict(sys.modules, {'requests': types.SimpleNamespace(Session=Session)}), \
+                patch.object(bridge, 'pixeldrain_manifest', return_value=(entries, session)), \
+                patch.object(bridge, 'PROTOCOL_OUTPUT', io.StringIO()):
+            yield request, session, part, output, state, receipt
+
+    def test_pixeldrain_retry_restarts_only_the_rejected_member_and_only_when_explicit(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            request, session, part, output, state, sibling_receipt = fixture
+            with self.assertRaisesRegex(bridge.BridgeError, 'CLOUD_DOWNLOAD_CHECKSUM_MISMATCH'):
+                bridge.run(request)
+            self.assertEqual(b'wrong', part.read_bytes())
+            self.assertFalse(part.with_suffix('.rejected').exists())
+            self.assertEqual(['bytes=5-'], session.requests)
+            bridge.run(dict(request, checksumRetryKey='1000'))
+            self.assertEqual(['bytes=5-', None], session.requests)
+            self.assertEqual(session.original, (output / 'current.rar').read_bytes())
+            self.assertEqual(b'complete sibling', (output / 'sibling.rar').read_bytes())
+            self.assertEqual(sibling_receipt, json.loads((state / 'completed.json').read_text())['sibling.rar'])
+            self.assertFalse(part.parent.exists())
+            self.assertFalse((state / (part.stem + '.rejected.json')).exists())
+
+    def test_pixeldrain_rejected_prefix_survives_interruption_and_new_prefix_is_resumed(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            request, session, part, output, _, _ = fixture
+            rejected = part.with_suffix('.rejected')
+            session.failure = 'fresh interruption'
+            with self.assertRaises(OSError):
+                bridge.run(dict(request, checksumRetryKey='1000'))
+            self.assertEqual(b'wrong', (rejected / 'original').read_bytes())
+            self.assertEqual(session.original[:4], part.read_bytes())
+            session.failure = None
+            bridge.run(dict(request, checksumRetryKey='1000'))
+            self.assertEqual([None, 'bytes=4-'], session.requests)
+            self.assertEqual(session.original, (output / 'current.rar').read_bytes())
+            self.assertFalse(rejected.exists())
+
+    def test_pixeldrain_reconciles_interruption_before_atomic_move_and_after_publish(self):
+        for after_publish in (False, True):
+            with self.subTest(after_publish=after_publish), tempfile.TemporaryDirectory() as temp, \
+                    self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+                request, session, part, output, _, _ = fixture
+                destination = output / 'current.rar'
+                rejected = part.with_suffix('.rejected')
+                unlink = Path.unlink
+                rename = os.rename
+                def interrupt_unlink(path, *args, **kwargs):
+                    if path == part and after_publish and destination.exists():
+                        raise OSError('interrupted')
+                    return unlink(path, *args, **kwargs)
+                def interrupt_rename(source, target, *args, **kwargs):
+                    if source == part and not after_publish:
+                        raise OSError('interrupted')
+                    return rename(source, target, *args, **kwargs)
+                with patch.object(Path, 'unlink', interrupt_unlink), patch.object(os, 'rename', interrupt_rename), self.assertRaises(OSError):
+                    bridge.run(dict(request, checksumRetryKey='1000'))
+                self.assertEqual(b'wrong', (rejected / 'original' if after_publish else part).read_bytes())
+                if after_publish:
+                    self.assertTrue(part.samefile(destination))
+                bridge.run(request)
+                self.assertEqual([None], session.requests)
+                self.assertEqual(session.original, destination.read_bytes())
+                self.assertFalse(part.parent.exists())
+
+    @unittest.skipUnless(sys.platform == 'linux', 'uses Linux no-replace publication')
+    def test_unsupported_hardlinks_publish_and_reuse_the_verified_file(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            request, session, part, output, state, sibling_receipt = fixture
+            part.write_bytes(session.original[:5])
+            with patch.object(os, 'link', side_effect=OSError(errno.ENOTSUP, 'hardlinks unavailable')):
+                bridge.run(request)
+            self.assertEqual(session.original, (output / 'current.rar').read_bytes())
+            self.assertFalse(part.parent.exists())
+            receipts = json.loads((state / 'completed.json').read_text())
+            self.assertEqual(sibling_receipt, receipts['sibling.rar'])
+            self.assertEqual(session.entry['sha256'], receipts['current.rar']['sha256'])
+            bridge.run(request)
+            self.assertEqual(['bytes=5-'], session.requests)
+
+    @unittest.skipUnless(sys.platform == 'linux', 'uses Linux no-replace publication')
+    def test_no_replace_publication_preserves_a_concurrent_destination(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            request, session, part, output, _, _ = fixture
+            part.write_bytes(session.original[:5])
+            destination = output / 'current.rar'
+
+            def collide(source, target):
+                self.assertEqual(part, source)
+                self.assertEqual(destination, target)
+                target.write_bytes(b'concurrent foreign file')
+                raise OSError(errno.ENOTSUP, 'hardlinks unavailable')
+
+            with patch.object(os, 'link', side_effect=collide), \
+                    self.assertRaisesRegex(bridge.BridgeError, 'without overwriting'):
+                bridge.run(request)
+            self.assertEqual(b'concurrent foreign file', destination.read_bytes())
+            self.assertEqual(session.original, part.read_bytes())
+
+    @unittest.skipUnless(sys.platform == 'linux', 'uses Linux no-replace publication')
+    def test_no_replace_publication_replays_rejected_partial_cleanup_after_move(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            request, session, part, output, state, _ = fixture
+            destination = output / 'current.rar'
+            rejected = part.with_suffix('.rejected')
+            release = bridge.release_rejected_partial
+
+            def interrupt(*args):
+                if args[1] == part:
+                    self.assertFalse(part.exists())
+                    self.assertEqual(session.original, destination.read_bytes())
+                    raise OSError('interrupted after move')
+                return release(*args)
+
+            with patch.object(os, 'link', side_effect=OSError(errno.ENOTSUP, 'hardlinks unavailable')), \
+                    patch.object(bridge, 'release_rejected_partial', side_effect=interrupt), \
+                    self.assertRaisesRegex(OSError, 'interrupted after move'):
+                bridge.run(dict(request, checksumRetryKey='1000'))
+            self.assertEqual(b'wrong', (rejected / 'original').read_bytes())
+            bridge.run(request)
+            self.assertEqual([None], session.requests)
+            self.assertEqual(session.original, destination.read_bytes())
+            self.assertFalse(part.parent.exists())
+            self.assertEqual([], list(state.glob('*.rejected.json')))
+
+    def test_publication_does_not_fallback_for_link_permission_or_collision_errors(self):
+        for code in (errno.EACCES, errno.EEXIST):
+            with self.subTest(code=code), patch.object(os, 'link', side_effect=OSError(code, 'link refused')), \
+                    patch.object(bridge, 'rename_noreplace') as rename:
+                with self.assertRaises(OSError) as error:
+                    bridge.publish_verified_part(Path('source'), Path('destination'), None, Path('state'))
+                self.assertEqual(code, error.exception.errno)
+                rename.assert_not_called()
+
+    def test_pixeldrain_rejected_retry_refuses_unowned_slot_and_preserves_original_on_fresh_mismatch(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            request, session, part, output, state, _ = fixture
+            rejected = part.with_suffix('.rejected')
+            rejected.write_bytes(b'unowned')
+            with self.assertRaisesRegex(bridge.BridgeError, 'CLOUD_PARTIAL_IDENTITY_UNVERIFIED'):
+                bridge.run(dict(request, checksumRetryKey='1000'))
+            self.assertEqual([], session.requests)
+            self.assertEqual(b'unowned', rejected.read_bytes())
+            self.assertEqual(b'wrong', part.read_bytes())
+            rejected.unlink()
+            session.failure = 'fresh mismatch'
+            with self.assertRaisesRegex(bridge.BridgeError, 'CLOUD_DOWNLOAD_CHECKSUM_MISMATCH'):
+                bridge.run(dict(request, checksumRetryKey='1000'))
+            self.assertEqual([None], session.requests)
+            self.assertEqual(b'wrong', (rejected / 'original').read_bytes())
+            self.assertEqual(0, part.stat().st_size)
+            self.assertFalse((output / 'current.rar').exists())
+            self.assertNotIn('current.rar', json.loads((state / 'completed.json').read_text()))
+
+    def test_pixeldrain_replays_verified_publish_and_preserves_ambiguous_legacy_quarantine(self):
+        for replacement in (False, True):
+            with self.subTest(replacement=replacement), tempfile.TemporaryDirectory() as temp, \
+                    self.pixeldrain_rejected_fixture(Path(temp), more_members=True) as fixture:
+                request, session, part, output, state, _ = fixture
+                os.utime(part, ns=(1700000000802173200, 1700000000802173200))
+                original = bridge.file_identity(part.stat())
+                rejected = part.with_suffix('.rejected')
+                record = state / (part.stem + '.rejected.json')
+                identity = json.loads((state / 'manifest.json').read_text())['identity']
+                record.write_text(json.dumps({'version': 1, 'operation': identity, 'member': part.stem,
+                                              'size': len(session.original), 'sha256': session.entry['sha256'],
+                                              'original': original, 'key': '1000'}))
+                os.rename(part, rejected)
+                if replacement:
+                    rejected.unlink()
+                    rejected.write_bytes(b'unrelated')
+                else:
+                    # SMB recycle adds a name for the same old inode and rounds its mtime.
+                    os.link(rejected, Path(temp) / 'recycled')
+                    os.utime(rejected, ns=(1700000000000000000, 1700000000000000000))
+                    self.assertEqual(original[:3], bridge.file_identity(rejected.stat())[:3])
+                    self.assertEqual(2, rejected.stat().st_nlink)
+                part.write_bytes(session.original)
+                destination = output / 'current.rar'
+                os.link(part, destination)
+                self.assertEqual(2, destination.stat().st_nlink)
+                destination.chmod(0o400)
+                receipts = json.loads((state / 'completed.json').read_text())
+                receipts['current.rar'] = {'size': len(session.original), 'sha256': session.entry['sha256']}
+                (state / 'completed.json').write_text(json.dumps(receipts))
+                bridge.run(request)
+                self.assertEqual([None], session.requests)  # Only the following member needed a download.
+                self.assertEqual(session.original, destination.read_bytes())
+                self.assertEqual(session.original, (output / 'later.rar').read_bytes())
+                self.assertFalse(part.exists())
+                self.assertEqual(b'unrelated' if replacement else b'wrong', rejected.read_bytes())
+                self.assertTrue(record.is_file())
+
+    def test_pixeldrain_rejected_retry_checks_verified_siblings_before_touching_the_partial(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            request, session, part, output, _, _ = fixture
+            (output / 'sibling.rar').write_bytes(b'X' * len(b'complete sibling'))
+            with self.assertRaisesRegex(bridge.BridgeError, 'not a verified result'):
+                bridge.run(dict(request, checksumRetryKey='1000'))
+            self.assertEqual([], session.requests)
+            self.assertEqual(b'wrong', part.read_bytes())
+            self.assertFalse(part.with_suffix('.rejected').exists())
+
+    def test_pixeldrain_rejected_retry_preserves_conflicting_receipt_and_repair_record(self):
+        for kind in ('completion', 'repair'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as temp, \
+                    self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+                request, session, part, _, state, sibling = fixture
+                if kind == 'completion':
+                    record = state / 'completed.json'
+                    pinned = {'sibling.rar': sibling,
+                              'current.rar': {'size': len(session.original), 'sha256': session.entry['sha256']}}
+                else:
+                    record = state / (part.stem + '.repair.json')
+                    pinned = {'size': len(session.original), 'sha256': session.entry['sha256'], 'ranges': [[0, 2]]}
+                record.write_text(json.dumps(pinned))
+                with self.assertRaises(bridge.BridgeError):
+                    bridge.run(dict(request, checksumRetryKey='1000'))
+                self.assertEqual(['bytes=5-'] if kind == 'completion' else [], session.requests)
+                self.assertEqual(b'wrong', part.read_bytes())
+                self.assertEqual(pinned, json.loads(record.read_text()))
+                self.assertFalse(part.with_suffix('.rejected').exists())
+
+    def test_pixeldrain_pins_spent_generation_after_its_member_is_published(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp), more_members=True) as fixture:
+            request, session, part, output, state, _ = fixture
+            later = part.parent / (hashlib.sha256(b'later.rar').hexdigest() + '.part')
+            later.write_bytes(b'bad')
+            for _ in range(2):
+                with self.assertRaisesRegex(bridge.BridgeError, 'CLOUD_DOWNLOAD_CHECKSUM_MISMATCH'):
+                    bridge.run(dict(request, checksumRetryKey='1000'))
+                self.assertEqual(session.original, (output / 'current.rar').read_bytes())
+                self.assertEqual(b'bad', later.read_bytes())
+                self.assertFalse(later.with_suffix('.rejected').exists())
+                saved = json.loads((state / (part.stem + '.rejected.json')).read_text())
+                self.assertEqual('1000', saved['key'])
+            self.assertEqual([None, 'bytes=3-', 'bytes=3-'], session.requests)
+            bridge.run(dict(request, checksumRetryKey='2000'))
+            self.assertEqual([None, 'bytes=3-', 'bytes=3-', None], session.requests)
+            self.assertEqual(session.original, (output / 'later.rar').read_bytes())
+            self.assertEqual([], list(state.glob('*.rejected.json')))
 
     def test_pixeldrain_zero_repairs_require_confirmed_ranges_and_correct_whole_content(self):
         original = b'prefix' + b'X'*70000 + b'abcdefghij'

@@ -67,12 +67,13 @@ public sealed class AcquisitionPlanContinueFilesActivity : IWorkflowActivity
             {
                 if (!await AcquisitionPlanArtifactInputGuard.OwnsRunAsync(db, ctx.RunId, entry.Input.TaskId, ct))
                     throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
-                // A projected delivery borrows an earlier publication. A storage retry
-                // borrows only the exact processed input of a stopped publication node.
+                // A projected delivery borrows an earlier publication. A delivery retry
+                // uses the stopped publication input or the explicitly captured delivery stage.
                 var projected = entry.ExpectedDeliveryProjectionFingerprint != null;
                 var artifact = await AcquisitionPlanArtifactInputGuard.RequireAsync(db, store, entry.Input.TaskId, entry.Target.Id, entry.Input, ct,
                     publishedOutputOnly: config.PublishRetainedFiles && projected,
-                    publicationInputOnly: config.PublishRetainedFiles && !projected);
+                    publicationInputOnly: config.PublishRetainedFiles && !projected,
+                    capturedDelivery: entry.Target.StageDirectories?.Delivery);
                 if (artifact.Kind == AcquisitionCurrentDirectoryFiles.Kind)
                     await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(artifact,
                         ctx.Services.GetService<FileProcessingWorkspaceResolver>(), ct);

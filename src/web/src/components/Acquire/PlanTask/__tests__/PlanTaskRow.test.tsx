@@ -5,6 +5,10 @@ import PlanTaskRow from "../PlanTaskRow";
 import type { PlanTask } from "../models";
 import { AcquisitionStatus } from "@/sdk/constants";
 import type { RuntimeOverview } from "../runtimeOverview";
+import { createInstance } from "i18next";
+import { acquisitionStageLabel } from "../../taskStage";
+import cn from "@/locales/cn/pages/acquisition.json";
+import en from "@/locales/en/pages/acquisition.json";
 
 vi.mock("@/components/bakaui", () => ({
   Button: ({ children, onPress, color, "aria-label": label }: any) => <button onClick={onPress} data-color={color} aria-label={label}>{children}</button>,
@@ -25,7 +29,7 @@ it.each([AcquisitionStatus.Failed, AcquisitionStatus.Completed])("offers a disti
 vi.mock("../../AcquisitionTiming", () => ({ default: () => null }));
 vi.mock("../RuntimeOverviewSummary", () => ({
   default: ({ overview }: { overview?: RuntimeOverview }) =>
-    overview ? <p>{overview.problem}</p> : null,
+    overview ? <p>{overview.stage ?? overview.problem}</p> : null,
 }));
 
 it("does not present the original plan directory as a current task location", () => {
@@ -34,7 +38,7 @@ it("does not present the original plan directory as a current task location", ()
   expect(screen.queryByText(/original-plan|acquisition.plan.historicalDirectory/)).toBeNull();
 });
 
-it("distinguishes an incomplete saved draft from an actively preparing search", () => {
+it("distinguishes a draft waiting for data preparation from an actively preparing search", () => {
   const task = {
     id: 1,
     title: "Saved task",
@@ -51,6 +55,16 @@ it("distinguishes an incomplete saved draft from an actively preparing search", 
   view.rerender(<PlanTaskRow task={{ ...task, builderId: "exhentai.search" }} onOpen={vi.fn()} />);
   expect(screen.getByText(/acquisition.plan.phase.preparing/)).toBeVisible();
   expect(screen.queryByText(/acquisition.draft.incomplete/)).toBeNull();
+});
+
+it.each(["cn", "en"] as const)("labels preparation consistently in the %s task status and saved message", async language => {
+  const i18n = createInstance();
+  await i18n.init({ lng: language, resources: { cn: { translation: cn }, en: { translation: en } } });
+  const stage = acquisitionStageLabel(i18n.t, { status: AcquisitionStatus.Waiting, builderId: "draft", phase: "preparing", stage: "preparing" });
+  expect(stage).toBe(language === "cn" ? "准备数据" : "Preparing data");
+  expect(i18n.t("acquisition.plan.phase.preparing")).toBe(stage);
+  expect(i18n.t("acquisition.plan.phase.draft")).toBe(stage);
+  expect(i18n.t("acquisition.draft.saved")).toContain(language === "cn" ? "等待准备数据" : "Waiting to prepare data");
 });
 
 it("does not show previous-run diagnostics after a new execution has been created", () => {
@@ -127,4 +141,46 @@ it("shows both the registered file condition and the current reason in the task'
   const tags = within(screen.getByRole("list", { name: "acquisition.filters.title" }));
   expect(tags.getByText("acquisition.attention.tag.localStorage")).toBeVisible();
   expect(tags.getByText("acquisition.filters.fact.spaceInsufficient")).toBeVisible();
+});
+
+it("updates the file release badge when a refreshed search returns new task facts", () => {
+  const task = { id: 4, status: AcquisitionStatus.Completed } as PlanTask;
+  const open = vi.fn();
+  const row = render(<PlanTaskRow task={task} facts={["awaitingFileRelease"]} onOpen={open} />);
+  const tags = within(screen.getByRole("list", { name: "acquisition.filters.title" }));
+  expect(tags.getByText("acquisition.filters.fact.awaitingFileRelease")).toBeVisible();
+
+  row.rerender(<PlanTaskRow task={task} facts={[]} onOpen={open} />);
+  expect(screen.queryByText("acquisition.filters.fact.awaitingFileRelease")).toBeNull();
+});
+
+it("offers a new cleanup confirmation only after automatic cleanup requires review", () => {
+  const task = { id: 5, status: AcquisitionStatus.Completed } as PlanTask;
+  const open = vi.fn(), openDeletion = vi.fn();
+  const card = (facts: string[]) => <PlanTaskRow task={task} facts={facts} onOpen={open} onDelete={openDeletion} />;
+  const review = "acquisition.filters.fact.fileCleanupNeedsReview";
+  const waiting = "acquisition.filters.fact.awaitingFileRelease";
+  const row = render(card([]));
+  expect(screen.queryByText(review)).toBeNull();
+  row.rerender(card(["awaitingFileRelease", "fileCleanupNeedsReview"]));
+  expect(screen.getByText(waiting)).toBeVisible();
+  expect(screen.queryByText(review)).toBeNull();
+  row.rerender(card(["fileCleanupNeedsReview"]));
+  expect(screen.queryByText(waiting)).toBeNull();
+  expect(openDeletion).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: review }));
+  expect(openDeletion).toHaveBeenCalledOnce();
+  expect(open).not.toHaveBeenCalled();
+});
+
+it("checks the revision and nullable run before showing an active confirmation on a ready row", () => {
+  const task = { id: 2, phase: "ready", builderId: "prepared", planRevision: 4, status: AcquisitionStatus.Waiting } as PlanTask;
+  const confirmation = { taskId: 2, planRevision: 4,
+    progressScope: "confirmation", stage: "verifyingFiles" } as RuntimeOverview;
+  const view = render(<PlanTaskRow task={task} overview={confirmation} onOpen={vi.fn()} />);
+  expect(screen.getByText("verifyingFiles")).toBeVisible();
+  view.rerender(<PlanTaskRow task={{ ...task, planRevision: 5 }} overview={confirmation} onOpen={vi.fn()} />);
+  expect(screen.queryByText("verifyingFiles")).toBeNull();
+  view.rerender(<PlanTaskRow task={{ ...task, workflowRunId: 11 }} overview={confirmation} onOpen={vi.fn()} />);
+  expect(screen.queryByText("verifyingFiles")).toBeNull();
 });

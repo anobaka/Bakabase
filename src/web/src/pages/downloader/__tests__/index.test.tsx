@@ -370,9 +370,7 @@ describe("unified download center", () => {
     mount();
     await screen.findByText("Archive");
     fireEvent.click(screen.getByText("Archive"));
-    fireEvent.change(screen.getByLabelText("downloader.filter.source"), {
-      target: { value: "http" },
-    });
+    fireEvent.click(screen.getByRole("button", { name: "downloadCenter.provider.http" }));
     expect(rows()).toEqual(["http:file"]);
     expect(screen.queryByText("downloader.action.startSelected")).toBeNull();
     fireEvent.click(screen.getByText("downloadCenter.action.startVisible"));

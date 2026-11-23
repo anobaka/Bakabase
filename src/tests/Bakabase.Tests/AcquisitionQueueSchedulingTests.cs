@@ -18,13 +18,11 @@ using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Acquisition.Components.Workflow;
 using Bakabase.Modules.Acquisition.Extensions;
-using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Input;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.TestKit.Utils;
-using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -32,6 +30,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Bakabase.Tests;
 
 [TestClass]
+[DoNotParallelize] // Real workflow executions share process-wide task/run gates with other database fixtures.
 public sealed class AcquisitionQueueSchedulingTests
 {
     // Only the interval is shortened. Persistence and the reconcile/pump body remain production code.
@@ -75,49 +74,69 @@ public sealed class AcquisitionQueueSchedulingTests
     [DataTestMethod]
     [DataRow(WorkflowRunStatus.Success, AcquisitionStatus.Completed)]
     [DataRow(WorkflowRunStatus.Waiting, AcquisitionStatus.Waiting)]
-    public async Task EnqueuedWorkflowKeepsItsSlotUntilItCompletesOrWaits(
+    public async Task PendingStartupTasksStartTogether_AndReconcileIndependently(
         WorkflowRunStatus releaseStatus, AcquisitionStatus expectedStatus)
     {
         var services = await TestServiceBuilder.BuildServiceProvider(collection => collection.AddAcquisitionStep<LocalStep>());
-        services.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.Concurrency = 1;
         var manager = services.GetRequiredService<BTaskManager>();
         try
         {
             int firstId;
             int secondId;
+            int thirdId;
             int firstRunId;
             await using (var scope = services.CreateAsyncScope())
             {
                 var definitions = scope.ServiceProvider.GetRequiredService<IWorkflowDefinitionService>();
                 var recipe = await definitions.CreateAsync(new WorkflowDefinitionCreationInputModel
                 {
-                    Name = "Queue reservation fixture",
+                    Name = "Startup queue fixture",
                     Enabled = true,
                     TriggerKind = AcquisitionWorkflowKinds.TriggerRequested,
                     Activities = [new WorkflowActivityInputModel { Kind = LocalStep.StepKind, ConfigJson = "{}" }]
                 });
                 var placeholders = scope.ServiceProvider.GetRequiredService<IPlaceholderResourceService>();
-                var firstResource = await placeholders.CreateByTitle("Reserved slot");
-                var secondResource = await placeholders.CreateByTitle("Queued slot");
+                var firstResource = await placeholders.CreateByTitle("Already dispatched");
+                var secondResource = await placeholders.CreateByTitle("Pending at startup");
+                var thirdResource = await placeholders.CreateByTitle("Also pending at startup");
                 var acquisitions = scope.ServiceProvider.GetRequiredService<IAcquisitionService>();
                 var first = await acquisitions.CreateAsync(firstResource.ResourceId, AcquisitionLeadKind.DirectUrl,
                     "https://example.invalid/first", recipeDefinitionId: recipe.Id);
                 firstId = first.Id;
                 firstRunId = first.WorkflowRunId!.Value;
 
-                // The daemon is deliberately not started: the workflow stays Pending while its
-                // acquisition owns the slot. Reconciliation must not turn it back into a queue entry.
+                // The daemon is deliberately not started. A dispatched workflow remains Pending
+                // without preventing the pump from dispatching every unfinished startup row.
                 var queue = scope.ServiceProvider.GetRequiredService<IAcquisitionQueue>();
                 await queue.ReconcileAsync();
                 Assert.AreEqual(AcquisitionStatus.Running, (await acquisitions.GetAsync(firstId))!.Status);
-                var second = await acquisitions.CreateAsync(secondResource.ResourceId, AcquisitionLeadKind.DirectUrl,
-                    "https://example.invalid/second", recipeDefinitionId: recipe.Id);
+                var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+                var pending = new[] { secondResource.ResourceId, thirdResource.ResourceId }
+                    .Select(resourceId => new AcquisitionTaskDbModel
+                    {
+                        ResourceId = resourceId,
+                        RecipeDefinitionId = recipe.Id,
+                        LeadKind = AcquisitionLeadKind.DirectUrl,
+                        LeadValue = $"https://example.invalid/{resourceId}",
+                        Status = AcquisitionStatus.Pending,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    }).ToArray();
+                db.Set<AcquisitionTaskDbModel>().AddRange(pending);
+                await db.SaveChangesAsync();
+                var second = pending[0];
                 secondId = second.Id;
-                Assert.AreEqual(AcquisitionStatus.Pending, second.Status);
-                Assert.IsNull(second.WorkflowRunId);
+                thirdId = pending[1].Id;
                 await queue.PumpAsync();
-                Assert.IsNull((await acquisitions.GetAsync(secondId))!.WorkflowRunId,
-                    "The pump must also respect the enqueued workflow's reserved slot.");
+                foreach (var id in new[] { secondId, thirdId })
+                {
+                    var dispatched = (await acquisitions.GetAsync(id))!;
+                    Assert.AreEqual(AcquisitionStatus.Running, dispatched.Status);
+                    Assert.IsNotNull(dispatched.WorkflowRunId);
+                }
+                await queue.PumpAsync();
+                Assert.AreEqual(3, await db.Set<WorkflowRunDbModel>().CountAsync(),
+                    "Repeated queue ticks must not duplicate already dispatched workflows.");
             }
 
             await using (var scope = services.CreateAsyncScope())
@@ -131,10 +150,9 @@ public sealed class AcquisitionQueueSchedulingTests
                 await queue.PumpAsync();
                 var acquisitions = scope.ServiceProvider.GetRequiredService<IAcquisitionService>();
                 Assert.AreEqual(expectedStatus, (await acquisitions.GetAsync(firstId))!.Status);
-                var second = (await acquisitions.GetAsync(secondId))!;
-                Assert.AreEqual(AcquisitionStatus.Running, second.Status);
-                Assert.IsNotNull(second.WorkflowRunId,
-                    "Both completion and waiting for user input release the next queue slot.");
+                foreach (var id in new[] { secondId, thirdId })
+                    Assert.AreEqual(AcquisitionStatus.Running, (await acquisitions.GetAsync(id))!.Status,
+                        "One workflow completing or waiting must not change the other workflows.");
             }
         }
         finally
@@ -145,7 +163,7 @@ public sealed class AcquisitionQueueSchedulingTests
 
     [TestMethod]
     [Timeout(90000)]
-    public async Task PeriodicQueueSurvivesItsFirstTick_ThenCompletesAndStartsLaterAcquisitions()
+    public async Task PeriodicQueueSurvivesCleanup_AndSameRecipeExecutionsOverlap()
     {
         var services = await TestServiceBuilder.BuildServiceProvider(collection =>
         {
@@ -185,7 +203,6 @@ public sealed class AcquisitionQueueSchedulingTests
             return task.Status == AcquisitionStatus.Completed && task.CompletedAt != null && task.WorkflowRunId != null;
         }
 
-        services.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.Concurrency = 1;
         try
         {
             await services.GetRequiredService<DynamicTaskRegistry>().RegisterAllTasksAsync();
@@ -224,29 +241,31 @@ public sealed class AcquisitionQueueSchedulingTests
                 acquisitionIds.Add(firstId);
             }
 
-            // Running on the acquisition row only means a workflow was enqueued. Wait for its
-            // actual step before testing the occupied slot, and release each run separately so
-            // scheduling, completion and reconciliation each have an observable boundary.
+            // Wait for actual execution, then keep the first activity blocked while creating a
+            // second task with the same recipe. Row status alone cannot prove concurrency.
             await WaitUntil("first workflow enters its step", () => Task.FromResult(step.Entered(firstId).IsCompleted), DescribeState);
             await using (var scope = services.CreateAsyncScope())
             {
                 var acquisitions = scope.ServiceProvider.GetRequiredService<IAcquisitionService>();
                 var second = await acquisitions.CreateAsync(secondResourceId, AcquisitionLeadKind.DirectUrl,
                     "https://example.invalid/second", recipeDefinitionId: recipeId);
-                Assert.AreEqual(AcquisitionStatus.Pending, second.Status);
-                Assert.IsNull(second.WorkflowRunId);
+                Assert.AreEqual(AcquisitionStatus.Running, second.Status);
+                Assert.IsNotNull(second.WorkflowRunId);
                 secondId = second.Id;
                 acquisitionIds.Add(secondId);
             }
 
-            step.Release(firstId);
+            await WaitUntil("second workflow enters while the first is blocked",
+                () => Task.FromResult(step.Entered(secondId).IsCompleted), DescribeState);
+            Assert.IsFalse(await IsCompleted(firstId), "The first activity has not been released.");
 
-            // The real daemon executes workflow.run.*, then later queue ticks mirror success and
-            // release the next slot. No manual runner, reconciliation, pump or status update.
-            await WaitUntil("first acquisition completes", () => IsCompleted(firstId), DescribeState);
-            await WaitUntil("queued workflow enters its step", () => Task.FromResult(step.Entered(secondId).IsCompleted), DescribeState);
+            // Release the second workflow first to prove independent completion. The real daemon
+            // and periodic queue perform all execution and reconciliation.
             step.Release(secondId);
-            await WaitUntil("queued acquisition completes", () => IsCompleted(secondId), DescribeState);
+            await WaitUntil("second acquisition completes independently", () => IsCompleted(secondId), DescribeState);
+            Assert.IsFalse(await IsCompleted(firstId));
+            step.Release(firstId);
+            await WaitUntil("first acquisition completes", () => IsCompleted(firstId), DescribeState);
             Assert.IsTrue(Volatile.Read(ref queue.Ticks) >= 3);
         }
         finally

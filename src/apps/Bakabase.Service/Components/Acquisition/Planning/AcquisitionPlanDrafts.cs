@@ -107,7 +107,8 @@ public sealed partial class AcquisitionPlanService
             // The owner may explicitly supply instructions, but only producer adapters bind source revisions.
             var plan = input.Plan with {DeliveryLayout = null, Title = Title(input.Plan.Title), Parts = input.Plan.Parts.Select(p => p with
                 {ProcessingSource = null, AppliedProcessingRevisionId = null, SelectionMode = "manual",
-                    Sources = p.Sources.Select(s => s with {ProcessingSource = null, AppliedProcessingRevisionId = null}).ToList()}).ToList()};
+                    Sources = p.Sources.Select(s => s with {ProcessingSource = null, AppliedProcessingRevisionId = null,
+                        ManualAvailabilityOverride = null}).ToList()}).ToList()};
             AcquisitionPlanCompiler.Validate(plan);
             var check = await downloads.PreflightAsync(Request(plan, $"acquisition:{row.Id}") with
                 {IgnoreSourceAvailability = !await HasNeverExecutedAsync(row, ct)}, plan.OutputDirectory, ct);
@@ -136,15 +137,16 @@ public sealed partial class AcquisitionPlanService
         if (changed != 1) throw new InvalidOperationException("PLAN_VERSION_CONFLICT");
     }
 
-    private static List<AcquisitionDraftSource> ValidateDraftSources(IReadOnlyList<AcquisitionDraftSource> sources)
+    private static List<AcquisitionDraftSource> ValidateDraftSources(IReadOnlyList<AcquisitionDraftSource> sources,
+        int maximumSources = 100, int maximumUrlLength = 2048)
     {
-        if (sources.Count > 100 || sources.Any(s => s == null || string.IsNullOrWhiteSpace(s.Id) ||
-            s.Id.Length > 128 || string.IsNullOrWhiteSpace(s.Url) || s.Url.Length > 2048 || s.Title?.Length > 512 ||
+        if (sources.Count > maximumSources || sources.Any(s => s == null || string.IsNullOrWhiteSpace(s.Id) ||
+            s.Id.Length > 128 || string.IsNullOrWhiteSpace(s.Url) || s.Url.Length > maximumUrlLength || s.Title?.Length > 512 ||
             s.AccessCode?.Length > 512 || s.ArchivePassword?.Length > 2048 || s.ProviderId?.Length > 128 ||
-            s.MethodId?.Length > 128 || s.AccountId?.Length > 128 ||
+            s.MethodId?.Length > 128 || s.AccountId?.Length > 128 || s.GroupId?.Length > 256 ||
             s.Kind is not ("auto" or "http" or "share" or "remote" or "torrent")) ||
             sources.Select(s => s.Id).Distinct(StringComparer.Ordinal).Count() != sources.Count)
-            throw new ArgumentException("Supply at most 100 valid, uniquely identified acquisition sources.");
+            throw new ArgumentException($"Supply at most {maximumSources} valid, uniquely identified acquisition sources.");
         foreach (var source in sources)
         {
             if (source.Kind == "remote")

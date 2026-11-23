@@ -47,6 +47,32 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
     public Task<SingletonResponse<AcquisitionPlanTaskDetail>> PrepareDraft(int id, [FromBody] AcquisitionDraftPreparationInput input) =>
         Respond(async () => {await GuardSavedDirectory(id); await GuardDirectory(input.Plan?.OutputDirectory); return await service.PrepareDraftAsync(id, input, HttpContext.RequestAborted);});
 
+    [HttpPost("{id:int}/preparation/preview")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "PreviewAcquisitionPreparation")]
+    public async Task<SingletonResponse<AcquisitionPreparationPreview>> PreviewPreparation(int id, [FromBody] AcquisitionPreparationInput input)
+    {
+        try
+        {
+            await GuardSavedDirectory(id);
+            return new(await service.PreviewPreparationAsync(id, input, HttpContext.RequestAborted));
+        }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or UnauthorizedAccessException)
+        {return SingletonResponseBuilder<AcquisitionPreparationPreview>.BuildBadRequest(error.Message);}
+    }
+
+    [HttpPost("{id:int}/preparation/confirm")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "ConfirmAcquisitionPreparation")]
+    public Task<SingletonResponse<AcquisitionPlanTaskDetail>> ConfirmPreparation(int id, [FromBody] AcquisitionPreparationInput input) =>
+        Respond(async () =>
+        {
+            await GuardSavedDirectory(id);
+            foreach (var source in input.Sources ?? [])
+                foreach (var step in source.Processing?.Steps ?? []) await GuardDirectory(step.StoragePolicy?.ProcessingWorkspaceDirectory);
+            return await service.ConfirmPreparationAsync(id, input, HttpContext.RequestAborted);
+        });
+
     /// <summary>Explicitly preserves selected legacy overview entries. Never called by a list read.</summary>
     [HttpPost("legacy-overview/import")]
     [RemoteAccessible]
@@ -119,6 +145,12 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
     [SwaggerOperation(OperationId = "KeepPreparedAcquisitionFiles")]
     public Task<SingletonResponse<AcquisitionPlanTaskDetail>> KeepPreparedFiles(int id, [FromBody] AcquisitionKeepPreparedFilesInput input) =>
         Respond(async () => {await GuardSavedDirectory(id); return await service.KeepPreparedFilesAsync(id, input, HttpContext.RequestAborted, GuardDirectory);});
+
+    [HttpPost("{id:int}/prepared-files/defer-processing")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "DeferPreparedAcquisitionProcessing")]
+    public Task<SingletonResponse<AcquisitionPlanTaskDetail>> DeferPreparedProcessing(int id, [FromBody] AcquisitionDeferPreparedProcessingInput input) =>
+        Respond(async () => {await GuardSavedDirectory(id); return await service.DeferPreparedProcessingAsync(id, input.ExpectedRevision, HttpContext.RequestAborted, GuardDirectory);});
 
     [HttpPost("{id:int}/registered-downloads/preview")]
     [RemoteAccessible]

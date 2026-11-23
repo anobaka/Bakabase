@@ -93,6 +93,32 @@ public sealed class FileProcessingResumeActionTests
     }
 
     [TestMethod]
+    public void Archive_group_consent_requires_the_persisted_offer_and_exact_frozen_input()
+    {
+        var token = new string('a', 64);
+        var source = new CloudDownloadTarget {Id = "part", ProcessingWaitReason = "MissingVolumes"};
+        var inspect = new CloudFileProcessingSignal {TargetId = source.Id, ArtifactId = "input", Fingerprint = "fingerprint",
+            StepId = "s2", Action = FileProcessingResumeActions.InspectGroup};
+        var retain = inspect with {Action = FileProcessingResumeActions.RetainGroup, ArchiveGroupToken = token};
+        string GroupPrompt(bool enriched, string message) => JsonSerializer.Serialize(new {targetId = source.Id, artifactId = "input",
+            fingerprint = "fingerprint", knownStepId = "s2", reason = "MissingVolumes", message,
+            allowedActions = enriched ? new[]{FileProcessingResumeActions.RetainGroup} : [], archiveGroupInspected = enriched,
+            incompleteArchiveGroup = enriched ? new {token} : null});
+        var legacy = GroupPrompt(false, FileProcessingResumeActions.LegacyGroupMissingVolumes);
+        var current = GroupPrompt(true, "A required archive volume is missing.");
+        FileProcessingResumeActions.ValidateGroup(Context(legacy), source, inspect, "s2");
+        FileProcessingResumeActions.ValidateGroup(Context(current), source, retain, "s2");
+        Assert.IsTrue(FileProcessingResumeActions.IsLegacyGroupProbeWait(legacy));
+        Assert.IsFalse(FileProcessingResumeActions.IsLegacyGroupProbeWait(GroupPrompt(false, "A split family is incomplete.")));
+        foreach (var wrong in new[]{retain with {ArchiveGroupToken = new string('b',64)}, retain with {StepId="s1"},
+                     retain with {TargetId="other"}, retain with {ArtifactId="different"}, retain with {Fingerprint="different"},
+                     retain with {ArchivePolicy="keep"}, retain with {Password="answer"}, inspect})
+            Assert.ThrowsExactly<ArgumentException>(() => FileProcessingResumeActions.ValidateGroup(Context(current),source,wrong,"s2"));
+        Assert.ThrowsExactly<ArgumentException>(() => FileProcessingResumeActions.ValidateGroup(Context(legacy),source,retain,"s2"));
+        Assert.ThrowsExactly<ArgumentException>(() => FileProcessingResumeActions.ValidateGroup(Context(null),source,retain,"s2"));
+    }
+
+    [TestMethod]
     public void SourcePasswordCheckOnlyResumesAnUnreviewedOriginalAcquisitionArchive()
     {
         var prompt = """{"reason":"PasswordUnknown","targetId":"p","archiveId":"nested"}""";

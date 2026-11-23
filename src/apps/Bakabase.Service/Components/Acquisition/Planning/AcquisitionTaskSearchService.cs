@@ -4,14 +4,18 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Services;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Workflow;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,7 +26,8 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 /// producing run. Search does not open the files or load full execution history for every task.</summary>
 public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisitionService acquisitions,
     AcquisitionSourceAttentionProjection? sourceAttention = null, AcquisitionDownloadActivityProjection? downloadActivity = null,
-    IArtifactOperationStore? artifacts = null)
+    IArtifactOperationStore? artifacts = null, WorkflowActivityRuntimeRegistry? runtimeProviders = null,
+    BTaskManager? backgroundTasks = null)
 {
     private static readonly string[] Stages = ["preparing", "ready", "running", "attention", "completed"];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -61,8 +66,14 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
             sort is not ("newest" or "lastProcessed" or "sizeAsc" or "sizeDesc") ||
             (input.AttentionTags?.Count ?? 0) > 32 || (input.Facts?.Count ?? 0) > 16 ||
             selectedTags.Any(tag => !ExecutionProblemClassifier.AttentionTags.Contains(tag)) ||
-            selectedFacts.Any(fact => !AcquisitionExecutionFactProjection.FactTags.Contains(fact)))
-            throw new ArgumentException("Choose a valid stage, attention tag, sort and page (1–100 tasks per page).");
+            !AcquisitionDownloadSourceFilter.IsValid(input.DownloadSource) ||
+            selectedFacts.Any(fact => !AcquisitionExecutionFactProjection.FactTags.Contains(fact)) ||
+            input.CapabilityId is {Length: > 128} || input.ExecutionState is {Length: > 64})
+            throw new ArgumentException("Choose a valid stage, download source, attention tag, sort and page (1–100 tasks per page).");
+        var capabilityId = input.CapabilityId?.Trim();
+        var executionState = input.ExecutionState?.Trim();
+        if (capabilityId?.Length == 0 || executionState?.Length == 0)
+            throw new ArgumentException("Choose a non-empty runtime capability and execution state.");
         // No checkpoint, frozen plan, output file manifest or old execution history is selected here.
         var index = await (from task in db.AcquisitionTasks.AsNoTracking()
             where task.DeletedAt == null
@@ -98,6 +109,27 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
             task.Id.ToString() == keyword || (task.Title ?? (task.ResourceId is {} resourceId ? names.GetValueOrDefault(resourceId) : null))?
                 .Contains(keyword, StringComparison.OrdinalIgnoreCase) == true;
         var scoped = rows.Where(t => (input.Stage == "all" ? t.Stage != "cancelled" : t.Stage == input.Stage) && Matches(t)).ToArray();
+        if (input.DownloadSource != null)
+        {
+            var matchingSources = await new AcquisitionDownloadSourceFilter(db)
+                .MatchAsync(scoped.Select(t => t.Id).ToArray(), input.DownloadSource, ct);
+            scoped = scoped.Where(t => matchingSources.Contains(t.Id)).ToArray();
+        }
+        // Runtime facets are a bounded projection of the current node. Providers own the
+        // capability descriptor and optional execution state; no acquisition status is changed
+        // and no execution history or download evidence is loaded for this list facet.
+        var runtimeFacets = runtimeProviders == null ? new Dictionary<int, AcquisitionTaskRuntimeFacet>() :
+            await ReadRuntimeFacetsAsync(scoped, ct);
+        var runtimeCapabilityCounts = runtimeFacets.Values.Where(f => f.CapabilityId != null)
+            .GroupBy(f => f.CapabilityId!, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+        var runtimeExecutionStateCounts = runtimeFacets.Values.Where(f => f.ExecutionState != null)
+            .GroupBy(f => f.ExecutionState!, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+        if (capabilityId != null)
+            scoped = scoped.Where(t => runtimeFacets.TryGetValue(t.Id, out var facet) && facet.CapabilityId == capabilityId).ToArray();
+        if (executionState != null)
+            scoped = scoped.Where(t => runtimeFacets.TryGetValue(t.Id, out var facet) && facet.ExecutionState == executionState).ToArray();
         var attention = scoped.Where(t => t.Stage == "attention" || t.DownloadActivity != null).ToArray();
         var attentionIds = attention.Select(t => t.Id).ToArray();
         var attentionRunIds = attention.Where(t => t.WorkflowRunId.HasValue).Select(t => t.WorkflowRunId!.Value).Distinct().ToArray();
@@ -243,11 +275,63 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
             TotalCount = filtered.Length, TotalTasks = totalTasks,
             QueueTaskCount = await AcquisitionQueueCount.ReadAsync(db, ct), Page = page, PageSize = input.PageSize,
             StageCounts = stageCounts, AttentionCounts = attentionCounts, FactCounts = factCounts,
+            RuntimeCapabilityCounts = runtimeCapabilityCounts, RuntimeExecutionStateCounts = runtimeExecutionStateCounts,
+            RuntimeCapabilities = runtimeFacets.Values.Where(f => f.CapabilityId != null)
+                .GroupBy(f => f.CapabilityId!, StringComparer.Ordinal).Select(g => g.First()).ToArray(),
+            TaskRuntimeFacets = pageIndex.Where(t => runtimeFacets.ContainsKey(t.Id))
+                .ToDictionary(t => t.Id, t => runtimeFacets[t.Id]),
             TaskFacts = pageIndex.Where(t => projected.ContainsKey(t.Id)).ToDictionary(t => t.Id, t => facts[t.Id].Tags),
             FilteredTaskIds = bulk.Select(t => t.Id).ToArray(),
             CheckableTaskIds = bulk.Where(t => t.BuilderId != null).Select(t => t.Id).ToArray(), TaskIdsTruncated = filtered.Length > bulk.Length,
             SizeEstimates = pageIndex.Where(t => projected.ContainsKey(t.Id)).ToDictionary(t => t.Id, t => estimates[t.Id])};
     }
+
+    private async Task<Dictionary<int, AcquisitionTaskRuntimeFacet>> ReadRuntimeFacetsAsync(
+        IReadOnlyList<AcquisitionTask> rows, CancellationToken ct)
+    {
+        if (runtimeProviders == null) return new();
+        // A completed run retains its last node for history, but that node is no
+        // longer an active capability. Runtime facets belong to resumable or
+        // currently executing acquisition work only.
+        var bindings = rows.Where(t => t.Stage is "running" or "attention" &&
+                t.WorkflowRunId.HasValue && t.CurrentStepIndex.HasValue)
+            .Select(t => (TaskId: t.Id, RunId: t.WorkflowRunId!.Value, Step: t.CurrentStepIndex!.Value))
+            .ToArray();
+        if (bindings.Length == 0) return new();
+        var runIds = bindings.Select(b => b.RunId).Distinct().ToArray();
+        var nodes = await (from node in db.WorkflowNodeExecutions.AsNoTracking()
+            join run in db.WorkflowRuns.AsNoTracking() on node.WorkflowRunId equals run.Id
+            where runIds.Contains(node.WorkflowRunId) && node.StepIndex == run.CurrentStepIndex &&
+                  !db.WorkflowNodeExecutions.Any(later => later.WorkflowRunId == node.WorkflowRunId &&
+                      later.StepIndex == node.StepIndex &&
+                      (later.Attempt > node.Attempt || later.Attempt == node.Attempt && later.Id > node.Id))
+            select new {node.WorkflowRunId, node.StepIndex, node.Kind, run.Status}).ToListAsync(ct);
+        var byRun = nodes.ToDictionary(n => n.WorkflowRunId);
+        var result = new Dictionary<int, AcquisitionTaskRuntimeFacet>();
+        foreach (var binding in bindings)
+        {
+            if (!byRun.TryGetValue(binding.RunId, out var node) || string.IsNullOrWhiteSpace(node.Kind)) continue;
+            var live = backgroundTasks?.GetTaskViewModel($"workflow.run.{binding.RunId}") is
+                {Status: BTaskStatus.Running, Data: WorkflowTaskProgress progress} ? progress : null;
+            var snapshot = await runtimeProviders.ReadAsync(new(binding.RunId, binding.Step, node.Kind,
+                node.Status, live, []), ct);
+            var capability = snapshot.Capability;
+            if (capability == null) continue;
+            result[binding.TaskId] = new()
+            {
+                ActivityKind = node.Kind,
+                CapabilityId = capability.Id,
+                CapabilityName = capability.DisplayName,
+                CapabilityNameKey = capability.DisplayNameKey,
+                ExecutionState = capability.Status,
+                WaitReason = capability.WaitReason,
+                ExecutionPolicy = capability.ExecutionPolicy,
+                MaximumParallelism = capability.MaximumParallelism
+            };
+        }
+        return result;
+    }
+
     private async Task<Dictionary<int, DateTime?>> LastProcessedAsync(int[] taskIds, CancellationToken ct)
     {
         // A task may be between revisions with no current run. Include its linked runs,

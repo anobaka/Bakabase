@@ -7,5 +7,9 @@ namespace Bakabase.Modules.Workflow.Abstractions.Services;
 /// </summary>
 public interface IWorkflowRunMutationGuard
 {
+    /// <summary>Validate a specialized answer against the current persisted wait before it is queued.
+    /// Runs under the same mutation gate; a rejected answer leaves the wait intact.</summary>
+    void ValidateAnswer(Models.Domain.WorkflowActivity? activity, string? waitReason, string? prompt, string signalJson) { }
+
     Task EnsureCanMutateAsync(int runId, CancellationToken ct = default);
 }

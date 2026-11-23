@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Bakabase.Modules.Downloader.Cloud;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
-public sealed record AcquisitionDownloadDestinationPreviewInput(IReadOnlyList<int> TaskIds, string TargetRootDirectory);
+public sealed record AcquisitionDownloadDestinationPreviewInput(IReadOnlyList<int> TaskIds, string TargetRootDirectory,
+    bool? ReuseExistingFiles = null, IReadOnlyList<int>? DownloadTaskIds = null);
 public sealed record AcquisitionDownloadDestinationApplyInput(string PreviewToken, IReadOnlyList<int> TaskIds);
 public sealed record AcquisitionDownloadDestinationItem(int? DownloadTaskId, string? OldDirectory, string? NewDirectory,
-    bool CanApply, string ReasonCode);
+    bool CanApply, string ReasonCode, bool CanPreviewReuse = false, CloudDownloadReuseEstimate? ReuseEstimate = null);
 public sealed record AcquisitionDownloadDestinationRow(int TaskId, string? Title, bool CanApply, string ReasonCode,
     IReadOnlyList<AcquisitionDownloadDestinationItem> Downloads);
 public sealed record AcquisitionDownloadDestinationPreview(string PreviewToken, DateTimeOffset ExpiresAt, int TaskCount,

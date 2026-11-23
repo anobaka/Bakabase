@@ -71,6 +71,40 @@ public sealed partial class ArtifactWorkspaceMaintenanceTests
         Assert.IsTrue((await _maintenance.ReclaimAsync([fixture.Artifact.Id], default).WaitAsync(TimeSpan.FromSeconds(10))).Single().Completed);
     }
 
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Automatic_cleanup_only_opens_candidate_payloads_after_acquiring_maintenance(bool changed)
+    {
+        var fixture = await Fixture();
+        using var held = new FileStream(fixture.Intermediate, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var pause = new VerificationPause();
+        pause.Continue.SetResult();
+        var entered = false;
+        await using var services = LifecycleServices(store => new PausedVerificationStore(store, pause, () =>
+        {
+            entered = true;
+            if (changed)
+            {
+                var first = held.ReadByte();
+                Assert.IsTrue(first >= 0);
+                held.Position = 0;
+                held.WriteByte((byte)(first ^ 1));
+            }
+            held.Dispose();
+        }));
+        using var scope = services.CreateScope();
+        var cleanup = scope.ServiceProvider.GetRequiredService<ArtifactWorkspaceMaintenance>();
+        var outcome = (await cleanup.ReclaimAsync([fixture.Artifact.Id], default)).Single();
+        Assert.IsTrue(entered, outcome.Reason);
+        Assert.IsTrue(outcome.Completed, outcome.Reason);
+        Assert.AreEqual(changed ? 0 : 1, outcome.RemovedFiles);
+        Assert.AreEqual(changed, File.Exists(fixture.Intermediate));
+        Assert.IsTrue(File.Exists(fixture.Original));
+        Assert.IsTrue(File.Exists(fixture.Artifact.Files.Single()));
+    }
+
     private sealed class CleanupClock : TimeProvider
     {
         private long timestamp;
@@ -88,7 +122,7 @@ public sealed partial class ArtifactWorkspaceMaintenanceTests
 
     // Keep the real registration, ownership checks, hashing and deletion. Pause only the
     // first content verification to model a slow storage read without generating huge files.
-    private sealed class PausedVerificationStore(IArtifactOperationStore inner, VerificationPause pause) : IArtifactOperationStore
+    private sealed class PausedVerificationStore(IArtifactOperationStore inner, VerificationPause pause, Action? enteringMaintenance = null) : IArtifactOperationStore
     {
         public async Task<ArtifactRecord?> ResolveByIdAsync(string id, CancellationToken ct = default)
         {
@@ -99,7 +133,11 @@ public sealed partial class ArtifactWorkspaceMaintenanceTests
             }
             return await inner.ResolveByIdAsync(id, ct);
         }
-        public Task<IAsyncDisposable> AcquireMaintenanceAsync(CancellationToken ct = default) => inner.AcquireMaintenanceAsync(ct);
+        public Task<IAsyncDisposable> AcquireMaintenanceAsync(CancellationToken ct = default)
+        {
+            enteringMaintenance?.Invoke();
+            return inner.AcquireMaintenanceAsync(ct);
+        }
         public Task<bool> HasRegisteredFilesAsync(IReadOnlyList<string> files, CancellationToken ct = default) => inner.HasRegisteredFilesAsync(files, ct);
         public Task<ArtifactRecord?> ResolveAsync(string intentKey, CancellationToken ct = default) => inner.ResolveAsync(intentKey, ct);
         public Task<ArtifactRecord?> GetArtifactAsync(string id, CancellationToken ct = default) => inner.GetArtifactAsync(id, ct);

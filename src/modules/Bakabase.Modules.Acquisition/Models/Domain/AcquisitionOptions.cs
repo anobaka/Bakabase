@@ -103,8 +103,8 @@ public record AcquisitionOptions
     public int RecentPasswordCandidateCount { get; set; } = 20;
 
     /// <summary>
-    /// How many acquisitions run at once. Two by default: most of the time is spent waiting on a
-    /// person or a network, and more parallel downloads mostly means more ways to be rate-limited.
+    /// Maximum acquisition workflows executing concurrently. Invoked capabilities own their
+    /// additional execution policies and queues. Lowering this limit does not interrupt active runs.
     /// </summary>
-    public int Concurrency { get; set; } = 2;
+    public int Concurrency { get; set; } = 20;
 }

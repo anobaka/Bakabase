@@ -14,12 +14,13 @@ import { PublishFileArtifactsUI } from "../Activities/CloudDownload/PublishArtif
 import { CleanupArtifactsUI } from "../Activities/CloudDownload/CleanupArtifacts";
 import WorksetResults from "@/components/CloudDownload/WorksetResults";
 
-const cleanup = vi.hoisted(() => ({ restore: vi.fn() }));
+const cleanup = vi.hoisted(() => ({ restore: vi.fn(), manifest: vi.fn() }));
 vi.mock("@/sdk/BApi", () => ({
-  default: { artifacts: { restoreArtifactCleanup: cleanup.restore } },
+  default: { artifacts: { restoreArtifactCleanup: cleanup.restore }, workflow: { getWorkflowArtifactFiles: cleanup.manifest } },
 }));
 
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, options?: {format?: string}) =>
+  key === "cloudDownload.deliveryReview.archiveSignature" ? `${key} ${options?.format}` : key }) }));
 vi.mock("@/components/Dependency/DependencyManager", () => ({
   default: ({ id }: { id: string }) => <div data-testid="dependency-manager">{id}</div>,
 }));
@@ -42,6 +43,9 @@ vi.mock("@/components/bakaui", async () => ({
   ...(await import("@/test/radioControls")),
   Modal: ({ title, children, footer }: any) => <div role="dialog" aria-label={title}>{children}<footer>{footer}</footer></div>,
   Tooltip: ({ children }: any) => <>{children}</>,
+  Spinner: () => <span role="status" />,
+  Pagination: ({ page, total, onChange }: any) => <button disabled={page === total}
+    onClick={() => onChange(page + 1)}>next page</button>,
   Accordion: ({ children, selectedKeys = new Set(), onSelectionChange }: any) => (
     <div>
       {Children.map(
@@ -234,6 +238,35 @@ it("keeps frozen conflicting steps paused for task revision without offering a b
   expect(screen.getByRole("button", { name: "cloudDownload.processing.continue" })).toBeDisabled();
 });
 
+it.each([false, true])("offers bound keep and edit choices for a stored delivery conflict (fileTask=%s)", (fileTask) => {
+  const Form = AssessDeliveryUI.ResumeForm!;
+  const onSubmit = vi.fn();
+  render(<Form fileTask={fileTask} submitting={false} onSubmit={onSubmit} promptJson={JSON.stringify({
+    targetId: "part", reason: "ProcessingPathConflict", canEditPlan: false, deliveryReview: true,
+    artifactId: "artifact", fingerprint: "fp", reviewToken: "token",
+    allowedArchivePolicies: ["instructions", "keep"],
+    extractionPlanJson: '{"requirement":"required","steps":[{"id":"rename","op":"renameExtension","extension":".zip"}]}',
+  })} />);
+  expect(screen.queryByText("acquisition.plan.lockedPlan")).toBeNull();
+  const submit = screen.getByRole("button", { name: "cloudDownload.processing.continue" });
+  expect(submit).toBeDisabled();
+  if (fileTask) {
+    expect(screen.getByRole("radio", { name: "acquisition.processingChoice.manual" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("radio", { name: "acquisition.processingChoice.keep" }));
+  } else {
+    expect(screen.getByRole("option", { name: "cloudDownload.processing.policy.instructions" })).toHaveValue("instructions");
+    expect(screen.getByRole("option", { name: "cloudDownload.deliveryReview.keepCurrentFiles" })).toHaveValue("keep");
+    fireEvent.change(screen.getByRole("combobox", { name: "cloudDownload.processing.archivePolicy" }),
+      { target: { value: "keep" } });
+  }
+  expect(onSubmit).not.toHaveBeenCalled();
+  fireEvent.click(submit);
+  expect(JSON.parse(onSubmit.mock.calls[0][0])).toEqual({
+    artifactId: "artifact", fingerprint: "fp", reviewToken: "token",
+    processing: { targetId: "part", archivePolicy: "keep" },
+  });
+});
+
 it.each(["pyzipper-component-service", "7z-component-service"])("offers the runtime dependency %s without inferring it from the processing plan", (id) => {
   const onSubmit = vi.fn();
   render(<ResumeForm submitting={false} onSubmit={onSubmit} promptJson={JSON.stringify({
@@ -373,6 +406,69 @@ const planPrompt = (targetId: string) =>
     reason: "ExtractionPlanUnknown",
     extractionPlanJson: JSON.stringify({ requirement: "required", steps: [] }),
   });
+
+describe("acquisition archive group recovery", () => {
+  const Form = AcquisitionPlanProcessUI.ResumeForm!;
+  const identity = { targetId: "part", artifactId: "snapshot", fingerprint: "saved", knownStepId: "s2" };
+  const oldPrompt = { ...identity, reason: "MissingVolumes", allowedActions: [] };
+  const group = { token: "first-checkpoint", memberCount: 3, totalBytes: 512, completedGroupCount: 1,
+    members: ["set/part.002", "set/part.003", "set/part.004"] };
+  const review = { ...oldPrompt, archiveGroupInspected: true, allowedActions: ["retainIncompleteArchiveGroup"],
+    incompleteArchiveGroup: group };
+  const inspect = "workflow.fileRecovery.incompleteGroup.inspect";
+  const retain = "workflow.fileRecovery.incompleteGroup.retain";
+
+  it("can inspect a saved wait without authorizing retention or a new download", async () => {
+    const submit = vi.fn();
+    render(<Form submitting={false} onSubmit={submit} promptJson={JSON.stringify(oldPrompt)} />);
+    expect(screen.queryByRole("button", { name: retain })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: inspect }));
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(submit.mock.calls[0][0])).toEqual({
+      targetId: "part", artifactId: "snapshot", fingerprint: "saved", stepId: "s2", action: "inspectIncompleteArchiveGroup",
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: inspect })).toBeEnabled());
+  });
+
+  it.each([
+    { ...review, incompleteArchiveGroup: { ...group, token: "" } },
+    { ...review, incompleteArchiveGroup: { ...group, completedGroupCount: -1 } },
+    { ...review, incompleteArchiveGroup: { ...group, members: [] } },
+    { ...review, allowedActions: [] },
+    { ...oldPrompt, archiveGroupInspected: true },
+  ])("withholds consent when the checkpoint is missing, invalid or unavailable", prompt => {
+    render(<Form submitting={false} onSubmit={vi.fn()} promptJson={JSON.stringify(prompt)} />);
+    expect(screen.queryByRole("button", { name: retain })).toBeNull();
+    expect(screen.queryByRole("button", { name: inspect })).toBeNull();
+  });
+
+  it("shows confirmed members and only sends the current checkpoint on an explicit click", async () => {
+    let done!: () => void;
+    const submit = vi.fn((_input: string) => new Promise<void>(resolve => { done = resolve; }));
+    const renderForm = (prompt: typeof review) =>
+      <Form submitting={false} onSubmit={submit} promptJson={JSON.stringify(prompt)} />;
+    const view = render(renderForm(review));
+    for (const name of group.members) expect(screen.getByText(name)).toBeVisible();
+    expect(submit).not.toHaveBeenCalled();
+    const button = screen.getByRole("button", { name: retain });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(submit.mock.calls[0][0])).toEqual({ targetId: "part", artifactId: "snapshot", fingerprint: "saved",
+      stepId: "s2", action: "retainIncompleteArchiveGroup", archiveGroupToken: "first-checkpoint" });
+    done();
+    await waitFor(() => expect(button).toBeEnabled());
+    const current = { ...review, incompleteArchiveGroup: { ...group, token: "different-checkpoint", members: ["other/part.001"] } };
+    view.rerender(renderForm(current));
+    expect(screen.queryByText(group.members[0])).toBeNull();
+    expect(screen.getByText("other/part.001")).toBeVisible();
+    expect(submit).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: retain }));
+    expect(JSON.parse(submit.mock.calls[1][0]).archiveGroupToken).toBe("different-checkpoint");
+    done();
+    await waitFor(() => expect(screen.getByRole("button", { name: retain })).toBeEnabled());
+  });
+});
 
 describe("current-step archive discovery recovery", () => {
   it.each([
@@ -1074,6 +1170,55 @@ it.each([AssessDeliveryUI, AcquisitionPlanProcessUI])("binds a final archive dec
     artifactId: "processed-a", fingerprint: "manifest-a", reviewToken: "revision-a",
     processing: {targetId: "part-a", archivePolicy: "keep"},
   });
+});
+
+it.each([true, false])("shows only server-observed archive headers alongside each reviewed filename (fileTask=%s)", fileTask => {
+  const Form = AssessDeliveryUI.ResumeForm!;
+  const onSubmit = vi.fn();
+  const prompt = { targetId: "part", reason: "FILE_DELIVERY_RESULT_UNCERTAIN", deliveryReview: true,
+    artifactId: "artifact", fingerprint: "fp", reviewToken: "same-review", allowedArchivePolicies: ["instructions", "keep"],
+    files: ["part.mp4", "clip.mov", "guess.zip", "movie.mp4"] };
+  const view = render(<Form fileTask={fileTask} submitting={false} onSubmit={onSubmit} promptJson={JSON.stringify({ ...prompt,
+    archiveSignatures: { "part.mp4": ".7z", "clip.mov": ".rar", "guess.zip": "probably ZIP", "unlisted.mp4": ".zip" },
+  })} />);
+  expect(screen.getByText("part.mp4").closest("li")).toHaveTextContent("cloudDownload.deliveryReview.archiveSignature 7z");
+  expect(screen.getByText("clip.mov").closest("li")).toHaveTextContent("cloudDownload.deliveryReview.archiveSignature RAR");
+  expect(screen.getByText("guess.zip").closest("li")).toHaveTextContent(/^guess\.zip$/);
+  expect(screen.getByText("movie.mp4").closest("li")).toHaveTextContent(/^movie\.mp4$/);
+  expect(screen.queryByText("unlisted.mp4")).toBeNull();
+  view.rerender(<Form fileTask={fileTask} submitting={false} onSubmit={onSubmit} promptJson={JSON.stringify(prompt)} />);
+  expect(screen.getByText("part.mp4").closest("li")).toHaveTextContent(/^part\.mp4$/);
+  expect(onSubmit).not.toHaveBeenCalled();
+});
+
+it("submits only explicit delivery exclusions and retains choices across manifest pages", async () => {
+  const firstPage = Array.from({ length: 50 }, (_, i) => ({ relativePath: `media/${i}.jpg`, length: 1, sha256: "abc" }));
+  const omitted = ".smbdeleteAAA12345.1";
+  cleanup.manifest.mockImplementation(async (_run, id, { pageIndex }) => ({ code: 0, data: {
+    artifactId: id, pageIndex, pageSize: 50, state: "available", fileCount: 51,
+    entries: pageIndex === 1 ? firstPage : [{ relativePath: omitted, length: 159, sha256: "def" }],
+  } }));
+  const onSubmit = vi.fn();
+  const Form = AssessDeliveryUI.ResumeForm!;
+  render(<Form fileTask runId={42} submitting={false} onSubmit={onSubmit} promptJson={JSON.stringify({
+    targetId: "part", reason: "FILE_DELIVERY_RESULT_UNCERTAIN", deliveryReview: true,
+    artifactId: "artifact", fingerprint: "fp", reviewToken: "preview", allowedArchivePolicies: ["instructions", "keep"],
+  })} />);
+  fireEvent.click(screen.getByRole("button", { name: "cloudDownload.deliveryReview.selectFiles" }));
+  expect(await screen.findByRole("checkbox", { name: "media/0.jpg" })).toBeChecked();
+  const confirm = screen.getByRole("button", { name: "cloudDownload.deliveryReview.confirmSelection" });
+  expect(confirm).toBeEnabled();
+  fireEvent.click(confirm);
+  expect(JSON.parse(onSubmit.mock.calls[0][0])).toEqual({ artifactId: "artifact", fingerprint: "fp", reviewToken: "preview",
+    processing: { targetId: "part", archivePolicy: "keep" } });
+  onSubmit.mockClear();
+  fireEvent.click(screen.getByRole("checkbox", { name: "media/0.jpg" }));
+  fireEvent.click(screen.getByRole("button", { name: "next page" }));
+  fireEvent.click(await screen.findByRole("checkbox", { name: omitted }));
+  expect(onSubmit).not.toHaveBeenCalled();
+  fireEvent.click(confirm);
+  expect(JSON.parse(onSubmit.mock.calls[0][0])).toEqual({ artifactId: "artifact", fingerprint: "fp", reviewToken: "preview",
+    processing: { targetId: "part", archivePolicy: "keep" }, excludedFiles: ["media/0.jpg", omitted] });
 });
 
 it("does not allow archive confirmation when the saved review identity is missing", () => {

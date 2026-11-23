@@ -1,5 +1,5 @@
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { CenterTask, TaskAction } from "../downloadCenter";
+import { isFileVerificationStage, type CenterTask, type TaskAction } from "../downloadCenter";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Modal } from "@/components/bakaui";
@@ -91,7 +91,7 @@ export default function GeneralTaskDetailModal({
             onFolder={onFolder}
           />
           <p className="break-all text-sm text-default-500">{task.outputDirectory}</p>
-          {task.error && (
+          {task.error && !isFileVerificationStage(task.stage) && (
             <p role="alert" className="break-words text-sm text-danger">
               {task.error}
             </p>

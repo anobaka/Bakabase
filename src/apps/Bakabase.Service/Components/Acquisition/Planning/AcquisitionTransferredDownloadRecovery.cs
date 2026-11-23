@@ -60,10 +60,12 @@ public sealed class AcquisitionTransferredDownloadRecovery(BakabaseDbContext db,
             s.EntityKind == "task" && s.EntityId == ownerId).Select(s => s.WorkflowRunId).ToArrayAsync(ct);
         priorRuns = priorRuns.Concat(linkedRuns).Distinct().ToArray();
         var runKeys = priorRuns.Select(r => r.ToString(CultureInfo.InvariantCulture)).ToArray();
+        var reviewedSlots = together.Where(t => t.ReviewedTransferId != null)
+            .Select(t => CloudOperationService.OperationSlot(t, "transfer")).ToArray();
         if (await db.DownloadResultOwners.AnyAsync(o => o.AcquisitionTaskId == task.Id || priorRuns.Contains(o.WorkflowRunId), ct) ||
             await db.ManagedDownloadTasks.AnyAsync(d => d.WorkflowRunId != null && priorRuns.Contains(d.WorkflowRunId.Value), ct) ||
             await db.ArtifactOperationBindings.AnyAsync(b => b.OwnerKind == "workflow" && runKeys.Contains(b.OwnerId) &&
-                !b.Slot.EndsWith(":transfer"), ct) ||
+                !b.Slot.EndsWith(":transfer") && !(b.OwnerId == run.Id.ToString() && reviewedSlots.Contains(b.Slot)), ct) ||
             await db.CloudDownloadOperations.AnyAsync(o => o.Kind == "download" && priorRuns.Contains(o.WorkflowRunId), ct)) return null;
         var directories = new List<string>(); var proofs = new List<string>(); var next = item.Targets.ToList();
         foreach (var target in together)
@@ -83,16 +85,18 @@ public sealed class AcquisitionTransferredDownloadRecovery(BakabaseDbContext db,
             var transferConfig = JsonSerializer.Deserialize<CloudWorkflowConfig>(definition.Nodes[step - 1].ConfigJson, WorkflowJson.Options);
             if (transferConfig == null || transferConfig.ReusePolicy == "force") return null;
             var sourceKey = DownloadArtifactCoordinator.Source(target);
-            var transferId = CloudOperationService.Key("transfer.v2", sourceKey, transferConfig.RemoteDirectory);
+            var originalTransferId = CloudOperationService.Key("transfer.v2", sourceKey, transferConfig.RemoteDirectory);
+            var transferId = target.ReviewedTransferId ?? originalTransferId;
             var bound = await db.ArtifactOperationBindings.AsNoTracking().SingleOrDefaultAsync(b => b.OwnerKind == "workflow" &&
                 b.OwnerId == run.Id.ToString() && b.Slot == CloudOperationService.OperationSlot(target, "transfer"), ct);
             var transfer = await db.CloudDownloadOperations.AsNoTracking().SingleOrDefaultAsync(o => o.Id == transferId, ct);
-            if (bound?.OperationId != transferId || transfer is not {Kind: "transfer", State: "succeeded", ReceiptJson: not null} ||
+            if (bound?.OperationId != transferId || transfer is not {State: "succeeded", ReceiptJson: not null} ||
+                transfer.Kind != (target.ReviewedTransferId == null ? "transfer" : CloudOperationService.ReplayKind) ||
                 transfer.WorkflowRunId != run.Id || transfer.TargetId != target.Id) return null;
             var receipt = JsonSerializer.Deserialize<CloudTransferReceipt>(transfer.ReceiptJson, WorkflowJson.Options);
             var request = JsonSerializer.Deserialize<CloudTransferRequest>(transfer.RequestJson, WorkflowJson.Options);
             if (receipt?.OperationId != transferId || receipt.Entry != remote || request?.OperationId != transferId ||
-                request.AccountId != target.AccountId || request.RemoteDirectory != transferConfig.RemoteDirectory.TrimEnd('/') + "/" + transferId ||
+                request.AccountId != target.AccountId || request.RemoteDirectory != transferConfig.RemoteDirectory.TrimEnd('/') + "/" + originalTransferId ||
                 CloudSourceIdentity.Key(request.Source, request.AccountId) != sourceKey) return null;
             var allocation = layout.Parts[target.Id];
             var location = plan.StageDirectories?.Parts.GetValueOrDefault(target.Id)?.Download is {BindingId: not null} manual

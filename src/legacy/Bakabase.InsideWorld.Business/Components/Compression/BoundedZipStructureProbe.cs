@@ -31,6 +31,10 @@ internal static class BoundedZipStructureProbe
     private const int MaximumTrailingBytes = 32 * 1024;
     private const int MaximumCentralBytes = 64 * 1024;
     private const int MaximumEntries = 128;
+    // Each member needs two random reads. Cap an entire explicitly selected archive
+    // inspection at 1,024 local-header reads, including competing end records.
+    private const int MaximumSelectedStandaloneEntries = 512;
+    private const int MinimumCentralEntryBytes = 46 + 1; // fixed header and a nonempty name
     private const int MaximumLocalHeaderBytes = 4096;
     private const int MaximumEndCandidates = 4;
 
@@ -45,7 +49,8 @@ internal static class BoundedZipStructureProbe
     }
 
     internal static async Task<ZipStructureDescriptor?> FindStructureAsync(string path, long expectedLength,
-        CancellationToken ct, bool requireImageHeader = false, bool includeStandaloneZip = false)
+        CancellationToken ct, bool requireImageHeader = false, bool includeStandaloneZip = false,
+        bool verifySelectedStandaloneZip = false)
     {
         await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
             1, FileOptions.Asynchronous | FileOptions.RandomAccess);
@@ -66,8 +71,8 @@ internal static class BoundedZipStructureProbe
         // An archive already starting at byte zero takes precedence over a ZIP embedded
         // in its payload or trailer. Leave validation to its ordinary archive handler.
         var header = (await Read(0, (int)Math.Min(512, expectedLength)))!;
-        var standaloneZip = includeStandaloneZip && header.AsSpan().StartsWith("PK\x03\x04"u8);
-        if (ArchiveSignature.HasKnownContainerHeader(header) && !standaloneZip)
+        var standaloneZip = (includeStandaloneZip || verifySelectedStandaloneZip) && header.AsSpan().StartsWith("PK\x03\x04"u8);
+        if (!standaloneZip && (verifySelectedStandaloneZip || ArchiveSignature.HasKnownContainerHeader(header)))
             return null;
         if (requireImageHeader && !header.AsSpan().StartsWith(new byte[] {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}) &&
             !header.AsSpan().StartsWith(new byte[] {0xff, 0xd8, 0xff}))
@@ -76,6 +81,7 @@ internal static class BoundedZipStructureProbe
         var tail = (await Read(tailStart, (int)(expectedLength - tailStart)))!;
         ZipStructureDescriptor? found = null;
         var candidates = 0;
+        var remainingStandaloneEntries = MaximumSelectedStandaloneEntries;
         for (var e = 0; e <= tail.Length - 22; e++)
         {
             ct.ThrowIfCancellationRequested();
@@ -118,12 +124,13 @@ internal static class BoundedZipStructureProbe
             }
             else if (count == ushort.MaxValue || centralSize == uint.MaxValue ||
                      centralOffset == uint.MaxValue || U16(tail, e + 8) != count) continue;
-            if (count == 0 || count > MaximumEntries || centralSize == 0 ||
+            if (count == 0 || count > centralSize / MinimumCentralEntryBytes ||
                 centralSize > MaximumCentralBytes || centralSize > (ulong)centralEnd ||
                 centralOffset > (ulong)centralEnd - centralSize) continue;
             var centralStart = centralEnd - (long)centralSize;
             var prefix = centralStart - (long)centralOffset;
             if ((prefix == 0) != standaloneZip || centralStart <= prefix) continue;
+            if (count > (ulong)(verifySelectedStandaloneZip ? MaximumSelectedStandaloneEntries : MaximumEntries)) continue;
             var central = await Read(centralStart, (int)centralSize);
             if (central == null) continue;
             var position = 0;
@@ -151,6 +158,8 @@ internal static class BoundedZipStructureProbe
                     localOffset > (ulong)(centralStart - prefix) ||
                     centralStart - prefix - (long)localOffset < 30) { valid = false; break; }
                 var localStart = prefix + (long)localOffset;
+                if (verifySelectedStandaloneZip && remainingStandaloneEntries-- == 0)
+                    throw new ArchiveFormatProbeIncompleteException("Archive structure discovery exceeded its member limit. Revise the extraction step.");
                 var local = await Read(localStart, 30);
                 if (local == null || U32(local, 0) != 0x04034b50 ||
                     U16(local, 6) != flags || U16(local, 8) != method || U16(local, 26) != nameLength ||

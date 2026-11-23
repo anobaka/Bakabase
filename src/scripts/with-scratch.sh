@@ -3,13 +3,13 @@
 # This affects tools that honor TMPDIR/TMP/TEMP. It cannot relocate paths explicitly
 # chosen by a command (for example /tmp/foo, build outputs or a results directory).
 # Keep the run directory, including any logs the command writes there, for inspection.
-# No exit trap removes files: child processes may still be using them after it exits.
+# TestKit databases use a separately owned directory for supervised test commands.
 
 set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: with-scratch.sh [--root EXISTING_DIRECTORY] -- COMMAND [ARGUMENT...]
+Usage: with-scratch.sh [--root EXISTING_DIRECTORY] [--test-run] -- COMMAND [ARGUMENT...]
 
 Use --root or BAKABASE_SCRATCH_ROOT to choose an existing writable directory.
 There is no fallback to the system disk, and a missing root is never created.
@@ -19,7 +19,9 @@ for .NET diagnostic and other Unix socket filenames (macOS has a 104-byte limit)
 The command inherits its original working directory, input and output streams.
 TMPDIR, TMP and TEMP point to a new private run directory's t/ subdirectory;
 BAKABASE_SCRATCH_RUN_DIR identifies the retained run directory for reports/logs.
-The command's exit status is preserved. Remove retained runs only after confirming
+Direct dotnet test commands reclaim their TestKit databases after success. Use
+--test-run when a script or another executable drives the tests. Failed or
+still-active test runs retain their databases. The command's exit status is preserved. Remove retained runs only after confirming
 that no process still uses them. This wrapper supports macOS and Linux shells.
 
 Examples (create your chosen scratch root separately):
@@ -33,6 +35,7 @@ fail() {
   exit 2
 }
 
+test_run=false
 scratch_root=${BAKABASE_SCRATCH_ROOT:-}
 while (($#)); do
   case "$1" in
@@ -40,6 +43,10 @@ while (($#)); do
       (($# >= 2)) || fail '--root requires an existing directory.'
       scratch_root=$2
       shift 2
+      ;;
+    --test-run)
+      test_run=true
+      shift
       ;;
     --help|-h)
       usage
@@ -77,4 +84,24 @@ export TMP="$TMPDIR"
 export TEMP="$TMPDIR"
 printf 'with-scratch: retained run directory: %s\n' "$scratch_run" >&2
 
+# A nested wrapper has its own command lifetime. Direct dotnet test/vstest and
+# the MSTest executable entry points are common; compound drivers can opt in.
+unset BAKABASE_TEST_FIXTURE_ROOT
+command_args=("$@")
+if [[ ${command_args[0]##*/} == env ]]; then
+  command_args=("${command_args[@]:1}")
+  while [[ ${command_args[0]:-} == *=* ]]; do command_args=("${command_args[@]:1}"); done
+fi
+case "${command_args[0]:-}" in
+  dotnet|*/dotnet)
+    case "${command_args[1]:-}" in test|vstest|*Tests.dll) test_run=true ;; esac
+    ;;
+  Bakabase.*Tests|*/Bakabase.*Tests) test_run=true ;;
+esac
+if [[ $test_run == true ]]; then
+  if command -v python3 >/dev/null 2>&1; then
+    exec python3 "$(dirname -- "${BASH_SOURCE[0]}")/with-scratch-test.py" "$@"
+  fi
+  printf 'with-scratch: python3 unavailable, retaining test databases.\n' >&2
+fi
 exec "$@"

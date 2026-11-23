@@ -295,11 +295,126 @@ public sealed class CloudDownloadDestinationTests
         Assert.ThrowsException<InvalidDataException>(()=>CloudDownloadDestinations.ExecutionDirectory(revised with {DestinationRevisions=[revision,revision]}));
     }
 
-    private sealed class Provider : ICloudDownloadProvider,ICloudDownloadDestinationRevisionProvider,ICloudRetainedDownloadRecoveryProvider
+    [TestMethod]
+    public async Task RetainedSourceRevisionUsesTheSameSiteAndTwoIndependentLayoutsWithoutAnyCopyOrEnqueue()
+    {
+        Directory.CreateDirectory(_download.DownloadPath);
+        var original = Path.Combine(_download.DownloadPath, "file");
+        await File.WriteAllTextAsync(original, "original");
+        await _db.DownloadTasks.Where(d => d.Id == _download.Id).ExecuteUpdateAsync(set => set
+            .SetProperty(d => d.Progress, 42m).SetProperty(d => d.LastFileVerificationJson, "previous"));
+        var normal = await Preview();
+        Assert.IsFalse(normal.CanRevise);
+        Assert.IsTrue(normal.CanPreviewReuse);
+        var partial = await Service.PreviewAsync(_run.Id, _target, _oldRoot, _newRoot, NewDirectory, default, true);
+        Assert.IsTrue(partial.CanRevise, partial.ReasonCode);
+        Assert.AreEqual(70L, partial.ReuseEstimate?.RequiredDownloadBytes);
+        Assert.AreEqual(100L, _guard.ExpectedBytes);
+        var revision = Guid.NewGuid().ToString("N");
+        var receipt = await Service.ApplyAsync(_run.Id, _target, _oldRoot, _newRoot, NewDirectory,
+            partial.Fingerprint!, revision, default, reuseExistingFiles: true);
+        Assert.AreEqual(_download.Id, receipt.DownloadTaskId);
+        var repeated = await Service.ApplyAsync(_run.Id, _target, _oldRoot, _newRoot, NewDirectory,
+            partial.Fingerprint!, revision, default, reuseExistingFiles: true);
+        Assert.IsTrue(repeated.AlreadyApplied);
+        var actual = await _db.DownloadTasks.AsNoTracking().SingleAsync(d => d.Id == _download.Id);
+        var operation = await _db.CloudDownloadOperations.AsNoTracking().SingleAsync(o => o.Id == _operation.Id);
+        Assert.AreEqual(actual.Options, operation.RequestJson);
+        Assert.AreEqual(DownloadTaskDbModelStatus.Failed, actual.Status);
+        Assert.IsNull(actual.LastFileVerificationJson);
+        Assert.AreEqual(0m, actual.Progress);
+        Assert.AreEqual(_download.Message, actual.Message);
+        Assert.AreEqual(_download.Id, operation.DownloadTaskId);
+        var persisted = JsonSerializer.Deserialize<CloudDownloadRequest>(actual.Options!, JsonSerializerOptions.Web)!;
+        var execution = CloudDownloadDestinations.ExecutionRequest(persisted);
+        Assert.AreEqual(_operation.Id, execution.OperationId);
+        Assert.AreEqual(_operation.Id + ":destination:" + revision, execution.LayoutOperationId);
+        Assert.AreEqual(NewDirectory, execution.OutputDirectory);
+        Assert.AreEqual(new CloudDownloadReuseSource(_operation.Id, _download.DownloadPath, _provider.ObservedFingerprint), execution.ReuseSource);
+        Assert.AreEqual(execution, CloudDownloadDestinations.ExecutionRequest(execution));
+        Assert.IsFalse(Directory.Exists(NewDirectory));
+        Assert.AreEqual("original", await File.ReadAllTextAsync(original));
+        Assert.IsFalse(await _db.DownloadResults.AnyAsync());
+    }
+
+    [TestMethod]
+    public async Task RetainedSourceStyleCannotBypassSharedRootsAndChangedSourceCannotApply()
+    {
+        await _db.DownloadTasks.Where(d => d.Id == _download.Id).ExecuteUpdateAsync(set => set.SetProperty(d => d.Progress, 42m));
+        var preview = await Service.PreviewAsync(_run.Id, _target, _oldRoot, _newRoot, NewDirectory, default, true);
+        Assert.IsTrue(preview.CanRevise, preview.ReasonCode);
+        _provider.ObservedFingerprint = new('b', 64);
+        var rejected = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => Service.ApplyAsync(_run.Id,
+            _target, _oldRoot, _newRoot, NewDirectory, preview.Fingerprint!, Guid.NewGuid().ToString("N"), default, reuseExistingFiles: true));
+        Assert.AreEqual("DOWNLOAD_DESTINATION_PREVIEW_CHANGED", rejected.Message);
+        _db.DownloadTasks.Add(new() {DownloadPath = Path.Combine(_download.DownloadPath, "another-task")});
+        await _db.SaveChangesAsync();
+        var shared = await Preview();
+        Assert.IsFalse(shared.CanPreviewReuse);
+        Assert.AreEqual("DOWNLOAD_DESTINATION_SHARED", shared.ReasonCode);
+        Assert.IsFalse((await Service.PreviewAsync(_run.Id, _target, _oldRoot, _newRoot, NewDirectory, default, true)).CanRevise);
+        Assert.AreEqual(_download.DownloadPath, (await _db.DownloadTasks.AsNoTracking().SingleAsync(d => d.Id == _download.Id)).DownloadPath);
+    }
+
+    [TestMethod]
+    public async Task UserMustHaveAccessToTheOriginalSourceBeforeAnyProviderInspection()
+    {
+        var preview = await Service.PreviewAsync(_run.Id, _target, _oldRoot, _newRoot, NewDirectory, default,
+            reuseExistingFiles: true, guard: path => path == _download.DownloadPath ? throw new UnauthorizedAccessException() : Task.CompletedTask);
+        Assert.IsFalse(preview.CanRevise);
+        Assert.IsNull(preview.PreviousDirectory);
+        Assert.IsFalse(preview.CanPreviewReuse);
+        Assert.AreEqual(0, _provider.ReuseInspections);
+        Assert.AreEqual(0, _provider.Checks);
+    }
+
+    [TestMethod]
+    public async Task ExistingSourceOfAnotherRevisionCannotBeClaimedAsANewDestination()
+    {
+        var original = Path.Combine(NewDirectory, "retained");
+        var otherDestination = Path.Combine(_newRoot, "unrelated");
+        var revision = new CloudDownloadDestinationRevision(Guid.NewGuid().ToString("N"), original, otherDestination, _newRoot,
+            DateTime.UtcNow, new('a',64)) {ReuseInventoryFingerprint = new('b',64)};
+        var other = new CloudDownloadRequest("another-operation", _target.SelectedSource!, "account", _target.RemoteEntry, original)
+            {DestinationRevisions = [revision]};
+        _db.DownloadTasks.Add(new() {DownloadPath = otherDestination, Options = Json(other)});
+        await _db.SaveChangesAsync();
+        var blocked = await Service.PreviewAsync(_run.Id, _target, _oldRoot, _newRoot, NewDirectory, default, true);
+        Assert.IsFalse(blocked.CanRevise);
+        Assert.AreEqual("DOWNLOAD_DESTINATION_SHARED", blocked.ReasonCode);
+        Assert.AreEqual(0, _provider.ReuseInspections);
+    }
+
+    [TestMethod]
+    public void InaccessibleRetainedSourceKeepsItsIdentityButDisablesAllReadsForDestinationOnlyResume()
+    {
+        var original = JsonSerializer.Deserialize<CloudDownloadRequest>(_download.Options!, JsonSerializerOptions.Web)!;
+        var source = new CloudDownloadReuseSource(original.OperationId, original.OutputDirectory, new('a',64));
+        var execution = original with {OutputDirectory = NewDirectory, ReuseSource = source};
+        Assert.AreSame(execution, CloudSiteDownloader<BaiduCloudTaskType>.GuardRetainedSource(execution, path =>
+            Assert.AreEqual(source.OutputDirectory,path)));
+        var disconnected = CloudSiteDownloader<BaiduCloudTaskType>.GuardRetainedSource(execution, _ =>
+            throw new Bakabase.Abstractions.Exceptions.UserStoragePathException("Unavailable", mountUnavailable: true));
+        Assert.AreEqual(source with {DisableSourceRead = true}, disconnected.ReuseSource);
+        Assert.IsTrue(Json(disconnected.ReuseSource).Contains("\"disableSourceRead\":true"));
+        Assert.AreEqual(original.OperationId, disconnected.OperationId);
+        Assert.AreEqual(NewDirectory, disconnected.OutputDirectory);
+        Assert.IsFalse(source.DisableSourceRead);
+    }
+
+    private sealed class Provider : ICloudDownloadProvider,ICloudDownloadDestinationRevisionProvider,ICloudRetainedDownloadRecoveryProvider,
+        ICloudDownloadSourceReuseProvider
     {
         public string ProviderId=>"baidu";public string? Problem;public int Checks;public Func<Task>? DuringCheck;
         public async Task<CloudReadiness> InspectDestinationRevisionAsync(CloudDownloadRequest request,string newDirectory,CancellationToken ct)
         {Checks++;if(DuringCheck!=null)await DuringCheck();return new(Problem==null,Problem);}
+        public string ObservedFingerprint = new('a', 64);
+        public int ReuseInspections;
+        public Task<CloudDownloadReuseInventory> InspectReuseSourceAsync(CloudDownloadRequest request, CancellationToken ct)
+        {
+            ReuseInspections++;
+            return Task.FromResult(new CloudDownloadReuseInventory(new(4, 100, 2, 30), ObservedFingerprint));
+        }
         public CloudDownloadRequest? LastRetainedRequest;
         public bool CanRevalidateRetainedDownloadFailure(string code)=>code=="BAIDU_OUTPUT_DIRECTORY_FAILED";
         public Task<CloudReadiness> InspectRetainedDownloadAsync(CloudDownloadRequest request,bool verifyRemote,CancellationToken ct)
@@ -311,9 +426,11 @@ public sealed class CloudDownloadDestinationTests
     private sealed class Guard:IStorageWriteGuard
     {
         public bool Reject;public StorageWriteContext? LastContext;
+        public long? ExpectedBytes;
         public Task CheckAsync(string path,StorageWriteContext? context,CancellationToken ct=default)
         {LastContext=context;if(Reject)throw new LocalStorageException("LOCAL_STORAGE_RESERVE_LOW");return Task.CompletedTask;}
-        public Task CheckAllocationAsync(string path,long bytes,StorageWriteContext? context,CancellationToken ct=default)=>CheckAsync(path,context,ct);
+        public Task CheckAllocationAsync(string path,long bytes,StorageWriteContext? context,CancellationToken ct=default)
+        {ExpectedBytes = bytes; return CheckAsync(path, context, ct);}
         public Task<T> RunAsync<T>(IReadOnlyList<string> paths,StorageWriteContext? context,Func<CancellationToken,Task<T>> writer,CancellationToken ct=default)=>throw new AssertFailedException("No filesystem writes");
         public Task CopyAsync(Stream source,Stream destination,string path,StorageWriteContext? context,CancellationToken ct=default)=>throw new AssertFailedException("No copying");
     }

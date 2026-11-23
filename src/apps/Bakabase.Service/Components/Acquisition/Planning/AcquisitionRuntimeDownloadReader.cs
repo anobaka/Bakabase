@@ -7,13 +7,16 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.HttpDownloads.Abstractions;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
 public sealed record AcquisitionRuntimeDownload(string Id, string? ParentId, int? WorkflowRunId,
     string Status, double? Progress, long? CompletedBytes, long? TotalBytes, DateTimeOffset ObservedAt,
-    string? ProblemCode, double? SpeedBytesPerSecond = null, string? Stage = null);
+    string? ProblemCode, double? SpeedBytesPerSecond = null, string? Stage = null)
+    : WorkflowRuntimeTransferSnapshot(Id, ParentId, WorkflowRunId, Status, Progress, CompletedBytes, TotalBytes,
+        ObservedAt, ProblemCode, SpeedBytesPerSecond, Stage);
 
 /// <summary>Read snapshots once for an entire page. No registry binding, reconcile, enqueue or retry.</summary>
 public interface IAcquisitionRuntimeDownloadReader
@@ -30,6 +33,13 @@ public sealed class AcquisitionRuntimeDownloadReader(BakabaseDbContext db, Downl
     {
         var result = new List<AcquisitionRuntimeDownload>();
         foreach (var task in await sites.GetRuntimeDtos(siteIds, ct))
+        {
+            if (task.FileVerification is {} verification)
+            {
+                result.Add(new("site:" + task.Id, null, verification.WorkflowRunId, "running", null, null, null,
+                    verification.ObservedAt, null, Stage: verification.Stage));
+                continue;
+            }
             result.Add(new("site:" + task.Id, null, null, (int) task.Status switch
             {100 when task.NextStartDt == null || task.NextStartDt <= DateTime.Now => "queued",
                 200 => "queued", 300 or 400 => "running", 500 => "stopping", 600 => "completed", 700 => "failed", _ => "stopped"},
@@ -41,6 +51,7 @@ public sealed class AcquisitionRuntimeDownloadReader(BakabaseDbContext db, Downl
                 task.Status == InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskStatus.Failed
                     ? AcquisitionRuntimeProblems.Code(task.Message) : AcquisitionRuntimeProblems.Code(task.Current),
                 task.DownloadSpeedBytesPerSecond, SafeStage(task.Current)));
+        }
 
         // Only the latest result generation of each site work may own an inferred native child.
         var latestResults = await db.DownloadResults.AsNoTracking().Where(r => siteIds.Contains(r.DownloadTaskId) &&

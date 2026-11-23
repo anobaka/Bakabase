@@ -78,6 +78,33 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         Assert.AreEqual(2, Directory.GetFiles(Path.Combine(root, "file-processing", "quarantine-receipts"), "*.json").Length);
     }
 
+    [TestMethod]
+    public async Task Completed_registration_receipt_satisfies_only_its_original_cleanup_selection()
+    {
+        var locations = new FileProcessingWorkspaceResolver(root);
+        var maintenance = new ArtifactWorkspaceMaintenance(db, store, new(new NoDeletionExtraction()),
+            new(new NoDeletionExtraction()), root, locations);
+        cleanup = new(db, store, new ArchiveQuarantineService(store, root, new Storage()),
+            workspaces: locations, maintenance: maintenance);
+        var raw = await Artifact("download");
+        var source = await Artifact("processedFiles", raw);
+        var output = await Artifact("publishedFiles", source);
+        var selection = (await Preview(output)).Single(row => row.ArtifactId == source.Id);
+        var first = await cleanup.ReclaimAsync(selection, [1], default);
+        Assert.IsTrue(first.Completed, first.Reason);
+        Assert.AreEqual(1, first.RemovedFiles);
+        Directory.CreateDirectory(source.RootDirectory);
+        await File.WriteAllTextAsync(source.Files[0], "unrelated new file");
+        var repeat = await cleanup.ReclaimAsync(selection, [1], default);
+        Assert.IsTrue(repeat.Completed, repeat.Reason);
+        Assert.AreEqual("AlreadyRetired", repeat.Reason);
+        Assert.AreEqual(0, repeat.RemovedFiles);
+        Assert.AreEqual(0L, repeat.RemovedBytes);
+        Assert.IsFalse((await cleanup.ReclaimAsync(selection with {SelectionFingerprint = "stale"}, [1], default)).Completed);
+        Assert.AreEqual("unrelated new file", await File.ReadAllTextAsync(source.Files[0]));
+        Assert.IsTrue(File.Exists(output.Files[0]));
+    }
+
     [DataTestMethod]
     [DataRow(false)]
     [DataRow(null)]
@@ -86,6 +113,34 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var source = await Artifact("processedFiles", cleanupPolicy: keep); var final = await Artifact("publishedFiles", source);
         var row = (await Preview(final)).Single(); Assert.AreEqual("RetentionPolicyKeep", row.Reason); Assert.IsFalse(row.Eligible);
         Assert.IsTrue(File.Exists(source.Files[0]));
+    }
+
+    [DataTestMethod]
+    [DataRow("invalid-policy")]
+    [DataRow("invalid-plan")]
+    [DataRow("invalid-steps")]
+    [DataRow("unknown-step")]
+    [DataRow("nested-keep")]
+    public async Task Ordinary_preview_keeps_download_and_processed_files_when_frozen_retention_cannot_authorize_them(string variant)
+    {
+        var raw = await Artifact("download");
+        var processed = await Artifact("processedFiles", raw, sourceCleanup: "delete");
+        var publication = await Artifact("publishedFiles", processed);
+        var metadata = JsonNode.Parse(processed.MetadataJson!)!.AsObject();
+        switch (variant)
+        {
+            case "invalid-policy": metadata["storagePolicy"] = "broken"; break;
+            case "invalid-plan": metadata["planJson"] = "{"; break;
+            case "invalid-steps": metadata["planJson"] = """{"steps":null}"""; break;
+            case "unknown-step": metadata["planJson"] = """{"steps":[null]}"""; break;
+            case "nested-keep": metadata["planJson"] = """{"steps":[{"storagePolicy":{"sourceCleanup":"keep"}}]}"""; break;
+        }
+        var changed = metadata.ToJsonString();
+        await db.Artifacts.Where(a => a.Id == processed.Id).ExecuteUpdateAsync(s => s.SetProperty(a => a.MetadataJson, changed));
+        var rows = await Preview(publication);
+        CollectionAssert.AreEquivalent(new[] {raw.Id, processed.Id}, rows.Select(r => r.ArtifactId).ToArray());
+        Assert.IsTrue(rows.All(r => !r.Eligible && r.Reason == "RetentionPolicyKeep"));
+        Assert.IsTrue(File.Exists(raw.Files.Single()) && File.Exists(processed.Files.Single()));
     }
 
     [TestMethod]

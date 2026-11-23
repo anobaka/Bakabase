@@ -53,7 +53,8 @@ public sealed partial class AcquisitionRecoveryTests
     }
 
     private async Task<(int TaskId, int RunId, AcquisitionRecoveryService Recovery, AcquisitionLocalFilesRecoveryService Local,
-        LocalFilesHost Host, AcquisitionPlanService Plans, TestBOptionsManager<AcquisitionOptions> Options)> LocalFilesFixture(bool dependencyMissing = false)
+        LocalFilesHost Host, AcquisitionPlanService Plans, TestBOptionsManager<AcquisitionOptions> Options)> LocalFilesFixture(
+        bool dependencyMissing = false, AcquisitionConfirmationRuntime? confirmations = null, IUserStoragePolicy? storagePolicy = null)
     {
         var (task, run, workset, _, _) = await SeedRevisedCompletedDownload("download.awaitCompletion", "11111111111111111111111111111111");
         run.WaitReason = "cloud.cloudAttention";
@@ -73,7 +74,7 @@ public sealed partial class AcquisitionRecoveryTests
         {ProcessingWorkspaceDirectory = Directory.CreateDirectory(Path.Combine(_root, "current-work")).FullName,
             DeliveryRootDirectory = Directory.CreateDirectory(Path.Combine(_root, "current-delivery")).FullName,
             StoragePolicy = new() {SourceCleanup = "delete"}});
-        var storage = new UserStoragePolicy(false);
+        var storage = storagePolicy ?? new UserStoragePolicy(false);
         var store = _services.GetRequiredService<IArtifactOperationStore>();
         var host = new LocalFilesHost(_db);
         // Local continuations have zero acquisition candidates. Keep the real plan/replan
@@ -82,9 +83,9 @@ public sealed partial class AcquisitionRecoveryTests
             null!, null!, null!, null!, null!);
         var plans = new AcquisitionPlanService(_db, [], _services.GetRequiredService<IAcquisitionService>(), host,
             intents, storage, artifacts: store,
-            deliveryDirectories: new(storage, options), storageDefaults: new(options, storage));
+            deliveryDirectories: new(storage, options), storageDefaults: new(options, storage), confirmations: confirmations);
         var local = new AcquisitionLocalFilesRecoveryService(_db, plans, storage, store,
-            new(_db, store, storage, _services.GetRequiredService<DownloadResultService>()), _services);
+            new(_db, store, storage, _services.GetRequiredService<DownloadResultService>()), _services, confirmations: confirmations);
         return (task.Id, run.Id, new(_db, _diagnostics, new(), new RecordingHost(), plans, localFiles: local), local, host, plans, options);
     }
 

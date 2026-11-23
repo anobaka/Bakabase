@@ -85,6 +85,11 @@ public interface IArchiveExtractionService
         ? ProbePasswordAsync(entryFile, candidates, onOutput, ct)
         : throw new NotSupportedException("This archive service does not support the selected opening mode.");
 
+    /// <summary>Complete declared file bytes for this opening and selected members. Null means
+    /// the provider cannot establish a budget from metadata. No output or data test is performed.</summary>
+    Task<long?> TryGetExpandedBytesAsync(ArchiveExtractionRequest request, CancellationToken ct) =>
+        Task.FromResult<long?>(null);
+
     Task<ArchiveExtractionResult> ExtractAsync(ArchiveExtractionRequest request,
         Action<int>? onProgress, CancellationToken ct);
 }
@@ -194,6 +199,10 @@ public class ArchiveExtractionService(CompressedFileService compressedFileServic
             value.Equals("Cannot open encrypted archive. Wrong password?", StringComparison.OrdinalIgnoreCase) ||
             value.Equals("Data Error in encrypted file. Wrong password?", StringComparison.OrdinalIgnoreCase);
     }
+
+    public Task<long?> TryGetExpandedBytesAsync(ArchiveExtractionRequest request, CancellationToken ct) =>
+        compressedFileService.TryGetExpandedBytesAsync(Path.GetFullPath(request.Files[0], Path.GetFullPath(request.Directory)),
+            request.Password, request.OpenOptions, ct);
 
     public async Task<ArchiveExtractionResult> ExtractAsync(ArchiveExtractionRequest request,
         Action<int>? onProgress, CancellationToken ct)

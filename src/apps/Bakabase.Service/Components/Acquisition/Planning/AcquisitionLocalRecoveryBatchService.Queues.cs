@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
@@ -24,10 +25,32 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
         var deferred = AcquisitionContinuationEntry.Read(task);
         if (local is {IsOpen: true} && local.Status is not ("queued" or "paused" or "spaceBlocked") ||
             deferred is {IsOpen: true} && deferred.Status != "queued" ||
-            local?.ReasonCode == "LOCAL_BATCH_OUTCOME_UNKNOWN" || deferred?.ReasonCode == "RECOVERY_OUTCOME_UNKNOWN") return false;
+            deferred?.ReasonCode == "RECOVERY_OUTCOME_UNKNOWN") return false;
+        if (local?.ReasonCode == "LOCAL_BATCH_OUTCOME_UNKNOWN" &&
+            !await CanReviewUncertainDispatchAsync(task, run, local, ct)) return false;
         foreach (var id in new[] {local?.WorkflowRunId, deferred?.WorkflowRunId}.Where(id => id != null && id != task.WorkflowRunId).Distinct())
             if (IsExecuting(await db.WorkflowRuns.AsNoTracking().SingleOrDefaultAsync(r => r.Id == id, ct))) return false;
         return true;
+    }
+
+    // Older workers could lose their polling budget between saving "starting" and submitting.
+    // Only a fresh preview may replace their closed rows, and only when the host or operation
+    // journal establishes which side of admission the current checkpoint belongs to.
+    private async Task<bool> CanReviewUncertainDispatchAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
+        AcquisitionLocalRecoveryQueueEntry entry, CancellationToken ct)
+    {
+        if (entry is not {Status: "attention", Mode: "automatic", RecoveryScope: "workflow", SelectedAction: ContinueAction} ||
+            run is not {Status: WorkflowRunStatus.Waiting, PendingSignalJson: null, WaitingSince: not null} ||
+            task.WorkflowRunId != run.Id || entry.WorkflowRunId != run.Id || task.PlanRevision != entry.PlanRevision ||
+            tasks?.IsPending("workflow.run." + run.Id) == true) return false;
+        // A later suspension is an acknowledged end to any earlier handoff to this same run.
+        if (run.WaitingSince.Value.ToUniversalTime() > entry.UpdatedAt.UtcDateTime) return true;
+        if (!IsTransferCursor(run) || run.WaitingSince.Value.ToUniversalTime() >= entry.CreatedAt.UtcDateTime ||
+            entry.AttemptVersion != AcquisitionLocalRecoveryQueueEntry.ContentVersion(task, run)) return false;
+        // The transfer provider persists its isolated intent before it can perform a remote write.
+        // The preview will still revalidate the exact bound source, original account and receipt.
+        var since = entry.CreatedAt.UtcDateTime;
+        return !await db.CloudDownloadOperations.AsNoTracking().AnyAsync(o => o.WorkflowRunId == run.Id && o.UpdatedAt >= since, ct);
     }
 
     private async Task<AcquisitionRecoveryQueueReference?> QueueReference(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,

@@ -21,6 +21,7 @@ using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.TestKit.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 
 namespace Bakabase.Tests;
@@ -38,10 +39,17 @@ public sealed partial class AcquisitionRecoveryTests
     [TestInitialize]
     public async Task Setup()
     {
-        _services = await TestServiceBuilder.BuildServiceProvider(services => services.AddTransient(sp =>
-            new BakabaseLocalizer(sp.GetRequiredService<IStringLocalizer<SharedResource>>())));
-        _db = _services.GetRequiredService<BakabaseDbContext>();
         _root = Path.Combine(Path.GetTempPath(), "acquisition-recovery-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(_root);
+        _services = await TestServiceBuilder.BuildServiceProvider(services =>
+        {
+            services.AddTransient(sp => new BakabaseLocalizer(sp.GetRequiredService<IStringLocalizer<SharedResource>>()));
+            // Keep the configured reserve active and measure a fixture volume. The failure
+            // cases provide their own capacity evidence independently of the developer's disk.
+            services.RemoveAll<IStorageWriteGuard>();
+            services.AddSingleton<IStorageWriteGuard>(sp => new StorageWriteGuard(
+                sp.GetRequiredService<IStorageWritePolicyProvider>(), _ => (_root, 1L << 40), TimeSpan.FromMilliseconds(500)));
+        });
+        _db = _services.GetRequiredService<BakabaseDbContext>();
         _diagnostics = new(_db, new UserStoragePolicy(false), _services.GetRequiredService<IArtifactOperationStore>());
     }
     [TestCleanup] public void Cleanup() {(_services as IDisposable)?.Dispose(); Directory.Delete(_root, true);}
@@ -80,6 +88,32 @@ public sealed partial class AcquisitionRecoveryTests
             WorkflowRunId = run.Id, TargetId = target.Id, Kind = "transfer", State = state, RequestJson = "retained"});
         await _db.SaveChangesAsync(); var result = await _diagnostics.DiagnoseAsync(task, run, default);
         Assert.IsFalse(result.Row.CanContinue); Assert.AreEqual(state, (await _db.CloudDownloadOperations.AsNoTracking().SingleAsync()).State);
+    }
+    [DataTestMethod]
+    [DataRow("BAIDU_TRANSFER_FAILED_CONFIRM_TARGET")]
+    [DataRow("BAIDU_TRANSFER_INCOMPLETE_CONFIRM_TARGET")]
+    public async Task DeferredRecoveryReportsUnconfirmedTransferTargetWithoutRepeatingTransfer(string code)
+    {
+        var (task, run, workset) = await Seed(status: WorkflowRunStatus.Waiting, error: null);
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset with
+        {
+            Targets = [workset.Targets[0] with {Problem = $"BridgeException: {code}"}]
+        });
+        await _db.SaveChangesAsync();
+        task = await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
+        run = await _db.WorkflowRuns.AsNoTracking().SingleAsync(r => r.Id == run.Id);
+
+        var diagnosis = await _diagnostics.DiagnoseAsync(task, run, default);
+        Assert.IsFalse(diagnosis.Row.CanContinue);
+        Assert.AreEqual(code, diagnosis.Row.CurrentProblemCode);
+        Assert.AreEqual("inspectSource", diagnosis.Row.ManualAction);
+
+        var recovery = new AcquisitionRecoveryService(_db, _diagnostics, new(), null!);
+        var result = await recovery.ContinueDeferredAsync(task.Id, "workflow",
+            AcquisitionContinuationEntry.ContentVersion(task, run), default, _ => Task.CompletedTask);
+        Assert.AreEqual(0, result.ContinuedTaskIds.Count);
+        Assert.AreEqual("RECOVERY_TRANSFER_REVIEW_REQUIRED", result.Skipped.Single().ReasonCode);
+        Assert.AreEqual(0, await _db.CloudDownloadOperations.CountAsync());
     }
     [TestMethod]
     public async Task ChangedTransferBindingAndMissingAccountCannotBeMistakenForAnUnattemptedTransfer()
@@ -311,7 +345,8 @@ public sealed partial class AcquisitionRecoveryTests
     {
         public readonly List<int> CheapIds = [];
         public Task<AcquisitionRecoveryDiagnosis> DiagnoseAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
-            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false)
+            CancellationToken ct, bool verifyFiles = true, bool verifyContent = false, bool includeStoppedDownloads = false,
+            bool includeStoppedVerification = false, bool deferCompletedDownloadVerification = false)
         {
             if (!verifyFiles) CheapIds.Add(task.Id);
             else CollectionAssert.AreEqual(new[] {deepId, cheapId}, CheapIds,
@@ -324,13 +359,14 @@ public sealed partial class AcquisitionRecoveryTests
     private sealed class RecordingHost : IWorkflowRunResumer
     {
         public int Calls; public Func<Task>? BeforeValidation; public bool ThrowAfterContinuation;
+        public string? Signal;
         public Task ResumeAsync(int runId, string signalJson, CancellationToken ct = default) => throw new AssertFailedException("Must use guarded continuation");
         public Task RequeueAsync(int runId, CancellationToken ct = default) => throw new AssertFailedException("Must use guarded continuation");
         public Task UpdateWaitAsync(int runId, string reason, string? promptJson, CancellationToken ct = default) => throw new AssertFailedException();
         public async Task ContinueConditionallyAsync(int runId, bool waiting, string signal, Func<CancellationToken, Task> validate, CancellationToken ct = default)
         {
             var gate = WorkflowRunMutationGate.For(runId); await gate.WaitAsync(ct);
-            try {if (BeforeValidation != null) await BeforeValidation(); await validate(ct); Calls++;
+            try {if (BeforeValidation != null) await BeforeValidation(); await validate(ct); Signal = signal; Calls++;
                 if (ThrowAfterContinuation) throw new InvalidOperationException("Uncertain queue receipt");}
             finally {gate.Release();}
         }

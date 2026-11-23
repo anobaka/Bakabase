@@ -68,7 +68,17 @@ public sealed partial class PublishedArtifactAncestorCleanup
                 output.State != ArtifactLocationState.Available && authorization?.Consent.DeliveryAccepted != true ||
                 authorization != null && !await authorization.MatchesAsync(output, ct))
                 return new(expected.ArtifactId, false, "ResultNotVerified");
-            var current = await PreviewRetiredPlanResultAsync(registered, output, await AncestorsAsync(output, ct), owners, ct, authorization);
+            var graph = await AncestorsAsync(output, ct);
+            if (authorization == null && expected.PreviewFiles == null &&
+                await RetiredOriginalAsync(registered, output, ct) is {} retired)
+            {
+                // A concurrent policy cleanup may have finished the selected registration.
+                // Private leftovers have their own preview and fingerprint.
+                var boundary = graph.ContainsKey(retired.Id) ? null : await BoundaryProofAsync(retired, output, graph, ct);
+                if (Fingerprint(retired, output, owners, boundary) == expected.SelectionFingerprint)
+                    return new(expected.ArtifactId, true, "AlreadyRetired");
+            }
+            var current = await PreviewRetiredPlanResultAsync(registered, output, graph, owners, ct, authorization);
             if (current == null || current.SelectionFingerprint != expected.SelectionFingerprint)
                 return new(expected.ArtifactId, false, "SelectionChanged");
             var verified = authorization?.Consent.DeliveryAccepted == true

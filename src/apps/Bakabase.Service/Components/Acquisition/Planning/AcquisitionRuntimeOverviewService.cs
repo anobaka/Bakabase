@@ -13,6 +13,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Components;
@@ -26,7 +27,8 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 /// <summary>Bounded inspection of existing evidence. Never reconciles task state or probes a remote source.</summary>
 public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcquisitionRuntimeDownloadReader downloads,
     SourceAvailabilityService availability, AcquisitionSourceAttentionProjection? sourceAttention = null,
-    BTaskManager? backgroundTasks = null)
+    BTaskManager? backgroundTasks = null, WorkflowActivityRuntimeRegistry? runtimeProviders = null,
+    AcquisitionConfirmationRuntime? confirmations = null)
 {
     private const int MaximumSources = 50;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -38,7 +40,7 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
         var ids = taskIds.Distinct().ToArray();
         if (ids.Length == 0) return [];
         var tasks = await db.AcquisitionTasks.AsNoTracking().Where(t => t.DeletedAt == null && ids.Contains(t.Id)).Select(t => new AcquisitionTaskDbModel
-        {Id = t.Id, WorkflowRunId = t.WorkflowRunId, Status = t.Status, Error = t.Error, UpdatedAt = t.UpdatedAt,
+        {Id = t.Id, PlanRevision = t.PlanRevision, WorkflowRunId = t.WorkflowRunId, Status = t.Status, Error = t.Error, UpdatedAt = t.UpdatedAt,
             CompletedAt = t.CompletedAt, BuilderStateJson = t.BuilderStateJson, PlanJson = t.PlanJson}).ToListAsync(ct);
         var runIds = tasks.Where(t => t.WorkflowRunId.HasValue).Select(t => t.WorkflowRunId!.Value).Distinct().ToArray();
         var runs = await db.WorkflowRuns.AsNoTracking().Where(r => runIds.Contains(r.Id)).Select(r => new WorkflowRunDbModel
@@ -53,7 +55,7 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
             .ToListAsync(ct);
         var legacyIds = runs.Values.Where(r => r.PlanSnapshotJson == null).Select(r => r.WorkflowDefinitionId).Distinct().ToArray();
         var legacyNodes = await db.Set<WorkflowActivityDbModel>().AsNoTracking().Where(n => legacyIds.Contains(n.WorkflowDefinitionId))
-            .Select(n => new {n.WorkflowDefinitionId, n.Order, n.Kind}).ToListAsync(ct);
+            .Select(n => new {n.WorkflowDefinitionId, n.Order, n.Id, n.Kind}).ToListAsync(ct);
         var operations = await db.CloudDownloadOperations.AsNoTracking().Where(o => runIds.Contains(o.WorkflowRunId) && o.DownloadTaskId != null)
             .OrderByDescending(o => o.UpdatedAt).Select(o => new {o.WorkflowRunId, o.TargetId, o.DownloadTaskId}).ToListAsync(ct);
         var owners = await db.DownloadResultOwners.AsNoTracking().Where(o => runIds.Contains(o.WorkflowRunId))
@@ -101,7 +103,6 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
         {
             var run = task.WorkflowRunId is {} runId ? runs.GetValueOrDefault(runId) : null;
             var taskNodes = nodes.Where(n => n.WorkflowRunId == run?.Id).ToArray();
-            var node = taskNodes.FirstOrDefault(n => n.StepIndex == run?.CurrentStepIndex);
             var completed = run != null ? run.Status == WorkflowRunStatus.Success : task.Status == AcquisitionStatus.Completed;
             // A conditional retry resumes the existing run. Its acquisition row can still
             // carry the previous failure until the active step completes.
@@ -111,8 +112,28 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
             WorkflowRunPlan? executionPlan = null;
             try { executionPlan = WorkflowRunPlans.Read(run?.PlanSnapshotJson); } catch (InvalidDataException) { }
             var legacy = legacyNodes.Where(n => n.WorkflowDefinitionId == run?.WorkflowDefinitionId).OrderBy(n => n.Order).ToArray();
-            var kind = executionPlan?.Nodes.ElementAtOrDefault(run?.CurrentStepIndex ?? -1)?.Kind ??
-                legacy.ElementAtOrDefault(run?.CurrentStepIndex ?? -1)?.Kind ?? node?.Kind;
+            var live = run != null && backgroundTasks?.GetTaskViewModel($"workflow.run.{run.Id}") is
+                {Status: BTaskStatus.Running, Data: WorkflowTaskProgress progress} ? progress : null;
+            var stepIndex = run?.CurrentStepIndex;
+            // The persisted cursor is a restart checkpoint. On the first pass the runner commits
+            // the invocation before emitting progress, even when no checkpoint exists yet.
+            if (stepIndex == null && run?.Status == WorkflowRunStatus.Running &&
+                taskNodes.Where(n => n.Status == "running" && n.CompletedAt == null).Take(2).ToArray() is [var active])
+            {
+                var planned = executionPlan?.Nodes.ElementAtOrDefault(active.StepIndex);
+                var legacyStep = run.PlanSnapshotJson == null ? legacy.ElementAtOrDefault(active.StepIndex) : null;
+                if (planned != null && planned.NodeId == active.NodeId && planned.Kind == active.Kind ||
+                    legacyStep != null && active.NodeId == "activity:" + legacyStep.Id.ToString(System.Globalization.CultureInfo.InvariantCulture) &&
+                    legacyStep.Kind == active.Kind)
+                {
+                    stepIndex = active.StepIndex;
+                    if (live?.ReportedAt.ToUniversalTime() < DateTime.SpecifyKind(active.StartedAt, DateTimeKind.Utc))
+                        live = null;
+                }
+            }
+            var node = taskNodes.FirstOrDefault(n => n.StepIndex == stepIndex);
+            var kind = executionPlan?.Nodes.ElementAtOrDefault(stepIndex ?? -1)?.Kind ??
+                legacy.ElementAtOrDefault(stepIndex ?? -1)?.Kind ?? node?.Kind;
             var failureCode = AcquisitionRuntimeProblems.CurrentFailureCode(run?.Status, node?.Status,
                 run?.ErrorMessage, node == null ? [] : outputs[node.Id]);
             var bound = run != null ? taskBindings[run.Id] : [];
@@ -223,8 +244,15 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 AcquisitionRuntimeProblems.Code(run?.ErrorMessage) ?? AcquisitionRuntimeProblems.Code(task.Error) : null;
             var issues = Read<AcquisitionPlanBuilderState>(task.BuilderStateJson)?.Issues;
             if (attention && problemCode == null) problemCode = AcquisitionRuntimeProblems.Code(issues?.FirstOrDefault(i => i.Blocking)?.Code) ?? "SOURCE_ATTENTION_REQUIRED";
+            // Preparation can have several independent blockers. Keep every current blocker
+            // in the tags, as task search does, while retaining one problem as the summary.
+            // Once execution starts its current diagnostics supersede preparation issues.
+            IEnumerable<string> preparationCodes = task.WorkflowRunId == null
+                ? (issues ?? []).Where(i => i.Blocking && ExecutionProblemClassifier.IsKnown(i.Code)).Select(i => i.Code)
+                : [];
             IReadOnlyList<string> problemCodes = failureCode != null ? [failureCode] : (processingWaitCode == null ? [] : new[] {processingWaitCode})
-                .Concat(executionProblems).Concat(problemCode == null ? [] : new[] {problemCode}).Distinct().ToArray();
+                .Concat(executionProblems).Concat(problemCode == null ? [] : new[] {problemCode})
+                .Concat(preparationCodes).Distinct().ToArray();
             if (attention && sourceAttention != null)
             {
                 problemCodes = await sourceAttention.ProjectAsync(AcquisitionEffectiveSourceProjection.Apply(task.PlanJson,
@@ -235,34 +263,26 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 problemCode = failureCode is not (null or "SOURCE_ATTENTION_REQUIRED") ? failureCode :
                     processingWaitCode ?? problemCodes.FirstOrDefault() ?? problemCode;
             }
-            var completedBytes = SumBytes(leaves, d => d.CompletedBytes);
-            var totalBytes = SumBytes(leaves, d => d.TotalBytes);
-            var active = leaves.Where(IsTransferring).ToArray();
-            var speed = active.Length > 0 && active.All(d => d.SpeedBytesPerSecond is >= 0)
-                ? active.Sum(d => d.SpeedBytesPerSecond!.Value) : (double?)null;
-            var downloading = kind?.StartsWith("download.", StringComparison.Ordinal) == true || kind is "cloud.download" or "acquisition.fetchSupported";
-            var transferPhase = leaves.All(d => d.Stage is not ("Verifying" or "Preparing" or "Reusing" or "Checking"));
-            double? progress = downloading && !completed && transferPhase ? leaves.Length == 1 ? leaves[0].Progress :
-                totalBytes > 0 ? 100d * completedBytes / totalBytes : null : null;
-            if (progress.HasValue && (!double.IsFinite(progress.Value) || progress is < 0 or > 100)) progress = null;
-            (string? Stage, int? Progress) files = default;
-            if (!downloading && run?.Status == WorkflowRunStatus.Running &&
-                backgroundTasks?.GetTaskViewModel($"workflow.run.{run.Id}") is {Status: BTaskStatus.Running, Data: WorkflowTaskProgress live})
-                files = CurrentFileProgress(run.Id, run.CurrentStepIndex, kind, live);
-            result.Add(new() {TaskId = task.Id, WorkflowRunId = run?.Id, WorkflowStatus = run?.Status.ToString().ToLowerInvariant(),
-                CurrentStepIndex = run?.CurrentStepIndex, StepCount = executionPlan?.Nodes.Count ?? (run != null && run.PlanSnapshotJson == null ? legacy.Length : null),
-                CurrentNodeKind = kind, Stage = downloading && leaves.Length == 1 ? leaves[0].Stage : files.Stage,
-                Progress = progress ?? files.Progress, ProgressScope = progress.HasValue ? "download" :
-                    files.Stage == "extractingArchive" ? "archive" : files.Stage != null ? "processing" : null,
-                CompletedBytes = completedBytes, TotalBytes = totalBytes,
-                SpeedBytesPerSecond = speed.HasValue && double.IsFinite(speed.Value) ? speed : null,
-                EstimatedRemainingSeconds = downloading && !completed && !attention &&
-                    bound.All(id => excludedDownloads.Contains(id) || matching.Any(d => d.Id == id || d.ParentId == id)) &&
-                    (targets.Count(t => !t.Excluded) <= 1 || targets.Where(t => !t.Excluded && t.DownloadArtifactId == null)
-                        .All(t => run != null && targetBindings.ContainsKey((run.Id, t.Id)))) ? RemainingSeconds(leaves) : null,
-                BytesPartial = leaves.Any(d => d.CompletedBytes.HasValue) && completedBytes == null || leaves.Any(d => d.TotalBytes.HasValue) && totalBytes == null,
-                DownloadCount = leaves.Length, ActiveDownloadCount = leaves.Count(d => d.Status is "running" or "queued" or "stopping"),
-                CompletedDownloadCount = leaves.Count(d => d.Status == "completed"), FailedDownloadCount = completed ? 0 : leaves.Count(d => d.Status == "failed"),
+            var downloadEvidence = new CloudDownloadRuntimeEvidence(leaves, completed, attention,
+                bound.All(id => excludedDownloads.Contains(id) || matching.Any(d => d.Id == id || d.ParentId == id)) &&
+                (targets.Count(t => !t.Excluded) <= 1 || targets.Where(t => !t.Excluded && t.DownloadArtifactId == null)
+                    .All(t => run != null && targetBindings.ContainsKey((run.Id, t.Id)))));
+            var summary = downloadEvidence.Summarize();
+            var confirmation = confirmations?.Read(task.Id, task.PlanRevision, task.WorkflowRunId);
+            var runtime = confirmation ?? (run != null && kind != null && runtimeProviders != null
+                ? await runtimeProviders.ReadAsync(new(run.Id,
+                    stepIndex, kind, run.Status, live, [downloadEvidence]), ct) : null);
+            result.Add(new() {TaskId = task.Id, PlanRevision = task.PlanRevision, WorkflowRunId = run?.Id, WorkflowStatus = run?.Status.ToString().ToLowerInvariant(),
+                CurrentStepIndex = stepIndex, StepCount = executionPlan?.Nodes.Count ?? (run != null && run.PlanSnapshotJson == null ? legacy.Length : null),
+                CurrentNodeKind = kind, Capability = runtime?.Capability, Stage = runtime?.Stage,
+                Progress = runtime?.Progress, ProgressScope = runtime?.ProgressScope,
+                CompletedBytes = runtime?.CompletedBytes ?? (confirmation == null ? summary.CompletedBytes : null),
+                TotalBytes = runtime?.TotalBytes ?? (confirmation == null ? summary.TotalBytes : null),
+                SpeedBytesPerSecond = runtime?.SpeedBytesPerSecond ?? (confirmation == null ? summary.SpeedBytesPerSecond : null),
+                EstimatedRemainingSeconds = runtime?.EstimatedRemainingSeconds,
+                BytesPartial = confirmation == null && summary.BytesPartial,
+                DownloadCount = summary.Count, ActiveDownloadCount = summary.ActiveCount,
+                CompletedDownloadCount = summary.CompletedCount, FailedDownloadCount = summary.FailedCount,
                 DownloadActivity = downloadActivity?.Activity,
                 DownloadContinuation = run == null ? null : AcquisitionDownloadContinuationService.Read(task)?.Mode ?? AcquisitionDownloadContinuationService.Manual,
                 DownloadsCompletedAwaitingWorkflow = completedWait,
@@ -273,52 +293,6 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 Sources = sources, SourcesTruncated = targets.Sum(t => t.Sources.Count) > MaximumSources});
         }
         return result.OrderBy(r => Array.IndexOf(ids, r.TaskId)).ToArray();
-    }
-
-    // Keep the archive tool's measured percentage separate from the whole workflow's step counter.
-    private static bool IsTransferring(AcquisitionRuntimeDownload download) =>
-        download.Status == "running" && download.Stage is null or "Downloading";
-
-    private static long? SumBytes(AcquisitionRuntimeDownload[] downloads, Func<AcquisitionRuntimeDownload, long?> counter)
-    {
-        long sum = 0;
-        foreach (var download in downloads)
-        {
-            if (counter(download) is not long value || value < 0 || value > long.MaxValue - sum) return null;
-            sum += value;
-        }
-        return downloads.Length == 0 ? null : sum;
-    }
-
-    private static long? RemainingSeconds(AcquisitionRuntimeDownload[] leaves)
-    {
-        long? slowest = null;
-        foreach (var download in leaves)
-        {
-            if (download.Status == "completed") continue;
-            if (!IsTransferring(download) || download.SpeedBytesPerSecond is not double rate || !double.IsFinite(rate) || rate <= 0 ||
-                download.TotalBytes is not long total || total <= 0 || download.CompletedBytes is not long done ||
-                done < 0 || done >= total) return null;
-            // Concurrent transfers finish when the last independent file finishes. A task
-            // still at 100% may be checking its bytes before publication.
-            var seconds = Math.Ceiling((total - done) / rate);
-            if (seconds > TimeSpan.MaxValue.TotalSeconds) return null;
-            slowest = Math.Max(slowest ?? 0, (long)seconds);
-        }
-        return slowest;
-    }
-
-    internal static (string? Stage, int? Progress) CurrentFileProgress(int runId, int? step, string? kind,
-        WorkflowTaskProgress live)
-    {
-        if (step == null || live.WorkflowRunId != runId || live.StepIndex != step || live.ActivityKind != kind) return default;
-        return live.Stage switch
-        {
-            "extractingArchive" => (live.Stage, live.StageProgress is >= 0 and <= 100 ? live.StageProgress : null),
-            "verifyingFiles" or "preparingFiles" or "processingFiles" or "checkingArchive" or "finalizingFiles" or "analyzingFiles"
-                => (live.Stage, null),
-            _ => default
-        };
     }
 
     private static List<CloudDownloadTarget> PlanTargets(string? json) => Read<AcquisitionPlan>(json)?.Parts.Select(part => new CloudDownloadTarget

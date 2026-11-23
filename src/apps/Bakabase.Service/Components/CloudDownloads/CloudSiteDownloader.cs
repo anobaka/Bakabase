@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
@@ -121,10 +122,19 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
         if (request.Source.ProviderId != providerId || Path.GetFullPath(request.OutputDirectory) != Path.GetFullPath(task.DownloadPath))
             throw new ArgumentException("The cloud task source or destination changed.");
         EnsureUserPathAllowed(task.DownloadPath);
+        request = GuardRetainedSource(request, path => EnsureUserPathAllowed(path));
         var provider = DownloadIntents.DownloadProviderRouting.Require(GetRequiredService<IEnumerable<ICloudDownloadProvider>>(), request.Source);
         var readiness = await provider.CheckReadyAsync(request.AccountId, ct);
         if (!readiness.Available) throw new InvalidOperationException(readiness.Problem);
-        Task<CloudDownloadResult> Download(CloudDownloadRequest prepared, CancellationToken token) => provider.DownloadAsync(prepared, async p =>
+        // Integrity failures require a manual start. The stored reason survives queue admission;
+        // only providers that can identify the original failed member may change its checkpoint.
+        Func<CloudDownloadRequest, Func<CloudDownloadProgress, Task>, CancellationToken, Task<CloudDownloadResult>> download =
+            provider is ICloudDownloadChecksumRetryProvider checksumRetry &&
+            CloudDownloadIntegrityFailures.IsChecksumMismatch(task.Message)
+            ? (prepared, progress, token) => checksumRetry.RetryChecksumMismatchAsync(
+                prepared, task.DownloadStatusUpdateDt, progress, token)
+            : provider.DownloadAsync;
+        Task<CloudDownloadResult> Download(CloudDownloadRequest prepared, CancellationToken token) => download(prepared, async p =>
         {
             var snapshot = TransferSnapshot(p, DateTime.UtcNow);
             Volatile.Write(ref _transferProgress, snapshot);
@@ -145,7 +155,11 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
             await OnCurrentChangedInternal();
         }
         var result = await RunWithStorageAsync(services.GetService<IStorageWriteGuard>(), provider, request,
-            Download, WaitingForCapacity, ct);
+            Download, WaitingForCapacity, ct, async () =>
+            {
+                Current = "Verifying";
+                await OnCurrentChangedInternal();
+            });
         CloudDownloadManifest.Validate(task.DownloadPath, result.Files);
         foreach (var file in result.Files)
         {
@@ -153,38 +167,75 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
             await OnFileDownloadedInternal(file);
         }
         if (result.Files.Count > 0)
+        {
+            // Provider completion precedes our immutable local-files receipt. Hashing one
+            // large NAS file can outlast the idle watchdog; only successful reads refresh it.
+            Volatile.Write(ref _transferProgress, null);
+            ClearMediaDownloadSpeed();
+            Current = "Verifying";
+            await OnCurrentChangedInternal();
             await GetRequiredService<DownloadResultService>().RecordFilesAsync(task.Id, task.ThirdPartyId,
                 task.Key, task.Name ?? task.Key,
                 CloudDownloadPayloadRoot.Select(task.DownloadPath, result.PayloadRootDirectory, result.Files),
-                result.Files.ToArray(), null, ct);
+                result.Files.ToArray(), null, _ => Touch(), ct);
+        }
         await OnProgressInternal(100);
     }
 
     internal static async Task<CloudDownloadResult> RunWithStorageAsync(IStorageWriteGuard? writes,
         ICloudDownloadProvider provider, CloudDownloadRequest request,
         Func<CloudDownloadRequest, CancellationToken, Task<CloudDownloadResult>> download,
-        Func<Task> waiting, CancellationToken ct)
+        Func<Task> waiting, CancellationToken ct, Func<Task>? verificationActivity = null)
     {
         var destinations = new[] { request.OutputDirectory, request.WorkspaceDirectory }
             .Where(p => !string.IsNullOrWhiteSpace(p)).Select(p => Path.GetFullPath(p!)).ToArray();
         var context = new StorageWriteContext("cloudOperation", request.OperationId);
-        var plan = writes is IStorageWriteReservationGuard && provider is ICloudDownloadWriteBudgetProvider estimator
-            ? await estimator.PrepareWriteAsync(request, ct) : null;
-        if (writes is IStorageWriteReservationGuard reservations && plan != null)
+        if (writes is IStorageWriteReservationGuard reservations && provider is ICloudDownloadWriteBudgetProvider estimator
+            && await estimator.PrepareWriteAsync(request, ct) is { } plan)
         {
+            var started = false;
+            Task<CloudDownloadResult> Run(CloudDownloadWritePlan attempt)
+            {
+                var allocations = attempt.Budgets.Select(b => new StorageWriteBudget(b.Destination, b.MaximumAdditionalBytes)).ToList();
+                // Preserve monitoring of every declared placement even when it needs no payload budget
+                // (for example, an unused workspace preference). Actual writes must all be in the estimate.
+                var paths = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
+                    ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+                var budgetPaths = allocations.Select(b => Path.GetFullPath(b.Destination)).ToHashSet(paths);
+                allocations.AddRange(destinations.Where(p => !budgetPaths.Contains(p)).Select(p => new StorageWriteBudget(p, 0)));
+                return reservations.RunReservedAsync(allocations, context, token =>
+                {
+                    started = true;
+                    return download(attempt.Request, token);
+                }, waiting, ct);
+            }
+
             ValidatePreparedRequest(request, plan.Request);
-            var allocations = plan.Budgets.Select(b => new StorageWriteBudget(b.Destination, b.MaximumAdditionalBytes)).ToList();
-            // Preserve monitoring of every declared placement even when it needs no payload budget
-            // (for example, an unused workspace preference). Actual writes must all be in the estimate.
-            var paths = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
-                ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-            var budgetPaths = allocations.Select(b => Path.GetFullPath(b.Destination)).ToHashSet(paths);
-            allocations.AddRange(destinations.Where(p => !budgetPaths.Contains(p)).Select(p => new StorageWriteBudget(p, 0)));
-            return await reservations.RunReservedAsync(allocations, context, token => download(plan.Request, token), waiting, ct);
+            try { return await Run(plan); }
+            catch (LocalStorageException error) when (!started && error.Code == StorageWriteGuard.ReserveLowCode)
+            {
+                var retained = await estimator.TryPrepareRetainedWriteAsync(
+                    plan.Request, verificationActivity ?? (() => Task.CompletedTask), ct);
+                if (retained == null) throw;
+                ValidatePreparedRequest(plan.Request, retained.Request);
+                return await Run(retained);
+            }
         }
         // An absent estimate keeps the established monitor. It never claims reserved capacity.
         return writes == null ? await download(request, ct) :
             await writes.RunAsync(destinations, context, token => download(request, token), ct);
+    }
+
+    internal static CloudDownloadRequest GuardRetainedSource(CloudDownloadRequest request, Action<string> ensureAllowed)
+    {
+        if (request.ReuseSource is not { } source) return request;
+        try { ensureAllowed(source.OutputDirectory); return request; }
+        catch (UserStoragePathException)
+        {
+            // The selected source may have been disconnected since a successful staging pass.
+            // Keep its identity for the destination receipt, but explicitly forbid any more reads from it.
+            return request with {ReuseSource = source with {DisableSourceRead = true}};
+        }
     }
 
     private static void ValidatePreparedRequest(CloudDownloadRequest original, CloudDownloadRequest prepared)
@@ -194,7 +245,8 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
         var originalFixed = original with {AccountId = null, RemoteEntry = null};
         var preparedFixed = prepared with {AccountId = null, RemoteEntry = null};
         var remote = prepared.RemoteEntry;
-        if (JsonSerializer.Serialize(originalFixed, JsonSerializerOptions.Web) != JsonSerializer.Serialize(preparedFixed, JsonSerializerOptions.Web) ||
+        if (original.ProviderLayoutId != prepared.ProviderLayoutId || original.ReuseSource != prepared.ReuseSource ||
+            JsonSerializer.Serialize(originalFixed, JsonSerializerOptions.Web) != JsonSerializer.Serialize(preparedFixed, JsonSerializerOptions.Web) ||
             original.AccountId != null && original.AccountId != prepared.AccountId ||
             remote != null && (remote.ProviderId != original.Source.ProviderId || remote.AccountId != prepared.AccountId) ||
             original.RemoteEntry is { } pinned && (remote == null ||

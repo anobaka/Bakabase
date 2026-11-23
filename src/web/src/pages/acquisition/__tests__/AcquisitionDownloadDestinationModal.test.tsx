@@ -7,8 +7,14 @@ import AcquisitionRecoveryModal from "../components/AcquisitionRecoveryModal";
 const mocks = vi.hoisted(() => ({
   defaultRoot: vi.fn(),
   preview: vi.fn(),
+  previewReuse: vi.fn(),
   apply: vi.fn(),
   portal: vi.fn(),
+  translate: vi.fn((key: string) => key),
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: mocks.translate }),
 }));
 vi.mock("../components/acquisitionDownloadDestinationApi", () => ({
   acquisitionDownloadDestinationApi: mocks,
@@ -114,6 +120,87 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const selectReuse = async (response: ReturnType<typeof preview>) => {
+  mocks.preview.mockResolvedValue(
+    preview({
+      rows: [
+        {
+          taskId: 1,
+          title: "Two downloads",
+          canApply: false,
+          downloads: [{ ...download(11, false), canPreviewReuse: true }, download(12, false)],
+        },
+      ],
+    }),
+  );
+  mocks.previewReuse.mockResolvedValue(response);
+  await inspect();
+  fireEvent.click(button("previewReuse"));
+  await waitFor(() =>
+    expect(mocks.previewReuse).toHaveBeenCalledExactlyOnceWith(1, 11, "/ssd/downloads"),
+  );
+};
+
+it("confirms only the selected download after showing both space budgets", async () => {
+  await selectReuse(
+    preview({
+      previewToken: "reuse-one",
+      rows: [
+        {
+          taskId: 1,
+          title: "One download",
+          canApply: true,
+          downloads: [
+            {
+              ...download(11),
+              reuseEstimate: {
+                fileCount: 6,
+                candidateFileCount: 3,
+                candidateBytes: 3072,
+                requiredDownloadBytes: 4096,
+                totalBytes: 7168,
+              },
+            },
+          ],
+        },
+      ],
+    }),
+  );
+  await screen.findByText("acquisition.downloadDestination.reuseBudget");
+  expect(mocks.translate).toHaveBeenCalledWith("acquisition.downloadDestination.reuseBudget", {
+    minimum: "4.0 KiB",
+    total: "7.0 KiB",
+  });
+  expect(mocks.apply).not.toHaveBeenCalled();
+  mocks.apply.mockResolvedValue({ appliedTaskIds: [1], appliedDownloadCount: 1, skipped: [] });
+  fireEvent.click(button("applyReuse"));
+  expect(
+    await screen.findByRole("link", {
+      name: "acquisition.downloadDestination.viewSelectedDownload",
+    }),
+  ).toHaveAttribute("href", "#/downloader?id=site%3A11");
+  expect(mocks.apply).toHaveBeenCalledExactlyOnceWith("reuse-one", [1]);
+  expect(mocks.portal).not.toHaveBeenCalled();
+});
+
+it("rejects a reuse preview that also includes a sibling download", async () => {
+  await selectReuse(
+    preview({
+      rows: [
+        {
+          taskId: 1,
+          title: "Unexpected sibling",
+          canApply: true,
+          downloads: [download(11), download(12)],
+        },
+      ],
+    }),
+  );
+  await screen.findByRole("alert");
+  expect(button("applyReuse")).toBeDisabled();
+  expect(mocks.apply).not.toHaveBeenCalled();
+});
+
 it("loads the default root without previewing or changing tasks; closing remains read-only", async () => {
   await show();
   expect(screen.getByText("/ssd/downloads")).toBeVisible();
@@ -124,7 +211,7 @@ it("loads the default root without previewing or changing tasks; closing remains
   expect(mocks.apply).not.toHaveBeenCalled();
 });
 
-it("captures deduplicated filtered IDs and previews every download, protecting an entire task", async () => {
+it("captures deduplicated filtered IDs and previews every download, protecting ineligible tasks", async () => {
   const view = await show({ taskIds: [1, 2, 3, 1, 0, -1], scopeLabel: "attention · storage" });
   view.rerender(
     <AcquisitionDownloadDestinationModal taskIds={[99]} scopeLabel="attention · storage" />,
@@ -141,7 +228,7 @@ it("captures deduplicated filtered IDs and previews every download, protecting a
   expect(mocks.apply).not.toHaveBeenCalled();
 });
 
-it("does not allow a partially eligible multi-download task or an unexpected task ID", async () => {
+it("selects the eligible download of a mixed task and keeps its protected sibling in place", async () => {
   mocks.preview.mockResolvedValue(
     preview({
       rows: [
@@ -149,16 +236,68 @@ it("does not allow a partially eligible multi-download task or an unexpected tas
           taskId: 1,
           title: "Two downloads",
           canApply: true,
+          reasonCode: "DOWNLOAD_DESTINATION_ELIGIBLE_PARTS",
           downloads: [download(11), download(12, false)],
         },
         { taskId: 99, title: "Unexpected task", canApply: true, downloads: [download(99)] },
       ],
     }),
   );
+  mocks.apply.mockResolvedValue({ appliedTaskIds: [1], appliedDownloadCount: 1, skipped: [] });
   await inspect();
   expect(checkboxes()).toHaveLength(1);
-  expect(checkboxes()[0]).toBeDisabled();
+  expect(checkboxes()[0]).toBeEnabled();
+  expect(checkboxes()[0]).toBeChecked();
+  expect(screen.getByText("/ssd/11")).toBeVisible();
+  expect(screen.getByText("/nas/12")).toBeVisible();
+  expect(screen.queryByText("/ssd/12")).toBeNull();
   expect(screen.queryByText("Unexpected task")).toBeNull();
+  expect(mocks.translate).toHaveBeenCalledWith(
+    "acquisition.downloadDestination.reason.DOWNLOAD_DESTINATION_ELIGIBLE_PARTS",
+    { count: 1, downloads: 2 },
+  );
+  expect(mocks.translate).toHaveBeenCalledWith("acquisition.downloadDestination.total", {
+    count: 1,
+    downloads: 2,
+  });
+  expect(mocks.translate).toHaveBeenCalledWith("acquisition.downloadDestination.protected", {
+    count: 1,
+  });
+  expect(mocks.translate).toHaveBeenCalledWith("acquisition.downloadDestination.apply", {
+    count: 1,
+    downloads: 1,
+  });
+  fireEvent.click(button("apply"));
+  await screen.findByText("acquisition.downloadDestination.result");
+  expect(mocks.apply).toHaveBeenCalledExactlyOnceWith("preview-1", [1]);
+  fireEvent.click(button("diagnose"));
+  expect(mocks.portal).toHaveBeenCalledExactlyOnceWith(
+    AcquisitionRecoveryModal,
+    expect.objectContaining({ taskIds: [1], initialScope: "downloads" }),
+  );
+});
+
+it.each([
+  { canApply: false, newDirectory: "/ssd/11", reasonCode: "DOWNLOAD_DESTINATION_PREVIEW_CHANGED" },
+  { canApply: true, newDirectory: "   ", reasonCode: "UNKNOWN" },
+])("requires row permission and an eligible child with a proposed directory", async (row) => {
+  mocks.preview.mockResolvedValue(
+    preview({
+      rows: [
+        {
+          taskId: 1,
+          title: "Two downloads",
+          canApply: row.canApply,
+          reasonCode: row.reasonCode,
+          downloads: [{ ...download(11), newDirectory: row.newDirectory }],
+        },
+      ],
+    }),
+  );
+  await inspect();
+  expect(checkboxes()[0]).toBeDisabled();
+  expect(screen.getByText("/nas/11")).toBeVisible();
+  expect(screen.queryByText("/ssd/11")).toBeNull();
   expect(button("apply")).toBeDisabled();
 });
 

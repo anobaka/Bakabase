@@ -79,7 +79,6 @@ export default function LegacyTaskDetailModal({
                 onChanged();
               }}
               onEditRecipe={onEditRecipe}
-              onOriginNavigate={() => setVisible(false)}
             />
             <div className="flex flex-wrap gap-2">
               {task.workflowRunId && (

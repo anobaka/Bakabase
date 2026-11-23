@@ -13,6 +13,10 @@ public interface IBtDownloadManager
     Task<BtDownloadJob> EnsureQueuedAsync(BtDownloadRequest request, CancellationToken ct = default);
     Task<BtDownloadJob> StopAsync(string id, CancellationToken ct = default);
     Task<BtDownloadJob> ResumeAsync(string id, CancellationToken ct = default);
+    Task<BtDownloadJob?> InspectLegacyWorkflowMagnetAsync(BtLegacyWorkflowMagnet dispatch, CancellationToken ct = default)
+        => Task.FromResult<BtDownloadJob?>(null);
+    Task<BtDownloadJob?> ResumeLegacyWorkflowMagnetAsync(BtLegacyWorkflowMagnet dispatch, CancellationToken ct = default)
+        => Task.FromResult<BtDownloadJob?>(null);
     Task<BtDownloadJob> RecheckAsync(string id, CancellationToken ct = default);
     Task DeleteAsync(string id, CancellationToken ct = default);
     Task<BtDownloadJob> WaitForCompletionAsync(string id, Func<BtDownloadJob, Task>? progress = null,

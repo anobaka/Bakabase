@@ -5,6 +5,8 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.FileProcessing;
@@ -18,7 +20,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         AcquisitionPlan Plan, string Download, string Processing, string Delivery,
         AcquisitionTaskDeletionCleanupService Cleanup, AcquisitionTaskDeletionService Service);
 
-    private async Task<StageDeletionFixture> StageDeletion()
+    private async Task<StageDeletionFixture> StageDeletion(CleanupDiagnosticLogger? logger = null)
     {
         var f = await OwnedDeliveryFixture(emptyDirectories: true);
         var resolver = new FileProcessingWorkspaceResolver(root, new Storage());
@@ -50,7 +52,8 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var task = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == f.Task.Id);
         var extraction = new NoDeletionExtraction();
         var maintenance = new ArtifactWorkspaceMaintenance(db, store, new(extraction), new(extraction), root, resolver);
-        var files = new AcquisitionTaskDeletionCleanupService(db, store, maintenance, cleanup, new Storage(), workspaces: resolver);
+        var files = new AcquisitionTaskDeletionCleanupService(db, store, maintenance, cleanup, new Storage(),
+            workspaces: resolver, logger: logger);
         var service = new AcquisitionTaskDeletionService(db, new FinishedDeletionActivity(), new(), files);
         return new(task, f.Final, f.Source, plan, download.Directory, processing.Directory, f.Final.RootDirectory, files, service);
     }
@@ -91,6 +94,47 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     }
 
     [TestMethod]
+    [DataRow("spaceBlocked", 1, 2, false, true)]
+    [DataRow("paused", 1, 2, false, true)]
+    [DataRow("spaceBlocked", 1, 2, true, false)]
+    [DataRow("running", 1, 2, false, false)]
+    [DataRow("starting", 1, 2, false, false)]
+    [DataRow("spaceBlocked", 2, 2, false, false)]
+    [DataRow("spaceBlocked", 1, 1, false, false)]
+    public async Task Delivered_replan_retires_only_parked_prior_run_while_preserving_live_consumers(
+        string status, int queuedRevision, int queuedRun, bool foreignLease, bool eligible)
+    {
+        var f = await StageDeletion();
+        var queue = new AcquisitionLocalRecoveryQueueEntry {BatchId = "retained-batch", Version = "frozen", Signal = "{}",
+            RecoveryScope = "workflow", StorageStamp = "pinned", WorkflowRunId = queuedRun, PlanRevision = queuedRevision, Status = status};
+        var builder = AcquisitionLocalRecoveryQueueEntry.Write(f.Task.BuilderStateJson, queue);
+        await db.AcquisitionTasks.Where(t => t.Id == f.Task.Id).ExecuteUpdateAsync(u => u
+            .SetProperty(t => t.PlanRevision, 2).SetProperty(t => t.BuilderStateJson, builder));
+        await db.Set<WorkflowRunSourceDbModel>().Where(s => s.WorkflowRunId == 1)
+            .ExecuteUpdateAsync(u => u.SetProperty(s => s.Revision, "2"));
+        await db.WorkflowRuns.Where(r => r.Id == 2).ExecuteUpdateAsync(u => u.SetProperty(r => r.Status, WorkflowRunStatus.Cancelled));
+        db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = 2, Module = "acquisition", EntityKind = "task",
+            EntityId = f.Task.Id.ToString(), Revision = "1"});
+        await db.SaveChangesAsync();
+        if (foreignLease) await store.AttachConsumerAsync(f.Publication.OperationId, "another-live-reader", TimeSpan.FromHours(1));
+        var service = new AcquisitionTaskDeletionService(db, new FinishedDeletionActivity([1, 2]), new(), f.Cleanup);
+        var preview = await service.PreviewAsync(new([f.Task.Id], true, true, true, DeleteDeliveredFiles: true));
+        var groups = preview.Rows.Single().Cleanup!.Groups;
+        Assert.AreEqual(3, groups.Count);
+        Assert.AreEqual(eligible, groups.All(g => g.Eligible), string.Join(",", groups.Select(g => g.ReasonCode)));
+        if (!eligible) Assert.IsTrue(groups.Any(g => g.ReasonCode == "ActiveConsumer"));
+        Assert.AreEqual(foreignLease || eligible ? 0 : 1, await AcquisitionQueueCount.ReadAsync(db, default));
+        Assert.AreEqual(builder, await db.AcquisitionTasks.Where(t => t.Id == f.Task.Id).Select(t => t.BuilderStateJson).SingleAsync());
+        if (eligible)
+        {
+            var deleted = await service.DeleteAsync(new(preview.PreviewId));
+            CollectionAssert.AreEqual(new[] {f.Task.Id}, deleted.DeletedTaskIds.ToArray());
+            Assert.IsTrue(deleted.CleanupResults!.Single().Completed);
+            Assert.IsFalse(new[] {f.Download, f.Processing, f.Delivery}.Any(Directory.Exists));
+        }
+    }
+
+    [TestMethod]
     public async Task Stage_intermediate_cleanup_preserves_unselected_delivery_tree()
     {
         var f = await StageDeletion();
@@ -123,10 +167,39 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         Assert.IsTrue(File.Exists(Path.Combine(f.Download, "original.bin")));
         Assert.IsFalse(Directory.Exists(f.Processing));
         Assert.IsFalse(Directory.Exists(f.Delivery));
+        var saved = (await f.Service.GetDeletedTasksAsync(1, 25, "incomplete", default)).Items.Single();
+        Assert.AreEqual("incomplete", saved.IntermediateCleanup);
+        Assert.AreEqual("completed", saved.DeliveryCleanup);
 
-        var retry = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true, RetryRetainedFiles: true, DeleteDeliveredFiles: true));
+        var retry = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true, RetryRetainedFiles: true));
         Assert.IsTrue((await f.Service.DeleteAsync(new(retry.PreviewId, RetryRetainedFiles: true))).CleanupResults!.Single().Completed);
         Assert.IsFalse(Directory.Exists(f.Download));
+        Assert.IsFalse(Directory.Exists(f.Delivery));
+        var afterRetry = (await f.Service.GetDeletedTasksAsync(1, 25, "all", default)).Items.Single();
+        Assert.AreEqual("completed", afterRetry.IntermediateCleanup);
+        Assert.AreEqual("completed", afterRetry.DeliveryCleanup);
+    }
+
+    [TestMethod]
+    public async Task Changed_delivery_after_preview_marks_only_delivery_incomplete()
+    {
+        var f = await StageDeletion();
+        var preview = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true, DeleteDeliveredFiles: true));
+        var lateFile = Path.Combine(f.Delivery, "arrived-after-preview.bin");
+        await File.WriteAllTextAsync(lateFile, "changed");
+        var result = await f.Service.DeleteAsync(new(preview.PreviewId, RemoveTaskIfCleanupFails: true));
+        Assert.AreEqual(f.Task.Id, result.DeletedTaskIds.Single());
+        Assert.IsTrue(File.Exists(lateFile));
+        Assert.IsFalse(Directory.Exists(f.Processing));
+        Assert.IsFalse(Directory.Exists(f.Download));
+        var saved = (await f.Service.GetDeletedTasksAsync(1, 25, "incomplete", default)).Items.Single();
+        Assert.AreEqual("completed", saved.IntermediateCleanup);
+        Assert.AreEqual("incomplete", saved.DeliveryCleanup);
+        var retry = await f.Service.PreviewAsync(new([f.Task.Id], false, true, true, RetryRetainedFiles: true, DeleteDeliveredFiles: true));
+        Assert.IsTrue((await f.Service.DeleteAsync(new(retry.PreviewId, RetryRetainedFiles: true))).CleanupResults!.Single().Completed);
+        var afterRetry = (await f.Service.GetDeletedTasksAsync(1, 25, "all", default)).Items.Single();
+        Assert.AreEqual("completed", afterRetry.IntermediateCleanup);
+        Assert.AreEqual("completed", afterRetry.DeliveryCleanup);
     }
 
     [TestMethod]

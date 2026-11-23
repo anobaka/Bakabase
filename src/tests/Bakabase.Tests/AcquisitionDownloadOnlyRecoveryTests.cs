@@ -7,6 +7,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
+using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
@@ -49,7 +50,7 @@ public sealed partial class AcquisitionRecoveryTests
             });
     }
     private AcquisitionDownloadOnlyRecoveryService OnlyDownloads(CloudDownloadRecoveryService recovery,IAcquisitionOriginalDownloadStarter starter,OnlyDownloadGuard guard)=>
-        new(_db,recovery,starter,_services.GetRequiredService<DownloaderManager>(),guard,_services.GetRequiredService<IBOptions<AcquisitionOptions>>());
+        new(_db,recovery,starter,_services.GetRequiredService<DownloaderManager>(),guard,_services.GetRequiredService<DownloadTaskService>());
 
     [TestMethod]
     public async Task DownloadsScopeStartsOriginalIdAndPreservesWaitingRunAndNoRepeatCheckpoint()
@@ -69,6 +70,75 @@ public sealed partial class AcquisitionRecoveryTests
             .SingleAsync(t => t.Id == task.Id))!.Mode);
         await service.ApplyAsync(new(preview.PreviewToken,[task.Id]));Assert.AreEqual(1,starter.Calls.Count);
         var second=await service.PreviewAsync(new([task.Id],"downloads"));Assert.AreEqual(0,second.ContinuableCount);
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task DownloadsScopeVerifiesAndRegistersExistingFilesWithoutStartingPayloadOrWorkflow(bool matches)
+    {
+        var (run, target, download, _, _, provider, recovery) = await SeedRetainedDownload();
+        download.Message = "An artifact file changed while its manifest was being recorded. (mtime) DownloadResultService.RecordFilesAsync CloudSiteDownloader";
+        download.Key = "original";
+        var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson!)! with {Targets = [target]};
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
+        await _db.SaveChangesAsync();
+        var beforeRun = JsonSerializer.Serialize(await _db.WorkflowRuns.AsNoTracking().SingleAsync());
+        var task = await _db.AcquisitionTasks.SingleAsync(t => t.WorkflowRunId == run.Id);
+        var file = Path.Combine(download.DownloadPath, "retained-fixture");
+        var bytes = await File.ReadAllBytesAsync(file);
+        var sha = System.Security.Cryptography.SHA256.HashData(matches ? bytes : "other"u8.ToArray());
+        provider.ExistingProof = new([new(file, bytes.Length, Convert.ToHexString(sha))]);
+        var starter = new OnlyDownloadStarter(this, run.Id); var host = new RecordingHost(); var writes = new OnlyDownloadGuard {Reject = true};
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, new UserStoragePolicy(false), _services.GetRequiredService<IArtifactOperationStore>(), downloads: recovery);
+        var service = new AcquisitionRecoveryService(_db, diagnostics, new(), host, downloadOnly: OnlyDownloads(recovery, starter, writes));
+        var guarded = new List<string?>();
+        var preview = await service.PreviewAsync(new([task.Id], "downloads"), guardDirectory: path => { guarded.Add(path); return Task.CompletedTask; });
+        var candidate = preview.Rows.Single();
+        Assert.IsTrue(candidate.CanContinue, candidate.ReasonCode);
+        Assert.AreEqual("RECOVERY_EXISTING_FILES_VERIFY_REQUIRED", candidate.ReasonCode);
+        Assert.IsTrue(guarded.Contains(download.DownloadPath));
+        Assert.AreEqual(0, provider.VerificationCalls);
+        var applied = await service.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+        var outcome = applied.Downloads!.Single();
+        Assert.AreEqual(matches, applied.ContinuedTaskIds.Contains(task.Id));
+        Assert.AreEqual(matches, outcome.VerifiedDownloadTaskIds!.Contains(download.Id));
+        Assert.AreEqual(matches ? null : "RECOVERY_EXISTING_FILES_UNVERIFIED", outcome.ReasonCode);
+        Assert.AreEqual(0, outcome.StartedDownloadTaskIds.Count);
+        Assert.AreEqual(0, host.Calls); Assert.AreEqual(0, starter.Calls.Count); Assert.AreEqual(0, writes.Checks);
+        Assert.AreEqual(matches ? 1 : 0, await _db.DownloadResults.CountAsync());
+        Assert.AreEqual(beforeRun, JsonSerializer.Serialize(await _db.WorkflowRuns.AsNoTracking().SingleAsync()));
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(file));
+        await service.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+        Assert.AreEqual(1, provider.VerificationCalls);
+    }
+
+    [TestMethod]
+    public async Task DownloadVerificationRechecksWorkflowOwnershipAfterHashingAndBeforeRegistering()
+    {
+        var (run, target, download, _, _, provider, recovery) = await SeedRetainedDownload();
+        download.Message = "An artifact file changed while its manifest was being recorded. (mtime) DownloadResultService.RecordFilesAsync CloudSiteDownloader";
+        download.Key = "original";
+        var workset = AcquisitionRecoveryDiagnostics.ReadWorkset(run.CurrentItemJson!)! with {Targets = [target]};
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
+        await _db.SaveChangesAsync();
+        var file = Path.Combine(download.DownloadPath, "retained-fixture");
+        var bytes = await File.ReadAllBytesAsync(file);
+        provider.ExistingProof = new([new(file, bytes.Length, Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)))]);
+        var service = OnlyDownloads(recovery, new OnlyDownloadStarter(this, run.Id), new());
+        var signal = JsonSerializer.Serialize(new CloudSelectionSignal {ObserveExistingOnly = true,
+            VerifyExistingFilesOnly = true, ResumeTargetIds = [target.Id]}, JsonSerializerOptions.Web);
+        var checks = 0;
+        var result = await service.StartAsync(17, run, signal, _ =>
+        {
+            if (++checks == 2) throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
+            return Task.CompletedTask;
+        }, default);
+        Assert.AreEqual(1, provider.VerificationCalls);
+        Assert.AreEqual("ACQUISITION_TASK_CHANGED", result.ReasonCode);
+        Assert.AreEqual(0, result.VerifiedDownloadTaskIds!.Count);
+        Assert.AreEqual(0, await _db.DownloadResults.CountAsync());
+        Assert.AreEqual(DownloadTaskDbModelStatus.Failed, (await _db.DownloadTasks.AsNoTracking().SingleAsync()).Status);
     }
 
     [TestMethod]
@@ -99,7 +169,7 @@ public sealed partial class AcquisitionRecoveryTests
     }
 
     [TestMethod]
-    public async Task DownloadsScopeCountsOtherOwnersQueueAndKeepsFailedTaskWhenFull()
+    public async Task DownloadsScopeDelegatesConcurrencyToDownloadCenterInsteadOfCountingOtherAcquisitions()
     {
         var (task,run,_,download,_,_,recovery)=await SeedRecoverableProvider();
         _services.GetRequiredService<IBOptions<AcquisitionOptions>>().Value.Concurrency=1;
@@ -110,8 +180,10 @@ public sealed partial class AcquisitionRecoveryTests
         var starter=new OnlyDownloadStarter(this,run.Id);var host=new RecordingHost();
         var service=new AcquisitionRecoveryService(_db,_diagnostics,new(),host,downloadOnly:OnlyDownloads(recovery,starter,new()));
         var preview=await service.PreviewAsync(new([task.Id],"downloads"));var result=await service.ApplyAsync(new(preview.PreviewToken,[task.Id]));
-        Assert.AreEqual("RECOVERY_DOWNLOAD_CONCURRENCY_LIMIT",result.Skipped.Single().ReasonCode);
-        Assert.AreEqual(0,starter.Calls.Count);Assert.AreEqual(DownloadTaskDbModelStatus.Failed,(await _db.DownloadTasks.AsNoTracking().SingleAsync(d=>d.Id==download.Id)).Status);
+        CollectionAssert.AreEqual(new[] {task.Id}, result.ContinuedTaskIds.ToArray());
+        CollectionAssert.AreEqual(new[] {download.Id}, starter.Calls);
+        Assert.AreEqual(DownloadTaskDbModelStatus.Complete, (await _db.DownloadTasks.AsNoTracking().SingleAsync(d=>d.Id==download.Id)).Status);
+        Assert.AreEqual(DownloadTaskDbModelStatus.InProgress, (await _db.DownloadTasks.AsNoTracking().SingleAsync(d=>d.Id==queued.Id)).Status);
     }
 
     [DataTestMethod]

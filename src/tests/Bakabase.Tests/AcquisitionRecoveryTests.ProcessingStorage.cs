@@ -29,7 +29,7 @@ public sealed partial class AcquisitionRecoveryTests
         WorkflowRunDbModel Run, DownloadWorkset Workset, ArtifactRecord Input, FileProcessingPlan Plan,
         string Intent, string OperationId, string Checkpoint, string AppData, FileProcessingWorkspaceResolver Workspaces);
 
-    private async Task<ProcessingFixture> SeedProcessingStorage(string? sharingFile = null, bool localContinuation = false, bool includeDirectories = false)
+    private async Task<ProcessingFixture> SeedProcessingStorage(string? sharingFile = null, bool localContinuation = false, bool includeDirectories = false, string[]? volumes = null)
     {
         var (task, run, workset) = await Seed(AcquisitionPlanProcessingActivity.ActivityKind, WorkflowRunStatus.Waiting, null);
         var appData = Path.Combine(_root, "processing-metadata"); Directory.CreateDirectory(appData);
@@ -39,12 +39,13 @@ public sealed partial class AcquisitionRecoveryTests
         var download = DownloadArtifactCoordinator.DownloadIntent(workset.Targets[0], workset.OutputDirectory, workspaces);
         var directories = includeDirectories ? new[] {Directory.CreateDirectory(Path.Combine(_root, "empty-input-directory")).FullName} : [];
         var input = await store.AdoptAsync(new(download, download, "download", DownloadArtifactCoordinator.Source(workset.Targets[0])),
-            new(_root, [file], "download", true, Directories: includeDirectories ? directories : null), "download-owner");
+            new(_root, volumes ?? [file], "download", true, Directories: includeDirectories ? directories : null), "download-owner");
         var plan = new FileProcessingPlan {Requirement = "required", Steps =
             [new() {Id = "rename", Op = "renameFile", Selector = "original.bin", TargetName = "final.bin"}]};
+        if (volumes != null) plan = plan with {Steps = [new() {Id = "rename", Op = "extractArchive"}]};
         var serialized = JsonSerializer.Serialize(plan, WorkflowJson.Options);
         var target = workset.Targets[0] with {DownloadArtifactId = input.Id, DownloadOperationId = input.OperationId,
-            DownloadDirectory = _root, Files = [file], ProcessingPlanJson = serialized,
+            DownloadDirectory = _root, Files = [.. volumes ?? [file]], ProcessingPlanJson = serialized,
             ProcessingWaitReason = "StorageUnavailable", Problem = "StorageUnavailable"};
         workset = workset with {Targets = [target], SourceRefs = [new("acquisition", "task", task.Id.ToString(), "1")]};
         Bakabase.Modules.Acquisition.Abstractions.Models.Domain.AcquisitionPlanArtifactInput? continuation = null;
@@ -100,12 +101,64 @@ public sealed partial class AcquisitionRecoveryTests
         return new(task, run, workset, input, plan, intent, operation, checkpoint, appData, workspaces);
     }
 
+    [TestMethod]
+    [DataRow("missingParts", true)]
+    [DataRow("unopenedGroup", true)]
+    [DataRow("incorrectBinding", false)]
+    [DataRow("startedStaging", false)]
+    [DataRow("existingOutput", false)]
+    public async Task FailedRegisteredMultipartStepCanRetryTheSameAttemptOnlyWithVerifiedPrivateInputs(string scenario, bool eligible)
+    {
+        var files = Artifacts.FileProcessingMaskedSevenZipTests.MakeVolumes(_root);
+        var f = await SeedProcessingStorage(volumes: files);
+        var store = _services.GetRequiredService<IArtifactOperationStore>();
+        var current = (await store.GetOperationAsync(f.OperationId))!;
+        var error = scenario == "missingParts" ? "The archive volume set for bundle.7z.002 has missing parts." :
+            "Archive structure discovery requires a regular file.";
+        Assert.IsTrue(await store.FailAsync(new(current.Id, current.LeaseToken!), error));
+        f.Run.ErrorMessage = error; f.Run.Status = WorkflowRunStatus.Failed; f.Run.WaitPromptJson = null;
+        f.Task.Status = Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants.AcquisitionStatus.Failed;
+        var workset = f.Workset with {Targets = [f.Workset.Targets[0] with {Problem = null, ProcessingWaitReason = null}]};
+        f.Run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset); await _db.SaveChangesAsync();
+        var inputs = Path.Combine(f.Checkpoint, "inputs");
+        foreach (var path in files)
+        {
+            var dest = Path.Combine(inputs, Path.GetRelativePath(_root, path));
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!); File.Copy(path, dest);
+        }
+        var state = new FileProcessingPlanExecutor.State {InputManifest = f.Input.Manifest};
+        if (scenario != "missingParts")
+        {
+            var key = FileProcessingPlanExecutor.StepKey("rename") + "-0";
+            var output = Path.Combine(f.Checkpoint, "outputs", key);
+            var binding = files.Select(path => "inputs/" + Path.GetRelativePath(_root, path).Replace('\\', '/')).ToList();
+            if (scenario == "incorrectBinding") binding.Reverse();
+            state.Operations[key] = new() {OutputDirectory = output, ArchiveInputs = binding};
+            if (scenario == "existingOutput") Directory.CreateDirectory(output);
+            if (scenario == "startedStaging") Directory.CreateDirectory(output + ".pending");
+        }
+        await File.WriteAllTextAsync(Path.Combine(f.Checkpoint, "state.json"), JsonSerializer.Serialize(state, WorkflowJson.Options));
+        var diagnosis = await _diagnostics.DiagnoseAsync(f.Task, f.Run, default);
+        Assert.AreEqual(eligible, diagnosis.Row.CanContinue, diagnosis.Row.ReasonCode);
+        if (!eligible) return;
+        Assert.AreEqual("retry", diagnosis.Row.Action);
+        var signal = JsonSerializer.Deserialize<CloudFileProcessingSignal>(diagnosis.SignalJson, WorkflowJson.Options);
+        Assert.IsTrue(signal!.StorageRecovery!.RepairArchiveVolumes);
+        Assert.AreEqual(1, signal.StorageRecovery.Attempt);
+        var tail = Path.Combine(inputs, Path.GetRelativePath(_root, files[^1]));
+        await using (var writer = File.OpenWrite(tail)) {writer.Seek(-1, SeekOrigin.End); writer.WriteByte(0xff);}
+        Assert.IsFalse((await _diagnostics.DiagnoseAsync(f.Task, f.Run, default)).Row.CanContinue);
+        Assert.AreEqual(1, (await store.GetOperationAsync(f.OperationId))!.Attempt);
+    }
+
     [DataTestMethod]
     [DataRow("automatic", "resume")]
     [DataRow("localOnly", "resume")]
     [DataRow("automatic", "locatorChanged")]
     [DataRow("localOnly", "inputChanged")]
     [DataRow("automatic", "unknownOtherWorkspace")]
+    [DataRow("automatic", "boundNextPart")]
+    [DataRow("localOnly", "unboundNextPart")]
     [DataRow("localOnly", "excludedOtherPart")]
     [DataRow("automatic", "unboundDelivery")]
     public async Task BatchResumesReviewedLocalAttemptUsingPinnedWorkspacesAndFrozenDelivery(string mode, string scenario)
@@ -128,8 +181,34 @@ public sealed partial class AcquisitionRecoveryTests
             new() {NodeId = "delivery", Kind = "fs.publishArtifacts", ConfigJson = JsonSerializer.Serialize(end, WorkflowJson.Options)}]});
         f.Run.CurrentItemJson = WorkflowItemSnapshot.Capture(f.Workset with {Targets = [f.Workset.Targets.Single(),
             f.Workset.Targets.Single() with {Id = "other", Excluded = scenario == "excludedOtherPart",
-                StoragePolicy = scenario is "unknownOtherWorkspace" or "excludedOtherPart" ? null :
+                StoragePolicy = scenario is "unknownOtherWorkspace" or "excludedOtherPart" or "boundNextPart" or "unboundNextPart" ? null :
                     new ArtifactStoragePolicy {ProcessingWorkspaceDirectory = other}}]});
+        string? otherCheckpointRoot = null;
+        if (scenario is "boundNextPart" or "unboundNextPart")
+        {
+            var store = _services.GetRequiredService<IArtifactOperationStore>();
+            var inputRoot = Directory.CreateDirectory(Path.Combine(other, ".bakabase-work", "fixture", "files")).FullName;
+            var file = Path.Combine(inputRoot, "second.bin");
+            await File.WriteAllTextAsync(file, "other part");
+            var input = await store.AdoptAsync(new("other-download", "other-download", "download", "other-source"),
+                new(inputRoot, [file], "download"), "seed");
+            var previous = new WorkflowRunDbModel {Status = WorkflowRunStatus.Cancelled};
+            _db.WorkflowRuns.Add(previous); await _db.SaveChangesAsync();
+            _db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = previous.Id, Module = "acquisition", EntityKind = "task",
+                EntityId = f.Task.Id.ToString(), Revision = "1"});
+            foreach (var ownerId in scenario == "boundNextPart" ? new[] {previous.Id, f.Run.Id} : new[] {previous.Id})
+                _db.ArtifactOperationBindings.Add(new() {Id = Guid.NewGuid().ToString("N"), OwnerKind = "workflow",
+                    OwnerId = ownerId.ToString(), OperationId = input.OperationId, Slot = "other:artifact.continuation"});
+            var config = new AcquisitionPlanProcessingConfig("other", f.Plan, "rename")
+                {ContinueFrom = new(f.Task.Id, previous.Id, input.Id, input.OperationId, input.Fingerprint)};
+            var snapshot = WorkflowRunPlans.Read(f.Run.PlanSnapshotJson)!;
+            f.Run.PlanSnapshotJson = WorkflowRunPlans.Serialize(snapshot with {Nodes = snapshot.Nodes.Take(1)
+                .Append(new() {NodeId = "other-process", Kind = AcquisitionPlanProcessingActivity.ActivityKind,
+                    ConfigJson = JsonSerializer.Serialize(config, WorkflowJson.Options)}).Concat(snapshot.Nodes.Skip(1)).ToArray()});
+            otherCheckpointRoot = Directory.CreateDirectory(Path.Combine(_root, "previous-checkpoint-volume")).FullName;
+            await f.Workspaces.ResolveAsync("checkpoints", FileArtifactProcessor.CheckpointKey(input, f.Plan), 1,
+                input.RootDirectory, otherCheckpointRoot, default);
+        }
         var prompt = JsonNode.Parse(f.Run.WaitPromptJson!)!;
         prompt["knownStepId"] = null;
         prompt["message"] = StorageWriteGuard.ReserveLowCode;
@@ -141,10 +220,10 @@ public sealed partial class AcquisitionRecoveryTests
             _diagnostics, null!, plans, options, new UserStoragePolicy(false), new PinnedBatchCapacity(), new());
         var preview = await service.PreviewAsync(new([f.Task.Id], mode));
         var row = preview.Rows.Single();
-        if (scenario is "unknownOtherWorkspace" or "unboundDelivery")
+        if (scenario is "unknownOtherWorkspace" or "unboundNextPart" or "unboundDelivery")
         {
             Assert.IsFalse(row.CanQueue);
-            Assert.AreEqual(scenario == "unknownOtherWorkspace" ? "RECOVERY_LOCAL_STORAGE_REQUIRED" : "LOCAL_BATCH_STORAGE_REVIEW_REQUIRED", row.ReasonCode);
+            Assert.AreEqual(scenario != "unboundDelivery" ? "RECOVERY_LOCAL_STORAGE_REQUIRED" : "LOCAL_BATCH_STORAGE_REVIEW_REQUIRED", row.ReasonCode);
             return;
         }
         Assert.IsTrue(row.CanQueue, row.ReasonCode);
@@ -152,6 +231,7 @@ public sealed partial class AcquisitionRecoveryTests
         Assert.AreEqual(destination, row.DeliveryDirectory);
         var paths = preview.Volumes.SelectMany(v => v.Paths).ToArray();
         Assert.IsTrue(paths.Contains(_root)); Assert.AreEqual(scenario != "excludedOtherPart", paths.Contains(other));
+        if (otherCheckpointRoot != null) Assert.IsTrue(paths.Contains(otherCheckpointRoot));
         if (scenario == "inputChanged")
         {
             // Even a full local preview reads only metadata. Dispatch verifies the original bytes.

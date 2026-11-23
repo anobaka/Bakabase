@@ -98,9 +98,11 @@ internal static partial class AcquisitionProcessingStageCommit
             }
             var selection = new AcquisitionStageDirectoryMove(partId, "processing", source.RootDirectory, binding.Directory,
                 true, move, source.Manifest.Directories ?? []);
-            var blockers = await FindReplaceableDirectoryBlockersAsync(store, binding, source, selection, ct);
+            var blockers = FindDirectoryBlockers(binding, selection);
             AcquisitionStageDirectoryFileMove.CheckTargets(selection, blockers.Select(p => Path.Combine(binding.Directory, p))
                 .ToHashSet(ArtifactManifestFiles.PathComparer));
+            if (blockers.Count > 0 && await RetainBlockingInputAsync(db, store, workspaces, taskId, runId, partId, binding, source, blockers, ct))
+                return source;
             journal = new(1, key, taskId, runId, partId, binding.BindingId!, binding.Directory, source.Id,
                 source.Fingerprint, source.RootDirectory, producer.IntentKey, selection, reused, BlockingInputsToRemove: blockers);
             await SaveAsync(journalPath, journal, ct);
@@ -140,11 +142,16 @@ internal static partial class AcquisitionProcessingStageCommit
             await BindAsync(db, runId, partId, owned, ct);
             journal = journal with {OwnedArtifactId = owned.Id}; await Persist();
         }
+        var sourceMetadata = ReadMetadata(source);
         var metadata = new FileArtifactProcessingMetadata(source.Id, JsonSerializer.Serialize(new FileProcessingPlan {Requirement = "notRequired"}, Json),
-            source.MetadataJson, StoragePolicy: ReadMetadata(source)?.StoragePolicy,
+            source.MetadataJson, StoragePolicy: sourceMetadata?.StoragePolicy,
             FileDisposition: FileDispositionProofs.Preserve(source, source.Manifest),
             DirectoryProvenance: FileArtifactDeliveryLayout.ReadProvenance(source),
-            WorkspaceDirectoryScope: binding.Allocation) {StageCommit = journal with {Move = journal.Move with {Completed = true}}};
+            WorkspaceDirectoryScope: binding.Allocation)
+        {
+            RetainedArchiveFiles = sourceMetadata?.RetainedArchiveFiles, RetainedGroupTokens = sourceMetadata?.RetainedGroupTokens,
+            StageCommit = journal with {Move = journal.Move with {Completed = true}}
+        };
         var result = await store.AdoptAsync(new(key, producer.IntentKey, "files.process", source.Fingerprint),
             new(binding.Directory, ArtifactManifestFiles.ResolveFiles(binding.Directory, source.Manifest), "processedFiles", journal.ReusedFiles.Count == 0,
                 journal.OwnedArtifactId is {} ownedId ? [source.Id, ownedId] : [source.Id],

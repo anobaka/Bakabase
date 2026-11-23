@@ -56,7 +56,7 @@ public static class DataSyncDbSetClassification
             "AigcGenerators", "AigcGeneratorPropertyPresets");
         Add(DataSyncTableClass.NeverSync, "Device task or runtime state", null,
             "CloudDownloadOperations", "DownloadTasks", "ManagedDownloadTasks", "DownloadTaskFiles", "DownloadRecords", "DownloadResults", "DownloadResultOwners",
-            "DownloadResultProcessing", "PostParserTasks", "AcquisitionLeads", "AcquisitionTasks", "BulkModifications",
+            "DownloadResultProcessing", "PostParserTasks", "AcquisitionLeads", "AcquisitionTasks", "AcquisitionHandoffs", "BulkModifications",
             "ArtifactOperations", "Artifacts", "ArtifactConsumers", "ArtifactLineage", "ArtifactOperationBindings",
             "WorkflowRuns", "WorkflowNodeExecutions", "ProcessingPlanRevisions", "SubscriptionSnapshots", "FileRenameEntries", "Notifications", "ResourceProcessingJobs");
         Add(DataSyncTableClass.NeverSync, "Device logs and history", null,

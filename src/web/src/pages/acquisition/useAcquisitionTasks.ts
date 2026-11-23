@@ -14,7 +14,7 @@ export default function useAcquisitionTasks(query: Query) {
   const key = JSON.stringify(normalizedQuery);
   // Facet counts intentionally ignore the AND selection, pagination and ordering.
   // Keep them available while the user adds another condition to a pending request.
-  const facetKey = JSON.stringify([query.keyword ?? "", query.stage ?? "all"]);
+  const facetKey = JSON.stringify([query.keyword ?? "", query.stage ?? "all", query.downloadSource ?? ""]);
   const queryRef = useRef({ key, facetKey, query: normalizedQuery });
   queryRef.current = { key, facetKey, query: normalizedQuery };
   const sequence = useRef(0);
@@ -61,6 +61,10 @@ export default function useAcquisitionTasks(query: Query) {
     queueTaskCount: snapshot?.data.queueTaskCount ?? 0,
     attentionCounts: snapshot?.facetKey === facetKey ? snapshot.data.attentionCounts : undefined,
     factCounts: snapshot?.facetKey === facetKey ? snapshot.data.factCounts : undefined,
+    runtimeCapabilityCounts: snapshot?.facetKey === facetKey ? snapshot.data.runtimeCapabilityCounts : undefined,
+    runtimeExecutionStateCounts: snapshot?.facetKey === facetKey ? snapshot.data.runtimeExecutionStateCounts : undefined,
+    runtimeCapabilities: snapshot?.facetKey === facetKey ? snapshot.data.runtimeCapabilities : undefined,
+    taskRuntimeFacets: current ? snapshot.data.taskRuntimeFacets : undefined,
     loading: loading || (!current && !failed),
     failed,
     refresh: load,

@@ -26,6 +26,8 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         AcquisitionTaskDeleteCleanupGroup Group)
     {
         public IReadOnlyList<string> InputDirectories { get; init; } = [];
+        internal IReadOnlyDictionary<string, DeferredEmptyDirectoryTree.PrivateFile>? PrivateExtractionFiles { get; init; }
+        internal IReadOnlyDictionary<string, ArtifactManifestEntry>? ExtractionEntries { get; init; }
     }
 
     private async Task<IReadOnlyList<AbandonedInputCandidate>> PreviewAbandonedInputsAsync(
@@ -139,17 +141,21 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         var location = await workspaces.InspectExistingAsync("operations", operationId, attempt, ct);
         if (location == null || !await workspaces.HasOwnedLocationAsync(location, ct) || !HexKey(Path.GetFileName(checkpoint))) return null;
         var boundary = !SamePath(Path.GetDirectoryName(checkpoint)!, Path.Combine(location.Directory, "plan"));
+        RecordedContinuation? historical = null;
         if (boundary)
         {
             var recorded = await ReadAbandonedBoundaryAsync(operation, authorization, ct);
             if (recorded == null || recorded.Shared || !SamePath(checkpoint, recorded.Directory)) return null;
             location = recorded.Location;
+            historical = recorded.Historical;
         }
         var stateFile = Path.Combine(checkpoint, "state.json");
         ArtifactManifestFiles.RejectLinks(stateFile);
         if (!File.Exists(stateFile) || new FileInfo(stateFile).Length > 16 * 1024 * 1024) return null;
         var stateJson = await File.ReadAllTextAsync(stateFile, ct);
         var state = JsonSerializer.Deserialize<FileProcessingPlanExecutor.State>(stateJson, JsonSerializerOptions.Web);
+        if (state is {Completed: false} && (historical != null || state.Operations.Values.Any(o => o.Completed && o.OutputManifest != null)))
+            return await InspectAbandonedExtractionAsync(operation, checkpoint, stateFile, stateJson, state, authorization, ct, historical);
         if (state is not {LineageVersion: 1, InputManifest: {Entries.Count: > 0}} ||
             state.InputManifest.Fingerprint != operation.InputFingerprint ||
             state.BoundaryResults.Count != 0 || state.Outputs.Count != 1 || !state.Outputs.TryGetValue("download", out var staged) ||
@@ -332,7 +338,9 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             await using var fence = await artifacts.AcquireMaintenanceAsync(ct);
             var current = await InspectAbandonedInputAsync(expected.OperationId, expected.Attempt, expected.CheckpointDirectory,
                 authorization, new ArtifactCleanupReferenceGuard(db, workspaces), ct);
-            if (current == null || current.ClaimIdentity != expected.ClaimIdentity || current.StateFingerprint != expected.StateFingerprint || current.InputArtifactId != expected.InputArtifactId ||
+            if (current == null || current.Id != expected.Id ||
+                expected.PrivateExtractionFiles != null && current.FileIdentities.Count != expected.FileIdentities.Count ||
+                current.ClaimIdentity != expected.ClaimIdentity || current.StateFingerprint != expected.StateFingerprint || current.InputArtifactId != expected.InputArtifactId ||
                 current.FileIdentities.Any(p => !expected.FileIdentities.TryGetValue(p.Key, out var before) || before != p.Value))
                 return new(expected.Id, false, "SelectionChanged");
             if (!current.Group.Eligible) return new(expected.Id, false, current.Group.ReasonCode);
@@ -341,7 +349,13 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             foreach (var file in current.Files) snapshot.Observe(file.Path, file.Bytes, ct);
             var input = await artifacts.GetArtifactAsync(current.InputArtifactId, ct);
             if (input == null) return new(expected.Id, false, "SelectionChanged");
-            if (!authorization.Consent.SkipFileVerification)
+            if (current.ExtractionEntries != null && !authorization.Consent.SkipFileVerification)
+            {
+                var observed = await ArtifactManifestFiles.CaptureAsync(current.CheckpointDirectory, current.Files.Select(f => f.Path).ToArray(), ct);
+                if (observed.Entries.Any(e => !current.ExtractionEntries.TryGetValue(e.RelativePath, out var recorded) ||
+                    recorded.Length != e.Length || recorded.Sha256 != e.Sha256)) return new(expected.Id, false, "SelectionChanged");
+            }
+            else if (!authorization.Consent.SkipFileVerification)
             {
                 var entries = input.Manifest.Entries.ToDictionary(e => e.RelativePath, StringComparer.Ordinal);
                 foreach (var copy in current.Files.GroupBy(f =>
@@ -366,7 +380,13 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             {
                 ct.ThrowIfCancellationRequested();
                 if (!snapshot.Matches(file.Path, file.Bytes, ct)) throw new IOException("The failed input snapshot changed.");
-                File.Delete(file.Path); removed++; bytes += file.Bytes;
+                if (current.PrivateExtractionFiles is {} privateFiles)
+                {
+                    if (DeferredEmptyDirectoryTree.InspectPrivateFile(file.Path, privateFiles[file.Path]) == null)
+                        throw new IOException("The private extraction file changed.");
+                }
+                else File.Delete(file.Path);
+                removed++; bytes += file.Bytes;
             }
             var confirmedDirectories = refreshed.InputDirectories.Intersect(expected.InputDirectories, ArtifactManifestFiles.PathComparer);
             RemoveConfirmedEmptyDirectories(confirmedDirectories, ct);

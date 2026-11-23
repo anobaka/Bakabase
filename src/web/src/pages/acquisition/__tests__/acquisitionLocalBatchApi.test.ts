@@ -21,12 +21,13 @@ it("uses automatic classification and rechecks capacity for only the fixed selec
   const signal = new AbortController().signal;
   await acquisitionLocalBatchApi.preview([3, 1], signal, "automatic");
   expect(sdk.previewAcquisitionLocalRecoveryBatch).toHaveBeenCalledExactlyOnceWith(
-    { taskIds: [3, 1], mode: "automatic", order: "sizeAsc" },
+    { taskIds: [3, 1], mode: "automatic", order: "sizeAsc", maxAdaptiveIterations: 3 },
     { sensitiveResponse: true, showErrorToast: false, signal },
   );
   await acquisitionLocalBatchApi.capacity("fixed", [1], signal);
   expect(sdk.previewAcquisitionLocalRecoveryBatchCapacity).toHaveBeenCalledExactlyOnceWith(
-    { previewToken: "fixed", taskIds: [1] }, { sensitiveResponse: true, showErrorToast: false, signal },
+    { previewToken: "fixed", taskIds: [1] },
+    { sensitiveResponse: true, showErrorToast: false, signal },
   );
   expect(sdk.createAcquisitionLocalRecoveryBatch).not.toHaveBeenCalled();
 });
@@ -35,7 +36,7 @@ it("keeps preview evidence private and passes an abort signal only to the read-o
   const signal = new AbortController().signal;
   await acquisitionLocalBatchApi.preview([3, 1], signal);
   expect(sdk.previewAcquisitionLocalRecoveryBatch).toHaveBeenCalledWith(
-    { taskIds: [3, 1], mode: "localOnly", order: "sizeAsc" },
+    { taskIds: [3, 1], mode: "localOnly", order: "sizeAsc", maxAdaptiveIterations: 3 },
     { sensitiveResponse: true, showErrorToast: false, signal },
   );
 });
@@ -50,6 +51,20 @@ it.each([false, true])(
     );
   },
 );
+
+it("binds capacity and queue submission to the same per-task actions", async () => {
+  const selections = [{ taskId: 2, action: "retryTransfer" }];
+  await acquisitionLocalBatchApi.capacity("fixed-preview", [2], undefined, undefined, selections);
+  expect(sdk.previewAcquisitionLocalRecoveryBatchCapacity).toHaveBeenCalledExactlyOnceWith(
+    { previewToken: "fixed-preview", taskIds: [2], selections },
+    expect.anything(),
+  );
+  await acquisitionLocalBatchApi.create("fixed-preview", [2], false, undefined, selections);
+  expect(sdk.createAcquisitionLocalRecoveryBatch).toHaveBeenCalledExactlyOnceWith(
+    { previewToken: "fixed-preview", taskIds: [2], allowStorageOverride: false, selections },
+    { sensitiveResponse: true, showErrorToast: false },
+  );
+});
 
 it.each(["pause", "resume", "cancel"] as const)(
   "scopes %s to a single existing queue without changing task payloads",

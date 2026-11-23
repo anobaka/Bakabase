@@ -1,0 +1,106 @@
+[
+  {
+    "path": "requester/downloader/config.go",
+    "sha256": "3040e68378651efc700a9c0fadf41ef8e5329b65f9fbf7e4182c69f04bf9a339",
+    "edits": [
+      {
+        "before": "\tTryHTTP                    bool                       // 是否尝试使用 http 连接\n",
+        "after": "\tTryHTTP                    bool                       // 是否尝试使用 http 连接\n\n\t// CheckpointProgress reports bytes already written, synchronously from the monitor.\n\tCheckpointProgress func(completedBytes int64)\n\n\t// Keep the reserved data/checkpoint file identities when writing a Bakabase-owned staging area.\n\tPreserveWorkingFiles bool\n"
+      }
+    ]
+  },
+  {
+    "path": "requester/downloader/monitor.go",
+    "sha256": "c07f0f476c72e1c9fcb60488d2681a62581effae3fcbd4a3edd1247500f4ec1e",
+    "edits": [
+      {
+        "before": "\tisReloadWorker  bool //是否重载worker, 单线程模式不重载\n",
+        "after": "\tisReloadWorker  bool //是否重载worker, 单线程模式不重载\n\n\tcheckpointProgress func(int64)\n"
+      },
+      {
+        "before": "\t\t\t\t\tRanges:         mt.GetAllWorkersRange(),\n\t\t\t\t})\n\t\t\t}\n",
+        "after": "\t\t\t\t\tRanges:         mt.GetAllWorkersRange(),\n\t\t\t\t})\n\t\t\t}\n\t\t\tif mt.checkpointProgress != nil {\n\t\t\t\tmt.checkpointProgress(mt.status.Downloaded())\n\t\t\t}\n"
+      }
+    ]
+  },
+  {
+    "path": "requester/downloader/downloader.go",
+    "sha256": "82382075f088a0e3dcbdc1a5f5e0ebf6addc623e7397d05a4996e90f26bde120",
+    "edits": [
+      {
+        "before": "\t\tbii = der.instanceState.Get()\n",
+        "after": "\t\t// Failed attempts leave the checkpoint for retry, but cannot keep its handle.\n\t\tdefer der.instanceState.Close()\n\t\tbii = der.instanceState.Get()\n"
+      },
+      {
+        "before": "\tder.monitor.SetInstanceState(der.instanceState)\n",
+        "after": "\tder.monitor.SetInstanceState(der.instanceState)\n\tder.monitor.checkpointProgress = der.config.CheckpointProgress\n"
+      },
+      {
+        "before": "\terr = der.monitor.Err()\n\tif err == nil { // 成功\n\t\tpcsutil.Trigger(der.onSuccessEvent)\n\t\tif !single {\n\t\t\tder.removeInstanceState() // 移除断点续传文件\n\t\t}\n\t}\n",
+        "after": "\terr = moniterCtx.Err()\n\tif err == nil {\n\t\terr = der.monitor.Err()\n\t}\n\tif err == nil && !single {\n\t\terr = der.removeInstanceState()\n\t}\n\tif err == nil {\n\t\tpcsutil.Trigger(der.onSuccessEvent)\n\t}\n"
+      }
+    ]
+  },
+  {
+    "path": "requester/downloader/instance_state.go",
+    "sha256": "7c32bfaa89f73c34d17a108f589212bcfdb518e69395343c18cfe97593fa6d14",
+    "edits": [
+      {
+        "before": "\tif !is.checkSaveFile() {\n\t\treturn nil\n\t}\n\n\tis.mu.Lock()\n\tdefer is.mu.Unlock()\n\n\tcontents",
+        "after": "\tis.mu.Lock()\n\tdefer is.mu.Unlock()\n\tif !is.checkSaveFile() {\n\t\treturn nil\n\t}\n\n\tcontents"
+      },
+      {
+        "before": "\tif !is.checkSaveFile() {\n\t\treturn\n\t}\n\n\tis.mu.Lock()\n\tdefer is.mu.Unlock()\n",
+        "after": "\tis.mu.Lock()\n\tdefer is.mu.Unlock()\n\tif !is.checkSaveFile() {\n\t\treturn\n\t}\n"
+      },
+      {
+        "before": "func (is *InstanceState) Close() error {\n\tif !is.checkSaveFile() {\n\t\treturn nil\n\t}\n\n\treturn is.saveFile.Close()\n}",
+        "after": "func (is *InstanceState) Close() error {\n\tis.mu.Lock()\n\tdefer is.mu.Unlock()\n\tif !is.checkSaveFile() {\n\t\treturn nil\n\t}\n\tfile := is.saveFile\n\tis.saveFile = nil\n\treturn file.Close()\n}"
+      },
+      {
+        "before": "\tder.instanceState.Close()\n\tif !der.config.IsTest",
+        "after": "\t// SMB may preserve an unlinked file while any handle remains open.\n\tif err := der.instanceState.Close(); err != nil {\n\t\treturn err\n\t}\n\tif !der.config.IsTest"
+      },
+      {
+        "before": "\t\treturn os.Remove(der.config.InstanceStatePath)",
+        "after": "\t\tif der.config.PreserveWorkingFiles {\n\t\t\treturn os.Truncate(der.config.InstanceStatePath, 0)\n\t\t}\n\t\treturn os.Remove(der.config.InstanceStatePath)"
+      }
+    ]
+  },
+  {
+    "path": "internal/pcsfunctions/pcsdownload/download_task_unit.go",
+    "sha256": "976f489c6f4661ff4899dc400af11fd7227a62ae7f2a8ed3ae5a9eda2e57d293",
+    "edits": [
+      {
+        "before": "\t\t\t\tremoveEmptyDownloadFile(dtu.SavePath)",
+        "after": "\t\t\t\tif !dtu.Cfg.PreserveWorkingFiles {\n\t\t\t\t\tremoveEmptyDownloadFile(dtu.SavePath)\n\t\t\t\t}"
+      },
+      {
+        "before": "if info, infoErr := file.Stat(); infoErr == nil && info.Size() == 0 {",
+        "after": "if info, infoErr := file.Stat(); !dtu.Cfg.PreserveWorkingFiles && infoErr == nil && info.Size() == 0 {"
+      }
+    ]
+  },
+  {
+    "path": "baidupcs/transfer.go",
+    "sha256": "43f19b6b13f7b95ee5702aa1c0c2a3b6d5da7fa8adebc8654f567edd7b74cc08",
+    "edits": [
+      {
+        "before": "func (pcs *BaiduPCS) GenerateRequestQuery(mode string, params map[string]string) (res map[string]string) {",
+        "after": "// ReadShareTransferResponse uses the existing POST transport once. Only the supplied reader\n// consumes its response. A missing callback means the HTTP operation provided no response.\nfunc (pcs *BaiduPCS) ReadShareTransferResponse(params map[string]string, consume func(*http.Response)) {\n\tpcs.generateRequestQuery(\"POST\", params, consume)\n}\n\nfunc (pcs *BaiduPCS) GenerateRequestQuery(mode string, params map[string]string) (res map[string]string) {\n\treturn pcs.generateRequestQuery(mode, params, nil)\n}\n\nfunc (pcs *BaiduPCS) generateRequestQuery(mode string, params map[string]string, consume func(*http.Response)) (res map[string]string) {"
+      },
+      {
+        "before": "\tdefer dataReadCloser.Close()\n\tbody, err := ioutil.ReadAll(dataReadCloser)\n\tif err != nil {\n\t\tres[\"ErrNo\"] = \"-1\"",
+        "after": "\tdefer dataReadCloser.Close()\n\tif consume != nil {\n\t\tconsume(response)\n\t\treturn\n\t}\n\tbody, err := ioutil.ReadAll(dataReadCloser)\n\tif err != nil {\n\t\tres[\"ErrNo\"] = \"-1\""
+      },
+      {
+        "before": "dataReadCloser, panError := pcs.sendReqReturnReadCloser(reqTypePan, OperationShareFileSavetoLocal, mode, params[\"shareUrl\"], postdata, headers)",
+        "after": "response, panError := pcs.sendReqReturnResp(reqTypePan, OperationShareFileSavetoLocal, mode, params[\"shareUrl\"], postdata, headers)"
+      },
+      {
+        "before": "defer dataReadCloser.Close()\n\tif consume != nil",
+        "after": "dataReadCloser := response.Body\n\tdefer dataReadCloser.Close()\n\tif consume != nil"
+      }
+    ]
+  }
+]

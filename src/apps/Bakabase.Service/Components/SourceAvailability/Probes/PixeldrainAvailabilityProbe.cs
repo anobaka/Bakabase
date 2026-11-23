@@ -62,7 +62,9 @@ public sealed class PixeldrainAvailabilityProbe(IHttpClientFactory clients) : IS
         var code = json.TryGetProperty("value", out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
         if (status == HttpStatusCode.NotFound && !success && code == "not_found")
             return Result(SourceAvailabilityStatuses.ConfirmedUnavailable, "SOURCE_NOT_FOUND");
-        if ((int)status == 429 || (int)status >= 500 || code is "download_limit_exceeded" or "transfer_limit_exceeded" or "max_concurrent_downloads")
+        if (code is "download_limit_exceeded" or "transfer_limit_exceeded")
+            return Result(SourceAvailabilityStatuses.TemporarilyUnavailable, "SOURCE_DOWNLOAD_QUOTA_EXCEEDED");
+        if ((int)status == 429 || (int)status >= 500 || code is "max_concurrent_downloads")
             return Result(SourceAvailabilityStatuses.TemporarilyUnavailable, "SOURCE_RATE_OR_SERVICE_LIMIT");
         if ((int)status is 401 or 403 || code is "authentication_required" or "forbidden" or "file_rate_limited_captcha_required" or
             "password_required" or "file_password_required" or "invalid_password" or "permission_denied" or "access_required")
@@ -84,8 +86,11 @@ public sealed class PixeldrainAvailabilityProbe(IHttpClientFactory clients) : IS
                 var result = FileState(file);
                 // A partial list is never proof that the whole share is invalid.
                 if (result.Status != SourceAvailabilityStatuses.Available)
+                {
+                    if (result.ReasonCode == "SOURCE_DOWNLOAD_QUOTA_EXCEEDED") return result;
                     return Result(result.Status == SourceAvailabilityStatuses.ConfirmedUnavailable ? SourceAvailabilityStatuses.Unknown : result.Status,
                         "SOURCE_METADATA_INCOMPLETE");
+                }
             }
             return Result(SourceAvailabilityStatuses.Available, "SOURCE_METADATA_AVAILABLE");
         }
@@ -102,9 +107,14 @@ public sealed class PixeldrainAvailabilityProbe(IHttpClientFactory clients) : IS
         // https://pixeldrain.com/api#file-id-info (reviewed 2026-10-25).
         if (file.TryGetProperty("availability", out var availability) && availability.ValueKind == JsonValueKind.String &&
             !string.IsNullOrEmpty(availability.GetString()))
-            return availability.GetString() is "download_limit_exceeded" or "transfer_limit_exceeded" or "max_concurrent_downloads"
-                ? Result(SourceAvailabilityStatuses.TemporarilyUnavailable, "SOURCE_RATE_OR_SERVICE_LIMIT")
-                : Result(SourceAvailabilityStatuses.AccessRequired, "SOURCE_ACCESS_REQUIRED");
+        {
+            var availabilityCode = availability.GetString();
+            return availabilityCode is "download_limit_exceeded" or "transfer_limit_exceeded"
+                ? Result(SourceAvailabilityStatuses.TemporarilyUnavailable, "SOURCE_DOWNLOAD_QUOTA_EXCEEDED")
+                : availabilityCode is "max_concurrent_downloads"
+                    ? Result(SourceAvailabilityStatuses.TemporarilyUnavailable, "SOURCE_RATE_OR_SERVICE_LIMIT")
+                    : Result(SourceAvailabilityStatuses.AccessRequired, "SOURCE_ACCESS_REQUIRED");
+        }
         if (file.TryGetProperty("abuse_type", out var abuse) && abuse.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(abuse.GetString()))
             return Result(SourceAvailabilityStatuses.AccessRequired, "SOURCE_ACCESS_REQUIRED");
         if (file.TryGetProperty("can_download", out var permitted) && permitted.ValueKind == JsonValueKind.False)

@@ -447,6 +447,22 @@ it("rejects a server preview from a different scope even when its action looks e
   expect(api.apply).not.toHaveBeenCalled();
 });
 
+it("shows registered existing downloads without reporting a transfer start", async () => {
+  api.preview.mockResolvedValue(preview({
+    scope: "downloads",
+    rows: [{ taskId: 1, title: "Check local files", action: "downloads", canContinue: true }],
+  }));
+  api.apply.mockResolvedValue({
+    continuedTaskIds: [1], skipped: [],
+    downloads: [{ taskId: 1, startedDownloadTaskIds: [], indeterminateDownloadTaskIds: [], verifiedDownloadTaskIds: [32] }],
+  });
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="downloads" />);
+  await screen.findByText("Check local files");
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.recovery.downloads.confirm" }));
+  expect(await screen.findByText("acquisition.recovery.downloads.verified")).toBeVisible();
+  expect(screen.queryByText("acquisition.recovery.downloads.started")).toBeNull();
+});
+
 it("shows partial and unknown download outcomes without counting foreign task receipts", async () => {
   api.preview.mockResolvedValue(
     preview({
@@ -527,6 +543,22 @@ const localRow = {
   reasonCode: "RECOVERY_LOCAL_FILES_READY",
   localFiles,
 };
+it("distinguishes the preview of registered paths from file verification on confirmation", async () => {
+  api.preview.mockResolvedValue(preview({ scope: "localFiles", rows: [{
+    ...localRow, reasonCode: "RECOVERY_LOCAL_FILES_CHECK_ON_CONFIRM",
+  }] }));
+  render(<AcquisitionRecoveryModal taskIds={[1]} initialScope="localFiles" />);
+  expect(await screen.findByText("acquisition.recovery.reason.RECOVERY_LOCAL_FILES_CHECK_ON_CONFIRM")).toBeVisible();
+  expect(screen.getByText("acquisition.recovery.localFiles.notGuaranteed")).toBeVisible();
+  expect(screen.queryByText("acquisition.recovery.reason.RECOVERY_LOCAL_FILES_READY")).toBeNull();
+  fireEvent.change(screen.getByRole("combobox", { name: "acquisition.recovery.localFiles.processingMode" }), {
+    target: { value: "prepareOnly" },
+  });
+  expect(screen.getByText("acquisition.recovery.localFiles.prepareHint")).toBeVisible();
+  expect(screen.getByRole("button", { name: "acquisition.recovery.localFiles.prepareConfirm" })).toBeEnabled();
+  expect(api.apply).not.toHaveBeenCalled();
+});
+
 const localConfirm = () =>
   screen.getByRole("button", { name: "acquisition.recovery.localFiles.confirm" });
 
