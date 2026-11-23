@@ -136,7 +136,7 @@ public static class ExecutionProblemClassifier
         Add("downloadSourceUnsupported", SourceAvailabilityStatuses.Unknown,
             "SOURCE_UNSUPPORTED", "DOWNLOAD_METHOD_UNAVAILABLE", "NATIVE_DOCUMENT_EXPORT_UNSUPPORTED", "SHAREPOINT_FOLDER_REQUIRED");
         Add("downloadInfoMissing", SourceAvailabilityStatuses.Unknown,
-            "SOURCE_INVALID", "SOURCE_URL_INVALID", "BUILDER_NO_RESULTS", "TERABOX_SHARE_INVALID", "TERABOX_SOURCE_INVALID",
+            "SOURCE_INVALID", "SOURCE_URL_INVALID", "BUILDER_NO_RESULTS", "HANDOFF_NO_MAIN_SOURCE", "TERABOX_SHARE_INVALID", "TERABOX_SOURCE_INVALID",
             "MEGA_SHARE_INVALID");
         Add("sourceSelectionRequired", SourceAvailabilityStatuses.Unknown,
             "SOURCE_SELECTION_REQUIRED", "SELECTION_INVALID", "ONE_MIRROR_PER_GROUP", "SOURCE_DISABLED", "PLAN_REPLAN_SOURCE_CHANGED",

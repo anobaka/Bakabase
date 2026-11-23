@@ -21,6 +21,7 @@ public sealed class AcquisitionSourceAttentionTagsTests
 
     [TestMethod]
     [DataRow("BUILDER_NO_RESULTS")]
+    [DataRow("HANDOFF_NO_MAIN_SOURCE")]
     [DataRow("SOURCE_INVALID")]
     [DataRow("SOURCE_URL_INVALID")]
     [DataRow("TERABOX_SOURCE_INVALID")]
