@@ -230,7 +230,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         try
         {
             var row = await Editable(id, ct); var plan = Plan(row);
-            await ValidateContinuationInputsAsync(row.Id, plan, ct);
+            await ValidateContinuationInputsAsync(row, plan, ct);
             var check = await PreflightDownloadsAsync(Request(plan, $"acquisition:{row.Id}") with
                 {IgnoreSourceAvailability = !await HasNeverExecutedAsync(row, ct)}, plan.OutputDirectory, ct);
             var issues = check.Requirements.Concat(check.Candidates.SelectMany(c => c.Requirements))
@@ -699,7 +699,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             return ("RECOVERY_CHECKPOINT_UNSUPPORTED", null);
         var plan = Plan(row);
         AcquisitionPlanCompiler.Validate(plan);
-        await ValidateContinuationInputsAsync(row.Id, plan, ct);
+        await ValidateContinuationInputsAsync(row, plan, ct);
         var dependencyIssues = await FileProcessingDependencyPreflight.InspectAsync(plan.Parts.Select(AcquisitionPlanCompiler.Processing),
             processingDependencies ?? [], ct);
         if (dependencyIssues.Count > 0) return (dependencyIssues[0].Code, null);
@@ -727,7 +727,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             var plan = Plan(row); AcquisitionPlanCompiler.Validate(plan);
             using (plan.Parts.Any(p => p.ContinueFrom != null)
                        ? confirmations?.Observe(row, FileProcessingActivityRuntimeProvider.ConfirmingExistingFiles, ct) : null)
-                await ValidateContinuationInputsAsync(row.Id, plan, ct, verifyContents: true);
+                plan = await ValidateContinuationInputsAsync(row, plan, ct, verifyContents: true);
             var dependencyIssues = await FileProcessingDependencyPreflight.InspectAsync(plan.Parts.Select(AcquisitionPlanCompiler.Processing),
                 processingDependencies ?? [], ct);
             if (dependencyIssues.Count > 0)
@@ -870,19 +870,39 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         Serialize(revision.Plan.Parts[0].Sources.Single(s => s.Id == revision.Plan.Parts[0].SelectedSourceId)) &&
         AcquisitionSourceRevisionService.SelectedExecutionIdentity(workset.Targets[0], workset.OutputDirectory) == revision.SourceRevision.SelectedExecutionIdentity;
 
-    private async Task ValidateContinuationInputsAsync(int taskId, AcquisitionPlan plan, CancellationToken ct, bool verifyContents = false)
+    private async Task<AcquisitionPlan> ValidateContinuationInputsAsync(AcquisitionTaskDbModel row, AcquisitionPlan plan,
+        CancellationToken ct, bool verifyContents = false)
     {
+        var validated = plan;
         foreach (var part in plan.Parts.Where(p => p.ContinueFrom != null))
         {
             if (artifacts == null) throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
-            var input = await AcquisitionPlanArtifactInputGuard.RequireAsync(db, artifacts, taskId, part.Id, part.ContinueFrom!, ct);
+            var input = await AcquisitionPlanArtifactInputGuard.RequireAsync(db, artifacts, row.Id, part.Id, part.ContinueFrom!, ct);
             if (input.Kind == AcquisitionCurrentDirectoryFiles.Kind)
-                await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, workspaces, ct);
+            {
+                try { await AcquisitionCurrentDirectoryFiles.ValidateSelectionAsync(input, workspaces, ct); }
+                catch (InvalidOperationException e) when (e.Message == "PLAN_CURRENT_DIRECTORY_CHANGED")
+                {
+                    var replacement = await ResolveLegacyCaptureAsync(row, part, input, verifyContents, ct);
+                    if (replacement == null) throw;
+                    input = replacement;
+                    if (verifyContents)
+                        validated = validated with {Parts = validated.Parts.Select(p => p.Id == part.Id
+                            ? p with {ContinueFrom = part.ContinueFrom! with {ArtifactId = input.Id,
+                                OperationId = input.OperationId, Fingerprint = input.Fingerprint}} : p).ToList()};
+                }
+            }
             storage.EnsurePathAllowed(input.RootDirectory);
             foreach (var file in input.Files) storage.EnsurePathAllowed(file);
             if (verifyContents && !(await ArtifactManifestFiles.ValidateAsync(input.RootDirectory, input.Manifest, ct)).Available)
                 throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
         }
+        if (!ReferenceEquals(validated, plan))
+        {
+            await SavePreparedChoiceAsync(row, validated, "processing.refreshCapturedInput", "PLAN_VERSION_CONFLICT", ct);
+            await db.Entry(row).ReloadAsync(ct);
+        }
+        return validated;
     }
 
     private Task<DownloadIntentPreflight> PreflightDownloadsAsync(DownloadIntentRequest request, string outputDirectory, CancellationToken ct)

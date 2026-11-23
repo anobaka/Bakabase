@@ -22,7 +22,8 @@ internal sealed record AcquisitionStageDirectoryCaptureReceipt(int Version, int 
     int Revision, int PreviousRunId, string CaptureId, string Stage, string BindingId, string Directory,
     string InputFingerprint, string Fingerprint, IReadOnlyList<OwnedWorkspaceDirectory> ExcludedWorkspaces,
     ArtifactDirectoryProvenance? DirectoryProvenance = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool DeliveryOnly = false);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool DeliveryOnly = false,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool VerifiedSmbFileNames = false);
 
 internal static partial class AcquisitionCurrentDirectoryFiles
 {
@@ -46,12 +47,13 @@ internal static partial class AcquisitionCurrentDirectoryFiles
         if (!Directory.Exists(binding.Directory)) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_UNAVAILABLE");
         var excluded = workspaces == null ? [] : await workspaces.OwnedDirectoriesUnderAsync(binding.Directory, ct);
         var selection = await EnumerateAsync(binding.Directory, excluded, workspaces, ct,
+            () => ReadDownloadMarkerFilesAsync(db, store, taskId, partId, binding.Directory, ct),
             deliveryOnly ? MaximumDeliveryEntries : MaximumEntries);
         foreach (var file in selection.Files.Concat(selection.Directories)) storage.EnsurePathAllowed(file);
         var provenance = await AcquisitionStageDirectoryProvenance.ReadAsync(db, store, taskId, partId, binding.Directory, ct);
         var receipt = new AcquisitionStageDirectoryCaptureReceipt(2, taskId, partId, revision, runId,
             Guid.NewGuid().ToString("N"), stage, binding.BindingId!, binding.Directory, "", "", excluded,
-            DeliveryOnly: deliveryOnly);
+            DeliveryOnly: deliveryOnly, VerifiedSmbFileNames: selection.HasRecordedMarker);
         receipt = receipt with {InputFingerprint = StageSeed(receipt)};
         var captured = await store.AdoptAsync(new(ArtifactManifestFiles.Hash("current-stage:" + receipt.InputFingerprint),
                 "acquisition.current-stage:" + receipt.InputFingerprint, OperationKind, receipt.InputFingerprint),
@@ -81,7 +83,9 @@ internal static partial class AcquisitionCurrentDirectoryFiles
             receipt.PreviousRunId, receipt.CaptureId, receipt.Stage, receipt.BindingId, receipt.Directory,
             receipt.ExcludedWorkspaces}, Json);
         // Existing capture receipts must retain their original fingerprints.
-        return ArtifactManifestFiles.Hash(receipt.DeliveryOnly ? identity + "\ndelivery-only" : identity);
+        if (receipt.DeliveryOnly) identity += "\ndelivery-only";
+        if (receipt.VerifiedSmbFileNames) identity += "\nverified-smb-file-names";
+        return ArtifactManifestFiles.Hash(identity);
     }
 
     private static async Task<bool> IsStageOwnedAsync(BakabaseDbContext db, IArtifactOperationStore store,

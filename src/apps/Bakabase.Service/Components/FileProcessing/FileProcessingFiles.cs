@@ -34,8 +34,13 @@ public static class FileProcessingFiles
 
     // Darwin's smbfs_delete_openfile increments each of the three collision
     // counters from ASCII A through z, including the punctuation between Z and a.
+    private const string DarwinSmbDeleteSuffix = @"[\x41-\x7A]{3}[0-9a-fA-F]{4,8}4\.4";
+
+    internal static bool IsDarwinSmbDeleteMarker(string name) => name.StartsWith(".smbdelete", StringComparison.Ordinal) &&
+        Regex.IsMatch(name, @"^\.smbdelete" + DarwinSmbDeleteSuffix + @"\z", RegexOptions.CultureInvariant);
+
     internal static bool IsSmbDeleteMarker(string name) =>
-        Regex.IsMatch(name, @"^\.smbdelete(?:[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)?|[\x41-\x7A]{3}[0-9a-fA-F]{4,8}4\.4)\z",
+        Regex.IsMatch(name, @"^\.smbdelete(?:[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)?|" + DarwinSmbDeleteSuffix + @")\z",
             RegexOptions.CultureInvariant);
 
     public static string Within(string path, string root)

@@ -65,7 +65,8 @@ public sealed partial class AcquisitionReplanTests
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
     }
 
-    private async Task<(AcquisitionPlanTaskDetail Task, WorkflowRunDbModel Run, ArtifactRecord Artifact)> Failed(bool implicitAccount = false, bool passwordProtectedDownload = false)
+    private async Task<(AcquisitionPlanTaskDetail Task, WorkflowRunDbModel Run, ArtifactRecord Artifact)> Failed(
+        bool implicitAccount = false, bool passwordProtectedDownload = false, string? fileName = null)
     {
         var source = new WorkflowSourceRef("test", "item", "original", "2", "0");
         var plan = new AcquisitionPlan {Title = "Saved source", OutputDirectory = _root, Parts = [new()
@@ -97,7 +98,7 @@ public sealed partial class AcquisitionReplanTests
         row!.WorkflowRunId = run.Id; row.Status = AcquisitionStatus.Failed; row.Phase = "attention";
         row.Error = run.ErrorMessage; row.CompletedAt = run.CompletedAt; await Db.SaveChangesAsync();
         var download = passwordProtectedDownload ? Directory.CreateDirectory(Path.Combine(_root, "archives")).FullName : _root;
-        var file = Path.Combine(download, passwordProtectedDownload ? "sample.zip" : "original.bin");
+        var file = Path.Combine(download, fileName ?? (passwordProtectedDownload ? "sample.zip" : "original.bin"));
         if (passwordProtectedDownload)
         {
             using var zip = System.IO.Compression.ZipFile.Open(file, System.IO.Compression.ZipArchiveMode.Create);

@@ -16,9 +16,9 @@ namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionReplanTests
 {
-    private async Task<(AcquisitionPlanTaskDetail Task, WorkflowRunDbModel Run, ArtifactRecord Artifact)> DownloadedInput()
+    private async Task<(AcquisitionPlanTaskDetail Task, WorkflowRunDbModel Run, ArtifactRecord Artifact)> DownloadedInput(string? archiveFileName = null)
     {
-        var (task, run, artifact) = await Failed();
+        var (task, run, artifact) = await Failed(passwordProtectedDownload: archiveFileName != null, fileName: archiveFileName);
         var workset = AcquisitionPlanCompiler.Workset(task.Id, 1, task.Plan!, task.SourceRefs);
         var target = workset.Targets.Single() with {DownloadArtifactId = artifact.Id,
             DownloadOperationId = artifact.OperationId, Files = artifact.Files.ToList(), DownloadDirectory = artifact.RootDirectory};

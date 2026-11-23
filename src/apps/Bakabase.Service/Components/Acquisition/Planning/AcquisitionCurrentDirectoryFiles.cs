@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.FileProcessing;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +23,8 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 internal sealed record AcquisitionCurrentDirectoryReceipt(int Version, int TaskId, string PartId, int Revision,
     int PreviousRunId, string CaptureId, AcquisitionPlanArtifactInput PriorInput, string Directory,
     string InputFingerprint, string Fingerprint, IReadOnlyList<OwnedWorkspaceDirectory> ExcludedWorkspaces,
-    ArtifactDirectoryProvenance? DirectoryProvenance = null);
+    ArtifactDirectoryProvenance? DirectoryProvenance = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] bool VerifiedSmbFileNames = false);
 
 /// <summary>A new, read-only input snapshot of an explicitly selected task directory. Never edits an old receipt.</summary>
 internal static partial class AcquisitionCurrentDirectoryFiles
@@ -147,25 +151,37 @@ internal static partial class AcquisitionCurrentDirectoryFiles
 
     internal static async Task<ArtifactRecord> CaptureAsync(BakabaseDbContext db, IArtifactOperationStore store,
         IUserStoragePolicy storage, FileProcessingWorkspaceResolver? workspaces, int taskId, int revision, int runId,
-        string partId, ArtifactRecord source, Func<string?, Task>? guardDirectory, CancellationToken ct, int? sourceRunId = null)
+        string partId, ArtifactRecord source, Func<string?, Task>? guardDirectory, CancellationToken ct, int? sourceRunId = null, string? captureId = null,
+        ArtifactManifest? expectedManifest = null)
     {
+        captureId ??= Guid.NewGuid().ToString("N");
+        if (!Guid.TryParseExact(captureId, "N", out _)) throw new ArgumentException("PLAN_CURRENT_DIRECTORY_MODE_INVALID");
         var sourceRun = sourceRunId ?? runId;
         await RequireSourceAsync(db, store, storage, workspaces, taskId, sourceRun, partId, source, ct, activeRunId: runId);
         if (guardDirectory != null) await guardDirectory(source.RootDirectory);
         var exclusions = workspaces == null ? [] : await workspaces.OwnedDirectoriesUnderAsync(source.RootDirectory, ct);
-        var selection = await EnumerateAsync(source.RootDirectory, exclusions, workspaces, ct);
+        var selection = await EnumerateAsync(source.RootDirectory, exclusions, workspaces, ct, () =>
+            source.Kind != Kind || HasVerifiedSmbFileNames(source)
+                ? Task.FromResult(RecordedMarkerFiles(source))
+                : ReadDownloadMarkerFilesAsync(db, store, taskId, partId, source.RootDirectory, ct));
         foreach (var path in selection.Files.Concat(selection.Directories)) storage.EnsurePathAllowed(path);
-        var captureId = Guid.NewGuid().ToString("N");
         var prior = new AcquisitionPlanArtifactInput(taskId, sourceRun, source.Id, source.OperationId, source.Fingerprint);
-        var seed = Seed(taskId, revision, runId, partId, captureId, prior, source.RootDirectory, exclusions);
+        var seed = Seed(taskId, revision, runId, partId, captureId, prior, source.RootDirectory, exclusions, selection.HasRecordedMarker);
         var receipt = new AcquisitionCurrentDirectoryReceipt(1, taskId, partId, revision, runId, captureId, prior,
-            source.RootDirectory, seed, "", exclusions);
+            source.RootDirectory, seed, "", exclusions, VerifiedSmbFileNames: selection.HasRecordedMarker);
         var provenance = await AcquisitionCurrentDirectoryProvenance.ReadAsync(db, store, taskId, partId, prior, ct);
+        string CaptureMetadata(ArtifactManifest manifest)
+        {
+            if (expectedManifest != null && (!manifest.Entries.SequenceEqual(expectedManifest.Entries) ||
+                !(manifest.Directories ?? []).SequenceEqual(expectedManifest.Directories ?? [], StringComparer.Ordinal)))
+                throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_CHANGED");
+            return JsonSerializer.Serialize(receipt with {Fingerprint = manifest.Fingerprint,
+                DirectoryProvenance = AcquisitionCurrentDirectoryProvenance.Project(source.Manifest, provenance, manifest)}, Json);
+        }
         var current = await store.AdoptAsync(new(ArtifactManifestFiles.Hash("current-directory:" + seed),
                 "acquisition.current-directory:" + seed, OperationKind, seed),
-            new(source.RootDirectory, selection.Files, Kind, false, [source.Id], Directories: selection.Directories,
-                CreateMetadata: manifest => JsonSerializer.Serialize(receipt with {Fingerprint = manifest.Fingerprint,
-                    DirectoryProvenance = AcquisitionCurrentDirectoryProvenance.Project(source.Manifest, provenance, manifest)}, Json)),
+            new(source.RootDirectory, selection.Files, Kind, false, [source.Id], ExpectedManifestFingerprint: expectedManifest?.Fingerprint,
+                Directories: selection.Directories, CreateMetadata: CaptureMetadata),
             "acquisition.current-directory:" + taskId, ct);
         if (!await new ArtifactOperationBindingService(db).BindAsync("workflow", runId.ToString(), Slot(receipt), current.OperationId, ct))
             throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_CHANGED");
@@ -202,21 +218,25 @@ internal static partial class AcquisitionCurrentDirectoryFiles
                 operation is {Kind: OperationKind, State: ArtifactOperationState.Completed} && operation.OutputArtifactId == artifact.Id &&
                 operation.InputFingerprint == receipt.InputFingerprint &&
                 receipt.InputFingerprint == Seed(receipt.TaskId, receipt.Revision, receipt.PreviousRunId, receipt.PartId,
-                    receipt.CaptureId, receipt.PriorInput, receipt.Directory, receipt.ExcludedWorkspaces);
+                    receipt.CaptureId, receipt.PriorInput, receipt.Directory, receipt.ExcludedWorkspaces, receipt.VerifiedSmbFileNames);
         }
         catch (Exception e) when (e is ArgumentException or InvalidOperationException or JsonException) { return false; }
     }
 
     private static string Seed(int taskId, int revision, int runId, string partId, string captureId,
-        AcquisitionPlanArtifactInput prior, string rootDirectory, IReadOnlyList<OwnedWorkspaceDirectory> exclusions) =>
+        AcquisitionPlanArtifactInput prior, string rootDirectory, IReadOnlyList<OwnedWorkspaceDirectory> exclusions, bool verifiedSmbFileNames) =>
         ArtifactManifestFiles.Hash(JsonSerializer.Serialize(new {taskId, revision, runId, partId, captureId, prior,
-            RootDirectory = rootDirectory, exclusions}, Json));
+            RootDirectory = rootDirectory, exclusions}, Json) + (verifiedSmbFileNames ? "\nverified-smb-file-names" : ""));
 
-    internal static async Task ValidateSelectionAsync(ArtifactRecord artifact, FileProcessingWorkspaceResolver? workspaces, CancellationToken ct)
+    internal static async Task ValidateSelectionAsync(ArtifactRecord artifact, FileProcessingWorkspaceResolver? workspaces, CancellationToken ct,
+        ArtifactRecord? expectedSelection = null)
     {
+        var expected = expectedSelection ?? artifact;
+        if (!ArtifactManifestFiles.PathComparer.Equals(expected.RootDirectory, artifact.RootDirectory))
+            throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_CHANGED");
         var receipt = JsonSerializer.Deserialize<AcquisitionCurrentDirectoryReceipt>(artifact.MetadataJson!, Json)
             ?? throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_CHANGED");
-        var frozenDirectories = ArtifactManifestFiles.ResolveDirectories(artifact.RootDirectory, artifact.Manifest);
+        var frozenDirectories = ArtifactManifestFiles.ResolveDirectories(expected.RootDirectory, expected.Manifest);
         IReadOnlyList<OwnedWorkspaceDirectory> exclusions = receipt.ExcludedWorkspaces;
         if (workspaces != null)
         {
@@ -225,19 +245,72 @@ internal static partial class AcquisitionCurrentDirectoryFiles
             // not a user-added resource. Never retroactively hide a previously captured path.
             var newlyOwned = await workspaces.OwnedDirectoriesUnderAsync(artifact.RootDirectory, ct);
             exclusions = receipt.ExcludedWorkspaces.Concat(newlyOwned.Where(proof =>
-                    !artifact.Files.Concat(frozenDirectories).Any(path => Overlap(path, proof.Directory))))
+                    !expected.Files.Concat(frozenDirectories).Any(path => Overlap(path, proof.Directory))))
                 .DistinctBy(proof => proof.Directory, ArtifactManifestFiles.PathComparer).ToArray();
         }
         var limit = IsDeliveryOnlyStageCapture(artifact) ? MaximumDeliveryEntries : MaximumEntries;
-        var now = await EnumerateAsync(artifact.RootDirectory, exclusions, workspaces, ct, limit);
-        if (!now.Files.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(artifact.Files) ||
+        var now = await EnumerateAsync(artifact.RootDirectory, exclusions, workspaces, ct, () => Task.FromResult(
+            expectedSelection != null || receipt.VerifiedSmbFileNames ? RecordedMarkerFiles(expected) : new HashSet<string>()), limit);
+        if (!now.Files.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(expected.Files) ||
             !now.Directories.ToHashSet(ArtifactManifestFiles.PathComparer).SetEquals(frozenDirectories))
             throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_CHANGED");
     }
 
-    private sealed record Selection(IReadOnlyList<string> Files, IReadOnlyList<string> Directories);
+    private static bool HasVerifiedSmbFileNames(ArtifactRecord artifact) =>
+        JsonSerializer.Deserialize<AcquisitionCurrentDirectoryReceipt>(artifact.MetadataJson!, Json)?.VerifiedSmbFileNames == true;
+
+    private static HashSet<string> RecordedMarkerFiles(ArtifactRecord artifact) => artifact.Files
+        .Where(path => FileProcessingFiles.IsDarwinSmbDeleteMarker(Path.GetFileName(path))).ToHashSet(ArtifactManifestFiles.PathComparer);
+
+    // Stage bindings can also point at an original download. Only ask for producer receipts when
+    // discovery actually encounters a Darwin marker. Directory captures cannot vouch for themselves.
+    private static async Task<HashSet<string>> ReadDownloadMarkerFilesAsync(BakabaseDbContext db, IArtifactOperationStore store,
+        int taskId, string partId, string directory, CancellationToken ct)
+    {
+        var task = taskId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var runs = db.Set<WorkflowRunSourceDbModel>().Where(s => s.Module == "acquisition" &&
+            s.EntityKind == "task" && s.EntityId == task).Select(s => s.WorkflowRunId);
+        var owners = runs.Select(id => id.ToString());
+        var ids = await (from artifact in db.Artifacts.AsNoTracking()
+            join operation in db.ArtifactOperations on artifact.OperationId equals operation.Id
+            join binding in db.ArtifactOperationBindings on operation.Id equals binding.OperationId
+            where artifact.Kind == "download" && artifact.State == ArtifactLocationState.Available &&
+                artifact.ManifestJson.Contains(".smbdelete") && operation.Kind == "download" &&
+                operation.State == ArtifactOperationState.Completed && operation.OutputArtifactId == artifact.Id &&
+                binding.OwnerKind == "workflow" && owners.Contains(binding.OwnerId) &&
+                (binding.Slot == partId + ":artifact.download" || binding.Slot == partId + ":artifact.continuation")
+            select artifact.Id).Distinct().ToArrayAsync(ct);
+        var result = new HashSet<string>(ArtifactManifestFiles.PathComparer);
+        foreach (var id in ids)
+        {
+            var artifact = await store.GetArtifactAsync(id, ct);
+            if (artifact != null && ArtifactManifestFiles.PathComparer.Equals(directory, artifact.RootDirectory))
+                result.UnionWith(RecordedMarkerFiles(artifact));
+        }
+        // The Download Center may finish before its result is registered as an artifact.
+        // Its latest completed receipt is also an explicit declaration for this task/part.
+        var nativeTasks = db.CloudDownloadOperations.Where(o => runs.Contains(o.WorkflowRunId) &&
+            o.TargetId == partId && o.Kind == "download").Select(o => o.DownloadTaskId);
+        var declared = await (from receipt in db.DownloadResults.AsNoTracking()
+            join download in db.DownloadTasks on receipt.DownloadTaskId equals download.Id
+            where nativeTasks.Contains(download.Id) && download.Status == DownloadTaskDbModelStatus.Complete &&
+                receipt.DownloadDirectory == directory && receipt.FilesJson.Contains(".smbdelete") &&
+                receipt.Fingerprint.Length == 64 && !db.DownloadResults.Any(r => r.DownloadTaskId == download.Id && r.Id > receipt.Id) &&
+                !db.DownloadResultOwners.Any(o => o.DownloadTaskId == download.Id && o.AcquisitionTaskId != taskId)
+            select receipt.FilesJson).ToArrayAsync(ct);
+        foreach (var json in declared)
+        {
+            var paths = JsonSerializer.Deserialize<string[]>(json, Json) ?? throw new InvalidDataException("PLAN_CURRENT_DIRECTORY_CHANGED");
+            foreach (var path in paths.Where(p => Path.IsPathFullyQualified(p) && FileProcessingFiles.IsDarwinSmbDeleteMarker(Path.GetFileName(p))))
+                result.Add(Path.GetFullPath(path));
+        }
+        return result;
+    }
+
+    private sealed record Selection(IReadOnlyList<string> Files, IReadOnlyList<string> Directories, bool HasRecordedMarker);
     private static async Task<Selection> EnumerateAsync(string root, IReadOnlyList<OwnedWorkspaceDirectory> exclusions,
-        FileProcessingWorkspaceResolver? workspaces, CancellationToken ct, int maximumEntries = MaximumEntries)
+        FileProcessingWorkspaceResolver? workspaces, CancellationToken ct, Func<Task<HashSet<string>>> readRecordedMarkers,
+        int maximumEntries = MaximumEntries)
     {
         if (exclusions == null || exclusions.Count > 10000) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_CHANGED");
         var excluded = new HashSet<string>(ArtifactManifestFiles.PathComparer);
@@ -250,6 +323,8 @@ internal static partial class AcquisitionCurrentDirectoryFiles
                 throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_CHANGED");
             excluded.Add(proof.Directory);
         }
+        HashSet<string>? recordedMarkers = null;
+        var hasRecordedMarker = false;
         var files = new List<string>(); var empty = new List<string>();
         var pending = new Stack<(string Path, int Depth)>(); pending.Push((root, 0)); var count = 1;
         while (pending.TryPop(out var directory))
@@ -260,16 +335,32 @@ internal static partial class AcquisitionCurrentDirectoryFiles
             var hasEntries = false;
             foreach (var path in Directory.EnumerateFileSystemEntries(directory.Path))
             {
-                hasEntries = true;
-                ct.ThrowIfCancellationRequested(); ArtifactManifestFiles.RejectLinks(path);
-                if (excluded.Contains(path)) continue;
+                ct.ThrowIfCancellationRequested();
+                var marker = FileProcessingFiles.IsDarwinSmbDeleteMarker(Path.GetFileName(path));
+                FileAttributes attributes;
+                try
+                {
+                    ArtifactManifestFiles.RejectLinks(path);
+                    attributes = File.GetAttributes(path);
+                }
+                catch (FileNotFoundException) when (marker) { continue; } // The SMB handle closed after enumeration.
+                if (attributes.HasFlag(FileAttributes.ReparsePoint)) throw new InvalidDataException("Artifact paths must not pass through symbolic links.");
+                if (excluded.Contains(path)) {hasEntries = true; continue;}
                 if (++count > maximumEntries) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_TOO_LARGE");
-                if (File.GetAttributes(path).HasFlag(FileAttributes.Directory)) pending.Push((path, directory.Depth + 1));
+                var isDirectory = attributes.HasFlag(FileAttributes.Directory);
+                if (marker && !isDirectory)
+                {
+                    recordedMarkers ??= await readRecordedMarkers();
+                    if (!recordedMarkers.Contains(path)) continue;
+                    hasRecordedMarker = true;
+                }
+                hasEntries = true;
+                if (isDirectory) pending.Push((path, directory.Depth + 1));
                 else files.Add(path);
             }
             if (!hasEntries && directory.Path != root) empty.Add(directory.Path);
         }
         if (files.Count == 0) throw new InvalidOperationException("PLAN_CURRENT_DIRECTORY_EMPTY");
-        return new(files.OrderBy(p => p, StringComparer.Ordinal).ToArray(), empty.OrderBy(p => p, StringComparer.Ordinal).ToArray());
+        return new(files.OrderBy(p => p, StringComparer.Ordinal).ToArray(), empty.OrderBy(p => p, StringComparer.Ordinal).ToArray(), hasRecordedMarker);
     }
 }
