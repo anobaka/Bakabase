@@ -470,6 +470,228 @@ def file_identity(info):
     return [info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns]
 
 
+def content_identity(info):
+    return [*file_identity(info), info.st_ctime_ns]
+
+
+def download_identity(request, output):
+    fields = [request["provider"], request["url"], request.get("accessCode"), str(output.resolve())]
+    return hashlib.sha256(json.dumps(fields).encode()).hexdigest()
+
+
+def reuse_error():
+    return BridgeError("DOWNLOAD_DESTINATION_REUSE_SOURCE_CHANGED: The retained download no longer matches its verified placement")
+
+
+def reuse_directory(value):
+    path = Path(value)
+    if not path.is_absolute() or any(p.is_symlink() for p in (path, *path.parents)):
+        raise reuse_error()
+    return path
+
+
+def reuse_file_identity(path):
+    info = present(path)
+    if info is None:
+        return None
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+        raise reuse_error()
+    return content_identity(info)
+
+
+def read_reuse_record(path, limit=64 * 1024 * 1024):
+    identity = reuse_file_identity(path)
+    if identity is None:
+        return None
+    if not 0 < identity[2] <= limit:
+        raise reuse_error()
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    with os.fdopen(os.open(path, flags), "rb") as stream:
+        if content_identity(os.fstat(stream.fileno())) != identity:
+            raise reuse_error()
+        try:
+            value = json.loads(stream.read(limit + 1))
+        except (UnicodeError, ValueError):
+            raise reuse_error() from None
+        if content_identity(os.fstat(stream.fileno())) != identity or reuse_file_identity(path) != identity:
+            raise reuse_error()
+        return value
+
+
+def pixeldrain_frozen_manifest(request, output, state):
+    recorded = read_reuse_record(state / "manifest.json")
+    identity = download_identity(request, output)
+    if (not isinstance(recorded, dict) or recorded.get("identity") != identity or
+            not isinstance(recorded.get("files"), list) or not 0 < len(recorded["files"]) <= 100000):
+        raise reuse_error()
+    names = set()
+    for entry in recorded["files"]:
+        if not isinstance(entry, dict) or set(entry) != {"id", "path", "size", "md5", "sha256"}:
+            raise reuse_error()
+        name, size, checksum = entry["path"], entry["size"], entry["sha256"]
+        if (not isinstance(name, str) or relative_path(name) != name or name.casefold() in names or
+                type(size) is not int or size < 0 or not isinstance(checksum, str) or
+                not re.fullmatch("[a-fA-F0-9]{64}", checksum)):
+            raise reuse_error()
+        names.add(name.casefold())
+    return identity, recorded["files"]
+
+
+def pixeldrain_reuse_inventory(request):
+    if request["provider"] != "pixeldrain":
+        raise reuse_error()
+    validate_url(request["provider"], request["url"])
+    output, state = reuse_directory(request["output"]), reuse_directory(request["state"])
+    staging = reuse_directory(output / (".bakabase-cloud-" + state.name))
+    identity, manifest = pixeldrain_frozen_manifest(request, output, state)
+    if any(p.name.endswith((".repair.json", ".rejected.json", ".new")) for p in state.iterdir()):
+        raise reuse_error()
+    receipts = read_reuse_record(state / "completed.json")
+    if receipts is None:
+        receipts = {}
+    if not isinstance(receipts, dict):
+        raise reuse_error()
+    candidates = {}
+    for entry in manifest:
+        name, size, checksum = entry["path"], entry["size"], entry["sha256"]
+        key = hashlib.sha256(name.encode()).hexdigest()
+        final = beneath(output, name)
+        part = staging / (key + ".part")
+        complete, partial = reuse_file_identity(final), reuse_file_identity(part)
+        if complete is not None:
+            if partial is not None or complete[2] != size or receipts.get(name) != {"size": size, "sha256": checksum.lower()}:
+                raise reuse_error()
+            candidates[name] = ("complete", complete, final)
+        elif partial is not None:
+            if not 0 <= partial[2] <= size:
+                raise reuse_error()
+            # The destination’s ordinary Range and whole-file checksum checks still
+            # run before any copied prefix counts as a completed download.
+            if partial[2]:
+                candidates[name] = ("partial", partial, part)
+        elif name in receipts:
+            raise reuse_error()
+    if not candidates:
+        raise reuse_error()
+    evidence = [identity, manifest, [(k, v[0], v[1]) for k, v in sorted(candidates.items())]]
+    fingerprint = hashlib.sha256(json.dumps(evidence, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    estimate = {"fileCount": len(manifest), "totalBytes": sum(e["size"] for e in manifest), "candidateFileCount": len(candidates),
+                "candidateBytes": sum(v[1][2] for v in candidates.values()), "inventoryFingerprint": fingerprint}
+    return manifest, candidates, estimate
+
+
+def pixeldrain_reuse_marker(request, identity):
+    fingerprint = request["reuseSource"]["inventoryFingerprint"]
+    if request["provider"] != "pixeldrain" or not re.fullmatch("[0-9a-f]{64}", fingerprint):
+        raise reuse_error()
+    return {"identity": identity, "inventoryFingerprint": fingerprint}
+
+
+def pixeldrain_reuse_budget(request):
+    validate_url(request["provider"], request["url"])
+    output, state = reuse_directory(request["output"]), reuse_directory(request["state"])
+    prepared = read_reuse_record(state / "reuse-prepared.json", 4096)
+    if prepared is None:
+        return None
+    identity, manifest = pixeldrain_frozen_manifest(request, output, state)
+    expected = pixeldrain_reuse_marker(request, identity)
+    if prepared != expected or read_reuse_record(state / "reuse-intent.json", 4096) != expected:
+        raise reuse_error()
+    receipts = read_reuse_record(state / "completed.json")
+    if receipts is None:
+        receipts = {}
+    if not isinstance(receipts, dict):
+        raise reuse_error()
+    # Count every incomplete member at full length. An explicit checksum retry
+    # can retain the failed partial while downloading a replacement on this volume.
+    needed = 0
+    for entry in manifest:
+        name, size = entry["path"], entry["size"]
+        installed = reuse_file_identity(beneath(output, name))
+        if (installed is None or installed[2] != size or
+                receipts.get(name) != {"size": size, "sha256": entry["sha256"].lower()}):
+            needed += size
+    return needed
+
+
+def copy_reuse_part(source, identity, part, checksum):
+    read_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    write_flags = os.O_RDWR | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    flags = write_flags if reuse_file_identity(part) is not None else write_flags | os.O_CREAT | os.O_EXCL
+    with os.fdopen(os.open(source, read_flags), "rb") as old:
+        if content_identity(os.fstat(old.fileno())) != identity:
+            raise reuse_error()
+        with os.fdopen(os.open(part, flags, 0o600), "r+b") as new:
+            info = os.fstat(new.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_size > identity[2]:
+                raise reuse_error()
+            original_length = info.st_size
+            digest = hashlib.sha256() if checksum else None
+            remaining = identity[2]
+            reported = time.monotonic()
+            while remaining:
+                chunk = old.read(min(remaining, 1024 * 1024))
+                if not chunk:
+                    raise reuse_error()
+                if digest:
+                    digest.update(chunk)
+                # A prior process may have stopped at any byte. Verify the already
+                # copied prefix before appending and preserve it on mismatch.
+                already_copied = min(max(original_length - new.tell(), 0), len(chunk))
+                if new.read(already_copied) != chunk[:already_copied]:
+                    raise reuse_error()
+                if already_copied < len(chunk):
+                    new.write(chunk[already_copied:])
+                remaining -= len(chunk)
+                now = time.monotonic()
+                if now - reported >= 2:
+                    emit({"type": "progress", "stage": "reusing"})
+                    reported = now
+            new.flush()
+            if (content_identity(os.fstat(old.fileno())) != identity or reuse_file_identity(source) != identity or
+                    reuse_file_identity(part) != content_identity(os.fstat(new.fileno())) or
+                    digest is not None and digest.hexdigest() != checksum.lower()):
+                raise reuse_error()
+            os.fsync(new.fileno())
+
+
+def seed_pixeldrain_reuse(request, output, state, staging, manifest, identity):
+    source = request.get("reuseSource")
+    if source is None:
+        return
+    expected = pixeldrain_reuse_marker(request, identity)
+    marker = state / "reuse-prepared.json"
+    intent = state / "reuse-intent.json"
+    prepared = read_reuse_record(marker, 4096)
+    previous = read_reuse_record(intent, 4096)
+    if prepared is not None:
+        if prepared != expected or previous != expected:
+            raise reuse_error()
+        return
+    if previous not in (None, expected) or source.get("disableSourceRead"):
+        raise reuse_error()
+    old_output, old_state = reuse_directory(source["output"]), reuse_directory(source["state"])
+    if any(a.resolve().is_relative_to(b.resolve()) or b.resolve().is_relative_to(a.resolve())
+           for a, b in ((old_output, output), (old_state, state))):
+        raise reuse_error()
+    old_manifest, candidates, estimate = pixeldrain_reuse_inventory(dict(request, output=str(old_output), state=str(old_state)))
+    if estimate["inventoryFingerprint"] != expected["inventoryFingerprint"] or old_manifest != manifest:
+        raise reuse_error()
+    if previous is None:
+        if any(staging.iterdir()) or any(beneath(output, e["path"]).exists() for e in manifest):
+            raise reuse_error()
+        atomic_json(intent, expected)
+        sync_directory(state)
+    members = {e["path"]: e for e in manifest}
+    for name, (kind, stamp, path) in candidates.items():
+        key = hashlib.sha256(name.encode()).hexdigest()
+        copy_reuse_part(path, stamp, staging / (key + ".part"), members[name]["sha256"] if kind == "complete" else None)
+        emit({"type": "progress", "stage": "reusing"})
+    sync_directory(staging)
+    atomic_json(marker, expected)
+    sync_directory(state)
+
+
 def rename_noreplace(source, destination):
     import ctypes
 
@@ -889,6 +1111,13 @@ def http_original(session, entry, part, provider, progress, repair_record=None):
 
 
 def run(request):
+    if request.get("mode") == "inspectReuseSource":
+        _, _, estimate = pixeldrain_reuse_inventory(request)
+        emit({"type": "reuseInventory", **estimate})
+        return
+    if request.get("mode") == "inspectReuseDestination":
+        emit({"type": "reuseWriteBudget", "maximumAdditionalBytes": pixeldrain_reuse_budget(request)})
+        return
     validate_url(request["provider"], request["url"])
     output = Path(request["output"])
     state = Path(request["state"])
@@ -926,7 +1155,7 @@ def run(request):
     fields = ("id", "path", "size", "md5", "sha256") if request["provider"] == "pixeldrain" else ("id", "path", "size", "md5")
     manifest = [{k: e.get(k) for k in fields} for e in entries]
     manifest_path = state / "manifest.json"
-    identity = hashlib.sha256(json.dumps([request["provider"], request["url"], request.get("accessCode"), str(output.resolve())]).encode()).hexdigest()
+    identity = download_identity(request, output)
     persisted = {"identity": identity, "files": manifest}
     staging = output / staging_name
     if staging.is_symlink():
@@ -954,6 +1183,7 @@ def run(request):
     receipt_path = state / "completed.json"
     receipts = json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
     staging.mkdir(mode=0o700, exist_ok=True)
+    seed_pixeldrain_reuse(request, output, state, staging, manifest, identity)
     completed = []
     completed_bytes = 0
     total_bytes = sum(e["size"] for e in entries) if all(

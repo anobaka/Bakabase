@@ -1345,7 +1345,7 @@
   "acquisition.downloadDestination.applyReuse": "Use the new folder for download #{{id}}",
   "acquisition.downloadDestination.viewSelectedDownload": "View #{{id}} in Download Center",
   "acquisition.downloadDestination.backToSelection": "Back to selected acquisition tasks",
-  "acquisition.downloadDestination.reuseCandidates": "{{count}} of {{total}} files match by size ({{bytes}}). The download will verify each candidate.",
+  "acquisition.downloadDestination.reuseCandidates": "{{count}} of {{total}} files have local data that may be reused ({{bytes}}). The download will verify each candidate.",
   "acquisition.downloadDestination.reuseBudget": "Estimated download: {{minimum}} to {{total}}. The new folder needs room for {{total}}.",
   "acquisition.downloadDestination.reuseOriginals": "The original files and resume data stay in place. Files that pass the source’s checksum verification will be copied to the new folder. Download Center will fetch the rest.",
   "acquisition.downloadDestination.resumeHint": "Open this download and select Retry or Start to verify the files and complete it in the new folder.",

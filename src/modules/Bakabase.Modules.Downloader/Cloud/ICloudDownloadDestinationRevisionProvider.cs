@@ -11,6 +11,9 @@ public interface ICloudDownloadDestinationRevisionProvider
 
 public interface ICloudDownloadSourceReuseProvider
 {
+    /// <summary>Whether this request may have a provider-owned inventory worth inspecting.</summary>
+    bool CanInspectReuseSource(CloudDownloadRequest executionRequest) => executionRequest.RemoteEntry?.ManifestJson != null;
+
     /// <summary>Inspects a stopped, read-only source and its provider-bound layout. Does not hash, copy, or download payloads.</summary>
     Task<CloudDownloadReuseInventory> InspectReuseSourceAsync(CloudDownloadRequest executionRequest, CancellationToken ct);
 }

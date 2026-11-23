@@ -247,16 +247,17 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
         // Caller-owned acquisition settings supply the reserve through the existing write-policy provider.
         await writes.CheckAsync(newDirectory, new("cloudOperation", intent), ct);
         var execution = CloudDownloadDestinations.ExecutionRequest(request);
+        var canInspect = reuseProvider?.CanInspectReuseSource(execution) == true;
         CloudDownloadReuseInventory? reuse = null;
         if (reuseExistingFiles)
         {
+            Require(canInspect, "DOWNLOAD_DESTINATION_REUSE_UNSUPPORTED");
             reuse = await reuseProvider!.InspectReuseSourceAsync(execution, ct);
             await writes.CheckAllocationAsync(newDirectory, reuse.Estimate.TotalBytes, new("cloudOperation", intent), ct);
         }
         else
         {
             // Offer the explicit retained-source preview only after validating exclusive ownership and destination.
-            var canInspect = reuseProvider != null && request.RemoteEntry?.ManifestJson != null;
             void RequireEmptySource()
             {
                 try

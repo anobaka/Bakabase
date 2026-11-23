@@ -1345,7 +1345,7 @@
   "acquisition.downloadDestination.applyReuse": "为下载 #{{id}} 使用新目录",
   "acquisition.downloadDestination.viewSelectedDownload": "在下载中心查看 #{{id}}",
   "acquisition.downloadDestination.backToSelection": "返回所选获取任务",
-  "acquisition.downloadDestination.reuseCandidates": "共 {{total}} 个文件，{{count}} 个大小相符（{{bytes}}），可在补齐时逐个校验。",
+  "acquisition.downloadDestination.reuseCandidates": "共 {{total}} 个文件，其中 {{count}} 个含有可尝试复用的数据（{{bytes}}）。补齐时会逐项校验。",
   "acquisition.downloadDestination.reuseBudget": "预计需要下载 {{minimum}} 至 {{total}}，新目录需要容纳 {{total}}。",
   "acquisition.downloadDestination.reuseOriginals": "旧目录中的文件和断点会保留。通过来源校验的文件将复制到新目录，其余文件由下载中心补齐。",
   "acquisition.downloadDestination.resumeHint": "打开这一项下载，点击重试或开始，即可在新目录校验和补齐文件。",

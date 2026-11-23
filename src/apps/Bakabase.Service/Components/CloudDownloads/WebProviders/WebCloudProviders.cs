@@ -29,7 +29,8 @@ public sealed class GofileCloudProvider(GalleryDlService tool, AppService appSer
     public override string ProviderId => "gofile";
 }
 
-public sealed class PixeldrainCloudProvider : WebCloudProvider, ICloudDownloadRecoveryProvider, ICloudDownloadChecksumRetryProvider
+public sealed partial class PixeldrainCloudProvider : WebCloudProvider, ICloudDownloadRecoveryProvider, ICloudDownloadChecksumRetryProvider,
+    ICloudDownloadSourceReuseProvider, ICloudDownloadWriteBudgetProvider
 {
     private readonly PixeldrainAvailabilityProbe _availability;
     public PixeldrainCloudProvider(GalleryDlService tool, AppService appService, BakabaseWebProxy proxy,
@@ -114,7 +115,7 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
         try
         {
             var privateDirectory = appData();
-            foreach (var part in StateDirectorySegments(ProviderId, operationKey))
+            foreach (var part in StateDirectorySegments(ProviderId, OperationKey(request.LayoutOperationId)))
             {
                 privateDirectory = Path.Combine(privateDirectory, part);
                 if (new DirectoryInfo(privateDirectory).LinkTarget != null)
@@ -140,7 +141,8 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
             try
             {
                 var input = SerializeRequest(ProviderId, request, state,
-                    ResolveDownloadProxy(proxy, ProviderId, new Uri(request.Source.Url)), checksumRetryKey);
+                    ResolveDownloadProxy(proxy, ProviderId, new Uri(request.Source.Url)), checksumRetryKey,
+                    reuseSource: DescribeReuseSource(request, appData()));
                 await process.StandardInput.WriteAsync(input.AsMemory(), ct);
                 process.StandardInput.Close();
                 while (await process.StandardOutput.ReadLineAsync(ct) is { } line)
@@ -181,11 +183,21 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
     }
 
     internal static string SerializeRequest(string providerId, CloudDownloadRequest request, string state,
-        CloudToolProxy.Settings? settings, string? checksumRetryKey = null) => JsonSerializer.Serialize(new
+        CloudToolProxy.Settings? settings, string? checksumRetryKey = null, string? mode = null,
+        BridgeReuseSource? reuseSource = null)
     {
-        provider = providerId, url = request.Source.Url, accessCode = request.Source.AccessCode,
-        output = Path.GetFullPath(request.OutputDirectory), state, proxy = settings, checksumRetryKey
-    }, JsonSerializerOptions.Web);
+        var input = new Dictionary<string, object?>
+        {
+            ["provider"] = providerId, ["url"] = request.Source.Url, ["accessCode"] = request.Source.AccessCode,
+            ["output"] = Path.GetFullPath(request.OutputDirectory), ["state"] = state, ["proxy"] = settings,
+            ["checksumRetryKey"] = checksumRetryKey
+        };
+        if (mode != null) input["mode"] = mode;
+        if (reuseSource != null) input["reuseSource"] = reuseSource;
+        return JsonSerializer.Serialize(input, JsonSerializerOptions.Web);
+    }
+
+    internal sealed record BridgeReuseSource(string Output, string State, string InventoryFingerprint, bool DisableSourceRead);
 
     internal static CloudToolProxy.Settings? ResolveDownloadProxy(BakabaseWebProxy proxy, string providerId, Uri destination)
     {

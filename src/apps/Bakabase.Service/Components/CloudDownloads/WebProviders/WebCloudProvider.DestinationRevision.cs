@@ -17,6 +17,9 @@ public abstract partial class WebCloudProvider
     private static string[] StateDirectorySegments(string providerId, string operationKey) =>
         ["cloud-downloads", "web", providerId, operationKey];
 
+    internal static string StateDirectory(string appData, string providerId, string layoutOperationId) =>
+        Path.Combine([appData, .. StateDirectorySegments(providerId, OperationKey(layoutOperationId))]);
+
     public Task<CloudReadiness> InspectDestinationRevisionAsync(CloudDownloadRequest currentExecutionRequest,
         string newDirectory, CancellationToken ct) => Path.IsPathFullyQualified(newDirectory)
         ? InspectUnstartedDownloadAsync(currentExecutionRequest, ct)
@@ -34,7 +37,7 @@ public abstract partial class WebCloudProvider
         try
         {
             ValidateShareUrl(ProviderId, request.Source.Url);
-            return InspectUnstartedOperation(appData(), ProviderId, key, ct);
+            return InspectUnstartedOperation(appData(), ProviderId, OperationKey(request.LayoutOperationId), ct);
         }
         catch (ArgumentException) { return new(false, "DOWNLOAD_DESTINATION_PROVIDER_STATE_UNKNOWN"); }
         finally { gate.Release(); }

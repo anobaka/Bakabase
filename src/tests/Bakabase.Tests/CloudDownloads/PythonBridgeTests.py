@@ -432,6 +432,73 @@ class BridgeTests(unittest.TestCase):
                 self.assertEqual(session.original, destination.read_bytes())
                 self.assertFalse(part.parent.exists())
 
+    def test_pixeldrain_reuses_completed_files_and_partial_prefix_at_a_new_destination(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            original, session, part, output, state, _ = fixture
+            part.write_bytes(session.original[:5])
+            _, _, inventory = bridge.pixeldrain_reuse_inventory(original)
+            self.assertEqual((2, 2, (output / "sibling.rar").stat().st_size + 5),
+                             (inventory["fileCount"], inventory["candidateFileCount"], inventory["candidateBytes"]))
+            target = Path(temp) / "new-output"
+            new_state = Path(temp) / "new-operation"
+            request = dict(original, output=str(target), state=str(new_state), reuseSource={
+                "output": str(output), "state": str(state), "inventoryFingerprint": inventory["inventoryFingerprint"]})
+            self.assertIsNone(bridge.pixeldrain_reuse_budget(request))
+            bridge.run(request)
+            self.assertEqual(["bytes=5-"], session.requests)
+            self.assertEqual(session.original, (target / "current.rar").read_bytes())
+            self.assertEqual((output / "sibling.rar").read_bytes(), (target / "sibling.rar").read_bytes())
+            self.assertEqual(session.original[:5], part.read_bytes())
+            self.assertEqual(0, bridge.pixeldrain_reuse_budget(request))
+            output.rename(Path(temp) / "offline")
+            request["reuseSource"]["disableSourceRead"] = True
+            bridge.run(request)
+            self.assertEqual(["bytes=5-"], session.requests)
+
+    def test_pixeldrain_reuse_resumes_an_interrupted_copy_without_overwriting_existing_bytes(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            original, session, part, output, state, _ = fixture
+            part.write_bytes(session.original[:5])
+            _, _, inventory = bridge.pixeldrain_reuse_inventory(original)
+            target = Path(temp) / "new-output"
+            request = dict(original, output=str(target), state=str(Path(temp) / "new-operation"), reuseSource={
+                "output": str(output), "state": str(state), "inventoryFingerprint": inventory["inventoryFingerprint"]})
+            untouched = bridge.copy_reuse_part
+
+            def interrupt(source, identity, destination, checksum):
+                if source == part:
+                    destination.write_bytes(session.original[:2])
+                    raise OSError("interrupted cross-volume copy")
+                untouched(source, identity, destination, checksum)
+
+            with patch.object(bridge, "copy_reuse_part", side_effect=interrupt), self.assertRaisesRegex(OSError, "interrupted"):
+                bridge.run(request)
+            self.assertEqual([], session.requests)
+            self.assertFalse((target / "current.rar").exists())
+            self.assertIsNone(bridge.pixeldrain_reuse_budget(request))
+            bridge.run(request)
+            self.assertEqual(["bytes=5-"], session.requests)
+            self.assertEqual(session.original, (target / "current.rar").read_bytes())
+            self.assertEqual(session.original[:5], part.read_bytes())
+
+    def test_pixeldrain_reuse_refuses_a_changed_candidate_or_a_sealed_repair(self):
+        with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
+            original, session, part, output, state, _ = fixture
+            part.write_bytes(session.original[:5])
+            _, _, inventory = bridge.pixeldrain_reuse_inventory(original)
+            target = Path(temp) / "new-output"
+            request = dict(original, output=str(target), state=str(Path(temp) / "new-operation"), reuseSource={
+                "output": str(output), "state": str(state), "inventoryFingerprint": inventory["inventoryFingerprint"]})
+            part.write_bytes(b"stale")
+            with self.assertRaisesRegex(bridge.BridgeError, "REUSE_SOURCE_CHANGED"):
+                bridge.run(request)
+            self.assertEqual([], session.requests)
+            self.assertEqual(b"stale", part.read_bytes())
+            self.assertFalse((target / "current.rar").exists())
+            (state / (part.stem + ".repair.json")).write_text("{}")
+            with self.assertRaisesRegex(bridge.BridgeError, "REUSE_SOURCE_CHANGED"):
+                bridge.pixeldrain_reuse_inventory(original)
+
     @unittest.skipUnless(sys.platform == 'linux', 'uses Linux no-replace publication')
     def test_unsupported_hardlinks_publish_and_reuse_the_verified_file(self):
         with tempfile.TemporaryDirectory() as temp, self.pixeldrain_rejected_fixture(Path(temp)) as fixture:
