@@ -185,8 +185,10 @@ public sealed class AcquisitionPlanServiceTests
             var created = await _plans.CreatePreparedPlanAsync(plan, []);
             var task = await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == created.Id);
             var before = System.Text.Json.JsonSerializer.Serialize(task);
+            var probesBefore = _availabilityProbe.Calls;
             var ready = await _plans.CheckUnstartedRecoveryAsync(task, default);
             Assert.IsNull(ready.Problem); Assert.IsNotNull(ready.Inputs);
+            Assert.AreEqual(probesBefore + 1, _availabilityProbe.Calls);
             Assert.AreEqual(before, System.Text.Json.JsonSerializer.Serialize(await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id)));
             Assert.AreEqual(0, await _db.WorkflowRuns.CountAsync());
             Assert.AreEqual(0, await _db.DownloadTasks.CountAsync());
@@ -195,6 +197,31 @@ public sealed class AcquisitionPlanServiceTests
             Assert.AreNotEqual(ready.Inputs, (await _plans.CheckUnstartedRecoveryAsync(task, default)).Inputs);
         }
         finally {Directory.Delete(directory, true);}
+    }
+
+    [TestMethod]
+    [DataRow("confirmedUnavailable", "SOURCE_SHARE_EXPIRED", "SOURCE_CONFIRMED_UNAVAILABLE")]
+    [DataRow("accessRequired", "SOURCE_ACCESS_CODE_REQUIRED", "SOURCE_ACCESS_VERIFICATION_REQUIRED")]
+    public async Task RecoveryPreviewReportsSelectedSourceFailureBeforeCreatingAFirstRun(string status, string reason, string expectedProblem)
+    {
+        const string url = "https://example.org/one.zip";
+        var plan = _builder.BuildPlan(new("one", "One", url), "Prepared", Path.GetTempPath());
+        var part = plan.Parts.Single();
+        plan = plan with {Parts = [part with {SelectionMode = "automatic", Sources = [part.Sources.Single(),
+            new() {Id = "mirror", Url = "https://example.org/mirror.zip", Kind = "http"}]}]};
+        var created = await _plans.CreatePreparedPlanAsync(plan, []);
+        var task = await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == created.Id);
+        _availabilityProbe.Conditions[url] = (status, reason);
+        var probesBefore = _availabilityProbe.Calls;
+
+        var check = await _plans.CheckUnstartedRecoveryAsync(task, default);
+
+        Assert.AreEqual(expectedProblem, check.Problem);
+        Assert.IsNull(check.Inputs);
+        Assert.AreEqual(probesBefore + 1, _availabilityProbe.Calls);
+        Assert.AreEqual(task.PlanJson, (await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id)).PlanJson);
+        Assert.AreEqual(0, await _db.WorkflowRuns.CountAsync());
+        Assert.AreEqual(0, await _db.DownloadTasks.CountAsync());
     }
 
     [TestMethod]
@@ -207,7 +234,9 @@ public sealed class AcquisitionPlanServiceTests
         await _db.SaveChangesAsync();
         var task = await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == created.Id);
         Assert.IsNull(task.WorkflowRunId);
+        var probesBefore = _availabilityProbe.Calls;
         Assert.AreEqual("RECOVERY_CHECKPOINT_UNSUPPORTED", (await _plans.CheckUnstartedRecoveryAsync(task, default)).Problem);
+        Assert.AreEqual(probesBefore, _availabilityProbe.Calls);
         Assert.AreEqual(1, await _db.WorkflowRuns.CountAsync());
         Assert.AreEqual(0, await _db.DownloadTasks.CountAsync());
     }

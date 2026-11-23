@@ -705,7 +705,8 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
         if (dependencyIssues.Count > 0) return (dependencyIssues[0].Code, null);
         // Inspect the already-selected inputs. Do not choose another mirror, install a tool,
         // start an account flow or alter the retained plan during the recovery preview.
-        var check = await PreflightDownloadsAsync(Request(plan, $"acquisition:{row.Id}"), plan.OutputDirectory, ct);
+        var request = Request(plan, $"acquisition:{row.Id}") with {CheckSourceAvailability = true};
+        var check = await PreflightDownloadsAsync(request, plan.OutputDirectory, ct);
         return check.CanSubmit ? (null, RecoveryInputs(plan, check)) :
             (check.Requirements.Concat(check.Candidates.SelectMany(c => c.Requirements))
                 .Select(r => r.Code).FirstOrDefault() ?? "RECOVERY_PREPARED_PLAN_BLOCKED", null);
