@@ -2,6 +2,7 @@ using System.Text.Json;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -82,7 +83,16 @@ public sealed partial class AcquisitionStoragePolicyTests
             if (scenario == "active") await store.AttachConsumerAsync(raws[0].OperationId, "active", TimeSpan.FromMinutes(1));
             if (scenario == "changedPlan") await db.AcquisitionTasks.Where(t => t.Id == task.Id)
                 .ExecuteUpdateAsync(s => s.SetProperty(t => t.PlanRevision, t => t.PlanRevision + 1));
-            var outcome = await plans.ReclaimWorkspacesAsync(new(preview.PreviewId, [task.Id]), previews, maintenance, Guard, default, ancestors);
+            var observedCleanup = false;
+            Task GuardActiveCleanup(string path)
+            {
+                observedCleanup = true;
+                Assert.IsTrue(AcquisitionTaskGate.IsCleaningIntermediates(task.Id));
+                return Guard(path);
+            }
+            var outcome = await plans.ReclaimWorkspacesAsync(new(preview.PreviewId, [task.Id]), previews, maintenance, GuardActiveCleanup, default, ancestors);
+            Assert.IsFalse(AcquisitionTaskGate.IsCleaningIntermediates(task.Id));
+            if (scenario == "success") Assert.IsTrue(observedCleanup);
             var after = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id);
             Assert.IsNull(after.DeletedAt); Assert.AreEqual(AcquisitionStatus.Completed, after.Status);
             Assert.AreEqual(before.PlanJson, after.PlanJson); Assert.AreEqual(before.PlanHistoryJson, after.PlanHistoryJson);

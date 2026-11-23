@@ -141,8 +141,9 @@ public sealed partial class AcquisitionPlanService
         var removedFiles = 0; long removedBytes = 0;
         foreach (var id in ids)
         {
-            var taskGate = AcquisitionTaskGate.For(id); var runGates = new List<SemaphoreSlim>();
-            if (!await taskGate.WaitAsync(0, ct)) {skipped.Add(new(id, "task_busy")); continue;}
+            using var cleanupLease = AcquisitionTaskGate.TryEnterIntermediateCleanup(id, ct);
+            var runGates = new List<SemaphoreSlim>();
+            if (cleanupLease == null) {skipped.Add(new(id, "task_busy")); continue;}
             try
             {
                 var busy = false;
@@ -220,7 +221,7 @@ public sealed partial class AcquisitionPlanService
             }
             catch (Exception error) when (entry.ReviewedCheckpoints.ContainsKey(id) && PublishedArtifactAncestorCleanup.UnavailableReviewEvidence(error))
             { skipped.Add(new(id, "processed_checkpoint_not_reclaimable")); }
-            finally {foreach (var gate in runGates) gate.Release(); taskGate.Release();}
+            finally {foreach (var gate in runGates) gate.Release();}
         }
         var result = new AcquisitionWorkspaceCleanupResult(completed, removedFiles, removedBytes, skipped);
         lock (entry) entry.Result = result;

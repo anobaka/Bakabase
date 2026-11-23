@@ -311,6 +311,62 @@ it("reports retained paths before the record outcome and counts only attempted f
   expect(api.remove).toHaveBeenLastCalledWith(expect.any(String), [1], defaultOptions);
 });
 
+it("reconfirms only the original busy tasks with the same cleanup choices and a fresh operation ID", async () => {
+  api.remove.mockResolvedValueOnce({ deletedTaskIds: [1], skipped: [
+    { taskId: 2, reasonCode: "ACQUISITION_INTERMEDIATE_CLEANUP_ACTIVE" },
+    { taskId: 3, reasonCode: "ACQUISITION_TASK_OPERATION_BUSY" },
+    { taskId: 4, reasonCode: "CLEANUP_PATH_NOT_AUTHORIZED" },
+    { taskId: 5, reasonCode: "ACQUISITION_TASK_ACTIVE" },
+    { taskId: 6, reasonCode: "ACQUISITION_DOWNLOAD_ACTIVE" },
+    { taskId: 1, reasonCode: "ACQUISITION_TASK_ACTIVE" },
+    { taskId: 7, reasonCode: "ACQUISITION_TASK_ACTIVE" },
+  ] }).mockResolvedValueOnce({ deletedTaskIds: [2, 3, 5], skipped: [{ taskId: 6, reasonCode: "ACQUISITION_TASK_CHANGED" }] });
+  render(<DeleteAcquisitionTasksModal taskIds={[1, 2, 3, 4, 5, 6]} taskNames={{2: "Cleaning", 3: "Updating", 5: "Running", 6: "Downloading"}} />);
+  fireEvent.click(checkbox("cleanup.option"));
+  fireEvent.click(checkbox("delivered.option"));
+  fireEvent.click(checkbox("cleanup.removeOnFailure"));
+  await finishReview();
+  fireEvent.click(button("acquisition.delete.retryBusy"));
+  expect(api.remove).toHaveBeenCalledTimes(1);
+  const list = screen.getByRole("list", { name: "acquisition.delete.taskNames" });
+  expect(Array.from(list.querySelectorAll("li"), item => item.textContent)).toEqual(["#2Cleaning", "#3Updating", "#5Running", "#6Downloading"]);
+  expect(screen.getByText("acquisition.delete.delivered.directConfirmation")).toBeVisible();
+  expect(screen.getByText("acquisition.delete.final.removeOnFailure")).toBeVisible();
+  expect(screen.queryByText("acquisition.delete.cleanup.option")).not.toBeInTheDocument();
+  fireEvent.click(confirm());
+  await screen.findByText("acquisition.delete.result");
+  expect(api.remove.mock.calls[1]).toEqual([
+    expect.stringMatching(/^[a-f\d]{32}$/), [2, 3, 5, 6],
+    { ...defaultOptions, cleanupFiles: false, deleteDeliveredFiles: true, removeTaskIfCleanupFails: true },
+  ]);
+  expect(api.remove.mock.calls[1][0]).not.toBe(api.remove.mock.calls[0][0]);
+  expect(screen.getByText("acquisition.delete.reason.ACQUISITION_TASK_CHANGED")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "acquisition.delete.retryBusy" })).toBeNull();
+  expect(api.previewRetained).not.toHaveBeenCalled();
+});
+
+it("restricts edits after backing out of a busy retry to the remaining fixed selection", async () => {
+  api.remove.mockResolvedValueOnce({ deletedTaskIds: [1], skipped: [{ taskId: 2, reasonCode: "ACQUISITION_TASK_OPERATION_BUSY" }] });
+  render(<DeleteAcquisitionTasksModal taskIds={[1, 2]} />);
+  fireEvent.click(checkbox("cleanup.removeOnFailure"));
+  await finishReview();
+  fireEvent.click(button("acquisition.delete.retryBusy"));
+  fireEvent.click(button("acquisition.delete.final.back"));
+  expect(checkbox("cleanup.removeOnFailure")).toBeChecked();
+  fireEvent.click(checkbox("cleanup.removeOnFailure"));
+  await finishReview();
+  expect(api.remove).toHaveBeenLastCalledWith(expect.any(String), [2], defaultOptions);
+});
+
+it("never offers to delete a task again after a retained-file cleanup was skipped", async () => {
+  api.remove.mockResolvedValueOnce({ deletedTaskIds: [], skipped: [{ taskId: 1, reasonCode: "ACQUISITION_INTERMEDIATE_CLEANUP_ACTIVE" }] });
+  render(<DeleteAcquisitionTasksModal taskIds={[1]} retryRetainedFiles />);
+  fireEvent.click(next());
+  fireEvent.click(button("acquisition.delete.retained.confirm"));
+  await screen.findByText("acquisition.delete.reason.ACQUISITION_INTERMEDIATE_CLEANUP_ACTIVE");
+  expect(screen.queryByRole("button", { name: "acquisition.delete.retryBusy" })).toBeNull();
+});
+
 it("retries only retained files with a new explicit confirmation and no preview", async () => {
   api.remove.mockResolvedValueOnce({ deletedTaskIds: [1], skipped: [{ taskId: 2, reasonCode: "ACQUISITION_TASK_ACTIVE" }],
     cleanupResults: [{ taskId: 1, completed: false, removedFiles: 0, removedBytes: 0, reasonCodes: ["ReferencedPath"] }],
@@ -341,7 +397,7 @@ it("requires a file scope for reopened retained cleanup, without requiring an in
 
 it("keeps deletion reasons and direct-confirmation text translated", () => {
   const keys = [...deletionReasonCodes].map(code => `acquisition.delete.reason.${code}`);
-  keys.push(...["final.directCleanup", "delivered.directConfirmation", "cleanup.directResult", "cleanup.incompleteTask", "cleanup.taskKept",
+  keys.push(...["retryBusy", "final.directCleanup", "delivered.directConfirmation", "cleanup.directResult", "cleanup.incompleteTask", "cleanup.taskKept",
     "cleanup.taskRemoved", "cleanup.outcomeSummary", "cleanup.removedDirectories", "cleanup.directoryStatistics"]
     .map(suffix => `acquisition.delete.${suffix}`));
   for (const key of keys) {

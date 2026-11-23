@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Bakabase.Modules.Acquisition.Components;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Components;
@@ -99,7 +100,11 @@ public sealed partial class AcquisitionReplanTests
         async Task<AcquisitionWorkspaceCleanupPreview> Preview() =>
             await Plans.PreviewWorkspaceCleanupAsync(new([task.Id]), previews, maintenance, _ => Task.CompletedTask, default, ancestors);
         async Task<AcquisitionWorkspaceCleanupResult> Apply(AcquisitionWorkspaceCleanupPreview preview) =>
-            await Plans.ReclaimWorkspacesAsync(new(preview.PreviewId, [task.Id]), previews, maintenance, _ => Task.CompletedTask, default, ancestors);
+            await Plans.ReclaimWorkspacesAsync(new(preview.PreviewId, [task.Id]), previews, maintenance, _ =>
+            {
+                Assert.IsTrue(AcquisitionTaskGate.IsCleaningIntermediates(task.Id));
+                return Task.CompletedTask;
+            }, default, ancestors);
         var selection = await Preview();
         var selected = selection.Rows.Single();
         Assert.IsTrue(selected.ArtifactIds.Contains(current.Id), selected.ReasonCode ?? string.Join(", ", selected.ArtifactIds));

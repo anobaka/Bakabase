@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Button, Checkbox, Modal, Pagination, Spinner } from "@/components/bakaui";
 import { bytesToSize, extractErrorMessage } from "@/components/utils";
 import CleanupDirectoryPicker, { type CleanupDirectorySelection } from "./CleanupDirectoryPicker";
-import { deletionReasonCodes, deletionReasonLabel } from "./deletionReasonLabel";
+import { busyDeletionReasons, deletionReasonCodes, deletionReasonLabel } from "./deletionReasonLabel";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import {
   acquisitionDeletionApi,
@@ -106,7 +106,7 @@ export default function DeleteAcquisitionTasksModal({
   const taskName = (id: number) => names[id]?.trim() || t("acquisition.delete.nameUnavailable", { id });
   const taskList = (ids: number[]) => <ul aria-label={t("acquisition.delete.taskNames")}
     className="max-h-64 min-w-0 overflow-y-auto divide-y divide-default-200 rounded-lg border border-default-200">
-    {ids.map(id => <li key={id} className="px-3 py-2 text-sm [overflow-wrap:anywhere]">{taskName(id)}</li>)}
+    {ids.map(id => <li key={id} className="px-3 py-2 text-sm [overflow-wrap:anywhere]">{names[id] && <span className="mr-2 text-default-500">#{id}</span>}{taskName(id)}</li>)}
   </ul>;
 
   useEffect(() => {
@@ -159,12 +159,15 @@ export default function DeleteAcquisitionTasksModal({
   };
   const selectionReady = selection.length > 0 && selection.length <= 10000 &&
     (!retainedReview || cleanupFiles || deleteDeliveredFiles);
+  const confirmDirectSelection = (ids: number[]) => {
+    setConfirmation({ operationId: uuidv4().replace(/-/g, ""), taskIds: [...ids], options });
+  };
   const review = async () => {
     if (!selectionReady || busy.current || reviewRequest.current) return;
     setDirectories({});
     setSelectionInvalid(false);
     if (!retainedReview || (!reviewWaitingRuns && !chooseDirectories)) {
-      setConfirmation({ operationId: uuidv4().replace(/-/g, ""), taskIds: [...selection], options });
+      confirmDirectSelection(selection);
       return;
     }
     const controller = new AbortController();
@@ -214,7 +217,7 @@ export default function DeleteAcquisitionTasksModal({
       changedCallback.current?.();
     }
   };
-  const resetReview = (ids = selection, retained = retainedReview) => {
+  const resetReview = (ids = selection, retained = retainedReview, removeOnFailure = false) => {
     setSelection(ids);
     setRetainedReview(retained);
     setChooseDirectories(false);
@@ -224,7 +227,7 @@ export default function DeleteAcquisitionTasksModal({
     setUnconfirmed(undefined);
     setProgress(undefined);
     setReceiptExpired(false);
-    setRemoveTaskIfCleanupFails(false);
+    setRemoveTaskIfCleanupFails(removeOnFailure);
     setPreviewFailed(false);
     setPage(1);
   };
@@ -233,6 +236,9 @@ export default function DeleteAcquisitionTasksModal({
   const retainedIds = incompleteCleanup
     .filter(row => retainedReview || result?.deletedTaskIds.includes(row.taskId))
     .map(row => row.taskId);
+  const busyIds = new Set(result?.skipped.filter(row => busyDeletionReasons.has(row.reasonCode)).map(row => row.taskId));
+  const removedIds = new Set(result?.deletedTaskIds);
+  const retryableIds = !retainedReview && busyIds.size ? selection.filter(id => busyIds.has(id) && !removedIds.has(id)) : [];
   const reason = (code?: string | null) => deletionReasonLabel(t, code);
 
   return (
@@ -376,6 +382,10 @@ export default function DeleteAcquisitionTasksModal({
             count: result.deletedTaskIds.length,
             skipped: result.skipped.length,
           })}</p>}
+          {retryableIds.length > 0 && <Button size="sm" variant="flat" color="primary" onPress={() => {
+            resetReview(retryableIds, false, options.removeTaskIfCleanupFails);
+            confirmDirectSelection(retryableIds);
+          }}>{t("acquisition.delete.retryBusy", { count: retryableIds.length })}</Button>}
           {result.skipped.length > 0 && <div className="max-h-64 overflow-y-auto divide-y divide-default-200 rounded-lg border border-default-200">
             {result.skipped.map(row => <div key={row.taskId} className="p-2 text-sm">
               <span className="mr-2 font-medium [overflow-wrap:anywhere]">{taskName(row.taskId)}</span>{reason(row.reasonCode)}

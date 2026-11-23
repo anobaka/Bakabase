@@ -283,8 +283,9 @@ public sealed partial class AcquisitionPlanService
                 }
                 if (blocked != null) { skipped.Add(new(id, blocked)); continue; }
             }
-            var gate = AcquisitionTaskGate.For(id); var runGates = new List<SemaphoreSlim>();
-            if (!await gate.WaitAsync(0, ct)) {skipped.Add(new(id, "task_busy")); continue;}
+            using var cleanupLease = AcquisitionTaskGate.TryEnterIntermediateCleanup(id, ct);
+            var runGates = new List<SemaphoreSlim>();
+            if (cleanupLease == null) {skipped.Add(new(id, "task_busy")); continue;}
             try
             {
                 var row = await Tasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id, ct);
@@ -337,7 +338,7 @@ public sealed partial class AcquisitionPlanService
                     }
                 if (succeeded) completed.Add(id);
             }
-            finally {foreach (var runGate in runGates) runGate.Release(); gate.Release();}
+            finally {foreach (var runGate in runGates) runGate.Release();}
         }
         var result = new AcquisitionWorkspaceCleanupResult(completed, files, bytes, skipped); lock (entry) entry.Result = result; return result;
     }

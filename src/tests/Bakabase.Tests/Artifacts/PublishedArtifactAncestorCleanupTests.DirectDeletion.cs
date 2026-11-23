@@ -26,6 +26,25 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     }
 
     [TestMethod]
+    public async Task Fresh_direct_confirmation_after_intermediate_cleanup_keeps_the_requested_delivery_scope()
+    {
+        var f = await StageDeletion();
+        var request = DirectDelete(f.Task.Id);
+        using (var cleanup = Bakabase.Modules.Acquisition.Components.AcquisitionTaskGate.TryEnterIntermediateCleanup(f.Task.Id, default))
+        {
+            Assert.IsNotNull(cleanup);
+            var busy = await f.Service.DeleteAsync(request);
+            Assert.AreEqual("ACQUISITION_INTERMEDIATE_CLEANUP_ACTIVE", busy.Skipped.Single().ReasonCode);
+            Assert.AreEqual(0, busy.DeletedTaskIds.Count);
+            Assert.IsTrue(Directory.Exists(f.Delivery));
+        }
+        Assert.AreEqual(0, (await f.Service.DeleteAsync(request)).DeletedTaskIds.Count);
+        var result = await f.Service.DeleteAsync(request with {PreviewId = Guid.NewGuid().ToString("N")});
+        CollectionAssert.AreEqual(new[] {f.Task.Id}, result.DeletedTaskIds.ToArray());
+        CollectionAssert.AreEquivalent(new[] {f.Download, f.Processing, f.Delivery}, result.RemovedDirectories!.ToArray());
+    }
+
+    [TestMethod]
     public async Task Direct_deletion_reports_only_directories_it_removed()
     {
         var f = await StageDeletion();

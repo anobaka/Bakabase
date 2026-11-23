@@ -214,9 +214,41 @@ public sealed class AcquisitionTaskDeletionTests
         {
             var result = await _delete.DeleteAsync(new(preview.PreviewId));
             Assert.AreEqual(0, result.DeletedTaskIds.Count); Assert.AreEqual(2, result.Skipped.Count);
-            Assert.IsTrue(result.Skipped.All(s => s.ReasonCode == "ACQUISITION_TASK_ACTIVE"));
+            Assert.IsTrue(result.Skipped.All(s => s.ReasonCode == "ACQUISITION_TASK_OPERATION_BUSY"));
         }
         finally { taskGate.Release(); runGate.Release(); }
+    }
+
+    [TestMethod]
+    public async Task Concurrent_cleanup_skips_only_its_task_with_a_specific_reason_and_preserves_the_confirmed_receipt()
+    {
+        var (maintained, _) = await Seed(WorkflowRunStatus.Success);
+        var (idle, _) = await Seed(WorkflowRunStatus.Success);
+        var (executing, run) = await Seed();
+        var preview = await Preview(maintained.Id, idle.Id, executing.Id);
+        var request = new AcquisitionTaskDeleteInput(preview.PreviewId);
+        AcquisitionTaskDeleteResult result;
+        using (var cleanup = AcquisitionTaskGate.TryEnterIntermediateCleanup(maintained.Id, default))
+        {
+            Assert.IsNotNull(cleanup);
+            Assert.AreEqual("ACQUISITION_INTERMEDIATE_CLEANUP_ACTIVE", (await Preview(maintained.Id)).Rows.Single().ReasonCode);
+            var editing = AcquisitionTaskGate.For(executing.Id);
+            await editing.WaitAsync();
+            try
+            {
+                run.Status = WorkflowRunStatus.Running;
+                await _db.SaveChangesAsync();
+                result = await _delete.DeleteAsync(request).WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            finally { editing.Release(); }
+            CollectionAssert.AreEqual(new[] {idle.Id}, result.DeletedTaskIds.ToArray());
+            Assert.AreEqual("ACQUISITION_INTERMEDIATE_CLEANUP_ACTIVE", result.Skipped.Single(s => s.TaskId == maintained.Id).ReasonCode);
+            Assert.AreEqual("ACQUISITION_TASK_ACTIVE", result.Skipped.Single(s => s.TaskId == executing.Id).ReasonCode);
+        }
+        Assert.AreEqual(result, await _delete.DeleteAsync(request));
+        var fresh = await Preview(maintained.Id);
+        Assert.IsTrue(fresh.Rows.Single().CanDelete);
+        CollectionAssert.AreEqual(new[] {maintained.Id}, (await _delete.DeleteAsync(new(fresh.PreviewId))).DeletedTaskIds.ToArray());
     }
 
     [TestMethod]
@@ -458,7 +490,7 @@ public sealed class AcquisitionTaskDeletionTests
         await using (await startGuard.AcquireAsync(site.Id))
         {
             var skipped = await _delete.DeleteAsync(new(first.PreviewId));
-            Assert.AreEqual("ACQUISITION_TASK_ACTIVE", skipped.Skipped.Single().ReasonCode);
+            Assert.AreEqual("ACQUISITION_TASK_OPERATION_BUSY", skipped.Skipped.Single().ReasonCode);
             Assert.AreEqual(0, skipped.DeletedTaskIds.Count);
         }
         var second = await Preview(task.Id);
