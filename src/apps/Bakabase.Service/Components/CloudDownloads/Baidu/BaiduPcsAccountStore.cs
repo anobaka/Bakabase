@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Modules.Downloader.Cloud;
 
 namespace Bakabase.Service.Components.CloudDownloads.Baidu;
 
@@ -28,11 +29,12 @@ public sealed class BaiduPcsLoginInputModel
     public string? Stoken { get; set; }
 }
 
-/// <summary>Stable identities and profiles, with shared downloads and exclusive account/remote mutations.</summary>
+/// <summary>Account changes are exclusive. Transfers and downloads share the account's read-only profile.</summary>
 public sealed class BaiduPcsAccountStore(AppService app, BaiduPcsBridgeClient bridge, BaiduAccountSnapshot? snapshot = null)
 {
     private readonly SemaphoreSlim _metadataLock = new(1, 1);
     private readonly ConcurrentDictionary<string, BaiduAccountLease> _accountLocks = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _transferLocks = new();
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _membershipLocks = new();
     private readonly ConcurrentDictionary<string, BaiduDownloadAdmission> _downloadAdmission = new();
     private readonly BaiduAccountSnapshot _snapshot = snapshot ?? new();
@@ -107,6 +109,16 @@ public sealed class BaiduPcsAccountStore(AppService app, BaiduPcsBridgeClient br
         return await WithReadAccountAsync(id, action, ct);
     }
 
+    internal async Task<T> WithTransferAccountAsync<T>(string id, Func<string, BaiduPcsAccountViewModel, Task<T>> action, CancellationToken ct)
+    {
+        if (!Guid.TryParseExact(id, "N", out _)) throw new ArgumentException("BAIDU_ACCOUNT_INVALID");
+        // Serialize remote writes before taking the profile lease so queued transfers do not hold up login/logout.
+        var gate = _transferLocks.GetOrAdd(id, _ => new(1, 1));
+        await gate.WaitAsync(ct);
+        try { return await WithReadAccountAsync(id, action, ct); }
+        finally { gate.Release(); }
+    }
+
     // Inspection must not wait behind an hours-long download, chmod/create the profile,
     // refresh cookies or switch accounts. The bridge binds this UID and checks a stable
     // read of the existing config; concurrent login replacement is rejected conservatively.
@@ -116,10 +128,10 @@ public sealed class BaiduPcsAccountStore(AppService app, BaiduPcsBridgeClient br
         if (!Guid.TryParseExact(id, "N", out _)) throw new ArgumentException("BAIDU_ACCOUNT_INVALID");
         var row = (await ListAsync(ct)).SingleOrDefault(a => a.Id == id)
             ?? throw new ArgumentException("BAIDU_ACCOUNT_NOT_FOUND");
-        if (!row.IsLoggedIn || string.IsNullOrWhiteSpace(row.Uid)) throw new InvalidOperationException("BAIDU_LOGIN_REQUIRED");
+        if (!row.IsLoggedIn || string.IsNullOrWhiteSpace(row.Uid)) throw new CloudProviderException("BAIDU_LOGIN_REQUIRED");
         var directory = Path.Combine(Root, id);
         if (!Directory.Exists(directory) || !File.Exists(Path.Combine(directory, "pcs_config.json")))
-            throw new InvalidOperationException("BAIDU_CONFIG_INVALID");
+            throw new CloudProviderException("BAIDU_CONFIG_INVALID");
         return (directory, row);
     }
 

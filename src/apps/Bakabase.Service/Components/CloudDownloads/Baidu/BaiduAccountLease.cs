@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.Service.Components.CloudDownloads.Baidu;
 
-/// <summary>FIFO account leases: downloads share an immutable profile; profile/remote mutations are exclusive.</summary>
+/// <summary>FIFO account leases let transfers and downloads read the profile while keeping profile changes exclusive.</summary>
 internal sealed class BaiduAccountLease
 {
     private readonly object _sync = new();

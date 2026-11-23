@@ -54,7 +54,7 @@ public sealed class BaiduPcsDiscoveryTests
             var found = await discovery.TryDiscoverAt(root, default);
             Assert.AreEqual(BaiduPcsGoService.BridgeVersion, found?.Version);
             Assert.AreEqual(root, found?.Location);
-            await File.WriteAllTextAsync(executable, "#!/bin/sh\nprintf '4.0.2+bakabase.16\\n'\n");
+            await File.WriteAllTextAsync(executable, "#!/bin/sh\nprintf '4.0.2+bakabase.28\\n'\n");
             Assert.IsNull(await discovery.TryDiscoverAt(root, default), "The previous bridge must be upgraded.");
             await File.WriteAllTextAsync(executable, "#!/bin/sh\nprintf '4.0.2\\n'\n");
             Assert.IsNull(await discovery.TryDiscoverAt(root, default), "Upstream CLI is not the JSON bridge protocol.");

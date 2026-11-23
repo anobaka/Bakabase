@@ -37,7 +37,7 @@ script. Tests still run natively; only the final `go build` uses those targets.
 
 ## Protocol and behavior
 
-`--version` reports `4.0.2+bakabase.28`. Otherwise one JSON request is read from
+`--version` reports `4.0.2+bakabase.29`. Otherwise one JSON request is read from
 stdin; JSON line events on stdout have `type: progress`, `result`, or `error`.
 Set `BAIDUPCS_GO_CONFIG_DIR` to an absolute private per-account directory,
 including when probing `--version` (upstream package initialization otherwise
@@ -58,9 +58,12 @@ Upstream stdout/stderr are discarded. Errors are stable safe codes.
   not guarantee that an original file can ultimately be downloaded.
 - `inspect-download`: read-only recovery inspection of the exact pinned remote manifest and retained local files/PCS range sidecars. Reads a stable existing profile with a fixed expected UID without `Config.Init`, account writes, downloads, transfers, directory creation, file hashing or checkpoint synthesis. An empty payload paired with an empty range sidecar is an unstarted upstream download. A nonempty partial file without a valid matching sidecar remains blocked. Complete-length files are only candidates; ordinary download checksum verification still decides reuse.
 - `inspect-retained-writes` checks the pinned remote listing, local path mapping and original file checksums. It returns the immutable member IDs eligible to reduce a storage reservation. During execution `download` verifies these IDs again before any payload writes and never rewrites them. Missing, partial and unproven members keep their full write budget.
-- `transfer`: `operationId`, `url`, `accessCode`, `remoteDirectory`; stores the
-  share in its own deterministic subdirectory and returns an exact recursive
-  manifest. Top-level share items and owned directories are paginated. A four
+- `transfer` takes `operationId`, `url`, `accessCode`, `remoteDirectory` and
+  `expectedUid`. It reads the saved profile into memory and verifies the active
+  account before opening an operation receipt or contacting the share. Older
+  callers can omit `expectedUid` under their exclusive profile lock. A transfer
+  stores the share in its own deterministic subdirectory and returns an exact
+  recursive manifest. Top-level share items and owned directories are paginated. A four
   character access code is required by this upstream version. Both `pan.baidu.com`
   and `yun.baidu.com` standard shares and `/share/init?surl=...` links are accepted.
 - `download`: `remotePath` and absolute `outputDirectory`; downloads existing
@@ -137,9 +140,10 @@ locations. General public-URL probes retain their public-address/DNS pinning
 boundary. The probe does not change proxy settings or try another DNS resolver.
 Account transfer/download operations keep their existing network behavior.
 
-Account/profile mutations and remote transfers remain exclusive in the host;
-downloads use shared read leases with a bounded per-account capacity. A queued
-mutation blocks later readers, so continuous downloads cannot starve login/logout.
+The host serializes remote transfers per account. A transfer and active downloads
+can read the same account profile concurrently. Download capacity is bounded per
+account. Login and logout take an exclusive profile lease. A waiting profile
+writer blocks later readers until it has finished.
 Overlapping local output roots are serialized even for different operations or
 accounts. Transfer journals record intent
 before the remote mutation and persist a completed receipt after verifying the

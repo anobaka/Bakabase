@@ -45,7 +45,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-const version = "4.0.2+bakabase.28"
+const version = "4.0.2+bakabase.29"
 
 type request struct {
 	Command            string       `json:"command"`
@@ -110,15 +110,15 @@ func main() {
 	}()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	err = run(ctx)
+	err = run(ctx, os.Stdin)
 	if err != nil {
 		emit(errorEvent(err))
 		os.Exit(1)
 	}
 }
-func run(ctx context.Context) error {
+func run(ctx context.Context, input io.Reader) error {
 	var r request
-	if json.NewDecoder(io.LimitReader(os.Stdin, 1024*1024)).Decode(&r) != nil {
+	if json.NewDecoder(io.LimitReader(input, 1024*1024)).Decode(&r) != nil {
 		return fail("BAIDU_INVALID_REQUEST")
 	}
 	// A separate anonymous process: never initializes or saves an account profile,
@@ -134,6 +134,13 @@ func run(ctx context.Context) error {
 	}
 	if !filepath.IsAbs(os.Getenv(pcsconfig.EnvConfigDir)) {
 		return fail("BAIDU_CONFIG_DIRECTORY_REQUIRED")
+	}
+	if r.Command == "transfer" && r.ExpectedUID != "" {
+		pcs, _, err := inspectionPCS(os.Getenv(pcsconfig.EnvConfigDir), r.ExpectedUID)
+		if err != nil {
+			return err
+		}
+		return transferShare(r, pcs)
 	}
 	if r.Command == "download" || r.Command == "membership" || r.Command == "manifest" || r.Command == "inspect-transfer-target" {
 		pcs, uid, err := inspectionPCS(os.Getenv(pcsconfig.EnvConfigDir), r.ExpectedUID)
@@ -299,6 +306,7 @@ func run(ctx context.Context) error {
 		emit(map[string]any{"type": "result", "uid": strconv.FormatUint(pcsconfig.Config.ActiveUser().UID, 10), "name": pcsconfig.Config.ActiveUser().Name})
 		return nil
 	case "transfer":
+		// Older hosts hold an exclusive profile lock and omit expectedUid.
 		return transferShare(r, pcs)
 	default:
 		return fail("BAIDU_UNKNOWN_COMMAND")
@@ -2256,8 +2264,8 @@ func (unit *storageAwareDownloadUnit) Run() *taskframework.TaskUnitRunResult {
 	return result
 }
 
-// Config.Init opens O_RDWR|O_CREATE. Inspection/download instead read a stable existing
-// profile into memory and never calls Init, Close, Save or account validation.
+// Config.Init opens O_RDWR|O_CREATE. Commands sharing a profile read lease
+// bind the expected account in memory without initializing or saving its file.
 func inspectionPCS(directory, expectedUID string) (*baidupcs.BaiduPCS, string, error) {
 	if !filepath.IsAbs(directory) || expectedUID == "" {
 		return nil, "", fail("BAIDU_ACCOUNT_IDENTITY_CHANGED")

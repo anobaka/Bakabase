@@ -1345,8 +1345,8 @@ func TestInspectionProfileIsReadOnlyAndRequiresExactStableIdentity(t *testing.T)
 }
 
 func TestDownloadDispatchUsesReadOnlyProfileAndRejectsUnboundedConnections(t *testing.T) {
-	savedConfig, savedInput := pcsconfig.Config, os.Stdin
-	defer func() { pcsconfig.Config, os.Stdin = savedConfig, savedInput }()
+	savedConfig := pcsconfig.Config
+	defer func() { pcsconfig.Config = savedConfig }()
 	root := t.TempDir()
 	profile := filepath.Join(root, pcsconfig.ConfigName)
 	original := []byte(`{"baidu_active_uid":123,"baidu_user_list":[{"uid":123,"bduss":"fixture"}]}`)
@@ -1354,18 +1354,9 @@ func TestDownloadDispatchUsesReadOnlyProfileAndRejectsUnboundedConnections(t *te
 		t.Fatal(err)
 	}
 	before, _ := os.Stat(profile)
-	requestFile := filepath.Join(t.TempDir(), "request.json")
-	if err := os.WriteFile(requestFile, []byte(`{"command":"download","expectedUid":"123","connectionsPerFile":21}`), 0600); err != nil {
-		t.Fatal(err)
-	}
-	input, err := os.Open(requestFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer input.Close()
-	os.Stdin = input
+	input := strings.NewReader(`{"command":"download","expectedUid":"123","connectionsPerFile":21}`)
 	t.Setenv(pcsconfig.EnvConfigDir, root)
-	if err := run(context.Background()); err == nil || err.Error() != "BAIDU_DOWNLOAD_OPTIONS_INVALID" {
+	if err := run(context.Background(), input); err == nil || err.Error() != "BAIDU_DOWNLOAD_OPTIONS_INVALID" {
 		t.Fatalf("unexpected dispatch: %v", err)
 	}
 	after, _ := os.Stat(profile)
@@ -1373,6 +1364,81 @@ func TestDownloadDispatchUsesReadOnlyProfileAndRejectsUnboundedConnections(t *te
 	names, _ := os.ReadDir(root)
 	if !sameLocalFile(before, after) || !bytes.Equal(data, original) || len(names) != 1 {
 		t.Fatal("download dispatch changed profile")
+	}
+}
+
+func TestIdentityBoundTransferDispatchReusesReceiptAndReadsProfile(t *testing.T) {
+	savedConfig, savedOutput := pcsconfig.Config, output
+	defer func() { pcsconfig.Config, output = savedConfig, savedOutput }()
+	root := t.TempDir()
+	t.Setenv(pcsconfig.EnvConfigDir, root)
+	profile := filepath.Join(root, pcsconfig.ConfigName)
+	original := []byte(`{"baidu_active_uid":123,"baidu_user_list":[{"uid":123,"bduss":"fixture-session","stoken":"fixture-token"}]}`)
+	if err := os.WriteFile(profile, original, 0400); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.Stat(profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A stale account selection must fail before consulting the operation ledger.
+	r := request{Command: "transfer", ExpectedUID: "456", OperationID: "old-operation", URL: "https://pan.baidu.com/s/1fixture", AccessCode: "abcd", RemoteDirectory: "/staged"}
+	dispatch := func() error {
+		input, err := json.Marshal(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return run(context.Background(), bytes.NewReader(input))
+	}
+	if err := dispatch(); err == nil || err.Error() != "BAIDU_ACCOUNT_IDENTITY_CHANGED" {
+		t.Fatalf("transfer accepted a different account: %v", err)
+	}
+	dir := filepath.Join(root, "operations")
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatal("operation ledger accessed before checking account identity")
+	}
+	// Use the receipt format of hosts that sent transfers without expectedUid.
+	key := fmt.Sprintf("%x", sha256.Sum256([]byte(r.OperationID)))
+	fingerprint := sha256.Sum256([]byte(r.URL + "\x00" + r.AccessCode + "\x00" + r.RemoteDirectory))
+	stored := receipt{Fingerprint: fmt.Sprintf("%x", fingerprint), Stage: "completed", RemotePath: path.Join(r.RemoteDirectory, "bakabase-"+key[:24])}
+	if err := os.Mkdir(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	ledger := filepath.Join(dir, key+".json")
+	if err := saveReceipt(ledger, &stored); err != nil {
+		t.Fatal(err)
+	}
+	receiptBefore, err := os.Stat(ledger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wire bytes.Buffer
+	output = json.NewEncoder(&wire)
+	r.ExpectedUID = "123"
+	if err := dispatch(); err != nil {
+		t.Fatal(err)
+	}
+	var result struct {
+		Type    string
+		Receipt receipt
+	}
+	if err := json.Unmarshal(wire.Bytes(), &result); err != nil || result.Type != "result" ||
+		result.Receipt.Stage != "completed" || result.Receipt.RemotePath != stored.RemotePath {
+		t.Fatal("pinned transfer failed to return the original receipt")
+	}
+	origin, _ := url.Parse(r.URL)
+	cookies := map[string]string{}
+	for _, c := range pcsconfig.Config.ActiveUserBaiduPCS().GetClient().Jar.Cookies(origin) {
+		cookies[c.Name] = c.Value
+	}
+	if cookies["BDUSS"] != "fixture-session" || cookies["STOKEN"] != "fixture-token" {
+		t.Fatal("transfer share client lost saved login cookies")
+	}
+	data, err := os.ReadFile(profile)
+	after, _ := os.Stat(profile)
+	receiptAfter, _ := os.Stat(ledger)
+	if err != nil || !bytes.Equal(original, data) || !sameLocalFile(before, after) || !sameLocalFile(receiptBefore, receiptAfter) {
+		t.Fatal("replaying a transfer modified the profile or receipt")
 	}
 }
 

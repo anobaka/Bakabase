@@ -139,12 +139,11 @@ public sealed partial class BaiduCloudDownloadProvider(BaiduPcsAccountStore acco
     public async Task<CloudTransferReceipt> TransferAsync(CloudTransferRequest request, CancellationToken ct)
     {
         var id = await accounts.ResolveAccountIdAsync(request.AccountId, ct) ?? throw new CloudProviderException("BAIDU_LOGIN_REQUIRED");
-        return await accounts.WithAccountAsync(id, async (directory, account) =>
+        return await accounts.WithTransferAccountAsync(id, async (directory, account) =>
         {
-            if (!account.IsLoggedIn) throw new CloudProviderException("BAIDU_LOGIN_REQUIRED");
             var result = await bridge.ExecuteAsync(directory, new
             {
-                command = "transfer", request.OperationId, request.Source.Url, request.Source.AccessCode,
+                command = "transfer", expectedUid = account.Uid, request.OperationId, request.Source.Url, request.Source.AccessCode,
                 request.RemoteDirectory
             }, null, ct);
             return ToReceipt(request.OperationId, id, result.GetProperty("receipt"));
