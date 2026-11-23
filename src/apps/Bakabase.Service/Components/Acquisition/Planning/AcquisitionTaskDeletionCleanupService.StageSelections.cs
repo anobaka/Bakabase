@@ -19,8 +19,9 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 public sealed partial class AcquisitionTaskDeletionCleanupService
 {
     private sealed record StageCleanupSelection(string Id, string PartId, string Stage, AcquisitionStageDirectory Entry,
-        bool Current = false, FileProcessingWorkspaceResolver.Location? Workspace = null, bool HistoricalDeliveryLayout = false)
+        bool Current = false, FileProcessingWorkspaceResolver.Location? Workspace = null, string? DeliveryLayoutRoot = null)
     {
+        public bool HistoricalDeliveryLayout => !Current && DeliveryLayoutRoot != null;
         public AcquisitionCleanupScopes Scopes { get; init; } = Stage == "delivery" ? AcquisitionCleanupScopes.Delivery : AcquisitionCleanupScopes.Intermediate;
     }
     private sealed record StageCleanupSelectionSet(IReadOnlyList<StageCleanupSelection> Selected,
@@ -61,11 +62,11 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         bool Selected(string stage) => stage == "delivery" ? deleteDeliveredFiles : cleanupIntermediates;
         static string Full(string path) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
         void Add(string identity, string partId, string stage, AcquisitionStageDirectory entry, bool isCurrent = false,
-            FileProcessingWorkspaceResolver.Location? workspace = null, bool historicalDeliveryLayout = false)
+            FileProcessingWorkspaceResolver.Location? workspace = null, string? deliveryLayoutRoot = null)
         {
             var normalized = entry with {Directory = Full(entry.Directory)};
             if (!Selected(stage)) {protectedRoots.Add(normalized.Directory); return;}
-            selections.Add(new(identity, partId, stage, normalized, isCurrent, workspace, historicalDeliveryLayout));
+            selections.Add(new(identity, partId, stage, normalized, isCurrent, workspace, deliveryLayoutRoot));
         }
         foreach (var plan in plans)
         {
@@ -91,12 +92,12 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 if (!Selected(stage)) {protectedRoots.Add(Full(entry.Directory)); continue;}
                 if (!isCurrent && entry.Evidence is not ("taskAllocation" or "taskLayout" or "downloadRecord" or
                         "userDirectoryRevision" or "plannedDelivery" or "deliveryRecord")) continue;
-                var historicalDeliveryLayout = !isCurrent && stage == "delivery" &&
+                var deliveryLayoutRoot = stage == "delivery" &&
                     plan.DeliveryLayout is { } delivery && delivery.TaskId == task.Id &&
                     delivery.PartDirectories.TryGetValue(partId, out var partPath) &&
-                    ArtifactManifestFiles.PathComparer.Equals(Full(partPath), Full(entry.Directory));
+                    ArtifactManifestFiles.PathComparer.Equals(Full(partPath), Full(entry.Directory)) ? Full(delivery.RootDirectory) : null;
                 Add("binding:" + ArtifactManifestFiles.Hash(JsonSerializer.Serialize(new {partId, stage, entry})),
-                    partId, stage, entry, isCurrent, historicalDeliveryLayout: historicalDeliveryLayout);
+                    partId, stage, entry, isCurrent, deliveryLayoutRoot: deliveryLayoutRoot);
             }
         }
         var ownerKeys = owners.Select(id => id.ToString(CultureInfo.InvariantCulture)).ToArray();

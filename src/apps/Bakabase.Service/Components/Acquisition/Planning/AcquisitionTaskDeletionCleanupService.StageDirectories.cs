@@ -122,6 +122,9 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             await RequireStageCleanupInactiveAsync(db, task, owners, authorization, ct);
             int? ownDownload = null;
             var exists = Directory.Exists(root);
+            // A delivery can be planned before any of its task or part folders exist.
+            // Probe from the root recorded by that exact layout, even if the immediate parent is missing.
+            var absenceBoundary = selected.DeliveryLayoutRoot ?? parent;
             if (entry is {Ownership: "exclusive", Evidence: "taskAllocation", Allocation: { } allocation})
             {
                 FileProcessingWorkspaceResolver.ValidateDirectoryScope(allocation);
@@ -149,10 +152,10 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 if (!hasLayout || !published && !(authorization.Consent.WholeTaskFiles && selected.Current))
                 {
                     // A superseded layout may have been saved before publication ever ran.
-                    // With an accessible parent, a confirmed missing path needs no ownership grant.
+                    // With an accessible layout root, a confirmed missing path needs no ownership grant.
                     if (selected.HistoricalDeliveryLayout && !exists)
                     {
-                        var presence = ArtifactCleanupAbsence.Probe(parent, root, ct);
+                        var presence = ArtifactCleanupAbsence.Probe(absenceBoundary, root, ct);
                         if (presence == ArtifactCleanupPathPresence.ConfirmedAbsent) return Result("AlreadyAbsent");
                         if (presence == ArtifactCleanupPathPresence.Unavailable) return Result("WorkspaceUnavailable");
                     }
@@ -192,7 +195,7 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                 return Result("CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED");
             await CheckReferencesAsync(ownDownload);
             if (!exists)
-                return Result(ArtifactCleanupAbsence.Probe(parent, root, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent
+                return Result(ArtifactCleanupAbsence.Probe(absenceBoundary, root, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent
                     ? "AlreadyAbsent" : "WorkspaceUnavailable");
             if (directDirectoryDeletion) return Result(null);
             var pending = new Stack<(string Path, int Depth)>(); pending.Push((root, 0)); var count = 0;

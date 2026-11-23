@@ -270,6 +270,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
 
     [DataTestMethod]
     [DataRow("absent", "AlreadyAbsent")]
+    [DataRow("missing-parent", "AlreadyAbsent")]
     [DataRow("present", "CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED")]
     [DataRow("unavailable", "WorkspaceUnavailable")]
     [DataRow("different-layout", "CLEANUP_DIRECTORY_OWNERSHIP_UNCONFIRMED")]
@@ -278,7 +279,8 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
     {
         var f = await StageDeletion();
         var layout = f.Plan.DeliveryLayout!;
-        var oldParent = scenario == "unavailable" ? Path.Combine(layout.RootDirectory, "missing-parent") : layout.RootDirectory;
+        var oldRoot = scenario == "unavailable" ? Path.Combine(root, "unavailable-layout") : layout.RootDirectory;
+        var oldParent = scenario == "missing-parent" ? Path.Combine(oldRoot, "missing-parent") : oldRoot;
         var oldDirectory = Path.Combine(oldParent, "old-delivery");
         var oldLayoutDirectory = scenario == "different-layout" ? Path.Combine(oldParent, "another-directory") : oldDirectory;
         var oldPayload = Path.Combine(oldDirectory, "untouched.bin");
@@ -290,7 +292,7 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var stages = f.Plan.StageDirectories!;
         var old = f.Plan with
         {
-            DeliveryLayout = layout with {TaskDirectory = oldLayoutDirectory,
+            DeliveryLayout = layout with {RootDirectory = oldRoot, TaskDirectory = oldLayoutDirectory,
                 PartDirectories = new() {["nested.part"] = oldLayoutDirectory}},
             StageDirectories = stages with {Parts = new(stages.Parts)
                 {["nested.part"] = stages.Parts["nested.part"] with
@@ -300,11 +302,12 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         var preview = await f.Service.PreviewAsync(new([f.Task.Id], true, true, true, DeleteDeliveredFiles: true));
         var group = preview.Rows.Single().Cleanup!.Groups.Single(g => g.Directory == oldDirectory);
         Assert.AreEqual(reason, group.ReasonCode);
-        Assert.AreEqual(scenario == "absent", group.Eligible);
+        var absent = scenario is "absent" or "missing-parent";
+        Assert.AreEqual(absent, group.Eligible);
 
         var result = await f.Service.DeleteAsync(DirectDelete(f.Task.Id));
 
-        Assert.AreEqual(scenario == "absent", result.CleanupResults!.Single().Completed);
+        Assert.AreEqual(absent, result.CleanupResults!.Single().Completed);
         Assert.AreEqual(scenario == "present", File.Exists(oldPayload));
         Assert.IsFalse(Directory.Exists(f.Delivery));
     }
