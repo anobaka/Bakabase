@@ -189,14 +189,17 @@ describe("cloud source workflow UI", () => {
     expect(submit).not.toHaveBeenCalled();
   });
 
-  it("selects the verified original when an acquisition has a single stopped BT download", () => {
+  it.each([
+    ["BT", { transportTaskId: "bt:original" }, "bt:original", "Original"],
+    ["site", { downloadTaskId: 31 }, "site:31", "Original · #31"],
+  ])("requires explicit selection for a single stopped %s download", (_, download, downloadId, checkboxName) => {
     const submit = vi.fn();
     const promptJson = JSON.stringify({ reason: "cloudAttention", targets: [
-      { id: "torrent", title: "Torrent", transportTaskId: "bt:original", sources: [] },
+      { id: "original", title: "Original", ...download, sources: [] },
     ] });
     render(
       <ResumeSubmissionContext.Provider value={{ runId: 12, submit: vi.fn(), downloadTargets: [
-        { targetId: "torrent", downloadId: "bt:original", status: "stopped", canRetry: true },
+        { targetId: "original", downloadId, status: "stopped", canRetry: true },
       ] }}>
         <ResumeActivityContext.Provider value="download.awaitCompletion">
           <GroupForm runId={12} promptJson={promptJson} fileTask submitting={false} onSubmit={submit} />
@@ -205,10 +208,12 @@ describe("cloud source workflow UI", () => {
     );
     const button = screen.getByRole("button", { name: "cloudDownload.resumeGuide.retryDownload" });
     expect(button).toBeDisabled();
-    fireEvent.click(screen.getByRole("checkbox", { name: "Torrent" }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "cloudDownload.resumeGuide.confirmSelectedDownloads" }));
+    const confirm = screen.getByRole("checkbox", { name: "cloudDownload.resumeGuide.confirmSelectedDownloads" });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox", { name: checkboxName }));
+    fireEvent.click(confirm);
     fireEvent.click(button);
-    expect(submit).toHaveBeenCalledExactlyOnceWith(JSON.stringify({ observeExistingOnly: true, resumeTargetIds: ["torrent"] }));
+    expect(submit).toHaveBeenCalledExactlyOnceWith(JSON.stringify({ observeExistingOnly: true, resumeTargetIds: ["original"] }));
   });
 
   it("only observes pending or completed downloads when all target identities are accounted for", () => {

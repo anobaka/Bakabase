@@ -295,14 +295,17 @@ public sealed class CloudDownloadDestinationTests
         Assert.ThrowsException<InvalidDataException>(()=>CloudDownloadDestinations.ExecutionDirectory(revised with {DestinationRevisions=[revision,revision]}));
     }
 
-    [TestMethod]
-    public async Task RetainedSourceRevisionUsesTheSameSiteAndTwoIndependentLayoutsWithoutAnyCopyOrEnqueue()
+    [DataTestMethod]
+    [DataRow(DownloadTaskDbModelStatus.Failed)]
+    [DataRow(DownloadTaskDbModelStatus.Disabled)]
+    public async Task RetainedSourceRevisionKeepsTheSameSiteAvailableForExplicitWorkflowResume(DownloadTaskDbModelStatus status)
     {
         Directory.CreateDirectory(_download.DownloadPath);
         var original = Path.Combine(_download.DownloadPath, "file");
         await File.WriteAllTextAsync(original, "original");
         await _db.DownloadTasks.Where(d => d.Id == _download.Id).ExecuteUpdateAsync(set => set
-            .SetProperty(d => d.Progress, 42m).SetProperty(d => d.LastFileVerificationJson, "previous"));
+            .SetProperty(d => d.Status, status).SetProperty(d => d.Progress, 42m)
+            .SetProperty(d => d.LastFileVerificationJson, "previous"));
         var normal = await Preview();
         Assert.IsFalse(normal.CanRevise);
         Assert.IsTrue(normal.CanPreviewReuse);
@@ -320,7 +323,7 @@ public sealed class CloudDownloadDestinationTests
         var actual = await _db.DownloadTasks.AsNoTracking().SingleAsync(d => d.Id == _download.Id);
         var operation = await _db.CloudDownloadOperations.AsNoTracking().SingleAsync(o => o.Id == _operation.Id);
         Assert.AreEqual(actual.Options, operation.RequestJson);
-        Assert.AreEqual(DownloadTaskDbModelStatus.Failed, actual.Status);
+        Assert.AreEqual(status, actual.Status);
         Assert.IsNull(actual.LastFileVerificationJson);
         Assert.AreEqual(0m, actual.Progress);
         Assert.AreEqual(_download.Message, actual.Message);
@@ -332,6 +335,16 @@ public sealed class CloudDownloadDestinationTests
         Assert.AreEqual(NewDirectory, execution.OutputDirectory);
         Assert.AreEqual(new CloudDownloadReuseSource(_operation.Id, _download.DownloadPath, _provider.ObservedFingerprint), execution.ReuseSource);
         Assert.AreEqual(execution, CloudDownloadDestinations.ExecutionRequest(execution));
+        var manual = new CloudManualDownloadResume(_db);
+        var workset = new DownloadWorkset { OutputDirectory = _oldRoot, Targets = [_target], NoRepeatExistingDownloads = true };
+        var owned = (await manual.ReadMultipleAsync(_run.Id, workset, default))!.Single();
+        Assert.AreEqual(_target.Id, owned.TargetId);
+        Assert.AreEqual($"site:{_download.Id}", owned.DownloadId);
+        Assert.AreEqual(status == DownloadTaskDbModelStatus.Disabled ? "stopped" : "failed", owned.Status);
+        Assert.IsTrue(owned.CanRetry);
+        var foreign = (await manual.ReadMultipleAsync(_run.Id + 1, workset, default))!.Single();
+        Assert.IsFalse(foreign.CanRetry);
+        Assert.IsNull(await manual.ReadMultipleAsync(_run.Id, workset with { NoRepeatExistingDownloads = false }, default));
         Assert.IsFalse(Directory.Exists(NewDirectory));
         Assert.AreEqual("original", await File.ReadAllTextAsync(original));
         Assert.IsFalse(await _db.DownloadResults.AnyAsync());

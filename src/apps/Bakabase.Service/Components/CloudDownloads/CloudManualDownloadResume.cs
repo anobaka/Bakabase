@@ -66,10 +66,10 @@ public sealed class CloudManualDownloadResume(BakabaseDbContext db, IBtDownloadM
 
     internal async Task<IReadOnlyList<CloudDownloadResumeTarget>?> ReadMultipleAsync(int runId, DownloadWorkset? workset, CancellationToken ct)
     {
-        if (workset is not {Targets.Count: > 0} || workset.Targets is [var single] &&
-            (workset.NoRepeatExistingDownloads != true ||
-             single.TransportTaskId?.StartsWith("bt:", StringComparison.Ordinal) != true)) return null;
+        if (workset is not {Targets.Count: > 0} ||
+            workset.Targets.Count == 1 && workset.NoRepeatExistingDownloads != true) return null;
         var bound = workset.Targets.Where(t => !t.Excluded && (t.DownloadTaskId.HasValue || t.TransportTaskId != null)).ToList();
+        if (workset.Targets.Count == 1 && bound.Count == 0) return null;
         var rows = new List<CloudDownloadResumeTarget>(bound.Count);
         foreach (var target in bound) rows.Add(await ReadAsync(runId, target, workset.OutputDirectory, ct));
         return rows;

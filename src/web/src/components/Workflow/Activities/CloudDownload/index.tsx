@@ -131,7 +131,7 @@ const CloudResumeForm: NonNullable<WorkflowActivityUI<CloudConfig>["ResumeForm"]
   const isAwait = activityKind === "download.awaitCompletion";
   const owner = useContext(ResumeSubmissionContext);
   const selectOriginals = isAwait && (targets.length > 1 ||
-    owner?.runId === runId && owner?.downloadTargets?.some(target => target.downloadId?.startsWith("bt:")) === true);
+    owner?.runId === runId && !!owner?.downloadTargets?.length);
   const downloadTargets = useDownloadResumeTargets(runId, targets, selectOriginals);
   const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
   const liveTargets = new Map(downloadTargets?.map(row => [row.targetId, row]));
