@@ -13,7 +13,7 @@ internal static class CloudPayloadHash
 {
     internal const int BufferSize = 1024 * 1024;
 
-    internal static async Task<(long Length, string Sha256)> ComputeFileAsync(string path, CancellationToken ct)
+    internal static async Task<(long Length, string Sha256)> ComputeFileAsync(string path, CancellationToken ct, Func<ValueTask>? onRead = null)
     {
         ct.ThrowIfCancellationRequested();
         await using var file = new FileStream(path, new FileStreamOptions
@@ -27,12 +27,12 @@ internal static class CloudPayloadHash
             Options = FileOptions.Asynchronous | FileOptions.SequentialScan
         });
         var length = file.Length;
-        return (length, await ComputeAsync(file, ct));
+        return (length, await ComputeAsync(file, ct, onRead));
     }
 
     // The caller owns the stream. HashDataAsync uses small reads on some runtimes;
     // explicit large requests avoid that overhead on network-mounted payloads.
-    internal static async Task<string> ComputeAsync(Stream source, CancellationToken ct)
+    internal static async Task<string> ComputeAsync(Stream source, CancellationToken ct, Func<ValueTask>? onRead = null)
     {
         ct.ThrowIfCancellationRequested();
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -47,6 +47,7 @@ internal static class CloudPayloadHash
                 if (read == 0) break;
                 observed?.Add(read, 0);
                 hash.AppendData(buffer, 0, read);
+                if (onRead != null) await onRead().ConfigureAwait(false);
             }
             ct.ThrowIfCancellationRequested();
             return Convert.ToHexString(hash.GetHashAndReset());

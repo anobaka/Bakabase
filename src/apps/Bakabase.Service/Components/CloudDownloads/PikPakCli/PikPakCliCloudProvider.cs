@@ -143,6 +143,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         PikPakCliStorage.Directory(stage);
         long total = journal.Files.Aggregate(0L, (value, file) => checked(value + file.Size));
         long completed = 0; var result = new List<string>();
+        Task ReportVerifying() => progress(new(null, Stage: "Verifying"));
+        const string transferStage = "Downloading PikPak original files";
         foreach (var file in journal.Files)
         {
             ct.ThrowIfCancellationRequested();
@@ -151,16 +153,16 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
             copies.Completed.TryGetValue(file.Path, out var receipt);
             if (File.Exists(destination))
             {
-                await progress(new(null, Stage: "Verifying"));
-                if (receipt == null || !await MatchesFile(destination, file, receipt, ct)) throw new PikPakCliException("PIKPAK_LOCAL_CHANGED");
+                await ReportVerifying();
+                if (receipt == null || !await MatchesFile(destination, file, receipt, ct, PikPakPayloadActivity.ReportReads(ReportVerifying))) throw new PikPakCliException("PIKPAK_LOCAL_CHANGED");
             }
             else
             {
                 if (Directory.Exists(destination)) throw new PikPakCliException("PIKPAK_LOCAL_CHANGED");
                 if (receipt != null)
                 {
-                    await progress(new(null, Stage: "Verifying"));
-                    if (!File.Exists(part) || !await MatchesFile(part, file, receipt, ct)) throw new PikPakCliException("PIKPAK_LOCAL_CHANGED");
+                    await ReportVerifying();
+                    if (!File.Exists(part) || !await MatchesFile(part, file, receipt, ct, PikPakPayloadActivity.ReportReads(ReportVerifying))) throw new PikPakCliException("PIKPAK_LOCAL_CHANGED");
                 }
                 else
                 {
@@ -169,12 +171,14 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
                     if (File.Exists(part) || copies.Started.Contains(file.Id)) throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
                     copies.Started.Add(file.Id);
                     await PikPakCliStorage.WriteAsync(Path.Combine(state, "download.json"), copies, ct);
-                    await progress(new(total == 0 ? null : 100d * completed / total, completed, total, "Downloading PikPak original files"));
-                    await account.Run(["download", file.Id, "--output", part], ct, payload: true);
+                    // The exact byte count is known only at each finished-file boundary.
+                    await progress(new(null, null, total, transferStage));
+                    await PikPakPayloadActivity.DownloadAsync(account, file.Id, part,
+                        () => progress(new(null, null, total, transferStage)), ct);
                     if (!File.Exists(part) || new FileInfo(part).Length != file.Size) throw new PikPakCliException("PIKPAK_DOWNLOAD_INCOMPLETE");
                     PikPakCliStorage.NoLinks(part);
-                    await progress(new(null, Stage: "Verifying"));
-                    receipt = new(file.Size, await PikPakCliStorage.FileHash(part, ct));
+                    await ReportVerifying();
+                    receipt = new(file.Size, await PikPakCliStorage.FileHash(part, ct, PikPakPayloadActivity.ReportReads(ReportVerifying)));
                     copies.Completed[file.Path] = receipt;
                     await PikPakCliStorage.WriteAsync(Path.Combine(state, "download.json"), copies, CancellationToken.None);
                 }
@@ -183,7 +187,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
             }
             completed += file.Size; result.Add(destination);
             await progress(new(total == 0 ? 100d * result.Count / journal.Files.Count : 100d * completed / total,
-                completed, total, "Downloading PikPak original files"));
+                completed, total, transferStage));
         }
         var temporary = Path.Combine(stage, "temporary"); PikPakCliStorage.NoLinks(temporary);
         if (Directory.Exists(temporary) && !Directory.EnumerateFileSystemEntries(temporary).Any()) Directory.Delete(temporary);
@@ -473,8 +477,10 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         PikPakCliStorage.Hash(JsonSerializer.Serialize(new {request.OperationId, output,
             journal.AccountId, journal.AccountVersion, journal.SourceIdentity, journal.Files}, PikPakCliStorage.Json));
 
-    private static async Task<bool> MatchesFile(string path, RemoteFile file, FileReceipt receipt, CancellationToken ct) =>
-        new FileInfo(path).Length == file.Size && receipt.Size == file.Size && receipt.Sha256 == await PikPakCliStorage.FileHash(path, ct);
+    private static async Task<bool> MatchesFile(string path, RemoteFile file, FileReceipt receipt, CancellationToken ct,
+        Func<ValueTask> onRead) =>
+        new FileInfo(path).Length == file.Size && receipt.Size == file.Size &&
+        receipt.Sha256 == await PikPakCliStorage.FileHash(path, ct, onRead);
     internal sealed record ShareNode(string Id, string Name, bool IsFolder, string? DisplaySize, IReadOnlyList<ShareNode> Children);
     internal sealed record RemoteFile(string Id, string Path, long Size, string Hash, string Version);
     private sealed record AccountNode(string Id, string Name, bool IsFolder, long Size, string Hash, string Version, string? OriginalShareId);

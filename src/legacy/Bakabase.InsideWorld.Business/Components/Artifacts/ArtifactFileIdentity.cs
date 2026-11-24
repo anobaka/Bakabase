@@ -49,10 +49,11 @@ public static class ArtifactFileIdentity
     }
 
     /// <summary>A filesystem object identity that remains stable when a regular file moves on the same volume.</summary>
-    public static string Read(string path)
+    public static string Read(string path, bool allowConcurrentWrites = false)
     {
         ArtifactManifestFiles.RejectLinks(path);
-        using var stream = File.OpenRead(path);
+        var share = allowConcurrentWrites ? FileShare.ReadWrite | FileShare.Delete : FileShare.Read;
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, share);
         if (OperatingSystem.IsWindows())
         {
             if (GetFileInformationByHandle(stream.SafeFileHandle, out var status) &&

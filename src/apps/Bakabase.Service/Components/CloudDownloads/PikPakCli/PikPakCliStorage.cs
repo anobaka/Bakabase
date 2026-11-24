@@ -70,8 +70,8 @@ internal static class PikPakCliStorage
             throw new PikPakCliException("PIKPAK_LOCAL_PATH_INVALID");
         return name;
     }
-    internal static async Task<string> FileHash(string file, CancellationToken ct)
-    { NoLinks(file); return (await CloudPayloadHash.ComputeFileAsync(file, ct)).Sha256.ToLowerInvariant(); }
+    internal static async Task<string> FileHash(string file, CancellationToken ct, Func<ValueTask>? onRead = null)
+    { NoLinks(file); return (await CloudPayloadHash.ComputeFileAsync(file, ct, onRead)).Sha256.ToLowerInvariant(); }
 }
 
 internal static class PikPakCliJson
