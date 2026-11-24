@@ -194,7 +194,7 @@ public sealed partial class BaiduCloudDownloadProvider(BaiduPcsAccountStore acco
             }, async update =>
             {
                 await progress(ParseProgress(update));
-            }, ct);
+            }, ct, observeStorageWrites: true);
             return new CloudDownloadResult(result.GetProperty("files").EnumerateArray().Select(f => f.GetString()!).ToArray())
             {
                 PayloadRootDirectory = await BaiduOwnedDownloadRoot.ResolveAsync(directory, pinned, request.OutputDirectory, ct)

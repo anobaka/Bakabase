@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using CliWrap;
 
 namespace Bakabase.InsideWorld.Business.Components.Compression;
@@ -157,7 +158,7 @@ public partial class CompressedFileService
         try
         {
             var running = command.ExecuteAsync(stop.Token);
-            exit = (await ArchiveProcessIo.AwaitAsync(running.ProcessId, running.Task, write: operation == "x")).ExitCode;
+            exit = (await LocalFileProcessIo.AwaitAsync(running.ProcessId, running.Task, write: operation == "x")).ExitCode;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {

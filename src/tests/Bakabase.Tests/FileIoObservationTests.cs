@@ -1,6 +1,5 @@
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
-using Bakabase.InsideWorld.Business.Components.Compression;
 
 namespace Bakabase.Tests;
 
@@ -96,9 +95,11 @@ public sealed class FileIoObservationTests
     public void Archive_process_observation_distinguishes_logical_counters_from_storage_device_counters()
     {
         using var both = new StringReader("rchar: 12345\nwchar: 67890\nsyscr: 5\nread_bytes: 2345\nwrite_bytes: 7890\n");
-        Assert.AreEqual((12345L, 67890L), ArchiveProcessIo.ReadCounters(both)!.Value);
+        Assert.AreEqual((12345L, 67890L), LocalFileProcessIo.ReadCounters(both)!.Value);
         using var deviceOnly = new StringReader("read_bytes: 2345\nwrite_bytes: 7890\n");
-        Assert.IsNull(ArchiveProcessIo.ReadCounters(deviceOnly));
+        Assert.IsNull(LocalFileProcessIo.ReadCounters(deviceOnly));
+        using var networkChild = new StringReader("rchar: 9999\nwchar: 9999\nread_bytes: 2345\nwrite_bytes: 7890\n");
+        Assert.AreEqual((0L, 7890L), LocalFileProcessIo.ReadCounters(networkChild, storageWritesOnly: true)!.Value);
     }
 
     private sealed class NoReserve : IStorageWritePolicyProvider

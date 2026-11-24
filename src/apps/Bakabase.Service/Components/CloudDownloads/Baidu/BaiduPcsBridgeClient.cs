@@ -11,6 +11,7 @@ using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 
 namespace Bakabase.Service.Components.CloudDownloads.Baidu;
 
@@ -18,7 +19,7 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
 {
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     public async Task<JsonElement> ExecuteAsync(string configDirectory, object request,
-        Func<JsonElement, Task>? progress, CancellationToken ct)
+        Func<JsonElement, Task>? progress, CancellationToken ct, bool observeStorageWrites = false)
     {
         await dependency.EnsureReadyAsync(ct);
         var info = new ProcessStartInfo(dependency.Executable)
@@ -30,6 +31,8 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
         ConfigureProxy(info, proxy);
         using var process = Process.Start(info) ?? throw new CloudProviderException("BAIDU_BRIDGE_START_FAILED");
         using var cancel = ct.Register(() => { try { process.Kill(true); } catch { } });
+        var exited = observeStorageWrites && FileIoObservationScope.Active ? process.WaitForExitAsync(CancellationToken.None) : null;
+        var writeObservation = exited != null ? LocalFileProcessIo.ObserveStorageWritesAsync(process.Id, exited) : Task.CompletedTask;
         using var verificationReads = FileIoObservationScope.Active ? new VerificationReadObservation() : null;
         var stderr = process.StandardError.BaseStream.CopyToAsync(Stream.Null, CancellationToken.None);
         try
@@ -82,7 +85,9 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
         finally
         {
             if (!process.HasExited) { try { process.Kill(true); } catch { } }
-            await process.WaitForExitAsync(CancellationToken.None); await stderr;
+            await (exited ?? process.WaitForExitAsync(CancellationToken.None));
+            await writeObservation;
+            await stderr;
         }
     }
 

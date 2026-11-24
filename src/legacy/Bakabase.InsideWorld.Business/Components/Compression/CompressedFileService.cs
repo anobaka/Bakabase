@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
@@ -469,7 +470,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 .WithStandardErrorPipe(PipeTarget.Merge(stderrTargets.ToArray()));
 
             var running = command.ExecuteAsync(ct);
-            var result = await ArchiveProcessIo.AwaitAsync(running.ProcessId, running.Task, write: false);
+            var result = await LocalFileProcessIo.AwaitAsync(running.ProcessId, running.Task, write: false);
 
             return new TestResult
             {
@@ -610,7 +611,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 .WithStandardErrorPipe(PipeTarget.Merge(stderrTargets.ToArray()));
 
             var running = command.ExecuteAsync(ct);
-            var result = await ArchiveProcessIo.AwaitAsync(running.ProcessId, running.Task, write: true);
+            var result = await LocalFileProcessIo.AwaitAsync(running.ProcessId, running.Task, write: true);
             var diagnostic = new TestResult
             {
                 ExitCode = result.ExitCode,

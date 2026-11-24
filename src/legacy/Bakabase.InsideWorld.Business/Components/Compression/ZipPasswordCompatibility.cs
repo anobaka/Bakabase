@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
 
@@ -49,7 +50,7 @@ internal static class ZipPasswordCompatibility
         using var process = new Process {StartInfo = start};
         process.Start();
         var exited = process.WaitForExitAsync(CancellationToken.None);
-        var observe = observeWrites.HasValue ? ArchiveProcessIo.ObserveAsync(process.Id, exited, observeWrites.Value) : Task.CompletedTask;
+        var observe = observeWrites.HasValue ? LocalFileProcessIo.ObserveArchiveAsync(process.Id, exited, observeWrites.Value) : Task.CompletedTask;
         using var registration = ct.Register(() => Kill(process));
         var output = ReadOutput(process.StandardOutput, progress, ct);
         var errors = Drain(process.StandardError);
