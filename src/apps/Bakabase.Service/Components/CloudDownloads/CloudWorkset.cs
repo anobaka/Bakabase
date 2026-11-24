@@ -172,16 +172,22 @@ public sealed record CloudSelectionSignal
 
     internal static bool IsPausedPreparedRetrySubset(string subset, string superset)
     {
+        var selected = ReadPausedPreparedRetrySelection(subset);
+        var approved = ReadPausedPreparedRetrySelection(superset);
+        return selected != null && approved != null && selected.All(entry => approved.GetValueOrDefault(entry.Key) == entry.Value);
+    }
+
+    internal static IReadOnlyDictionary<string, CloudPreparedDownloadRetry>? ReadPausedPreparedRetrySelection(string? signal)
+    {
+        if (string.IsNullOrWhiteSpace(signal)) return null;
         try
         {
-            var selected = JsonSerializer.Deserialize<CloudSelectionSignal>(subset, WorkflowJson.Options);
-            var approved = JsonSerializer.Deserialize<CloudSelectionSignal>(superset, WorkflowJson.Options);
-            return selected?.HasValidPreparedRetrySelection() == true && approved?.HasValidPreparedRetrySelection() == true &&
+            var selected = JsonSerializer.Deserialize<CloudSelectionSignal>(signal, WorkflowJson.Options);
+            return selected?.HasValidPreparedRetrySelection() == true &&
                 selected.PreparedDownloadRetries is {Count: > 0} requested &&
-                approved.PreparedDownloadRetries is {Count: > 0} allowed &&
-                requested.All(entry => entry.Value.WasPaused && allowed.GetValueOrDefault(entry.Key) == entry.Value);
+                requested.Values.All(entry => entry.WasPaused) ? requested : null;
         }
-        catch (JsonException) {return false;}
+        catch (JsonException) {return null;}
     }
 
     /// <summary>Only verify and register original existing files. Never restart a downloader or transfer.</summary>

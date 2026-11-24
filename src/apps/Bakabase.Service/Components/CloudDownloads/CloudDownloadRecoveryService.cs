@@ -31,6 +31,7 @@ public sealed record CloudDownloadRecoveryCheck(bool CanRetry, string ReasonCode
 public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, IEnumerable<ICloudDownloadProvider> providers,
     IUserStoragePolicy storage, FileProcessingWorkspaceResolver? workspaces = null)
 {
+    internal const string PausedOriginalLocalReview = "RECOVERY_PAUSED_ORIGINAL_LOCAL_REVIEW";
     private enum NativeVerificationScope { IdentityOnly, InspectInventory }
 
     public Task<CloudDownloadRecoveryCheck> CheckAsync(int runId, CloudDownloadTarget target,
@@ -205,9 +206,17 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             var executionRequest = CloudDownloadDestinations.ExecutionRequest(request);
             // A prepared retry must prove the provider's exact saved copy and previous native
             // attempt even when filesystem deletion markers have disappeared since preview.
-            var prepared = preparedProvider != null && (await (resumePausedPrepared
+            var preparedReadiness = preparedProvider == null ? null : await (resumePausedPrepared
                 ? preparedProvider.CheckPausedPreparedDownloadAsync(executionRequest, ct)
-                : preparedProvider.CheckPreparedDownloadRetryAsync(executionRequest, ct))).Available;
+                : preparedProvider.CheckPreparedDownloadRetryAsync(executionRequest, ct));
+            var prepared = preparedReadiness?.Available == true;
+            if (resumePausedPrepared && !prepared && preparedReadiness?.Problem is {} problem &&
+                WorkflowSourceRunProblems.Extract(problem).FirstOrDefault() is {} pausedFailure)
+            {
+                failure = pausedFailure;
+                return Block(pausedFailure is "PIKPAK_ACCOUNT_REQUIRED" or "PIKPAK_ACCOUNT_CHANGED"
+                    ? "RECOVERY_SOURCE_STILL_BLOCKED" : PausedOriginalLocalReview);
+            }
             if (!prepared && download.Progress != 0) return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
             if (!prepared && needsPreparedProof) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             if (prepared)
@@ -247,9 +256,12 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             }
             // A network probe can overlap another consumer or user edit. Do not certify a stale
             // local snapshot; execution repeats this local guard under the downloader action lock.
-            var latest = resumePausedPrepared
-                ? await CheckPausedPreparedAsync(runId, target, outputRoot, revalidate: false, ct)
-                : await CheckAsync(runId, target, outputRoot, revalidate: false, ct, requireEquivalentGroup: requireEquivalentGroup);
+            // The paused original's ready signal carries its old epoch until confirmation.
+            // Its acquisition confirmation and the native task's owner lease both recheck
+            // the exact checkpoint. Avoid walking the same NAS directories twice here.
+            if (resumePausedPrepared)
+                return new(true, "RECOVERY_PREPARED_DOWNLOAD_REVALIDATED", failure, true) {PreparedRetry = preparedRetry};
+            var latest = await CheckAsync(runId, target, outputRoot, revalidate: false, ct, requireEquivalentGroup: requireEquivalentGroup);
             if (!latest.Candidate) return latest;
             if (latest.PreparedRetry != preparedRetry)
                 return Block("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");

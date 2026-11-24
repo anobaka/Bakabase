@@ -99,7 +99,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
             return diagnosis;
         }
         var rows = new List<AcquisitionRecoveryRow>(); var versions = new Dictionary<int, string>(); var signals = new Dictionary<int, string>();
-        var verification = new List<(int Id, int Index, string Version)>();
+        var verification = new List<(int Id, int Index, string Version, bool IsPausedOriginal)>();
         // Fetch private checkpoints in bounded batches, not one query per row or one unbounded
         // all-history response. Deep file verification has a separate per-row time budget.
         foreach (var batch in ids.Chunk(25))
@@ -115,7 +115,8 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                 rows.Add(diagnosis.Row with {CanOverrideStorage = AcquisitionContinuationReserve.Supports(run)});
                 if (diagnosis.Row.CanContinue) {versions[id] = Version(task, run!); signals[id] = diagnosis.SignalJson;}
                 else if (diagnosis.Row.ReasonCode is "RECOVERY_VERIFY_FILES" or "RECOVERY_RECHECK_SOURCE")
-                    verification.Add((id, rows.Count - 1, Version(task, run!)));
+                    verification.Add((id, rows.Count - 1, Version(task, run!),
+                        diagnosis.PreparedDownloadReason == AcquisitionRecoveryDiagnostics.PausedOriginalReady));
             }
         }
         // Finish inexpensive diagnosis for every fixed task before spending the bounded budget
@@ -127,7 +128,9 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         foreach (var pending in verification)
         {
             using var itemBudget = CancellationTokenSource.CreateLinkedTokenSource(budget.Token);
-            itemBudget.CancelAfter(TimeSpan.FromSeconds(rows[pending.Index].ReasonCode == "RECOVERY_RECHECK_SOURCE" ? 12 : 4));
+            var inspectingPausedOriginal = ids.Length == 1 && scope == "workflow" && pending.IsPausedOriginal;
+            if (!inspectingPausedOriginal)
+                itemBudget.CancelAfter(TimeSpan.FromSeconds(rows[pending.Index].ReasonCode == "RECOVERY_RECHECK_SOURCE" ? 12 : 4));
             var inspectingOneFileSet = ids.Length == 1 && scope == "workflow" && IsLocalFileStep(rows[pending.Index].CurrentStepKind);
             var checkToken = inspectingOneFileSet ? ct : itemBudget.Token;
             try
@@ -141,7 +144,13 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                 if (result.Row.CanContinue) {versions[pending.Id] = pending.Version; signals[pending.Id] = result.SignalJson;}
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-            {rows[pending.Index] = rows[pending.Index] with {ReasonCode = "RECOVERY_CHECK_INCOMPLETE", ManualAction = "inspectFiles"};}
+            {
+                rows[pending.Index] = rows[pending.Index] with
+                {
+                    ReasonCode = pending.IsPausedOriginal ? AcquisitionRecoveryDiagnostics.PausedOriginalCheckTimedOut : "RECOVERY_CHECK_INCOMPLETE",
+                    ManualAction = pending.IsPausedOriginal ? "inspectSource" : "inspectFiles"
+                };
+            }
         }
         var preview = new AcquisitionRecoveryPreview(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddMinutes(10),
             rows.Count, versions.Count, rows.Count - versions.Count, rows, scope);
@@ -154,8 +163,8 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
         Func<string?, Task>? guardDirectory = null) => await ApplyCoreAsync(input, ct, guardDirectory);
 
     // The worker has already performed the full action diagnosis and checked its frozen
-    // signal. Pin that exact read to the newly persisted starting state. Apply still checks
-    // the version and diagnoses the provider again inside the task and workflow gates.
+    // signal. Pin that exact read to the newly persisted starting state. A paused original
+    // only repeats the local proof under the run gate; the downloader rechecks remote ownership.
     internal Task<AcquisitionRecoveryResult> ApplyBatchAdmissionAsync(string scope, AcquisitionRecoveryRow row,
         string version, string signal, string? placementStamp, bool transferRetryConfirmed, CancellationToken ct, string? startingBatchId = null)
     {
@@ -338,24 +347,35 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                         var (task, run) = await Current(id, token);
                         if (task == null || run == null || Version(task, run) != entry.Versions[id])
                             throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
+                        var pausedOriginal = expected.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady;
                         using var validationBudget = CancellationTokenSource.CreateLinkedTokenSource(token);
-                        if (entry.Preview.TotalCount != 1 || !IsLocalFileStep(expected.CurrentStepKind))
+                        if (!pausedOriginal && (entry.Preview.TotalCount != 1 || !IsLocalFileStep(expected.CurrentStepKind)))
                             validationBudget.CancelAfter(preserveReserve && diagnostics.IsTransferStep(expected.CurrentStepKind)
                                 ? TimeSpan.FromMinutes(2) : TimeSpan.FromSeconds(15));
+                        var approvedSignal = entry.Signals[id];
                         AcquisitionRecoveryDiagnosis current;
                         try { current = entry.Preview.Scope == "retryTransfer"
                             ? await diagnostics.DiagnoseTransferRetryAsync(task, run, validationBudget.Token)
                             : verified ?? await diagnostics.DiagnoseAsync(task, run, validationBudget.Token,
-                            verifyContent: true, includeStoppedVerification: true, deferCompletedDownloadVerification: true); }
+                            verifyFiles: !pausedOriginal, verifyContent: !pausedOriginal,
+                            includeStoppedVerification: true, deferCompletedDownloadVerification: true); }
                         catch (OperationCanceledException) when (!token.IsCancellationRequested)
                         { throw new RecoveryBlockedException("RECOVERY_CHECK_INCOMPLETE"); }
-                        if (!current.Row.CanContinue) throw new RecoveryBlockedException(current.Row.ReasonCode);
-                        var approvedSignal = entry.Signals[id];
-                        var pausedOriginal = current.Row.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady;
-                        if (current.SignalJson != approvedSignal &&
-                            !(pausedOriginal && expected.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady &&
-                              CloudSelectionSignal.IsPausedPreparedRetrySubset(approvedSignal, current.SignalJson)))
-                            throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
+                        if (pausedOriginal)
+                        {
+                            if (current.PreparedDownloadReason != AcquisitionRecoveryDiagnostics.PausedOriginalReady)
+                                throw new RecoveryBlockedException(current.Row.CanContinue ?
+                                    "ACQUISITION_TASK_CHANGED" : current.Row.ReasonCode);
+                            if (!CloudSelectionSignal.IsPausedPreparedRetrySubset(approvedSignal, current.SignalJson))
+                                throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
+                            if (guardDirectory != null)
+                                foreach (var directory in current.InitialDownloadDirectories) await guardDirectory(directory);
+                        }
+                        else
+                        {
+                            if (!current.Row.CanContinue) throw new RecoveryBlockedException(current.Row.ReasonCode);
+                            if (current.SignalJson != approvedSignal) throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
+                        }
                         if (processingPlacementStamp != null && current.ProcessingPlacementStamp != processingPlacementStamp)
                             throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
                         if (current.TransferRetryTargets.Count > 0)

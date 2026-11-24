@@ -232,6 +232,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
     {
         if (tasks?.IsShuttingDown == true) return;
         var gate = AcquisitionTaskGate.For(id); if (!await gate.WaitAsync(0, ct)) return;
+        var gateHeld = true;
         AcquisitionLocalRecoveryQueueEntry? dispatch = null;
         AcquisitionRecoveryRow? workflowRow = null;
         string? processingPlacementStamp = null;
@@ -263,8 +264,28 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
             catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
             {await SaveAsync(task, entry with {Status = "spaceBlocked", ReasonCode = "LOCAL_BATCH_CAPACITY_UNKNOWN"}, ct); return;}
             var localAdoption = entry.RecoveryScope == "localFiles";
+            var checkingPausedOriginal = entry.RecoveryScope == "workflow" && entry.SelectedAction == ContinueAction &&
+                CloudSelectionSignal.ReadPausedPreparedRetrySelection(entry.Signal) != null;
+            var queueStamp = checkingPausedOriginal ? QueueStamp(task) : null;
+            if (checkingPausedOriginal)
+            {
+                // This read-only check may wait for slow storage or the provider. Keep the
+                // queue entry cancellable and recheck its exact snapshot before admission.
+                gate.Release();
+                gateHeld = false;
+            }
             var check = await CheckActionAsync(task, run, new(entry.EstimatedBytes, "retained", entry.EstimateIncomplete),
                 entry.Mode, entry.SelectedAction, entry.MaxAdaptiveIterations, !localAdoption, entry.Restricted, null, ct);
+            if (checkingPausedOriginal)
+            {
+                await gate.WaitAsync(ct);
+                gateHeld = true;
+                (task, run) = await CurrentAsync(id, ct);
+                if (task == null || QueueStamp(task) != queueStamp) return;
+                if (task.DeletedAt != null || AcquisitionLocalRecoveryQueueEntry.ContentVersion(task, run) != entry.Version ||
+                    task.WorkflowRunId != entry.WorkflowRunId || task.PlanRevision != entry.PlanRevision)
+                {await SaveAsync(task, entry with {Status = "skipped", ReasonCode = "ACQUISITION_TASK_CHANGED"}, ct); return;}
+            }
             if (entry.SelectedAction == AcquisitionTransferReplayAction.Id && !entry.TransferRetryConfirmed)
             {
                 await SaveAsync(task, entry with {Status = "attention", ReasonCode = AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired}, ct);
@@ -294,7 +315,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
             workflowRow = check.WorkflowRow;
             await SaveAsync(task, dispatch, ct);
         }
-        finally {gate.Release();}
+        finally {if (gateHeld) gate.Release();}
         if (dispatch == null) return;
 
         // The persisted starting state prevents duplicate submission. Local adoption can hash

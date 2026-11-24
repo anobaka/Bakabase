@@ -1129,6 +1129,8 @@
   "acquisition.recovery.reason.RECOVERY_MIXED_DOWNLOADS_REVALIDATED": "已转存的分组会从副本重试，仅复用已校验的本地文件。其他就绪分组继续原下载。",
   "acquisition.recovery.reason.RECOVERY_PREPARED_DOWNLOAD_REVALIDATED": "从已转存的副本重试原下载。仅复用已校验的本地文件，无需再次转存。",
   "acquisition.recovery.reason.RECOVERY_PAUSED_ORIGINAL_READY": "从已保存的下载断点继续原任务。已验证的分段会保留，无需再次转存。",
+  "acquisition.recovery.reason.RECOVERY_PAUSED_ORIGINAL_CHECK_TIMED_OUT": "未能及时核对原下载的云端副本和本地断点。断点仍保留，稍后可重新检查。",
+  "acquisition.recovery.reason.RECOVERY_PAUSED_ORIGINAL_LOCAL_REVIEW": "未能确认本地文件仍与原下载断点对应。请核对下载目录和磁盘状态后再继续。",
   "acquisition.recovery.reason.RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED": "原文件下载能力已重新确认，且原任务没有已下载文件；确认后只重试原下载，不新建任务或重复转存。",
   "acquisition.recovery.reason.RECOVERY_SOURCE_STILL_BLOCKED": "已重新检查，当前来源仍未具备下载条件；可按上方原因处理后再次诊断。看见文件列表并不代表可以下载原文件。",
   "acquisition.recovery.reason.RECOVERY_DOWNLOAD_HAS_OUTPUT": "原任务已有文件、进度或产物记录，暂不自动重试，避免覆盖或重复下载。",

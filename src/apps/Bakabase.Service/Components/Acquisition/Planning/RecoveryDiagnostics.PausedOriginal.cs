@@ -17,6 +17,7 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 public sealed partial class AcquisitionRecoveryDiagnostics
 {
     internal const string PausedOriginalReady = "RECOVERY_PAUSED_ORIGINAL_READY";
+    internal const string PausedOriginalCheckTimedOut = "RECOVERY_PAUSED_ORIGINAL_CHECK_TIMED_OUT";
 
     private async Task<AcquisitionRecoveryDiagnosis?> InspectPausedOriginalAsync(AcquisitionTaskDbModel task,
         WorkflowRunDbModel run, DownloadWorkset workset, bool verifyRemote, CancellationToken ct)
@@ -29,7 +30,7 @@ public sealed partial class AcquisitionRecoveryDiagnostics
                 source.Revision == revision, ct)) return null;
 
         var selected = new Dictionary<string, CloudPreparedDownloadRetry>(StringComparer.Ordinal);
-        CloudDownloadRecoveryCheck? remoteBlock = null;
+        CloudDownloadRecoveryCheck? block = null;
         foreach (var group in workset.Targets.Where(t => !t.Excluded && t.DownloadTaskId != null).GroupBy(t => t.DownloadTaskId))
         {
             if (group.Count() != 1) continue;
@@ -37,11 +38,12 @@ public sealed partial class AcquisitionRecoveryDiagnostics
             var proof = await downloads!.CheckPausedPreparedAsync(run.Id, target, workset.OutputDirectory, verifyRemote, ct);
             if (proof.PreparedRetry is {WasPaused: true} retry && (verifyRemote ? proof.CanRetry : proof.Candidate))
                 selected.Add(target.Id, retry);
-            else if (proof.ReasonCode == "RECOVERY_SOURCE_STILL_BLOCKED") remoteBlock ??= proof;
+            else if (proof.ReasonCode is "RECOVERY_SOURCE_STILL_BLOCKED" or CloudDownloadRecoveryService.PausedOriginalLocalReview) block ??= proof;
         }
         const string node = "download.awaitCompletion";
-        if (selected.Count == 0) return remoteBlock == null ? null : new(new(task.Id, task.Title, run.Id, false, null,
-            remoteBlock.ReasonCode, "inspectSource", CurrentStepKind: node, CurrentProblemCode: remoteBlock.FailureCode));
+        if (selected.Count == 0) return block == null ? null : new(new(task.Id, task.Title, run.Id, false, null,
+            block.ReasonCode, block.ReasonCode == CloudDownloadRecoveryService.PausedOriginalLocalReview ? "inspectFiles" : "inspectSource",
+            CurrentStepKind: node, CurrentProblemCode: block.FailureCode));
         var signal = new CloudSelectionSignal {ObserveExistingOnly = true, RevalidateExistingDownloads = true,
             ResumeTargetIds = selected.Keys.ToList(), PreparedDownloadRetries = selected};
         var reason = verifyRemote ? PausedOriginalReady : "RECOVERY_RECHECK_SOURCE";

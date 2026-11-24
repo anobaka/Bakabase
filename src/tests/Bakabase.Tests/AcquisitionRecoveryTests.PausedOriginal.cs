@@ -37,6 +37,8 @@ public sealed partial class AcquisitionRecoveryTests
     [DataRow("cancelled-configured", true)]
     [DataRow("cancelled-emergency", true)]
     [DataRow("cancelled-inherit", true)]
+    [DataRow("slow-local-check", true)]
+    [DataRow("checkpoint-changed-before-confirmation", true)]
     [DataRow("no-checkpoint", false)]
     [DataRow("explicit-cancel", false)]
     [DataRow("stale-revision", false)]
@@ -76,6 +78,12 @@ public sealed partial class AcquisitionRecoveryTests
         });
         await _db.SaveChangesAsync();
         var provider = new PausedOriginalProvider {HasCheckpoint = scenario != "no-checkpoint"};
+        if (scenario == "slow-local-check")
+        {
+            var localChecks = 0;
+            provider.DuringPausedProof = ct => ++localChecks == 2
+                ? Task.Delay(TimeSpan.FromSeconds(13), ct) : Task.CompletedTask;
+        }
         var recovery = new CloudDownloadRecoveryService(_db, [provider], new UserStoragePolicy(false));
         var diagnostics = new AcquisitionRecoveryDiagnostics(_db, new UserStoragePolicy(false),
             _services.GetRequiredService<IArtifactOperationStore>(), downloads: recovery);
@@ -97,7 +105,19 @@ public sealed partial class AcquisitionRecoveryTests
             continuation.ConsumePausedSignalAsync(run.Id, workset.Id, expected.SignalJson, default));
         var reserve = scenario == "cancelled-emergency" ? true :
             scenario == "cancelled-configured" ? false : (bool?)null;
+        if (scenario == "checkpoint-changed-before-confirmation")
+            host.BeforeValidation = () => {provider.HasCheckpoint = false; return Task.CompletedTask;};
+        var remoteChecksBeforeConfirmation = provider.Checks;
         var outcome = await service.ApplyAsync(new(preview.PreviewToken, [task.Id], reserve));
+        Assert.AreEqual(remoteChecksBeforeConfirmation, provider.Checks,
+            "Confirmation should recheck the local checkpoint under the run gate without another remote probe.");
+        if (scenario == "checkpoint-changed-before-confirmation")
+        {
+            Assert.AreEqual(CloudDownloadRecoveryService.PausedOriginalLocalReview, outcome.Skipped.Single().ReasonCode);
+            Assert.AreEqual(0, host.Calls);
+            Assert.IsNull(AcquisitionDownloadContinuationService.Read(await _db.AcquisitionTasks.AsNoTracking().SingleAsync())?.ApprovedPausedSignalHash);
+            return;
+        }
         CollectionAssert.AreEqual(new[] { task.Id }, outcome.ContinuedTaskIds.ToArray());
         Assert.AreEqual(1, host.Calls);
         if (scenario is "cancelled-configured" or "cancelled-emergency" or "cancelled-inherit")
@@ -202,10 +222,11 @@ public sealed partial class AcquisitionRecoveryTests
     }
 
     [DataTestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
+    [DataRow(false, false)]
+    [DataRow(true, false)]
+    [DataRow(false, true)]
     public async Task Automatic_list_continuation_preserves_other_paused_groups_until_their_own_confirmation(
-        bool sourceRecoversDuringAdmission)
+        bool sourceRecoversDuringAdmission, bool cancelWhileChecking)
     {
         var provider = new PausedOriginalProvider {HasCheckpoint = true, UnavailableSourceId = "second",
             UnavailableProbesRemaining = sourceRecoversDuringAdmission ? 1 : int.MaxValue};
@@ -262,6 +283,33 @@ public sealed partial class AcquisitionRecoveryTests
         var queue = new AcquisitionLocalRecoveryBatchService(_db, recovery, diagnostics, null!, null!,
             new TestBOptionsManager<AcquisitionOptions>(new()), storage, new PinnedBatchCapacity(), new(), continuations: continuation);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        if (cancelWhileChecking)
+        {
+            var probeStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var finishProbe = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            provider.DuringProbe = () => {probeStarted.TrySetResult(); return finishProbe.Task;};
+            var preview = await queue.PreviewAsync(new([task.Id], "automatic"), timeout.Token);
+            var batch = await queue.ApplyAsync(new(preview.PreviewToken, [task.Id]), timeout.Token);
+            var dispatch = queue.DispatchAsync(task.Id, timeout.Token);
+            try
+            {
+                await probeStarted.Task.WaitAsync(timeout.Token);
+                using var commandTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var cancelled = await queue.CommandAsync(batch.BatchId, "cancel", commandTimeout.Token);
+                Assert.AreEqual("cancelled", cancelled.Rows.Single().Status);
+                Assert.IsFalse(dispatch.IsCompleted);
+            }
+            finally
+            {
+                finishProbe.TrySetResult();
+                await dispatch;
+            }
+            Assert.AreEqual("cancelled", (await queue.GetAsync(batch.BatchId)).Rows.Single().Status);
+            Assert.AreEqual(0, host.Calls);
+            Assert.AreEqual(0, provider.PreparedStarts.Count);
+            Assert.IsTrue((await _db.DownloadTasks.AsNoTracking().ToArrayAsync()).All(d => d.Status == DownloadTaskDbModelStatus.Disabled));
+            return;
+        }
 
         async Task<WorkflowItemOutcome> QueueAndRun(string expectedTarget)
         {
@@ -271,8 +319,11 @@ public sealed partial class AcquisitionRecoveryTests
             Assert.AreEqual(AcquisitionRecoveryDiagnostics.PausedOriginalReady, row.ReasonCode);
             var batch = await queue.ApplyAsync(new(preview.PreviewToken, [task.Id]), timeout.Token);
             var previousCalls = host.Calls;
+            var previousChecks = provider.Checks;
             await queue.TickAsync(timeout.Token);
             Assert.AreEqual(previousCalls + 1, host.Calls, (await queue.GetAsync(batch.BatchId)).Rows.Single().ReasonCode);
+            Assert.AreEqual(workset.Targets.Count(t => t.DownloadArtifactId == null), provider.Checks - previousChecks,
+                "Successful queue admission probes each candidate once before acquiring the run gate.");
             var answer = JsonSerializer.Deserialize<CloudSelectionSignal>(host.Signal!, WorkflowJson.Options)!;
             CollectionAssert.AreEqual(new[] {expectedTarget}, answer.ResumeTargetIds);
             await _db.WorkflowRuns.Where(r => r.Id == run.Id).ExecuteUpdateAsync(s =>
@@ -315,7 +366,8 @@ public sealed partial class AcquisitionRecoveryTests
 
     private sealed class PausedOriginalProvider : RecoverableProvider, ICloudDownloadRecoveryProvider, ICloudPreparedDownloadRetryProvider
     {
-        public bool HasCheckpoint { get; init; }
+        public bool HasCheckpoint { get; set; }
+        public Func<CancellationToken, Task>? DuringPausedProof { get; set; }
         public string? UnavailableSourceId { get; set; }
         public int UnavailableProbesRemaining { get; set; }
         public Task? AllowPayloadToFinish { get; set; }
@@ -328,8 +380,11 @@ public sealed partial class AcquisitionRecoveryTests
         }
         public Task<CloudReadiness> CheckPreparedDownloadRetryAsync(CloudDownloadRequest request, CancellationToken ct) =>
             Task.FromResult(new CloudReadiness(true));
-        public Task<CloudReadiness> CheckPausedPreparedDownloadAsync(CloudDownloadRequest request, CancellationToken ct) =>
-            Task.FromResult(new CloudReadiness(HasCheckpoint));
+        public async Task<CloudReadiness> CheckPausedPreparedDownloadAsync(CloudDownloadRequest request, CancellationToken ct)
+        {
+            if (DuringPausedProof != null) await DuringPausedProof(ct);
+            return new(HasCheckpoint, HasCheckpoint ? null : "PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+        }
         public async Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request,
             Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
         {
