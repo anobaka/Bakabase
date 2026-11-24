@@ -119,7 +119,6 @@ it("withholds stale zeroes during keyword debounce and after a failed refresh", 
   rerender(true);
   expect(result.current.downloadSourceCounts).toBeUndefined();
   expect(result.current.attentionCounts).toBeUndefined();
-  expect(result.current.attentionTagIds).toContain("localStorage");
   rerender(false);
   expect(result.current.downloadSourceCounts?.http).toBe(0);
   search.mockRejectedValueOnce(new Error("offline"));
@@ -127,4 +126,20 @@ it("withholds stale zeroes during keyword debounce and after a failed refresh", 
   expect(result.current.downloadSourceCounts).toBeUndefined();
   expect(result.current.runtimeCapabilityCounts).toBeUndefined();
   expect(result.current.stageCounts).toBeUndefined();
+});
+
+it("does not carry an error into the next query or discard the last matching facet scope", async () => {
+  const base = { stage: "all", keyword: "first", page: 1, pageSize: 24 };
+  const { result, rerender } = renderHook((query) => useAcquisitionTasks(query), { initialProps: base });
+  await waitFor(() => expect(result.current.data?.totalCount).toBe(1));
+  search.mockRejectedValueOnce(new Error("offline"));
+  rerender({ ...base, keyword: "second" });
+  await waitFor(() => expect(result.current.failed).toBe(true));
+  expect(result.current.downloadSourceCounts).toBeUndefined();
+  search.mockImplementation(() => new Promise(() => {}));
+  rerender({ ...base, page: 2 });
+  expect(result.current.failed).toBe(false);
+  expect(result.current.data).toBeUndefined();
+  expect(result.current.downloadSourceCounts?.all).toBe(4);
+  expect(result.current.loading).toBe(true);
 });

@@ -5,6 +5,11 @@ export function acquisitionFilterCount(counts: Record<string, number> | null | u
   return counts == null ? undefined : counts[id] ?? 0;
 }
 
+/** Unknown counts may label the current selection, but cannot establish a new filter choice. */
+export function showAcquisitionFilter(count: number | undefined, selectedOrAll: boolean) {
+  return selectedOrAll || (count !== undefined && count > 0);
+}
+
 export type AcquisitionFilterSelection = {
   attentionTags: string[];
   facts: string[];

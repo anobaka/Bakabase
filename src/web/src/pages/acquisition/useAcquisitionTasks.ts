@@ -25,7 +25,8 @@ export default function useAcquisitionTasks(query: Query, keywordPending = false
   const sequence = useRef(0);
   const pending = useRef<AbortController>();
   const [snapshot, setSnapshot] = useState<{ requestQuery: typeof requestQuery; data: Page }>();
-  const [failed, setFailed] = useState(false);
+  const [failedKey, setFailedKey] = useState<string>();
+  const failed = failedKey === key;
   const [loading, setLoading] = useState(true);
   const load = useCallback(async () => {
     const request = ++sequence.current;
@@ -43,9 +44,9 @@ export default function useAcquisitionTasks(query: Query, keywordPending = false
       if (request !== sequence.current || controller.signal.aborted) return;
       if (result.code || !result.data) throw new Error("ACQUISITION_SEARCH_FAILED");
       setSnapshot({ requestQuery: captured, data: result.data });
-      setFailed(false);
+      setFailedKey(undefined);
     } catch {
-      if (request === sequence.current && !controller.signal.aborted) setFailed(true);
+      if (request === sequence.current && !controller.signal.aborted) setFailedKey(captured.key);
     } finally {
       if (request === sequence.current && !controller.signal.aborted) setLoading(false);
     }
@@ -73,10 +74,8 @@ export default function useAcquisitionTasks(query: Query, keywordPending = false
     factCounts: tags?.factCounts,
     runtimeCapabilityCounts: runtime?.runtimeCapabilityCounts,
     runtimeExecutionStateCounts: runtime?.runtimeExecutionStateCounts,
-    // Keep discovered option names while the next scope loads, independently of their counts.
-    attentionTagIds: Object.keys(snapshot?.data.attentionCounts ?? {}),
+    // A selected capability can keep its provider label while its new scope loads.
     runtimeCapabilities: snapshot?.data.runtimeCapabilities,
-    runtimeExecutionStates: Object.keys(snapshot?.data.runtimeExecutionStateCounts ?? {}),
     taskRuntimeFacets: current ? snapshot.data.taskRuntimeFacets : undefined,
     loading: loading || (!current && !failed),
     failed,

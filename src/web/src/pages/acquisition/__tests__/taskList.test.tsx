@@ -1405,3 +1405,48 @@ it("keeps all selected empty facets individually removable, including sparse pro
   fireEvent.click(screen.getByRole("button", { name: "acquisition.filters.clear" }));
   await waitFor(() => expect(mocks.search.mock.lastCall![0]).toMatchObject({ attentionTags: [], facts: [] }));
 });
+
+it("never expands unknown choices on first load, keyword debounce or a superseded search", async () => {
+  let finishFirst!: (value: unknown) => void;
+  let finishBeta!: (value: unknown) => void;
+  let finishEmpty!: (value: unknown) => void;
+  mocks.search
+    .mockReturnValueOnce(new Promise(resolve => { finishFirst = resolve; }))
+    .mockReturnValueOnce(new Promise(resolve => { finishBeta = resolve; }))
+    .mockReturnValueOnce(new Promise(resolve => { finishEmpty = resolve; }));
+  show();
+  const sourceGroup = () => screen.queryByRole("group", { name: "downloader.filter.source" });
+  const stages = within(screen.getByRole("group", { name: "acquisition.tasks.filter" }));
+  const noTaskFacets = () => {
+    expect(screen.queryByRole("group", { name: "acquisition.filters.title" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "acquisition.runtime.filters.title" })).toBeNull();
+  };
+  expect(sourceGroup()).toBeNull();
+  noTaskFacets();
+  expect(stages.getAllByRole("button")).toHaveLength(1);
+  const populated = response({
+    runtimeCapabilityCounts: { "custom.archive": 2 }, runtimeExecutionStateCounts: { running: 2 },
+    runtimeCapabilities: [{ capabilityId: "custom.archive", capabilityName: "Archive worker" }],
+  });
+  await act(async () => finishFirst(populated));
+  expect(screen.getByRole("button", { name: "enum.thirdPartyId.baiduNetdisk 20" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "Archive worker 2" })).toBeVisible();
+
+  const searchField = screen.getByLabelText("acquisition.tasks.search");
+  fireEvent.change(searchField, { target: { value: "beta" } });
+  expect(sourceGroup()).toBeNull();
+  noTaskFacets();
+  expect(stageButton("attention", 30)).toBeVisible();
+  await waitFor(() => expect(mocks.search.mock.lastCall![0].keyword).toBe("beta"));
+  fireEvent.change(searchField, { target: { value: "empty" } });
+  await waitFor(() => expect(mocks.search.mock.lastCall![0].keyword).toBe("empty"));
+  await act(async () => finishBeta(populated));
+  expect(sourceGroup()).toBeNull();
+  noTaskFacets();
+  await act(async () => finishEmpty(response({
+    items: [], filteredTaskIds: [], checkableTaskIds: [], totalCount: 0, downloadSourceCounts: { all: 0 },
+    runtimeCapabilityCounts: {}, runtimeExecutionStateCounts: {}, attentionCounts: {}, factCounts: {},
+  })));
+  expect(sourceGroup()).toBeNull();
+  noTaskFacets();
+});

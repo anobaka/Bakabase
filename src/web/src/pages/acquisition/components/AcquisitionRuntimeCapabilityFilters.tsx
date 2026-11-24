@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineBranches, AiOutlineDownload, AiOutlineRobot } from "react-icons/ai";
 import { Button, Tooltip } from "@/components/bakaui";
-import { acquisitionFilterCount } from "../acquisitionFilters";
+import { acquisitionFilterCount, showAcquisitionFilter } from "../acquisitionFilters";
 
 type RuntimeFacet = {
   capabilityId?: string;
@@ -10,11 +10,11 @@ type RuntimeFacet = {
   capabilityNameKey?: string;
 };
 
-function runtimeChoices(counts: Record<string, number> | null | undefined, ids: Iterable<string>, selected?: string) {
-  const choices = new Set([...Object.keys(counts ?? {}), ...ids]);
+function runtimeChoices(counts: Record<string, number> | null | undefined, selected?: string) {
+  const choices = new Set(Object.keys(counts ?? {}));
   if (selected) choices.add(selected);
   return [...choices].map(id => ({ id, count: acquisitionFilterCount(counts, id) }))
-    .filter(choice => choice.count !== 0 || choice.id === selected);
+    .filter(choice => showAcquisitionFilter(choice.count, choice.id === selected));
 }
 
 function iconFor(id: string) {
@@ -27,7 +27,6 @@ export default function AcquisitionRuntimeCapabilityFilters({
   capabilityCounts,
   executionStateCounts,
   capabilities,
-  executionStates = [],
   facets,
   capabilityId,
   executionState,
@@ -38,7 +37,6 @@ export default function AcquisitionRuntimeCapabilityFilters({
   capabilityCounts?: Record<string, number> | null;
   executionStateCounts?: Record<string, number> | null;
   capabilities?: RuntimeFacet[] | null;
-  executionStates?: string[];
   facets?: Record<string, RuntimeFacet> | null;
   capabilityId?: string;
   executionState?: string;
@@ -57,8 +55,8 @@ export default function AcquisitionRuntimeCapabilityFilters({
     });
     return result;
   }, [capabilities, facets]);
-  const capabilityChoices = runtimeChoices(capabilityCounts, labels.keys(), capabilityId);
-  const states = runtimeChoices(executionStateCounts, executionStates, executionState);
+  const capabilityChoices = runtimeChoices(capabilityCounts, capabilityId);
+  const states = runtimeChoices(executionStateCounts, executionState);
   if (!capabilityChoices.length && !states.length) return null;
 
   const capabilityLabel = (id: string) => {

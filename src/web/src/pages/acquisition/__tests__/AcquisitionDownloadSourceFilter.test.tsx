@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { HeroUIProvider, Chip } from "@heroui/react";
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import { createInstance } from "i18next";
+import { I18nextProvider } from "react-i18next";
 import AcquisitionDownloadSourceFilter from "../components/AcquisitionDownloadSourceFilter";
 import { downloadSourceLabel } from "@/components/DownloadSource";
 import cn from "@/locales/cn/enums.json";
+import downloaderCn from "@/locales/cn/pages/downloader.json";
 import en from "@/locales/en/enums.json";
 
+vi.unmock("react-i18next");
 vi.mock("@/components/bakaui", async () => {
   const actual = await vi.importActual<typeof import("@/components/bakaui")>("@/components/bakaui");
   return { ...actual, Chip: (props: any) => <Chip {...props} /> };
@@ -20,7 +24,9 @@ it("uses a flat source row with protocol and site icons and clears through All s
     const [value, setValue] = useState<string>();
     return <AcquisitionDownloadSourceFilter counts={{ all: 37, http: 15, bt: 2, "site:14": 28 }} value={value} onChange={next => { change(next); setValue(next); }} />;
   }
-  render(<HeroUIProvider disableAnimation><Controlled /></HeroUIProvider>);
+  const i18n = createInstance();
+  await i18n.init({ lng: "en", resources: { en: { translation: {} } } });
+  render(<I18nextProvider i18n={i18n}><HeroUIProvider disableAnimation><Controlled /></HeroUIProvider></I18nextProvider>);
   const http = screen.getByRole("button", { name: "downloadCenter.provider.http 15" });
   const bt = screen.getByRole("button", { name: "downloadCenter.provider.bt 2" });
   const baidu = screen.getByRole("button", { name: "enum.thirdPartyId.baiduNetdisk 28" });
@@ -42,19 +48,31 @@ it.each(["cn", "en"] as const)("shares localized Download Center site labels in 
   expect(downloadSourceLabel("site:14", i18n.t)).toBe(language === "cn" ? "百度网盘" : "Baidu Netdisk");
 });
 
-it("keeps the selected zero and All, hides unselected zeroes, and shows unknown counts while waiting", async () => {
+it("retains only the selected source and All while waiting; both known zero and unknown can be cleared", async () => {
   const change = vi.fn();
-  const row = (counts?: Record<string, number>) => <HeroUIProvider disableAnimation>
-    <AcquisitionDownloadSourceFilter value="site:14" onChange={change} counts={counts} />
-  </HeroUIProvider>;
+  const i18n = createInstance();
+  await i18n.init({ lng: "cn", resources: { cn: { translation: { ...downloaderCn, ...cn } } } });
+  const row = (counts?: Record<string, number>) => <I18nextProvider i18n={i18n}>
+    <HeroUIProvider disableAnimation>
+      <AcquisitionDownloadSourceFilter value="site:14" onChange={change} counts={counts} />
+    </HeroUIProvider>
+  </I18nextProvider>;
   const { rerender } = render(row({ all: 0, bt: 0 }));
-  const selected = screen.getByRole("button", { name: "enum.thirdPartyId.baiduNetdisk 0" });
+  const selected = screen.getByRole("button", { name: "百度网盘 0" });
   expect(selected).toHaveAttribute("aria-pressed", "true");
-  expect(screen.getByRole("button", { name: "downloader.filter.allSources 0" })).toBeVisible();
+  expect(screen.getByRole("button", { name: "全部来源 0" })).toBeVisible();
   expect(screen.getAllByRole("button")).toHaveLength(2);
   await act(async () => selected.click());
   expect(change).toHaveBeenLastCalledWith(undefined);
   rerender(row());
-  expect(screen.getByRole("button", { name: "downloadCenter.provider.bt —" })).toBeVisible();
-  expect(screen.getByRole("button", { name: "downloader.filter.allSources —" })).toBeVisible();
+  expect(screen.getAllByRole("button")).toHaveLength(2);
+  expect(screen.getByRole("button", { name: "全部来源 —" })).toBeVisible();
+  const pending = screen.getByRole("button", { name: "百度网盘 —" });
+  expect(pending).toBe(selected);
+  const user = userEvent.setup();
+  act(() => pending.focus());
+  await act(async () => user.keyboard("{Enter}"));
+  expect(pending).toHaveFocus();
+  expect(change).toHaveBeenCalledTimes(2);
+  expect(change).toHaveBeenLastCalledWith(undefined);
 });

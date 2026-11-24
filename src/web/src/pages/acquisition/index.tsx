@@ -98,8 +98,6 @@ const AcquisitionPage: React.FC = () => {
     data,
     stageCounts,
     downloadSourceCounts,
-    attentionTagIds,
-    runtimeExecutionStates,
     attentionCounts,
     factCounts,
     runtimeCapabilityCounts,
@@ -564,7 +562,6 @@ const AcquisitionPage: React.FC = () => {
         capabilityCounts={runtimeCapabilityCounts}
         executionStateCounts={runtimeExecutionStateCounts}
         capabilities={runtimeCapabilities}
-        executionStates={runtimeExecutionStates}
         facets={taskRuntimeFacets}
         capabilityId={capabilityId}
         executionState={executionState}
@@ -582,7 +579,6 @@ const AcquisitionPage: React.FC = () => {
       />
       <AcquisitionAttentionFilters
         counts={attentionCounts}
-        tagIds={attentionTagIds}
         factCounts={factCounts}
         matchingCount={filterPending || loadFailed ? undefined : data?.totalCount}
         value={filters}

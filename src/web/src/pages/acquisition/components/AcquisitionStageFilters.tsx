@@ -4,7 +4,7 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/bakaui";
 import { acquisitionStages } from "@/components/Acquire/taskStage";
-import { acquisitionFilterCount } from "../acquisitionFilters";
+import { acquisitionFilterCount, showAcquisitionFilter } from "../acquisitionFilters";
 
 const stages: AcquisitionStageFilter[] = ["all", ...acquisitionStages];
 
@@ -34,7 +34,7 @@ export default function AcquisitionStageFilters({
         const selected = value === stage;
         const count = acquisitionFilterCount(counts, stage);
         const canClearSelection = value !== "all" && (selected || stage === "all");
-        if (count === 0 && !selected && stage !== "all") return null;
+        if (!showAcquisitionFilter(count, selected || stage === "all")) return null;
         return (
           <Button
             key={stage}

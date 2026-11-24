@@ -4,13 +4,13 @@ import { taskTag } from "@/components/Acquire/taskTags";
 import {
   acquisitionFactFilters,
   acquisitionFilterCount,
+  showAcquisitionFilter,
   toggleAcquisitionFilter,
   type AcquisitionFilterSelection,
 } from "../acquisitionFilters";
 
 export default function AcquisitionAttentionFilters({
   counts,
-  tagIds = [],
   factCounts,
   value,
   onChange,
@@ -18,7 +18,6 @@ export default function AcquisitionAttentionFilters({
   matchingCount,
 }: {
   counts?: Record<string, number> | null;
-  tagIds?: string[];
   factCounts?: Record<string, number> | null;
   value: AcquisitionFilterSelection;
   onChange: (value: AcquisitionFilterSelection) => void;
@@ -28,9 +27,9 @@ export default function AcquisitionAttentionFilters({
   const { t } = useTranslation();
   const tags = [
     ...acquisitionFactFilters.map(id => ({ ...taskTag("facts", id), count: acquisitionFilterCount(factCounts, id) })),
-    ...[...new Set([...tagIds, ...Object.keys(counts ?? {}), ...value.attentionTags])]
+    ...[...new Set([...Object.keys(counts ?? {}), ...value.attentionTags])]
       .map(id => ({ ...taskTag("attentionTags", id), count: acquisitionFilterCount(counts, id) })),
-  ].filter(({ kind, id, count }) => count !== 0 || value[kind].includes(id));
+  ].filter(({ kind, id, count }) => showAcquisitionFilter(count, value[kind].includes(id)));
   if (!tags.length) return null;
   const selectedCount = value.attentionTags.length + value.facts.length;
 

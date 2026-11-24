@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Button, Tooltip } from "@/components/bakaui";
 import { DownloadSourceIcon, downloadSourceLabel } from "@/components/DownloadSource";
-import { acquisitionFilterCount } from "../acquisitionFilters";
+import { acquisitionFilterCount, showAcquisitionFilter } from "../acquisitionFilters";
 import {
   acquisitionDownloadSources,
   normalizeAcquisitionDownloadSource,
@@ -17,14 +17,15 @@ export default function AcquisitionDownloadSourceFilter({
   onChange: (value: string | undefined) => void;
 }) {
   const { t } = useTranslation();
+  const selected = normalizeAcquisitionDownloadSource(value);
+  const sources = acquisitionDownloadSources.filter(source =>
+    showAcquisitionFilter(acquisitionFilterCount(counts, source), selected === source));
+  if (!sources.length) return null;
+
   const choices = [
     { value: "all", label: t("downloader.filter.allSources") },
-    ...acquisitionDownloadSources.map((source) => ({
-      value: source,
-      label: downloadSourceLabel(source, t),
-    })),
+    ...sources.map(source => ({ value: source, label: downloadSourceLabel(source, t) })),
   ];
-  const selected = normalizeAcquisitionDownloadSource(value);
   return (
     <div
       data-acquisition-download-source-filter
@@ -39,7 +40,6 @@ export default function AcquisitionDownloadSourceFilter({
         const isAll = choice.value === "all";
         const isSelected = isAll ? !selected : selected === choice.value;
         const count = acquisitionFilterCount(counts, choice.value);
-        if (count === 0 && !isAll && !isSelected) return null;
         return (
           <Button
             key={choice.value}
