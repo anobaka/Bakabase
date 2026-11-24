@@ -131,6 +131,7 @@ export default function PlanTaskDetailModal({
   const [preparationOpen, setPreparationOpen] = useState(false);
   const [preparationSettingsOpen, setPreparationSettingsOpen] = useState(false);
   const [runPlanOpen, setRunPlanOpen] = useState(false);
+  const [waitingStop, setWaitingStop] = useState<{ runId: number; revision: number }>();
   const requestId = useRef(0);
   const mutationPending = useRef(false);
   const load = useCallback(async () => {
@@ -395,6 +396,13 @@ export default function PlanTaskDetailModal({
     );
   const deliveryAvailable =
     !!detail && !readOnly && (hasStageDirectoryInputs(detail, "delivery") || canReviseDeliveryLayout(detail) || canRetryRecordedDelivery);
+  const stoppableRun = deliveryAvailable && task?.status === AcquisitionStatus.Waiting &&
+    task.workflowRunId != null && overview?.planRevision === task.planRevision &&
+    overview?.canStopWaitingRun === true
+    ? { runId: task.workflowRunId, revision: task.planRevision }
+    : undefined;
+  const stopUnavailable = !waitingStop || !stoppableRun || waitingStop.runId !== stoppableRun.runId ||
+    waitingStop.revision !== stoppableRun.revision;
   const refreshAfterAction = () => {
     void load();
     void loadHealth();
@@ -564,6 +572,12 @@ export default function PlanTaskDetailModal({
         <Button size="sm" variant="flat" isDisabled={busy || replanOpen}
           onPress={() => setEditor({ stage: "delivery", snapshot: detail! })}>
           {t("acquisition.timeline.retry.delivery")}
+        </Button>
+      )}
+      {stage === "delivery" && stoppableRun && (
+        <Button size="sm" variant="light" aria-haspopup="dialog" isDisabled={busy || replanOpen}
+          onPress={() => setWaitingStop(stoppableRun)}>
+          {t("acquisition.runtime.stopWaiting.open")}
         </Button>
       )}
     </>;
@@ -833,6 +847,30 @@ export default function PlanTaskDetailModal({
           defaultValue: t(`acquire.requirement.${issue.code}`, { defaultValue: t("acquisition.plan.issue.unknown") }),
         })}</p>)}
       </Modal>}
+      {waitingStop && (
+        <Modal visible title={t("acquisition.runtime.stopWaiting.title")} onClose={() => !busy && setWaitingStop(undefined)}
+          footer={<>
+            <Button variant="light" isDisabled={busy} onPress={() => setWaitingStop(undefined)}>{t("common.action.cancel")}</Button>
+            <Button color="danger" isLoading={busy} isDisabled={busy || stopUnavailable} onPress={() => {
+              if (stopUnavailable) return;
+              void mutate(async () => {
+                try {
+                  const result = await BApi.acquisition.cancelAcquisition(
+                    taskId, { expectedRunId: waitingStop.runId, expectedRevision: waitingStop.revision },
+                    { sensitiveResponse: true, showErrorToast: false },
+                  );
+                  if (result.code) throw new Error(result.message || "ACQUISITION_PLAN_REQUEST_FAILED");
+                  return undefined;
+                } finally {
+                  setWaitingStop(undefined);
+                }
+              });
+            }}>{t("acquisition.runtime.stopWaiting.confirm")}</Button>
+          </>}>
+          <p className="text-sm">{t("acquisition.runtime.stopWaiting.description", { runId: waitingStop.runId })}</p>
+          {stopUnavailable && <p role="alert" className="mt-2 text-sm text-warning-700">{t("acquisition.runtime.stopWaiting.changed")}</p>}
+        </Modal>
+      )}
       {!readOnly && (editor?.stage === "keepPrepared" || editor?.stage === "deferPrepared") && replanSnapshot && (
         <PreparedFilesModal detail={replanSnapshot} choice={editor.stage === "deferPrepared" ? "defer" : "keep"}
           stale={editorStale || !canChoosePreparedFiles(detail, editor.stage === "deferPrepared" ? "defer" : "keep")}

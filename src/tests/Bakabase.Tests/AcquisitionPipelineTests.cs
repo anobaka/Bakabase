@@ -375,6 +375,58 @@ public sealed class AcquisitionPipelineTests
     }
 
     [TestMethod]
+    public async Task GuardedCancelPreservesNewAttemptsAndQueuedAnswersToWaitingWorkflows()
+    {
+        var recipeId = await CreateRecipe(FetchStep.StepKind, AskStep.StepKind, PlaceStep.StepKind);
+        var task = await Create(await CreateMissingResource(), recipeId);
+        var runId = task.WorkflowRunId!.Value;
+        await Execute(runId);
+        Assert.AreEqual(AcquisitionStatus.Waiting, (await Task_(task.Id)).Status);
+        var revision = task.PlanRevision;
+
+        await using var scope = _sp.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<IAcquisitionService>();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        bool checkedWithRunLock = false;
+        Task<bool> CanStop(CancellationToken ct)
+        {
+            checkedWithRunLock = WorkflowRunMutationGate.For(runId).CurrentCount == 0;
+            return Task.FromResult(true);
+        }
+        var differentRun = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
+            service.CancelWaitingAsync(task.Id, runId + 1, revision, CanStop));
+        Assert.AreEqual("PLAN_VERSION_CONFLICT", differentRun.Message);
+        var differentRevision = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
+            service.CancelWaitingAsync(task.Id, runId, revision + 1, CanStop));
+        Assert.AreEqual("PLAN_VERSION_CONFLICT", differentRevision.Message);
+
+        const string queuedAnswer = "\"queued-answer\"";
+        await db.WorkflowRuns.Where(r => r.Id == runId)
+            .ExecuteUpdateAsync(update => update.SetProperty(r => r.PendingSignalJson, queuedAnswer));
+        var answerPending = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
+            service.CancelWaitingAsync(task.Id, runId, revision, CanStop));
+        Assert.AreEqual("ACQUISITION_TASK_ACTIVE", answerPending.Message);
+        Assert.AreEqual(queuedAnswer, (await Run(runId)).PendingSignalJson);
+        Assert.AreEqual(AcquisitionStatus.Waiting, (await Task_(task.Id)).Status);
+
+        await db.WorkflowRuns.Where(r => r.Id == runId)
+            .ExecuteUpdateAsync(update => update.SetProperty(r => r.PendingSignalJson, (string?)null));
+        var downloadStarted = await Assert.ThrowsExceptionAsync<InvalidOperationException>(() =>
+            service.CancelWaitingAsync(task.Id, runId, revision, _ => Task.FromResult(false)));
+        Assert.AreEqual("ACQUISITION_TASK_ACTIVE", downloadStarted.Message);
+        Assert.AreEqual(WorkflowRunStatus.Waiting, (await Run(runId)).Status);
+
+        await service.CancelWaitingAsync(task.Id, runId, revision, CanStop);
+        Assert.IsTrue(checkedWithRunLock);
+        var stopped = await Run(runId);
+        Assert.AreEqual(WorkflowRunStatus.Cancelled, stopped.Status);
+        Assert.AreEqual(1, stopped.CurrentStepIndex);
+        var stoppedTask = await Task_(task.Id);
+        Assert.AreEqual(AcquisitionStatus.Cancelled, stoppedTask.Status);
+        Assert.AreEqual(revision, stoppedTask.PlanRevision);
+    }
+
+    [TestMethod]
     public async Task Retry_PicksUpAtTheStepThatStopped()
     {
         var recipeId = await CreateRecipe(FetchStep.StepKind, AskStep.StepKind);

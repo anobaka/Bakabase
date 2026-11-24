@@ -2055,6 +2055,116 @@ it("opens redelivery in a separate dialog and closing the draft leaves the task 
   expect(mocks.run).not.toHaveBeenCalled();
 });
 
+const waitingRedelivery = {
+  ...detail,
+  task: { ...detail.task, workflowRunId: 77, status: AcquisitionStatus.Waiting, phase: "attention", currentStepIndex: 0 },
+  plan: { parts: [{ id: "part", sources: [] }] },
+  steps: [{ id: "publish", kind: "fs.publishArtifacts", stage: "delivery" }],
+  stageDirectories: { version: 1, taskId: 42, parts: { part: { delivery: { directory: "/Acquired/retained" } } } },
+  stageAttempts: [{ id: "77/1", runId: 77, stage: "delivery", attempt: 1, status: "waiting", nodes: [], outputs: [] }],
+};
+const waitingRedeliveryOverview = {
+  taskId: 42, planRevision: 3, workflowRunId: 77, workflowStatus: "waiting",
+  currentStepIndex: 0, currentNodeKind: "fs.publishArtifacts", canStopWaitingRun: true,
+};
+const stopWaitingOpen = { name: "acquisition.runtime.stopWaiting.open" };
+const stopWaitingDialog = { name: "acquisition.runtime.stopWaiting.title" };
+const stopWaitingConfirm = { name: "acquisition.runtime.stopWaiting.confirm" };
+const retryDelivery = { name: "acquisition.timeline.retry.delivery" };
+
+it("asks before stopping the current delivery wait and keeps redelivery after cancellation", async () => {
+  mocks.get.mockResolvedValue(waitingRedelivery);
+  mocks.runtimeOverviews.mockResolvedValue([waitingRedeliveryOverview]);
+  mocks.cancel.mockImplementation(async () => {
+    mocks.get.mockResolvedValue({
+      ...waitingRedelivery,
+      task: { ...waitingRedelivery.task, status: AcquisitionStatus.Cancelled },
+      stageAttempts: [{ ...waitingRedelivery.stageAttempts[0], status: "cancelled" }],
+    });
+    mocks.runtimeOverviews.mockResolvedValue([{ ...waitingRedeliveryOverview,
+      canStopWaitingRun: false, workflowStatus: "cancelled" }]);
+    return { code: 0 };
+  });
+  const onChanged = vi.fn();
+  render(<PlanTaskDetailModal taskId={42} onChanged={onChanged} />);
+  const open = await screen.findByRole("button", stopWaitingOpen);
+  expect(open.closest("li")).toHaveTextContent("acquisition.timeline.stage.delivery");
+  expect(screen.getByRole("button", retryDelivery)).toBeEnabled();
+  fireEvent.click(open);
+  const confirmation = await screen.findByRole("dialog", stopWaitingDialog);
+  expect(within(confirmation).getByText("acquisition.runtime.stopWaiting.description")).toBeVisible();
+  expect(mocks.cancel).not.toHaveBeenCalled();
+
+  fireEvent.click(within(confirmation).getByRole("button", stopWaitingConfirm));
+  await waitFor(() => expect(onChanged).toHaveBeenCalledOnce());
+  expect(mocks.cancel).toHaveBeenCalledExactlyOnceWith(42, { expectedRunId: 77, expectedRevision: 3 },
+    { sensitiveResponse: true, showErrorToast: false });
+  expect(screen.queryByRole("dialog", stopWaitingDialog)).toBeNull();
+  expect(screen.queryByRole("button", stopWaitingOpen)).toBeNull();
+  const redelivery = screen.getByRole("button", retryDelivery);
+  expect(redelivery.closest("li")).toHaveTextContent("acquisition.timeline.state.cancelled");
+  expect(redelivery).toBeEnabled();
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["without the capability", { canStopWaitingRun: false }],
+  ["for a different run", { workflowRunId: 76 }],
+  ["for a different revision", { planRevision: 2 }],
+])("keeps redelivery and hides stop waiting %s", async (_, overview) => {
+  mocks.get.mockResolvedValue(waitingRedelivery);
+  mocks.runtimeOverviews.mockResolvedValue([{ ...waitingRedeliveryOverview, ...overview }]);
+  await act(async () => { render(<PlanTaskDetailModal taskId={42} />); });
+  expect(mocks.runtimeOverviews).toHaveBeenCalledWith([42], expect.any(AbortSignal));
+  expect(screen.getByRole("button", retryDelivery)).toBeEnabled();
+  expect(screen.queryByRole("button", stopWaitingOpen)).toBeNull();
+  expect(mocks.cancel).not.toHaveBeenCalled();
+});
+
+it("cannot confirm stopping a delivery wait after the active run changes", async () => {
+  vi.useFakeTimers();
+  try {
+    mocks.get.mockResolvedValue(waitingRedelivery);
+    mocks.runtimeOverviews.mockResolvedValue([waitingRedeliveryOverview]);
+    await act(async () => { render(<PlanTaskDetailModal taskId={42} />); });
+    fireEvent.click(screen.getByRole("button", stopWaitingOpen));
+    expect(within(screen.getByRole("dialog", stopWaitingDialog)).getByRole("button", stopWaitingConfirm)).toBeEnabled();
+
+    mocks.get.mockResolvedValue({ ...waitingRedelivery,
+      task: { ...waitingRedelivery.task, workflowRunId: 78 } });
+    mocks.runtimeOverviews.mockResolvedValue([{ ...waitingRedeliveryOverview,
+      workflowRunId: 78, canStopWaitingRun: false }]);
+    await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+
+    const confirmation = screen.queryByRole("dialog", stopWaitingDialog);
+    if (confirmation) {
+      const confirm = within(confirmation).getByRole("button", stopWaitingConfirm);
+      expect(confirm).toBeDisabled();
+      fireEvent.click(confirm);
+    }
+    expect(screen.queryByRole("button", stopWaitingOpen)).toBeNull();
+    expect(screen.getByRole("button", retryDelivery)).toBeEnabled();
+    expect(mocks.cancel).not.toHaveBeenCalled();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("shows the existing action error when stopping a delivery wait is rejected", async () => {
+  mocks.get.mockResolvedValue(waitingRedelivery);
+  mocks.runtimeOverviews.mockResolvedValue([waitingRedeliveryOverview]);
+  mocks.cancel.mockResolvedValue({ code: 400, message: "The run has changed." });
+  const onChanged = vi.fn();
+  render(<PlanTaskDetailModal taskId={42} onChanged={onChanged} />);
+  fireEvent.click(await screen.findByRole("button", stopWaitingOpen));
+  fireEvent.click(within(await screen.findByRole("dialog", stopWaitingDialog)).getByRole("button", stopWaitingConfirm));
+
+  expect(await screen.findByText("acquisition.plan.actionFailed")).toBeVisible();
+  expect(screen.getByRole("button", retryDelivery)).toBeEnabled();
+  expect(onChanged).not.toHaveBeenCalled();
+  expect(mocks.cancel).toHaveBeenCalledOnce();
+});
+
 it("can review retained files from a removed, completed task's read-only details", async () => {
   mocks.get.mockResolvedValue({ ...detail, task: { ...detail.task, status: AcquisitionStatus.Completed,
     isDeleted: true, deletedAt: "2026-11-10T12:00:00Z", workflowRunId: 77 } });

@@ -76,6 +76,7 @@ const overview = (patch: Partial<RuntimeOverview> = {}): RuntimeOverview => ({
   sourcesTruncated: false,
   downloadsCompletedAwaitingWorkflow: false,
   canDiagnoseDownloadContinuation: false,
+  canStopWaitingRun: false,
   ...patch,
 });
 

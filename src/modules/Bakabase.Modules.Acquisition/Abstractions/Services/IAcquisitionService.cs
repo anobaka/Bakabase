@@ -44,6 +44,10 @@ public interface IAcquisitionService
 
     Task CancelAsync(int taskId, CancellationToken ct = default);
 
+    /// <summary>Cancel only the reviewed waiting run. Check live capability activity under the run lock.</summary>
+    Task CancelWaitingAsync(int taskId, int expectedRunId, int expectedRevision,
+        Func<CancellationToken, Task<bool>> canStopWaitingRun, CancellationToken ct = default);
+
     /// <summary>
     /// Mirrors a run's state onto the task row. Called by the step adapter after every step; not
     /// meant for anything else.

@@ -8777,6 +8777,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeO
   downloadContinuation?: string;
   downloadsCompletedAwaitingWorkflow: boolean;
   canDiagnoseDownloadContinuation: boolean;
+  canStopWaitingRun: boolean;
   problemCode?: string;
   problemReasonCode?: string;
   attentionTags: string[];
@@ -16346,10 +16347,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name CancelAcquisition
      * @request POST:/acquisition/{id}/cancel
      */
-    cancelAcquisition: (id: number, params: RequestParams = {}) =>
+    cancelAcquisition: (
+      id: number,
+      query?: {
+        /** @format int32 */
+        expectedRunId?: number;
+        /** @format int32 */
+        expectedRevision?: number;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/acquisition/${id}/cancel`,
         method: "POST",
+        query: query,
         format: "json",
         ...params,
       }),

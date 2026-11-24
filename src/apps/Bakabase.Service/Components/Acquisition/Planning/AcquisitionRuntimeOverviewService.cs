@@ -293,6 +293,10 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 DownloadContinuation = run == null ? null : AcquisitionDownloadContinuationService.Read(task)?.Mode ?? AcquisitionDownloadContinuationService.Manual,
                 DownloadsCompletedAwaitingWorkflow = completedWait,
                 CanDiagnoseDownloadContinuation = completedWait && run?.PendingSignalJson == null,
+                CanStopWaitingRun = task.Status == AcquisitionStatus.Waiting &&
+                    run is {Status: WorkflowRunStatus.Waiting, PendingSignalJson: null} &&
+                    summary.ActiveCount == 0 && downloadActivity?.Activity == null &&
+                    backgroundTasks?.IsPending($"workflow.run.{run.Id}") != true,
                 ProblemCode = problemCode, Problem = problemCode == null ? null : AcquisitionRuntimeProblems.Message(problemCode),
                 ProblemReasonCode = ExecutionProblemClassifier.NormalizedReason(problemCode),
                 AttentionTags = attention ? ExecutionProblemClassifier.Classify(problemCodes, node?.WaitReason ?? run?.WaitReason) : [],

@@ -35,6 +35,7 @@ public sealed record AcquisitionRuntimeOverview
     public bool DownloadsCompletedAwaitingWorkflow { get; init; }
     /// <summary>Offers diagnosis, not a claim that file validation or downstream storage admission passed.</summary>
     public bool CanDiagnoseDownloadContinuation { get; init; }
+    public bool CanStopWaitingRun { get; init; }
     public string? ProblemCode { get; init; }
     public string? ProblemReasonCode { get; init; }
     public IReadOnlyList<string> AttentionTags { get; init; } = [];

@@ -20146,6 +20146,7 @@ export interface components {
             downloadContinuation?: string;
             downloadsCompletedAwaitingWorkflow: boolean;
             canDiagnoseDownloadContinuation: boolean;
+            canStopWaitingRun: boolean;
             problemCode?: string;
             problemReasonCode?: string;
             attentionTags: string[];
@@ -26384,7 +26385,10 @@ export interface operations {
     };
     CancelAcquisition: {
         parameters: {
-            query?: never;
+            query?: {
+                expectedRunId?: number;
+                expectedRevision?: number;
+            };
             header?: never;
             path: {
                 id: number;

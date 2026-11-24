@@ -801,12 +801,16 @@ public sealed class AcquisitionRuntimeOverviewTests
         var checkpoint = run.CurrentItemJson;
         var result = await Read(task.Id);
         Assert.IsTrue(result.DownloadsCompletedAwaitingWorkflow); Assert.IsTrue(result.CanDiagnoseDownloadContinuation);
+        Assert.IsTrue(result.CanStopWaitingRun);
         Assert.AreEqual("downloadsOnly", result.DownloadContinuation); Assert.IsNull(result.ProblemCode);
         Assert.AreEqual(0, result.AttentionTags.Count); Assert.AreEqual(1, result.CompletedDownloadCount);
         var selected = result.Sources.Single(s => s.Selected);
         Assert.IsNull(selected.ReasonCode); Assert.AreEqual("download", selected.EvidenceKind); Assert.AreEqual("available", selected.Status);
         await _db.Entry(run).ReloadAsync(); Assert.AreEqual(checkpoint, run.CurrentItemJson);
         Assert.AreEqual(WorkflowRunStatus.Waiting, run.Status); Assert.IsNull(run.PendingSignalJson); Assert.AreEqual(0, _probe.Calls);
+        run.PendingSignalJson = "{}";
+        await _db.SaveChangesAsync();
+        Assert.IsFalse((await Read(task.Id)).CanStopWaitingRun);
     }
 
     [DataTestMethod]
@@ -818,6 +822,7 @@ public sealed class AcquisitionRuntimeOverviewTests
         _reader.Values = [new("site:42", null, run.Id, status, 20, 20, 100, DateTimeOffset.UtcNow, null)];
         var result = await Read(task.Id);
         Assert.AreEqual(status, result.DownloadActivity); Assert.AreEqual("waiting", result.WorkflowStatus);
+        Assert.IsFalse(result.CanStopWaitingRun);
         Assert.IsNull(result.ProblemCode); Assert.IsNull(result.Sources.Single(s => s.Selected).ReasonCode);
         _reader.Values = [_reader.Values.Single() with {ProblemCode = "LOCAL_STORAGE_RESERVE_LOW"}];
         var held = await Read(task.Id);

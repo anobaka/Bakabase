@@ -226,20 +226,35 @@ public class AcquisitionService<TDbContext>(
         return await Decorate(task.ToDomainModel(), ct);
     }
 
-    public async Task CancelAsync(int taskId, CancellationToken ct = default)
+    public Task CancelAsync(int taskId, CancellationToken ct = default) => CancelAsync(taskId, null, null, ct);
+
+    public Task CancelWaitingAsync(int taskId, int expectedRunId, int expectedRevision,
+        Func<CancellationToken, Task<bool>> canStopWaitingRun, CancellationToken ct = default) =>
+        CancelAsync(taskId, (expectedRunId, expectedRevision), canStopWaitingRun, ct);
+
+    private async Task CancelAsync(int taskId, (int RunId, int Revision)? waitingAttempt,
+        Func<CancellationToken, Task<bool>>? canStopWaitingRun, CancellationToken ct)
     {
         var gate = AcquisitionTaskGate.For(taskId);
         await gate.WaitAsync(ct);
-        try { await CancelCoreAsync(taskId, ct); }
+        try { await CancelCoreAsync(taskId, waitingAttempt, canStopWaitingRun, ct); }
         finally { gate.Release(); }
     }
 
-    private async Task CancelCoreAsync(int taskId, CancellationToken ct)
+    private async Task CancelCoreAsync(int taskId, (int RunId, int Revision)? waitingAttempt,
+        Func<CancellationToken, Task<bool>>? canStopWaitingRun, CancellationToken ct)
     {
         var task = await Tasks.FirstOrDefaultAsync(t => t.Id == taskId, ct)
                    ?? throw new InvalidOperationException($"Acquisition #{taskId} does not exist.");
         await db.Entry(task).ReloadAsync(ct);
         AcquisitionTaskGuard.EnsureNotDeleted(task);
+        if (waitingAttempt is {} expected)
+        {
+            if (task.WorkflowRunId != expected.RunId || task.PlanRevision != expected.Revision)
+                throw new InvalidOperationException("PLAN_VERSION_CONFLICT");
+            if (task.Status != AcquisitionStatus.Waiting)
+                throw new InvalidOperationException("ACQUISITION_TASK_ACTIVE");
+        }
 
         if (task.WorkflowRunId is { } runId)
         {
@@ -248,12 +263,23 @@ public class AcquisitionService<TDbContext>(
             await runGate.WaitAsync(ct);
             try
             {
-                await Runs.Where(r => r.Id == runId && r.Status != WorkflowRunStatus.Success)
+                var runs = Runs.Where(r => r.Id == runId && r.Status != WorkflowRunStatus.Success);
+                if (waitingAttempt != null)
+                {
+                    // A downloader can start under the same owner lock while this confirmation is open.
+                    if (taskManager.IsPending($"workflow.run.{runId}") || canStopWaitingRun == null ||
+                        !await canStopWaitingRun(ct))
+                        throw new InvalidOperationException("ACQUISITION_TASK_ACTIVE");
+                    runs = runs.Where(r => r.Status == WorkflowRunStatus.Waiting && r.PendingSignalJson == null);
+                }
+                var updated = await runs
                     .ExecuteUpdateAsync(s => s
                         .SetProperty(r => r.Status, _ => WorkflowRunStatus.Cancelled)
                         .SetProperty(r => r.CompletedAt, _ => DateTime.Now)
                         .SetProperty(r => r.PendingSignalJson, (string?)null)
                         .SetProperty(r => r.ErrorMessage, _ => "Cancelled: the acquisition was cancelled"), ct);
+                if (waitingAttempt != null && updated == 0)
+                    throw new InvalidOperationException("ACQUISITION_TASK_ACTIVE");
             }
             finally { runGate.Release(); }
             await taskManager.Stop($"workflow.run.{runId}");

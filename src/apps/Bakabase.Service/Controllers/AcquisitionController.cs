@@ -242,11 +242,21 @@ public class AcquisitionController(
     [HttpPost("{id:int}/cancel")]
     [SwaggerOperation(OperationId = "CancelAcquisition")]
     [RemoteAccessible]
-    public async Task<BaseResponse> Cancel(int id)
+    public async Task<BaseResponse> Cancel(int id, [FromServices] AcquisitionRuntimeOverviewService runtime,
+        [FromQuery] int? expectedRunId = null, [FromQuery] int? expectedRevision = null)
     {
         try
         {
-            await service.CancelAsync(id);
+            if (expectedRunId == null && expectedRevision == null)
+                await service.CancelAsync(id);
+            else
+            {
+                if (expectedRunId is not > 0 || expectedRevision is not >= 0)
+                    return BaseResponseBuilder.BuildBadRequest("PLAN_VERSION_CONFLICT");
+                await service.CancelWaitingAsync(id, expectedRunId.Value, expectedRevision.Value, async ct =>
+                    (await runtime.GetAsync([id], ct)).SingleOrDefault() is {CanStopWaitingRun: true} current &&
+                    current.WorkflowRunId == expectedRunId && current.PlanRevision == expectedRevision);
+            }
         }
         catch (InvalidOperationException e)
         {
