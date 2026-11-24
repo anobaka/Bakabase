@@ -8,6 +8,75 @@ namespace Bakabase.Tests.CloudDownloads;
 public sealed partial class ArchiveQuarantineServiceTests
 {
     [TestMethod]
+    public async Task A_recently_moved_file_with_a_stale_negative_lookup_is_reverified_in_the_same_request()
+    {
+        var original = Path.Combine(_root, "source.bin");
+        var destination = Path.Combine(_root, "moved.bin");
+        await File.WriteAllTextAsync(original, "expected");
+        File.Move(original, destination);
+        var attempts = 0;
+        async Task Verify()
+        {
+            // The underlying rename has committed, but cached path metadata still reports missing.
+            if (++attempts == 1) throw new FileNotFoundException("Cached name", destination);
+            Assert.AreEqual("expected", await File.ReadAllTextAsync(destination));
+        }
+        await ArchiveQuarantineService.VerifyRelocatedFileAsync(destination, Verify, default);
+        Assert.AreEqual(2, attempts);
+        Assert.IsFalse(File.Exists(original));
+    }
+
+    [TestMethod]
+    public async Task A_committed_move_can_wait_for_the_new_name_to_become_openable()
+    {
+        var target = Path.Combine(_root, "eventually-visible.bin");
+        var firstLookup = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var attempts = 0;
+        async Task Verify()
+        {
+            attempts++;
+            if (!File.Exists(target))
+            {
+                firstLookup.TrySetResult();
+                throw new FileNotFoundException("Destination not visible", target);
+            }
+            Assert.AreEqual("data", await File.ReadAllTextAsync(target));
+        }
+        var verification = ArchiveQuarantineService.VerifyRelocatedFileAsync(target, Verify, default);
+        await firstLookup.Task;
+        await File.WriteAllTextAsync(target, "data");
+        await verification;
+        Assert.AreEqual(2, attempts);
+    }
+
+    [TestMethod]
+    public async Task A_missing_or_modified_quarantine_destination_does_not_pass_the_relocation_check()
+    {
+        var path = Path.Combine(_root, "unverified.bin");
+        var attempts = 0;
+        Task Missing()
+        {
+            attempts++;
+            throw new FileNotFoundException("Unavailable", path);
+        }
+        await Assert.ThrowsExactlyAsync<FileNotFoundException>(() =>
+            ArchiveQuarantineService.VerifyRelocatedFileAsync(path, Missing, default));
+        Assert.AreEqual(1, attempts);
+
+        await File.WriteAllTextAsync(path, "different");
+        attempts = 0;
+        Task Changed()
+        {
+            if (++attempts == 1) throw new FileNotFoundException("Cached name", path);
+            throw new InvalidDataException("Content changed");
+        }
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() =>
+            ArchiveQuarantineService.VerifyRelocatedFileAsync(path, Changed, default));
+        Assert.AreEqual(2, attempts);
+        Assert.AreEqual("different", await File.ReadAllTextAsync(path));
+    }
+
+    [TestMethod]
     public async Task Explicit_skip_interrupted_before_purge_resumes_from_receipt_without_rehashing_or_overwriting_unknown_files()
     {
         var source = await Artifact("source", "archive.zip", "original");

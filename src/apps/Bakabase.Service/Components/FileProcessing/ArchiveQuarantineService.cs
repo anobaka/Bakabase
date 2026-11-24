@@ -21,6 +21,7 @@ public sealed record ArchiveQuarantineReceipt(string ReceiptId, string ArtifactI
 /// <summary>Exact-file source retirement. Quarantine is recoverable; explicit deletion requires verified final delivery.</summary>
 public sealed partial class ArchiveQuarantineService
 {
+    private static readonly int[] RelocationVisibilityDelaysMs = [0, 100, 400, 1500, 4000];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> Gates = new(StringComparer.Ordinal);
     private readonly IArtifactOperationStore _store;
@@ -557,8 +558,11 @@ public sealed partial class ArchiveQuarantineService
             File.Move(source, destination, overwrite: false); // Same-volume only; never fall back to copy-and-delete.
             try
             {
-                snapshot?.Moved(source, destination, entry.Length, ct);
-                await VerifyDestination(destination, entry);
+                await VerifyRelocatedFileAsync(destination, () =>
+                {
+                    snapshot?.Moved(source, destination, entry.Length, ct);
+                    return VerifyDestination(destination, entry);
+                }, ct);
             }
             catch
             {
@@ -577,6 +581,40 @@ public sealed partial class ArchiveQuarantineService
             // accepting a move that committed before the terminal receipt was saved.
         }
         if (!singleFile) await VerifyManifest(destinationRoot, receipt.Manifest, ct, snapshot, absent);
+    }
+
+    // An atomic move may succeed while SMB still caches the preceding negative lookup of the
+    // destination. Reopen that exact name before repeating the same content/identity check.
+    internal static async Task VerifyRelocatedFileAsync(string path, Func<Task> verify, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        try { await verify(); }
+        catch (Exception e) when (MayBeCachedAbsence(e))
+        {
+            var parent = Path.GetDirectoryName(path)!;
+            foreach (var delay in RelocationVisibilityDelaysMs)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (delay != 0) await Task.Delay(delay, ct);
+                // The rename has committed. The new entry and its parent listing may both
+                // lag initially. Only a successful open warrants repeating verification.
+                if (ArtifactCleanupAbsence.Probe(parent, path, ArtifactCleanupAbsence.OpenFileForObservation, ct)
+                    != ArtifactCleanupPathPresence.Present) continue;
+                try { await verify(); return; }
+                catch (Exception retry) when (MayBeCachedAbsence(retry)) { }
+            }
+            throw;
+        }
+
+        // The single-file validator can wrap a missing-path result in InvalidDataException.
+        // A known, present file with mismatched content or identity must still fail immediately.
+        bool MayBeCachedAbsence(Exception error) => error switch
+        {
+            FileNotFoundException missing => missing.FileName == null || FileProcessingFiles.PathComparer.Equals(missing.FileName, path),
+            DirectoryNotFoundException => true,
+            InvalidDataException => !File.Exists(path),
+            _ => false
+        };
     }
 
     private async Task VerifyOutputs(ArtifactRecord source, IReadOnlyList<string> ids, CancellationToken ct,
