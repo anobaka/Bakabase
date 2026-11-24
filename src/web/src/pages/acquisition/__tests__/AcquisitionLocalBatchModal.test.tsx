@@ -521,10 +521,20 @@ it("labels pending verification separately from confirmed download retries, loca
           recoveryAction: "verifyAndResume",
           canOverrideStorage: true,
         }),
+        row(7, {
+          actionCategory: "workflow",
+          recoveryAction: "start",
+          reasonCode: "RECOVERY_PREPARED_PLAN_READY",
+          workflowRunId: null,
+          canOverrideStorage: false,
+        }),
       ],
     }),
   );
-  render(<AcquisitionLocalBatchModal automatic taskIds={[1, 2, 3, 4, 5, 6]} />);
+  render(<AcquisitionLocalBatchModal automatic taskIds={[1, 2, 3, 4, 5, 6, 7]} />);
+  const ready = within(await screen.findByTestId("continuation-task-7"));
+  expect(ready.getByText("acquisition.continueActions.action.start")).toBeVisible();
+  expect(ready.getByRole("checkbox")).toBeChecked();
   const verifyDownload = within(await screen.findByTestId("continuation-task-5"));
   expect(verifyDownload.getByText("acquisition.continueActions.action.verifyDownload")).toBeVisible();
   expect(verifyDownload.getByText("acquisition.continueActions.verifyDownloadHint")).toBeVisible();

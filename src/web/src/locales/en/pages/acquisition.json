@@ -1758,6 +1758,7 @@
   "acquisition.continueActions.action.retryTransfer": "Retry the current cloud transfer step",
   "acquisition.continueActions.originalDownloadHint": "Recheck the original download task and checkpoint before continuing. After downloading, file processing follows the existing task plan.",
   "acquisition.continueActions.action.localProcessing": "Verify and reuse downloaded files for local processing",
+  "acquisition.continueActions.action.start": "Start the prepared plan",
   "acquisition.continueActions.action.workflow": "Continue the original workflow from its current checkpoint",
   "acquisition.continueActions.action.unavailable": "Cannot continue automatically",
   "acquisition.continueActions.excluded": "Not included this time",

@@ -1758,6 +1758,7 @@
   "acquisition.continueActions.action.retryTransfer": "当前步骤将重试网盘转存",
   "acquisition.continueActions.originalDownloadHint": "重新检查原下载任务及断点后继续；下载完成后仍按原任务流程处理文件。",
   "acquisition.continueActions.action.localProcessing": "将校验并复用已下载文件，继续本地处理",
+  "acquisition.continueActions.action.start": "启动已准备的方案",
   "acquisition.continueActions.action.workflow": "将从当前检查点继续原工作流",
   "acquisition.continueActions.action.unavailable": "当前无法自动继续",
   "acquisition.continueActions.excluded": "本次不处理",

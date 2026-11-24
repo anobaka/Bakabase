@@ -63,6 +63,7 @@ const resumesOriginalDownload = (row: PreviewRow) =>
   !usesCompletedDownload(row);
 const actionLabel = (row: PreviewRow) => {
   if (!supportsAction(row, "continue")) return "acquisition.continueActions.action.unavailable";
+  if (row.recoveryAction === "start") return "acquisition.continueActions.action.start";
   if (row.recoveryAction === "retryTransfer")
     return "acquisition.continueActions.action.retryTransfer";
   if (usesCompletedDownload(row)) return "acquisition.continueActions.action.completedDownload";
@@ -119,8 +120,9 @@ const validPreview = (value: LocalBatchPreview, ids: number[]) =>
       (row.estimatedBytes == null || measured(row.estimatedBytes)) &&
       (!row.canQueue ||
         ((row.recoveryScope === "workflow" || row.recoveryScope === "localFiles") &&
-          ((row.recoveryScope === "localFiles" && row.workflowRunId == null) ||
-            (Number.isSafeInteger(row.workflowRunId) && row.workflowRunId! > 0)))),
+          (row.workflowRunId == null
+            ? row.recoveryScope === "localFiles" || row.recoveryAction === "start"
+            : Number.isSafeInteger(row.workflowRunId) && row.workflowRunId > 0))),
   ) &&
   Array.isArray(value.volumes) &&
   value.volumes.every(
