@@ -130,10 +130,11 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
     }
 
     private async Task<CloudDownloadResult> DownloadFiles(CloudDownloadRequest request, string output, Journal journal,
-        PikPakCliAccountLease account, Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
+        PikPakCliAccountLease account, Func<CloudDownloadProgress, Task> progress, CancellationToken ct,
+        string? retryAttempt = null)
     {
         var state = OperationPath(request.OperationId);
-        var copies = await PikPakCliStorage.ReadAsync<DownloadJournal>(Path.Combine(state, "download.json"), ct);
+        var copies = await ReadDownloadJournal(request.OperationId, ct);
         var identity = DownloadIdentity(request, output, journal);
         if (copies != null && copies.Identity != identity) throw new PikPakCliException("PIKPAK_OPERATION_CHANGED");
         copies ??= new() {Identity = identity};
@@ -149,8 +150,10 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         {
             ct.ThrowIfCancellationRequested();
             var destination = PikPakCliStorage.Within(output, file.Path);
-            var part = Path.Combine(stage, PikPakCliStorage.Hash(file.Id) + ".payload"); PikPakCliStorage.NoLinks(part);
             copies.Completed.TryGetValue(file.Path, out var receipt);
+            var partDirectory = StagingAttemptDirectory(stage, receipt?.StagingAttempt ?? retryAttempt);
+            var part = Path.Combine(partDirectory, PikPakCliStorage.Hash(file.Id) + ".payload");
+            PikPakCliStorage.NoLinks(part);
             if (File.Exists(destination))
             {
                 await ReportVerifying();
@@ -168,7 +171,11 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
                 {
                     // CLI parallel downloads may preallocate their file. Size alone does not
                     // prove a cancelled attempt completed; preserve it for explicit recovery.
-                    if (File.Exists(part) || copies.Started.Contains(file.Id)) throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+                    PikPakCliStorage.NoLinks(part + ".part");
+                    if (Path.Exists(part) || Path.Exists(part + ".part") || retryAttempt == null && copies.Started.Contains(file.Id))
+                        throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+                    if (retryAttempt != null && !Directory.Exists(partDirectory))
+                        PikPakCliStorage.Directory(partDirectory);
                     copies.Started.Add(file.Id);
                     await PikPakCliStorage.WriteAsync(Path.Combine(state, "download.json"), copies, ct);
                     // The exact byte count is known only at each finished-file boundary.
@@ -178,7 +185,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
                     if (!File.Exists(part) || new FileInfo(part).Length != file.Size) throw new PikPakCliException("PIKPAK_DOWNLOAD_INCOMPLETE");
                     PikPakCliStorage.NoLinks(part);
                     await ReportVerifying();
-                    receipt = new(file.Size, await PikPakCliStorage.FileHash(part, ct, PikPakPayloadActivity.ReportReads(ReportVerifying)));
+                    receipt = new(file.Size, await PikPakCliStorage.FileHash(part, ct, PikPakPayloadActivity.ReportReads(ReportVerifying)))
+                        {StagingAttempt = retryAttempt};
                     copies.Completed[file.Path] = receipt;
                     await PikPakCliStorage.WriteAsync(Path.Combine(state, "download.json"), copies, CancellationToken.None);
                 }
@@ -189,14 +197,22 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
             await progress(new(total == 0 ? 100d * result.Count / journal.Files.Count : 100d * completed / total,
                 completed, total, transferStage));
         }
-        var temporary = Path.Combine(stage, "temporary"); PikPakCliStorage.NoLinks(temporary);
+        var executionStage = StagingAttemptDirectory(stage, retryAttempt);
+        var temporary = Path.Combine(executionStage, "temporary"); PikPakCliStorage.NoLinks(temporary);
         if (Directory.Exists(temporary) && !Directory.EnumerateFileSystemEntries(temporary).Any()) Directory.Delete(temporary);
+        if (retryAttempt != null && Directory.Exists(executionStage) && !Directory.EnumerateFileSystemEntries(executionStage).Any())
+            Directory.Delete(executionStage);
         if (!Directory.EnumerateFileSystemEntries(stage).Any()) Directory.Delete(stage);
         if (!Same(journal.Files, await ReadRemote(account, journal.FolderId!, ct)))
             throw new PikPakCliException("PIKPAK_REMOTE_CHANGED");
         CloudDownloadManifest.Validate(output, result);
         return new(result);
     }
+
+    private static string StagingAttemptDirectory(string stage, string? attempt) => attempt == null ? stage :
+        attempt.StartsWith("retry-", StringComparison.Ordinal) && Guid.TryParseExact(attempt[6..], "N", out _)
+            ? Path.Combine(stage, attempt)
+            : throw new PikPakCliException("PIKPAK_STATE_INVALID");
 
     private async Task<Journal> EnsureRestored(string operationId, CloudSource source, PikPakCliAccountLease account,
         CancellationToken ct, bool enrollOwnedCopy = false)
@@ -484,7 +500,11 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
     internal sealed record ShareNode(string Id, string Name, bool IsFolder, string? DisplaySize, IReadOnlyList<ShareNode> Children);
     internal sealed record RemoteFile(string Id, string Path, long Size, string Hash, string Version);
     private sealed record AccountNode(string Id, string Name, bool IsFolder, long Size, string Hash, string Version, string? OriginalShareId);
-    private sealed record FileReceipt(long Size, string Sha256);
+    private sealed record FileReceipt(long Size, string Sha256)
+    {
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public string? StagingAttempt { get; init; }
+    }
     private sealed class Journal
     {
         public Journal() { }

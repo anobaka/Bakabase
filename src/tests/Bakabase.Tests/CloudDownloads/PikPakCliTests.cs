@@ -455,6 +455,96 @@ public sealed class PikPakCliTests
     }
 
     [TestMethod]
+    public async Task ExplicitRetryReusesThePreparedOriginalWhenTheNativePartialWasRemoved()
+    {
+        await Login();
+        _native.FailPayload = true;
+        _native.RemoveFailedNativePartial = true;
+        var error = await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.DownloadAsync(Request, _ => Task.CompletedTask, default));
+        Assert.AreEqual("PIKPAK_NETWORK_UNAVAILABLE", error.Message);
+        var oldPayload = _native.Calls.Last(call => call[0] == "download")[3];
+        Assert.IsFalse(File.Exists(oldPayload + ".part"));
+        var stage = Path.GetDirectoryName(oldPayload)!;
+        var rootMarker = Path.Combine(Request.OutputDirectory, ".smbdeleteABA59fc4.4");
+        var privateMarker = Path.Combine(stage, ".smbdeleteAAA59fc4.4");
+        await File.WriteAllTextAsync(rootMarker, "existing root marker");
+        await File.WriteAllTextAsync(privateMarker, "existing payload marker");
+        Directory.CreateDirectory(Path.Combine(stage, "temporary"));
+        var savedTransfer = Directory.GetFiles(Path.Combine(_root, "appdata"), "transfer.json", SearchOption.AllDirectories).Single();
+        var transfer = await File.ReadAllTextAsync(savedTransfer);
+        var calls = _native.Calls.Count;
+
+        var admission = await _provider.CheckPreparedDownloadRetryAsync(Request, default);
+        Assert.IsTrue(admission.Available, admission.Problem);
+        Assert.AreEqual("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED", (await _provider.CheckLocalRecoveryAsync(Request, default)).Problem);
+        Assert.AreEqual("PIKPAK_OPERATION_CHANGED", (await _provider.CheckPreparedDownloadRetryAsync(Request with
+            {OutputDirectory = Path.Combine(_root, "different")}, default)).Problem);
+        Assert.AreEqual(calls, _native.Calls.Count, "Local admission must not call the provider.");
+        _native.OriginalExpired = true;
+        Assert.IsTrue((await _provider.RevalidateDownloadAsync(Request, default)).Available);
+
+        var automatic = await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.DownloadAsync(Request, _ => Task.CompletedTask, default));
+        Assert.AreEqual("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED", automatic.Message);
+        _native.WrongRestoredName = true;
+        var changed = await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.RetryPreparedDownloadAsync(Request, _ => Task.CompletedTask, default));
+        Assert.AreEqual("PIKPAK_REMOTE_CHANGED", changed.Message);
+        Assert.AreEqual(1, _native.Downloads);
+        _native.WrongRestoredName = false;
+
+        var failedRetry = await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.RetryPreparedDownloadAsync(Request, _ => Task.CompletedTask, default));
+        Assert.AreEqual("PIKPAK_NETWORK_UNAVAILABLE", failedRetry.Message);
+        Assert.AreEqual(2, _native.Downloads);
+        Assert.IsTrue((await _provider.CheckPreparedDownloadRetryAsync(Request, default)).Available);
+
+        _native.FailPayload = false;
+        var files = await _provider.RetryPreparedDownloadAsync(Request, _ => Task.CompletedTask, default);
+        Assert.AreEqual("abc", await File.ReadAllTextAsync(files.Files.Single()));
+        Assert.AreEqual("existing root marker", await File.ReadAllTextAsync(rootMarker));
+        Assert.AreEqual("existing payload marker", await File.ReadAllTextAsync(privateMarker));
+        var downloads = _native.Calls.Where(call => call[0] == "download").ToArray();
+        Assert.AreEqual(3, downloads.Length);
+        Assert.AreEqual(3, downloads.Select(call => call[3]).Distinct().Count());
+        Assert.AreEqual(1, downloads.Select(call => call[1]).Distinct().Count());
+        Assert.AreEqual(1, _native.Mkdirs);
+        Assert.AreEqual(1, _native.Restores);
+        Assert.AreEqual(transfer, await File.ReadAllTextAsync(savedTransfer));
+        Assert.IsFalse((await _provider.CheckPreparedDownloadRetryAsync(Request, default)).Available);
+    }
+
+    [DataTestMethod]
+    [DataRow("native")]
+    [DataRow("staged")]
+    [DataRow("unknown")]
+    [DataRow("destination")]
+    public async Task ExplicitPreparedRetryLeavesRealOrUnrecognizedFilesIntact(string scenario)
+    {
+        await Login();
+        _native.FailPayload = true;
+        _native.RemoveFailedNativePartial = true;
+        await Assert.ThrowsExceptionAsync<CloudProviderException>(() => _provider.DownloadAsync(Request, _ => Task.CompletedTask, default));
+        var oldPayload = _native.Calls.Last(call => call[0] == "download")[3];
+        var existing = scenario switch
+        {
+            "native" => oldPayload + ".part",
+            "staged" => oldPayload,
+            "unknown" => Path.Combine(Path.GetDirectoryName(oldPayload)!, ".smbdelete-not-a-marker"),
+            _ => Path.Combine(Request.OutputDirectory, "folder", "file.bin")
+        };
+        Directory.CreateDirectory(Path.GetDirectoryName(existing)!);
+        await File.WriteAllTextAsync(existing, "keep");
+        Assert.IsFalse((await _provider.CheckPreparedDownloadRetryAsync(Request, default)).Available);
+        var error = await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.RetryPreparedDownloadAsync(Request, _ => Task.CompletedTask, default));
+        Assert.AreEqual("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED", error.Message);
+        Assert.AreEqual(1, _native.Downloads);
+        Assert.AreEqual("keep", await File.ReadAllTextAsync(existing));
+    }
+
+    [TestMethod]
     public async Task EditedCompletedFileIsKeptAndNeverOverwrittenOrRedownloaded()
     {
         await Login();
@@ -698,6 +788,7 @@ public sealed class PikPakCliTests
     {
         internal List<string[]> Calls { get; } = [];
         internal bool Approved, FailAfterRestore, FailBeforeRestoreCommit, FailPayload, WrongRestoredName, RepeatToken, RejectRestorePermission, RejectRestoreQuota, ExtraRestoredFile, OriginalExpired;
+        internal bool RemoveFailedNativePartial;
         internal int Restores, SuccessfulRestores, Downloads, Mkdirs;
         internal string VerificationUri = "https://mypikpak.com/drive/activate";
         internal string? Continuation;
@@ -754,7 +845,14 @@ public sealed class PikPakCliTests
             }
             if (arguments[0] == "download")
             {
-                Downloads++; await File.WriteAllTextAsync(Value("--output")!, FailPayload ? "a" : "abc", ct);
+                Downloads++;
+                var path = Value("--output")!;
+                if (FailPayload && RemoveFailedNativePartial)
+                {
+                    await File.WriteAllTextAsync(path + ".part", "a", ct);
+                    File.Delete(path + ".part");
+                }
+                else await File.WriteAllTextAsync(path, FailPayload ? "a" : "abc", ct);
                 if (FailPayload) throw new PikPakCliException("PIKPAK_NETWORK_UNAVAILABLE");
                 return J("{}");
             }
