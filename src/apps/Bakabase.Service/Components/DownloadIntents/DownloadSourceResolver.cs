@@ -148,10 +148,18 @@ public sealed class DownloadSourceResolver(IEnumerable<IDownloadSourceResolver> 
             (method?.Id != DownloadMethodCatalog.Find(provider)?.Id ? method?.Id : null), MethodScope = method?.ArtifactScope};
     }
 
+    // A registered short-link resolver can discover a method even when the original
+    // address has no descriptor. Projections can ask without making a network request.
+    internal bool MayHaveDownloadMethod(CloudSource source) =>
+        DownloadMethodCatalog.FindAll(source).Count > 0 ||
+        Uri.TryCreate(source.Url, UriKind.Absolute, out var uri) && FindResolver(uri) != null;
+
+    private IDownloadSourceResolver? FindResolver(Uri source) => _resolvers.FirstOrDefault(r => r.CanResolve(source));
+
     public async Task<DownloadSourceResolution> ResolveAsync(string url, CancellationToken ct)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)) return new(url, []);
-        var resolver = _resolvers.FirstOrDefault(r => r.CanResolve(uri));
+        var resolver = FindResolver(uri);
         return resolver == null ? new(url, []) : await resolver.ResolveAsync(uri, ct);
     }
 }

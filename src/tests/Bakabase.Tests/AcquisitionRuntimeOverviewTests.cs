@@ -17,6 +17,7 @@ using Bakabase.Modules.Workflow.Components;
 using Bakabase.Modules.Workflow.Extensions;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.Service.Components.DownloadIntents;
 using Bakabase.Service.Components.FileProcessing;
 using Bakabase.Modules.AI.Services;
 using Bakabase.Service.Components.SourceAvailability;
@@ -218,6 +219,54 @@ public sealed class AcquisitionRuntimeOverviewTests
         Assert.AreEqual(0, _probe.Calls);
         await _db.Entry(task).ReloadAsync();
         Assert.AreEqual(plan, task.PlanJson);
+        Assert.IsNull(task.WorkflowRunId);
+    }
+
+    [DataTestMethod]
+    [DataRow("share", "https://images.example.test/post.png", "SOURCE_SHARE_CANCELLED", "unsupported", "SOURCE_SHARE_CANCELLED", "sourceUnavailable", null)]
+    [DataRow("share", "https://images.example.test/post.png", "SOURCE_SHARE_BLOCKED", "unsupported", "SOURCE_SHARE_BLOCKED", "sourceUnavailable", null)]
+    [DataRow("http", "https://images.example.test/post.png", "SOURCE_SHARE_CANCELLED", "unsupported", "SOURCE_VALIDITY_UNKNOWN", "sourceNeedsVerification", null)]
+    [DataRow("share", "https://gofile.io/d/mirror", "SOURCE_SHARE_BLOCKED", "available", "SOURCE_SELECTION_REQUIRED", "sourceSelectionRequired", null)]
+    [DataRow("share", "https://cm1.hk/s/mirror", "SOURCE_SHARE_CANCELLED", "unsupported", "SOURCE_VALIDITY_UNKNOWN", "sourceNeedsVerification", null)]
+    [DataRow("share", "https://gofile.io/d/mirror", "SOURCE_SHARE_BLOCKED", "unsupported", "SOURCE_VALIDITY_UNKNOWN", "sourceNeedsVerification", "legacy.method")]
+    public async Task Confirmed_selected_source_uses_download_capabilities_to_distinguish_unchecked_mirrors(
+        string kind, string url, string selectedReason, string mirrorStatus, string expectedCode, string expectedTag, string? savedMethod)
+    {
+        var selected = new AcquisitionPlanSource {Id = "selected", Url = "https://pan.baidu.com/s/fixture",
+            Kind = "share", ProviderId = "baidu", MethodId = "baidu.pcs"};
+        var mirror = new AcquisitionPlanSource {Id = "mirror", Url = url, Kind = kind, MethodId = savedMethod};
+        var plan = JsonSerializer.Serialize(new AcquisitionPlan {Parts = [new() {Id = "part",
+            SelectedSourceId = selected.Id, Sources = [mirror, selected]}]}, Json);
+        var builder = JsonSerializer.Serialize(new AcquisitionPlanBuilderState {Issues =
+            [new("SOURCE_CONFIRMED_UNAVAILABLE", "Selected source was confirmed unavailable")]}, Json);
+        var task = new AcquisitionTaskDbModel {Title = "Prepared acquisition", BuilderId = "prepared",
+            Status = AcquisitionStatus.Waiting, Phase = "attention", PlanRevision = 2, PlanJson = plan, BuilderStateJson = builder};
+        _db.AcquisitionTasks.Add(task);
+        await _db.SaveChangesAsync();
+
+        var batches = new SourceAvailabilityBatchService(_db, new SourceAvailabilityStore(_root), _availability, null!, null!);
+        foreach (var check in await batches.SnapshotAsync([task.Id], default))
+        {
+            var primary = check.Row.SourceId == selected.Id;
+            _probe.Status = primary ? SourceAvailabilityStatuses.ConfirmedUnavailable : mirrorStatus;
+            _probe.ReasonCode = primary ? selectedReason : mirrorStatus == SourceAvailabilityStatuses.Available
+                ? "SOURCE_METADATA_AVAILABLE" : "SOURCE_PROBE_UNSUPPORTED";
+            await _availability.CheckPreparationAsync(check.Preparation, check.Source, true, default);
+        }
+        using var shortLinks = new HttpRedirectSourceResolver(new System.Net.Http.HttpClient(),
+            (_, _) => throw new AssertFailedException("Reading diagnostics must not resolve a short link."));
+        var projection = new AcquisitionSourceAttentionProjection(_availability, new([shortLinks]));
+        var overview = new AcquisitionRuntimeOverviewService(_db, _reader, _availability, projection);
+        var search = new AcquisitionTaskSearchService(_db, _services.GetRequiredService<IAcquisitionService>(), projection);
+        var detail = (await overview.GetAsync([task.Id])).Single();
+        Assert.AreEqual(expectedCode, detail.ProblemCode);
+        var filtered = await search.SearchAsync(new(AttentionTag: expectedTag));
+        CollectionAssert.AreEqual(new[] {task.Id}, filtered.FilteredTaskIds.ToArray());
+        CollectionAssert.AreEqual(new[] {expectedTag}, filtered.Items.Single().AttentionTags.ToArray());
+        Assert.AreEqual(2, _probe.Calls);
+        await _db.Entry(task).ReloadAsync();
+        Assert.AreEqual(plan, task.PlanJson);
+        Assert.AreEqual(builder, task.BuilderStateJson);
         Assert.IsNull(task.WorkflowRunId);
     }
 

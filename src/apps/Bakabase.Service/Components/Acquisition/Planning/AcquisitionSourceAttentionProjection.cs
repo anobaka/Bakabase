@@ -14,8 +14,8 @@ using Bakabase.Service.Components.Workflow;
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
 /// <summary>Projects existing source evidence without probing, changing a plan or resuming execution.
-/// All mirrors of a required part must be unavailable before that part is classified unavailable.</summary>
-public sealed class AcquisitionSourceAttentionProjection(SourceAvailabilityService availability)
+/// Every potential download route for a required part must be unavailable before the part is classified unavailable.</summary>
+public sealed class AcquisitionSourceAttentionProjection(SourceAvailabilityService availability, DownloadSourceResolver? sourceResolver = null)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -119,16 +119,18 @@ public sealed class AcquisitionSourceAttentionProjection(SourceAvailabilityServi
             var prior = partPrior.Where(Refreshable).ToArray();
             var genericPrior = legacySourceDiagnostic && partPrior.All(c => c == "SOURCE_ATTENTION_REQUIRED");
             if (prior.Length == 0 && !genericPrior) continue;
-            var observations = new List<(bool Selected, string Status, string? Code, bool Fresh, bool Applicable)>();
+            var observations = new List<(bool Selected, string Status, string? Code, bool Fresh, bool Applicable, bool HasPossibleMethod)>();
             foreach (var source in part.Sources)
             {
                 var selected = source.Id == part.SelectedSourceId || part.SelectedSourceId == null && part.Sources.Count == 1;
                 SourceAvailabilityResult? result = null;
+                var hasPossibleMethod = true;
                 try
                 {
                     var normalized = DownloadMethodRegistry.Normalize(new DownloadCandidate
                     {Id = source.Id, Url = source.Url, Kind = source.Kind, ProviderId = source.ProviderId,
                         MethodId = source.MethodId, AccountId = source.AccountId, AccessCode = source.AccessCode});
+                    hasPossibleMethod = selected || sourceResolver?.MayHaveDownloadMethod(normalized) != false;
                     result = await availability.GetAsync(normalized, ct);
                 }
                 catch (ArgumentException) { /* An invalid locator is not proof of remote expiry. */ }
@@ -146,9 +148,14 @@ public sealed class AcquisitionSourceAttentionProjection(SourceAvailabilityServi
                 if (selected && prior.Any(c => ExecutionProblemClassifier.AvailabilityStatus(c) == SourceAvailabilityStatuses.ConfirmedUnavailable) &&
                     result?.Status is not (SourceAvailabilityStatuses.Available or SourceAvailabilityStatuses.ConfirmedUnavailable)) applicable = fresh = false;
                 var code = applicable ? result!.ReasonCode : selected ? prior.FirstOrDefault() : null;
-                observations.Add((selected, applicable ? result!.Status : ExecutionProblemClassifier.AvailabilityStatus(code), code, fresh, applicable));
+                observations.Add((selected, applicable ? result!.Status : ExecutionProblemClassifier.AvailabilityStatus(code), code, fresh, applicable, hasPossibleMethod));
             }
             if (!observations.Any(o => o.Applicable)) { projected.AddRange(prior); continue; }
+            var active = observations.FirstOrDefault(o => o.Selected);
+            // After confirmed expiry, only alternatives with a potential download route
+            // affect this diagnosis. Every archived lead keeps its own source card and health.
+            if (active.Applicable && active.Status == SourceAvailabilityStatuses.ConfirmedUnavailable)
+                observations.RemoveAll(o => !o.HasPossibleMethod);
             if (observations.Count > 0 && observations.All(o => o.Status == SourceAvailabilityStatuses.ConfirmedUnavailable))
             {
                 unavailableParts++;
@@ -156,7 +163,6 @@ public sealed class AcquisitionSourceAttentionProjection(SourceAvailabilityServi
                     ? reason : "SOURCE_CONFIRMED_UNAVAILABLE");
                 continue;
             }
-            var active = observations.FirstOrDefault(o => o.Selected);
             if (active.Status == SourceAvailabilityStatuses.ConfirmedUnavailable)
             {
                 projected.Add(observations.Any(o => o.Status == SourceAvailabilityStatuses.Available)
