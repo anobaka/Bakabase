@@ -76,7 +76,7 @@ public sealed class DownloadIntentRoutingTests
         Assert.IsNull(candidate.Methods.Single().AccountProvider);
         var requirement = candidate.Requirements.Single();
         Assert.AreEqual("WEIYUN_PUBLIC_SHARE_UNSUPPORTED", requirement.Code);
-        CollectionAssert.AreEqual(new[] {"chooseSource", "manualDownload"}, requirement.Actions!.ToArray());
+        CollectionAssert.AreEqual(new[] {"chooseSource"}, requirement.Actions!.ToArray());
     }
 
     [TestMethod]
