@@ -5178,6 +5178,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/download-center/cloud/{taskId}/owned-copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCloudDownloadOwnedCopy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/download-center/cloud/{taskId}/owned-copy/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RetryCloudDownloadOwnedCopy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-intents/preflight": {
         parameters: {
             query?: never;
@@ -9017,6 +9049,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pikpak-cli/account/capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPikPakCliCapacity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pikpak-cli/account/cleanup-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetPikPakCliCleanupSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/pikpak-cli/account/authorization": {
         parameters: {
             query?: never;
@@ -9027,6 +9091,22 @@ export interface paths {
         get: operations["GetActivePikPakCliAuthorization"];
         put?: never;
         post: operations["StartPikPakCliAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pikpak-cli/account/authorization/manage-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartPikPakCliManageFilesAuthorization"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18058,6 +18138,15 @@ export interface components {
             /** Format: int64 */
             firstBlockBytes: number;
         };
+        "Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView": {
+            /** Format: int32 */
+            downloadTaskId: number;
+            status: string;
+            reasonCode?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            canRetry: boolean;
+        };
         "Bakabase.Modules.Downloader.Cloud.CloudDownloadReuseEstimate": {
             /** Format: int32 */
             fileCount: number;
@@ -18149,6 +18238,7 @@ export interface components {
             /** Format: int32 */
             downloadResultId?: number;
             availableActions: string[];
+            ownedCopy?: components["schemas"]["Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView"];
             execution?: components["schemas"]["Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskExecution"];
         };
         "Bakabase.Modules.Downloader.Models.Tasks.DownloadTaskActionResult": {
@@ -21005,6 +21095,8 @@ export interface components {
             displayName?: string;
             problem?: string;
             quota?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliQuotaViewModel"];
+            canManageFiles: boolean;
+            trashTemporaryCopiesAfterDownload: boolean;
         };
         "Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAuthorizationViewModel": {
             id: string;
@@ -21016,6 +21108,30 @@ export interface components {
             /** Format: int32 */
             intervalSeconds: number;
             problem?: string;
+        };
+        "Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityRangeViewModel": {
+            /** Format: double */
+            minimum: number;
+            /** Format: double */
+            maximum: number;
+        };
+        "Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityViewModel": {
+            accountId?: string;
+            accountVersion?: string;
+            status: string;
+            problem?: string;
+            /** Format: date-time */
+            checkedAt?: string;
+            usedBytes?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityRangeViewModel"];
+            totalBytes?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityRangeViewModel"];
+            trashBytes?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityRangeViewModel"];
+            availableBytes?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityRangeViewModel"];
+            unlimited: boolean;
+        };
+        "Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCleanupSettingsInputModel": {
+            expectedAccountId: string;
+            expectedAccountVersion: string;
+            trashTemporaryCopiesAfterDownload: boolean;
         };
         "Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliQuotaViewModel": {
             /** Format: int64 */
@@ -24779,6 +24895,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Modules.DataSync.Services.DataSyncTaskStart"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Models.Tasks.DownloadTask]": {
             /** Format: int32 */
             code: number;
@@ -25192,6 +25314,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAuthorizationViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.Rclone.RcloneAccountViewModel]": {
             /** Format: int32 */
@@ -35958,6 +36086,54 @@ export interface operations {
             };
         };
     };
+    GetCloudDownloadOwnedCopy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView]"];
+                };
+            };
+        };
+    };
+    RetryCloudDownloadOwnedCopy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                taskId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView]"];
+                };
+            };
+        };
+    };
     PreflightDownloadIntent: {
         parameters: {
             query?: {
@@ -43869,6 +44045,60 @@ export interface operations {
             };
         };
     };
+    GetPikPakCliCapacity: {
+        parameters: {
+            query?: {
+                expectedAccountId?: string;
+                expectedAccountVersion?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCapacityViewModel]"];
+                };
+            };
+        };
+    };
+    SetPikPakCliCleanupSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCleanupSettingsInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCleanupSettingsInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCleanupSettingsInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliCleanupSettingsInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAccountViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAccountViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAccountViewModel]"];
+                };
+            };
+        };
+    };
     GetActivePikPakCliAuthorization: {
         parameters: {
             query?: never;
@@ -43892,6 +44122,28 @@ export interface operations {
         };
     };
     StartPikPakCliAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAuthorizationViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAuthorizationViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAuthorizationViewModel]"];
+                };
+            };
+        };
+    };
+    StartPikPakCliManageFilesAuthorization: {
         parameters: {
             query?: never;
             header?: never;

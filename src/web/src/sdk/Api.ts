@@ -6188,6 +6188,16 @@ export interface BakabaseModulesDownloaderCloudCloudChecksumMismatch {
   firstBlockBytes: number;
 }
 
+export interface BakabaseModulesDownloaderCloudCloudDownloadOwnedCopyView {
+  /** @format int32 */
+  downloadTaskId: number;
+  status: string;
+  reasonCode?: string;
+  /** @format date-time */
+  updatedAt?: string;
+  canRetry: boolean;
+}
+
 export interface BakabaseModulesDownloaderCloudCloudDownloadReuseEstimate {
   /** @format int32 */
   fileCount: number;
@@ -6281,6 +6291,7 @@ export interface BakabaseModulesDownloaderModelsTasksDownloadTask {
   /** @format int32 */
   downloadResultId?: number;
   availableActions: string[];
+  ownedCopy?: BakabaseModulesDownloaderCloudCloudDownloadOwnedCopyView;
   execution?: BakabaseModulesDownloaderModelsTasksDownloadTaskExecution;
 }
 
@@ -9648,6 +9659,8 @@ export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAccoun
   displayName?: string;
   problem?: string;
   quota?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliQuotaViewModel;
+  canManageFiles: boolean;
+  trashTemporaryCopiesAfterDownload: boolean;
 }
 
 export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel {
@@ -9660,6 +9673,33 @@ export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthor
   /** @format int32 */
   intervalSeconds: number;
   problem?: string;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCapacityRangeViewModel {
+  /** @format double */
+  minimum: number;
+  /** @format double */
+  maximum: number;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCapacityViewModel {
+  accountId?: string;
+  accountVersion?: string;
+  status: string;
+  problem?: string;
+  /** @format date-time */
+  checkedAt?: string;
+  usedBytes?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCapacityRangeViewModel;
+  totalBytes?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCapacityRangeViewModel;
+  trashBytes?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCapacityRangeViewModel;
+  availableBytes?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCapacityRangeViewModel;
+  unlimited: boolean;
+}
+
+export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCleanupSettingsInputModel {
+  expectedAccountId: string;
+  expectedAccountVersion: string;
+  trashTemporaryCopiesAfterDownload: boolean;
 }
 
 export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliQuotaViewModel {
@@ -14048,6 +14088,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesD
   data?: BakabaseModulesDataSyncServicesDataSyncTaskStart;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderCloudCloudDownloadOwnedCopyView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesDownloaderCloudCloudDownloadOwnedCopyView;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderModelsTasksDownloadTask {
   /** @format int32 */
   code: number;
@@ -14529,6 +14576,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCapacityViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCapacityViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsRcloneRcloneAccountViewModel {
@@ -29913,6 +29967,42 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
 
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenterCloud
+     * @name GetCloudDownloadOwnedCopy
+     * @request GET:/download-center/cloud/{taskId}/owned-copy
+     */
+    getCloudDownloadOwnedCopy: (taskId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderCloudCloudDownloadOwnedCopyView,
+        any
+      >({
+        path: `/download-center/cloud/${taskId}/owned-copy`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadCenterCloud
+     * @name RetryCloudDownloadOwnedCopy
+     * @request POST:/download-center/cloud/{taskId}/owned-copy/retry
+     */
+    retryCloudDownloadOwnedCopy: (taskId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesDownloaderCloudCloudDownloadOwnedCopyView,
+        any
+      >({
+        path: `/download-center/cloud/${taskId}/owned-copy/retry`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
   };
   downloadIntents = {
     /**
@@ -38630,6 +38720,91 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags PikPakCli
+     * @name GetPikPakCliCapacity
+     * @request GET:/pikpak-cli/account/capacity
+     */
+    getPikPakCliCapacity: (
+      query?: {
+        expectedAccountId?: string;
+        expectedAccountVersion?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCapacityViewModel,
+        any
+      >({
+        path: `/pikpak-cli/account/capacity`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPikPakCliCapacity
+     * @name getPikPakCliCapacityUrl
+     */
+    getPikPakCliCapacityUrl: (query?: {
+        expectedAccountId?: string;
+        expectedAccountVersion?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/pikpak-cli/account/capacity`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PikPakCli
+     * @name SetPikPakCliCleanupSettings
+     * @request PUT:/pikpak-cli/account/cleanup-settings
+     */
+    setPikPakCliCleanupSettings: (
+      data: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCleanupSettingsInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAccountViewModel,
+        any
+      >({
+        path: `/pikpak-cli/account/cleanup-settings`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for setPikPakCliCleanupSettings
+     * @name setPikPakCliCleanupSettingsUrl
+     */
+    setPikPakCliCleanupSettingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/pikpak-cli/account/cleanup-settings`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PikPakCli
      * @name GetActivePikPakCliAuthorization
      * @request GET:/pikpak-cli/account/authorization
      */
@@ -38680,6 +38855,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startPikPakCliAuthorizationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/pikpak-cli/account/authorization`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PikPakCli
+     * @name StartPikPakCliManageFilesAuthorization
+     * @request POST:/pikpak-cli/account/authorization/manage-files
+     */
+    startPikPakCliManageFilesAuthorization: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel,
+        any
+      >({
+        path: `/pikpak-cli/account/authorization/manage-files`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startPikPakCliManageFilesAuthorization
+     * @name startPikPakCliManageFilesAuthorizationUrl
+     */
+    startPikPakCliManageFilesAuthorizationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/pikpak-cli/account/authorization/manage-files`;
 
       return baseUrl + path;
     },
