@@ -44,6 +44,9 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
     IEnumerable<IArtifactCleanupOwnerPreparation>? ownerPreparations = null)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    private const string RegisteredScanKey = "registeredScan";
+    private const int RegisteredBatchSize = 2;
+    private sealed record RegisteredScan(string Fingerprint, int NextIndex, IReadOnlyList<string?> Reasons);
 
     internal Task<List<string>> GetRequestedIdsAsync(CancellationToken ct) => db.Set<ArtifactDbModel>().AsNoTracking()
         .Where(a => a.Kind == "publishedFiles" && a.MetadataJson != null &&
@@ -95,6 +98,7 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
         {
             metadata[PublishedArtifactCleanupCompletionObserver.PendingKey] = preparation.Retry;
             var blocked = metadata[PublishedArtifactCleanupCompletionObserver.ProgressKey]!.AsObject();
+            blocked.Remove(RegisteredScanKey);
             blocked["status"] = preparation.Retry ? "waitingOwners" : "retained";
             blocked["checkedAt"] = DateTime.UtcNow.ToString("O");
             blocked["reasons"] = JsonSerializer.SerializeToNode(new[] {preparation.Reason ?? "ActiveOwner"}, Json);
@@ -106,10 +110,23 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
         var owners = await PublicationOwnersAsync(publicationId, ct);
         var privateResults = await PrepareAutomaticPrivateCleanupAsync(publicationId, owners, ct);
         var candidates = await PreviewAsync([publicationId], owners, ct);
-        var eligible = candidates.Where(c => c.Eligible).ToArray();
-        var outcomes = new List<ArtifactWorkspaceCleanupResult>(privateResults);
+        var privatelyBlocked = privateResults.Any(r => !PrivateCleanupReady(r));
+        // The chain still needs its private verifiers. Registered rows are not executable
+        // with a blocked preparation, regardless of how many are otherwise eligible.
+        var eligible = privatelyBlocked ? [] : candidates.Where(c => c.Eligible).ToArray();
+        var progress = metadata[PublishedArtifactCleanupCompletionObserver.ProgressKey]!.AsObject();
+        // A bounded pass must visit the rest of the same eligible selection even when its
+        // first two candidates make no progress. Rewind when the selection has changed.
+        var fingerprint = eligible.Length > RegisteredBatchSize
+            ? CloudOperationService.Key(JsonSerializer.Serialize(eligible.Select(c => new {c.ArtifactId, c.SelectionFingerprint}), Json))
+            : null;
+        var scan = fingerprint == null ? null : progress[RegisteredScanKey]?.Deserialize<RegisteredScan>(Json);
+        if (scan?.Fingerprint != fingerprint || scan is {NextIndex: <= 0} || scan?.NextIndex >= eligible.Length) scan = null;
+        var start = scan?.NextIndex ?? 0;
+        var attempted = eligible.Skip(start).Take(RegisteredBatchSize).ToArray();
+        var outcomes = new List<ArtifactWorkspaceCleanupResult>(attempted.Length);
         var retiredInput = false;
-        foreach (var candidate in eligible.Take(2))
+        foreach (var candidate in attempted)
         {
             var beforeState = await db.Artifacts.AsNoTracking().Where(a => a.Id == candidate.ArtifactId)
                 .Select(a => (ArtifactLocationState?)a.State).SingleOrDefaultAsync(ct);
@@ -122,24 +139,33 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
                 await db.Artifacts.AsNoTracking().AnyAsync(a => a.Id == candidate.ArtifactId &&
                     a.State == ArtifactLocationState.Retired, ct)) retiredInput = true;
         }
-        // Retiring a nearer snapshot may release a previously blocked ancestor. Reevaluate
-        // once after actual progress; AlreadyRetired/no-op results cannot perpetuate the queue.
-        var pending = retiredInput || outcomes.Any(o => o.Completed && o.RemovedFiles > 0) || eligible.Length > Math.Min(eligible.Length, 2) ||
-            candidates.Any(c => c.Reason is "ActiveOwner" or "ActiveConsumer" or "UnboundArtifact") ||
-            outcomes.Any(r => !r.Completed && r.Reason is "ActiveOwner" or "ActiveConsumer");
+        var registeredReasons = (scan?.Reasons ?? []).Concat(outcomes.Where(r => !r.Completed).Select(r => r.Reason)).Distinct().ToArray();
+        var madeProgress = retiredInput || privateResults.Concat(outcomes).Any(r => r.RemovedFiles > 0);
+        var next = start + attempted.Length;
+        var remaining = next < eligible.Length;
+        var waiting = privateResults.Any(r => RetryableCleanupReason(r.Reason)) ||
+            !privatelyBlocked && (candidates.Any(c => RetryableCleanupReason(c.Reason)) ||
+                registeredReasons.Any(RetryableCleanupReason));
+        var pending = madeProgress || remaining || waiting;
         var reasons = candidates.Where(c => !c.Eligible && c.Reason != "AlreadyRetired").Select(c => c.Reason)
-            .Concat(outcomes.Where(r => !r.Completed).Select(r => r.Reason)).Distinct().ToArray();
+            .Concat(privateResults.Where(r => !r.Completed).Select(r => r.Reason)).Concat(registeredReasons).Distinct().ToArray();
         metadata[PublishedArtifactCleanupCompletionObserver.PendingKey] = pending;
-        var progress = metadata[PublishedArtifactCleanupCompletionObserver.ProgressKey]!.AsObject();
+        // Actual retirement (even of an empty stage) or partial deletion may release
+        // new candidates. Start a fresh pass after progress, otherwise resume this one.
+        if (!madeProgress && remaining && fingerprint != null)
+            progress[RegisteredScanKey] = JsonSerializer.SerializeToNode(new RegisteredScan(fingerprint, next, registeredReasons), Json);
+        else progress.Remove(RegisteredScanKey);
         progress["status"] = pending ? "pending" : row.State != ArtifactLocationState.Available ? "deliveryUnavailable" : reasons.Length > 0 ? "retained" : "completed";
         progress["checkedAt"] = DateTime.UtcNow.ToString("O");
-        progress["removedFiles"] = (progress["removedFiles"]?.GetValue<int>() ?? 0) + outcomes.Sum(o => o.RemovedFiles);
-        progress["removedBytes"] = (progress["removedBytes"]?.GetValue<long>() ?? 0) + outcomes.Sum(o => o.RemovedBytes);
+        progress["removedFiles"] = (progress["removedFiles"]?.GetValue<int>() ?? 0) + privateResults.Sum(o => o.RemovedFiles) + outcomes.Sum(o => o.RemovedFiles);
+        progress["removedBytes"] = (progress["removedBytes"]?.GetValue<long>() ?? 0) + privateResults.Sum(o => o.RemovedBytes) + outcomes.Sum(o => o.RemovedBytes);
         progress["reasons"] = JsonSerializer.SerializeToNode(reasons, Json);
         var updated = metadata.ToJsonString();
         await db.Set<ArtifactDbModel>().Where(a => a.Id == publicationId && a.MetadataJson == original)
             .ExecuteUpdateAsync(set => set.SetProperty(a => a.MetadataJson, updated).SetProperty(a => a.UpdatedAt, DateTime.UtcNow), ct);
     }
+
+    private static bool RetryableCleanupReason(string? reason) => reason is "ActiveOwner" or "ActiveConsumer";
 
     internal async Task<IReadOnlyList<string>> GetCandidateIdsAsync(string? afterId, int limit, CancellationToken ct)
     {
