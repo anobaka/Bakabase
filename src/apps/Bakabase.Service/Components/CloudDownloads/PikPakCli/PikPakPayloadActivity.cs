@@ -46,7 +46,9 @@ internal sealed class PikPakPayloadActivity(string partialPath)
     {
         var activity = new PikPakPayloadActivity(output + ".part");
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var download = account.Run(["download", fileId, "--output", output], lifetime.Token, payload: true);
+        var storageWrites = 0;
+        var download = account.Run(["download", fileId, "--output", output], lifetime.Token, payload: true,
+            progress: () => Interlocked.Exchange(ref storageWrites, 1));
         try
         {
             using var timer = new PeriodicTimer(Interval);
@@ -54,7 +56,8 @@ internal sealed class PikPakPayloadActivity(string partialPath)
             {
                 var tick = timer.WaitForNextTickAsync(ct).AsTask();
                 if (await Task.WhenAny(download, tick) == download || !await tick) break;
-                if (activity.HasWritten()) await onWrite();
+                // Network-mounted files may keep a cached timestamp throughout active writes.
+                if (Interlocked.Exchange(ref storageWrites, 0) != 0 || activity.HasWritten()) await onWrite();
             }
             await download;
         }

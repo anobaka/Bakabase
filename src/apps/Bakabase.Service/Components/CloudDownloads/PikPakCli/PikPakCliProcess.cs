@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Network;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.PikPakCli;
 using Bakabase.InsideWorld.Models.Constants;
@@ -36,7 +37,7 @@ internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebP
         // same profile without blocking account metadata or other authorization sessions.
         var gate = _profiles.GetOrAdd(profile, _ => new(1, 1));
         await gate.WaitAsync(ct);
-        try { return await RunCore(profile, arguments, ct, payload); }
+        try { return await RunCore(profile, arguments, ct, payload, observeProgress); }
         finally { gate.Release(); }
     }
 
@@ -48,26 +49,42 @@ internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebP
         finally { gate.Release(); }
     }
 
-    private async Task<JsonElement> RunCore(string profile, IReadOnlyList<string> arguments, CancellationToken ct, bool payload)
+    private async Task<JsonElement> RunCore(string profile, IReadOnlyList<string> arguments, CancellationToken ct,
+        bool payload, Action? observeProgress = null)
     {
         await dependency.EnsureReadyAsync(ct);
         PikPakCliStorage.Directory(profile);
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        if (!payload) deadline.CancelAfter(TimeSpan.FromMinutes(2));
         var start = CreateStartInfo(dependency.Executable, profile, arguments);
         if (payload) ConfigurePayloadStorage(start, arguments);
         CloudToolProxy.ApplyToEnvironment(start, proxy.ForDownloadTool("pikpak-cli", ThirdPartyId.PikPak),
             new Uri("https://api-drive.mypikpak.com"));
+        try { return await RunProcessAsync(start, arguments, ct, payload, observeProgress); }
+        finally
+        {
+            // The CLI may refresh credentials on any call. Parent directories are private too.
+            PikPakCliStorage.SecureFiles(profile);
+        }
+    }
+
+    internal static async Task<JsonElement> RunProcessAsync(ProcessStartInfo start, IReadOnlyList<string> arguments,
+        CancellationToken ct, bool payload, Action? observeProgress = null)
+    {
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        if (!payload) deadline.CancelAfter(TimeSpan.FromMinutes(2));
         using var process = new Process {StartInfo = start};
         if (!process.Start()) throw new PikPakCliException("PIKPAK_CLI_START_FAILED");
         void Kill() { try { if (!process.HasExited) process.Kill(true); } catch (InvalidOperationException) { } catch (System.ComponentModel.Win32Exception) { } }
         using var cancel = deadline.Token.Register(Kill);
+        var exited = process.WaitForExitAsync(CancellationToken.None);
+        var writeObservation = payload && arguments.Count > 0 && arguments[0] == "download" && observeProgress != null
+            ? LocalFileProcessIo.ObserveStorageWritesAsync(process.Id, exited, observeProgress)
+            : Task.CompletedTask;
         var output = Read(process.StandardOutput, Kill, 32 * 1024 * 1024);
         var errors = Read(process.StandardError, Kill, 256 * 1024, truncate: true);
         process.StandardInput.Close();
         try
         {
-            await process.WaitForExitAsync(deadline.Token);
+            await exited.WaitAsync(deadline.Token);
             var stdout = await output; var stderr = await errors;
             deadline.Token.ThrowIfCancellationRequested();
             var authorization = arguments.Count >= 2 && arguments[0] == "auth" && arguments[1] == "login";
@@ -90,10 +107,10 @@ internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebP
             {Evidence = FailureEvidence(arguments, null, "timeout", null)}; }
         finally
         {
-            Kill(); await process.WaitForExitAsync(CancellationToken.None);
+            Kill();
+            await exited;
+            await writeObservation;
             try { await Task.WhenAll(output, errors); } catch { }
-            // The CLI may refresh credentials on any call. Parent directories are private too.
-            PikPakCliStorage.SecureFiles(profile);
         }
     }
 

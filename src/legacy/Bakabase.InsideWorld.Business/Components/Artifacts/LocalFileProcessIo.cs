@@ -22,12 +22,16 @@ public static class LocalFileProcessIo
     internal static Task ObserveArchiveAsync(int pid, Task completion, bool write) => ObserveAsync(pid, completion, write, false);
 
     /// <summary>Estimate only kernel-accounted writes from one direct-to-file child. A network
-    /// process can read network and pipe bytes, so its logical counters are not used here.</summary>
-    public static Task ObserveStorageWritesAsync(int pid, Task completion) => ObserveAsync(pid, completion, true, true);
+    /// process can read network and pipe bytes, so its logical counters are not used here.
+    /// Optional activity only reports increases after the first sample from the live process.</summary>
+    public static Task ObserveStorageWritesAsync(int pid, Task completion, Action? onWrite = null) =>
+        ObserveAsync(pid, completion, true, true, onWrite);
 
-    private static async Task ObserveAsync(int pid, Task completion, bool write, bool storageWritesOnly)
+    private static async Task ObserveAsync(int pid, Task completion, bool write, bool storageWritesOnly,
+        Action? onWrite = null)
     {
-        if (!OperatingSystem.IsLinux() || !Environment.Is64BitProcess || !FileIoObservationScope.Active || completion.IsCompleted) return;
+        if (!OperatingSystem.IsLinux() || !Environment.Is64BitProcess ||
+            (!FileIoObservationScope.Active && onWrite == null) || completion.IsCompleted) return;
         try
         {
             // Holding the proc descriptor keeps later samples bound to this process even if its PID is reused.
@@ -38,9 +42,12 @@ public static class LocalFileProcessIo
             if (snapshot == null) return;
             using var counter = FileIoObservationScope.Begin(read: !storageWritesOnly, write, externalProcess: true);
             long previousRead = 0, previousWritten = 0;
+            var firstSample = true;
             while (snapshot is { } current && current.Read >= previousRead && current.Written >= previousWritten)
             {
                 counter?.Add(current.Read - previousRead, write ? current.Written - previousWritten : 0);
+                if (!firstSample && current.Written > previousWritten && !completion.IsCompleted) onWrite?.Invoke();
+                firstSample = false;
                 (previousRead, previousWritten) = current;
                 if (completion.IsCompleted) break;
                 await Task.WhenAny(completion, Task.Delay(TimeSpan.FromSeconds(1))).ConfigureAwait(false);

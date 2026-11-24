@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Bakabase.Service.Components.CloudDownloads;
@@ -43,12 +44,14 @@ public sealed class PikPakPayloadActivityTests
         Assert.IsFalse(activity.HasWritten());
     }
 
-    [TestMethod]
-    public async Task NativeRangedWritesRefreshActivityWithoutChangingFileLength()
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task NativeRangedWritesRefreshActivityWithoutChangingFileLength(bool reportProcessWrites)
     {
         var output = Path.Combine(_root, "sample.payload");
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-        var cli = new RangedDownload();
+        var cli = new RangedDownload(reportProcessWrites);
         var account = new PikPakCliAccountLease("test", "generation", _root, cli);
         var callbacks = 0;
 
@@ -63,6 +66,62 @@ public sealed class PikPakPayloadActivityTests
         Assert.AreEqual(1, callbacks);
         Assert.AreEqual(RangedDownload.Length, new FileInfo(output).Length);
         Assert.IsFalse(File.Exists(output + ".part"));
+    }
+
+    [TestMethod]
+    public async Task LinuxPayloadCountsFixedLengthWritesWithFrozenTimestampsAndStopsWhenIdle()
+    {
+        if (!OperatingSystem.IsLinux() || !Environment.Is64BitProcess) return;
+        var partial = Path.Combine(_root, "frozen.payload.part");
+        var startWriting = Path.Combine(_root, "write");
+        var fixedTimestamp = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var firstWrite = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var activity = 0;
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        // The same child that owns the download accounts for its completed range writer.
+        // Steady diagnostic traffic is deliberately present during both idle windows.
+        var command = RunLinuxPayload("""
+            truncate -s 16777216 "$1"
+            touch -m -t 202601010000 "$1"
+            while [ ! -f "$2" ]; do printf 'waiting\n' >&2; sleep .1; done
+            dd if=/dev/zero of="$1" bs=4096 count=8 seek=17 conv=notrunc,fsync status=none
+            touch -m -t 202601010000 "$1"
+            while :; do printf 'waiting\n' >&2; sleep .1; done
+            """, [partial, startWriting], cancellation.Token, () =>
+        {
+            Interlocked.Increment(ref activity);
+            firstWrite.TrySetResult();
+        });
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(2300), cancellation.Token);
+            Assert.AreEqual(RangedDownload.Length, new FileInfo(partial).Length);
+            Assert.AreEqual(fixedTimestamp, File.GetLastWriteTimeUtc(partial));
+            Assert.AreEqual(0, Volatile.Read(ref activity));
+
+            File.WriteAllBytes(startWriting, []);
+            await firstWrite.Task.WaitAsync(cancellation.Token);
+            Assert.AreEqual(RangedDownload.Length, new FileInfo(partial).Length);
+            Assert.AreEqual(fixedTimestamp, File.GetLastWriteTimeUtc(partial));
+
+            var reported = Volatile.Read(ref activity);
+            await Task.Delay(TimeSpan.FromMilliseconds(2300), cancellation.Token);
+            Assert.AreEqual(reported, Volatile.Read(ref activity));
+        }
+        finally
+        {
+            cancellation.Cancel();
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => { await command; });
+        }
+    }
+
+    [TestMethod]
+    public async Task LinuxPayloadThatExitsImmediatelyDoesNotReportWriteActivity()
+    {
+        if (!OperatingSystem.IsLinux() || !Environment.Is64BitProcess) return;
+        var result = await RunLinuxPayload("""printf '{"success":true}'""", [], default,
+            () => Assert.Fail("A command that wrote only to stdout reported a storage write."));
+        Assert.IsTrue(result.GetProperty("success").GetBoolean());
     }
 
     [TestMethod]
@@ -86,7 +145,21 @@ public sealed class PikPakPayloadActivityTests
         Assert.AreEqual(2, reads);
     }
 
-    private sealed class RangedDownload : IPikPakCliProcess
+    private static Task<JsonElement> RunLinuxPayload(string script, IReadOnlyList<string> paths, CancellationToken ct,
+        Action onWrite)
+    {
+        var start = new ProcessStartInfo("/bin/sh")
+        {
+            UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        start.Environment["TZ"] = "UTC";
+        foreach (var argument in new[] {"-eu", "-c", script, "fixture"}.Concat(paths))
+            start.ArgumentList.Add(argument);
+        return PikPakCliProcess.RunProcessAsync(start, ["download"], ct, payload: true, observeProgress: onWrite);
+    }
+
+    private sealed class RangedDownload(bool reportProcessWrites) : IPikPakCliProcess
     {
         internal const long Length = 16 * 1024 * 1024;
         internal readonly TaskCompletionSource Observed = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -102,10 +175,17 @@ public sealed class PikPakPayloadActivityTests
                              FileShare.ReadWrite | FileShare.Delete))
             {
                 file.SetLength(Length);
+                var frozenTimestamp = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
                 while (!Observed.Task.IsCompleted)
                 {
                     file.WriteByte(42);
                     await file.FlushAsync(ct);
+                    if (reportProcessWrites)
+                    {
+                        File.SetLastWriteTimeUtc(partial, frozenTimestamp);
+                        Assert.IsNotNull(observeProgress);
+                        observeProgress();
+                    }
                     // Each write replaces bytes within the allocation, as in the CLI's ranged transfer.
                     file.Position = (file.Position + 1024 * 1024) % Length;
                     await Task.Delay(TimeSpan.FromMilliseconds(100), ct);
