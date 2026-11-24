@@ -103,24 +103,26 @@ internal static class ArtifactCleanupAbsence
 
     private static bool MissingWithinReadableRoot(string root, string path, CancellationToken ct)
     {
-        var boundary = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
-        var missing = Path.GetFullPath(path);
-        // A successful cleanup may remove several empty descendants. Prove the first
-        // missing entry below an accessible parent, without ever climbing above the
-        // registered root. A detached root, link, file-as-parent or IO error is not absence.
-        while (Path.GetDirectoryName(missing) is { } parent)
+        var boundary = ArtifactManifestFiles.Absolute(root);
+        return TryGetListingParent(boundary, Path.GetFullPath(path), ct, out _, out var missing) &&
+            ArtifactManifestFiles.IsMissingFileConfirmed(boundary, missing, ct);
+    }
+
+    private static bool TryGetListingParent(string root, string path, CancellationToken ct, out string parent, out string missing)
+    {
+        // Several descendants may have been removed. Prove the first missing name in
+        // its accessible parent, without ever climbing above the registered root.
+        missing = path;
+        parent = root;
+        while (Path.GetDirectoryName(missing) is { } next)
         {
             ct.ThrowIfCancellationRequested();
+            parent = next;
             ArtifactManifestFiles.RejectLinks(parent);
-            try
-            {
-                var attributes = File.GetAttributes(parent);
-                if (!attributes.HasFlag(FileAttributes.Directory)) return false;
-                return ArtifactManifestFiles.IsMissingFileConfirmed(boundary, missing, ct);
-            }
+            try { return File.GetAttributes(parent).HasFlag(FileAttributes.Directory); }
             catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
             {
-                if (ArtifactManifestFiles.PathComparer.Equals(parent, boundary)) return false;
+                if (ArtifactManifestFiles.PathComparer.Equals(parent, root)) return false;
                 missing = parent;
             }
         }
@@ -129,6 +131,75 @@ internal static class ArtifactCleanupAbsence
 
     internal static bool AllConfirmedAbsent(string root, IReadOnlyList<string> files, CancellationToken ct = default,
         Action<string>? observe = null) =>
-        files.Count > 0 && files.Distinct(ArtifactManifestFiles.PathComparer).Count() == files.Count &&
-        files.All(path => Probe(root, path, observe ?? ReadAttributes, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent);
+        files.Count > 0 && ConfirmAbsentFiles(root, files, true, observe ?? ReadAttributes, ct) != null;
+
+    // Only a negative proof: a listed name or a failed observation never authorizes unlinking.
+    // In each independent pass, observe every exact name first, then enumerate its accessible
+    // parent. A cached listing from before the last exact observation cannot mask a reappearance.
+    internal static HashSet<string>? ConfirmAbsentFiles(string root, IReadOnlyList<string> paths, bool requireAll,
+        Action<string> observe, CancellationToken ct, Func<string, IEnumerable<string>>? list = null)
+    {
+        var comparer = ArtifactManifestFiles.PathComparer;
+        try
+        {
+            root = ArtifactManifestFiles.Absolute(root);
+            var files = paths.Select(ArtifactManifestFiles.Absolute).ToHashSet(comparer);
+            if (files.Count != paths.Count) return null;
+            list ??= Directory.EnumerateFileSystemEntries;
+            var missing = new HashSet<string>(comparer);
+            for (var pass = 0; pass < 2; pass++)
+            {
+                ct.ThrowIfCancellationRequested();
+                ArtifactManifestFiles.RejectLinks(root);
+                if (!File.GetAttributes(root).HasFlag(FileAttributes.Directory)) return null;
+                foreach (var path in pass == 0 ? files : missing)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    ArtifactManifestFiles.RelativeFile(root, path);
+                    ArtifactManifestFiles.RejectLinks(path);
+                    try { observe(path); }
+                    catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+                    {
+                        if (pass == 0) missing.Add(path);
+                        continue;
+                    }
+                    if (requireAll || pass != 0) return null;
+                }
+
+                if (!NamesMissingFromListings(root, missing, list, ct)) return null;
+            }
+            return missing;
+        }
+        catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
+        { return null; }
+    }
+
+    private static bool NamesMissingFromListings(string root, HashSet<string> missing,
+        Func<string, IEnumerable<string>> list, CancellationToken ct)
+    {
+        var comparer = ArtifactManifestFiles.PathComparer;
+        var children = new Dictionary<string, HashSet<string>>(comparer);
+        foreach (var group in missing.GroupBy(path => Path.GetDirectoryName(path)!, comparer))
+        {
+            if (!TryGetListingParent(root, group.First(), ct, out var parent, out var name)) return false;
+            if (!children.TryGetValue(parent, out var names)) children[parent] = names = new(comparer);
+            if (comparer.Equals(parent, group.Key)) names.UnionWith(group);
+            else names.Add(name);
+        }
+
+        // Always require a readable registered root, including when all the files
+        // live deeper. Never substitute a listing above a detached mapping.
+        if (!children.ContainsKey(root)) _ = list(root).Take(1).ToArray();
+        foreach (var (directory, names) in children)
+        {
+            ArtifactManifestFiles.RejectLinks(directory);
+            foreach (var entry in list(directory))
+            {
+                ct.ThrowIfCancellationRequested();
+                if (names.Contains(entry)) return false;
+            }
+            ArtifactManifestFiles.RejectLinks(directory);
+        }
+        return true;
+    }
 }

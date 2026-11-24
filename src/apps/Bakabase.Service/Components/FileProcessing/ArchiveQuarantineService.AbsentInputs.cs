@@ -11,6 +11,11 @@ namespace Bakabase.Service.Components.FileProcessing;
 
 public sealed partial class ArchiveQuarantineService
 {
+    private static HashSet<string> ConfirmRemovedQuarantineFiles(string root, IReadOnlyList<string> files, CancellationToken ct) =>
+        files.Count == 0 ? new(ArtifactManifestFiles.PathComparer) :
+            ArtifactCleanupAbsence.ConfirmAbsentFiles(root, files, false, ArtifactCleanupAbsence.OpenFileForObservation, ct) ??
+                throw new IOException("The resumed cleanup paths or their storage could not be verified.");
+
     internal Task<(int Files, long Bytes)?> PendingDeletionSizeAsync(ArchiveQuarantineReceipt header,
         ArtifactManifest manifest, CancellationToken ct) => InspectPendingDeletionAsync(header, manifest, null, ct);
 
@@ -33,6 +38,10 @@ public sealed partial class ArchiveQuarantineService
                 !ArtifactManifestFiles.PathComparer.Equals(Decode(receipt.QuarantineRoot), header.QuarantineRoot) ||
                 !FileDispositionProofs.SameManifest(receipt.Manifest, manifest)) return null;
             var excluded = MissingDeletionEntries(receipt);
+            var alreadyRemoved = receipt.Status == "Deleting"
+                ? ConfirmRemovedQuarantineFiles(header.QuarantineRoot, manifest.Entries.Where(e => !excluded.Contains(e.RelativePath))
+                    .Select(e => FileProcessingFiles.Within(Path.Combine(header.QuarantineRoot, e.RelativePath), header.QuarantineRoot)).ToArray(), ct)
+                : null;
             var files = 0;
             long bytes = 0;
             foreach (var entry in manifest.Entries)
@@ -41,6 +50,7 @@ public sealed partial class ArchiveQuarantineService
                 ct.ThrowIfCancellationRequested();
                 var root = header.QuarantineRoot;
                 var held = FileProcessingFiles.Within(Path.Combine(root, entry.RelativePath), root);
+                if (alreadyRemoved?.Contains(held) == true) continue;
                 if (header.Status == "Moving" && !File.Exists(held))
                 {
                     root = header.OriginalRoot;

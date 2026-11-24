@@ -267,12 +267,16 @@ public sealed partial class ArchiveQuarantineService
                         receipt.Consents.Add(authorization.Consent);
                     await Save(receipt, ct); // Restore refuses the receipt before the first unlink.
                 }
+                // A resumed receipt can already have thousands of unlinked siblings. Prove their
+                // absence together and keep them out of this unlink pass even if a name reappears.
+                var alreadyRemoved = resumingDeletion ? ConfirmRemovedQuarantineFiles(root, files, ct) : null;
                 foreach (var entry in receipt.Manifest.Entries)
                 {
                     ct.ThrowIfCancellationRequested();
                     // A file that reappears at a previously absent name was never selected for unlinking.
                     if (absentBeforeDeletion.Contains(entry.RelativePath)) continue;
                     var file = FileProcessingFiles.Within(Path.Combine(root, entry.RelativePath), root);
+                    if (alreadyRemoved?.Contains(file) == true) continue;
                     ArtifactManifestFiles.RejectLinks(file);
                     var presence = resumingDeletion
                         ? ArtifactCleanupAbsence.Probe(root, file, ArtifactCleanupAbsence.OpenFileForObservation, ct)

@@ -115,6 +115,101 @@ public sealed class ArtifactCleanupAbsenceTests
     }
 
     [TestMethod]
+    public void Thousands_of_removed_siblings_need_two_listings_per_accessible_parent()
+    {
+        var first = Directory.CreateDirectory(Path.Combine(root, "first")).FullName;
+        var second = Directory.CreateDirectory(Path.Combine(root, "second")).FullName;
+        var files = new List<string>();
+        for (var i = 0; i < 3000; i++)
+        {
+            var parent = i % 2 == 0 ? first : second;
+            File.WriteAllText(Path.Combine(parent, $".smbdeleteAAA{i:X4}4.4"), "");
+            files.Add(Path.Combine(parent, $"gone-{i}.bin"));
+        }
+        // Both already-removed branches use the same living ancestor as evidence.
+        files.Add(Path.Combine(root, "removed", "branch", "lost.bin"));
+        files.Add(Path.Combine(root, "removed", "second-branch", "lost.bin"));
+        var scans = new Dictionary<string, int>();
+        IEnumerable<string> ListDirectory(string directory)
+        {
+            scans[directory] = scans.GetValueOrDefault(directory) + 1;
+            return Directory.EnumerateFileSystemEntries(directory);
+        }
+
+        var evidence = ArtifactCleanupAbsence.ConfirmAbsentFiles(root, files, true,
+            ArtifactCleanupAbsence.OpenFileForObservation, default, ListDirectory);
+        Assert.IsNotNull(evidence);
+        CollectionAssert.AreEquivalent(files.ToArray(), evidence.ToArray());
+        Assert.AreEqual(3, scans.Count);
+        foreach (var path in new[] {root, first, second}) Assert.AreEqual(2, scans[path]);
+        Assert.AreEqual(1500, Directory.EnumerateFiles(first).Count());
+    }
+
+    [DataTestMethod]
+    [DataRow("permission")]
+    [DataRow("offline")]
+    [DataRow("reappearing-file")]
+    [DataRow("reappearing-directory")]
+    public void Second_batch_pass_refuses_changed_names_and_unreadable_directories(string change)
+    {
+        var parent = Directory.CreateDirectory(Path.Combine(root, "nested")).FullName;
+        var path = Path.Combine(parent, "late.bin");
+        var scans = 0;
+        IEnumerable<string> ListDirectory(string directory)
+        {
+            if (directory == parent && ++scans == 2)
+            {
+                if (change == "permission") throw new UnauthorizedAccessException();
+                if (change == "offline") throw new IOException();
+                if (change == "reappearing-file") File.WriteAllText(path, "new");
+                if (change == "reappearing-directory") Directory.CreateDirectory(path);
+            }
+            return Directory.EnumerateFileSystemEntries(directory);
+        }
+        // Even an exact-name lookup returning stale ENOENT cannot override fresh directory evidence.
+        Assert.IsNull(ArtifactCleanupAbsence.ConfirmAbsentFiles(root, [path], true,
+            _ => throw new FileNotFoundException(), default, ListDirectory));
+        Assert.AreEqual(2, scans);
+    }
+
+    [TestMethod]
+    public void Fresh_listings_apply_the_artifact_name_comparer_even_when_the_exact_lookup_is_stale()
+    {
+        var selected = Path.Combine(root, "listed.BIN");
+        File.WriteAllText(Path.Combine(root, "listed.bin"), "preserve");
+        var absent = ArtifactCleanupAbsence.AllConfirmedAbsent(root, [selected],
+            observe: _ => throw new FileNotFoundException());
+        Assert.AreEqual(!Bakabase.InsideWorld.Business.Components.Artifacts.ArtifactManifestFiles.PathComparer
+            .Equals("listed.BIN", "listed.bin"), absent);
+    }
+
+    [TestMethod]
+    public void A_partial_batch_only_proves_the_absent_subset_and_never_accepts_a_link_or_detached_root()
+    {
+        var gone = Path.Combine(root, "gone.bin");
+        var live = Path.Combine(root, "live.bin");
+        File.WriteAllText(live, "still present");
+        var evidence = ArtifactCleanupAbsence.ConfirmAbsentFiles(root, [gone, live], false,
+            ArtifactCleanupAbsence.OpenFileForObservation, default);
+        Assert.IsNotNull(evidence);
+        CollectionAssert.AreEqual(new[] {gone}, evidence.ToArray());
+        Assert.IsFalse(ArtifactCleanupAbsence.AllConfirmedAbsent(root, [gone, live]));
+        Assert.IsFalse(ArtifactCleanupAbsence.AllConfirmedAbsent(root, [Path.Combine(root, "..", "outside.bin")]));
+        Assert.ThrowsExactly<OperationCanceledException>(() => ArtifactCleanupAbsence.AllConfirmedAbsent(root, [gone],
+            new CancellationToken(true)));
+        if (!OperatingSystem.IsWindows())
+        {
+            var link = Path.Combine(root, "linked-parent");
+            Directory.CreateSymbolicLink(link, root);
+            Assert.IsFalse(ArtifactCleanupAbsence.AllConfirmedAbsent(root, [Path.Combine(link, "gone.bin")]));
+            Directory.Delete(link);
+        }
+        File.Delete(live);
+        Directory.Delete(root);
+        Assert.IsFalse(ArtifactCleanupAbsence.AllConfirmedAbsent(root, [gone]));
+    }
+
+    [TestMethod]
     public void Outside_root_and_symbolic_link_paths_are_unavailable()
     {
         Assert.AreEqual(ArtifactCleanupPathPresence.Unavailable,
