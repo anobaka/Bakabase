@@ -9388,6 +9388,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskPage
   /** @format int32 */
   pageSize: number;
   stageCounts: Record<string, number>;
+  downloadSourceCounts: Record<string, number>;
   attentionCounts: Record<string, number>;
   factCounts: Record<string, number>;
   runtimeCapabilityCounts: Record<string, number>;

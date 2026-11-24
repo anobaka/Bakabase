@@ -20767,6 +20767,9 @@ export interface components {
             stageCounts: {
                 [key: string]: number;
             };
+            downloadSourceCounts: {
+                [key: string]: number;
+            };
             attentionCounts: {
                 [key: string]: number;
             };

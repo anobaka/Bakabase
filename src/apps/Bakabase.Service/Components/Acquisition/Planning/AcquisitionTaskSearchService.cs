@@ -109,27 +109,35 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
             task.Id.ToString() == keyword || (task.Title ?? (task.ResourceId is {} resourceId ? names.GetValueOrDefault(resourceId) : null))?
                 .Contains(keyword, StringComparison.OrdinalIgnoreCase) == true;
         var scoped = rows.Where(t => (input.Stage == "all" ? t.Stage != "cancelled" : t.Stage == input.Stage) && Matches(t)).ToArray();
-        if (input.DownloadSource != null)
-        {
-            var matchingSources = await new AcquisitionDownloadSourceFilter(db)
-                .MatchAsync(scoped.Select(t => t.Id).ToArray(), input.DownloadSource, ct);
-            scoped = scoped.Where(t => matchingSources.Contains(t.Id)).ToArray();
-        }
-        // Runtime facets are a bounded projection of the current node. Providers own the
-        // capability descriptor and optional execution state; no acquisition status is changed
-        // and no execution history or download evidence is loaded for this list facet.
+        var sourceFilter = new AcquisitionDownloadSourceFilter(db);
+        var sources = input.DownloadSource == null ? new Dictionary<int, HashSet<string>>() :
+            await sourceFilter.ReadAsync(scoped.Select(t => t.Id).ToArray(), ct);
+        bool MatchesSource(AcquisitionTask task) => input.DownloadSource == null ||
+            sources.TryGetValue(task.Id, out var keys) && keys.Contains(input.DownloadSource);
+
+        // A selected capability or state also scopes the source alternatives. With neither selected,
+        // only the current source needs the provider's runtime projection for its own facet counts.
+        var runtimeScope = capabilityId == null && executionState == null ? scoped.Where(MatchesSource).ToArray() : scoped;
         var runtimeFacets = runtimeProviders == null ? new Dictionary<int, AcquisitionTaskRuntimeFacet>() :
-            await ReadRuntimeFacetsAsync(scoped, ct);
-        var runtimeCapabilityCounts = runtimeFacets.Values.Where(f => f.CapabilityId != null)
+            await ReadRuntimeFacetsAsync(runtimeScope, ct);
+        var sourceRuntimeFacets = scoped.Where(MatchesSource).Where(t => runtimeFacets.ContainsKey(t.Id))
+            .Select(t => runtimeFacets[t.Id]).ToArray();
+        var runtimeCapabilityCounts = sourceRuntimeFacets.Where(f => f.CapabilityId != null)
             .GroupBy(f => f.CapabilityId!, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
-        var runtimeExecutionStateCounts = runtimeFacets.Values.Where(f => f.ExecutionState != null)
+        var runtimeExecutionStateCounts = sourceRuntimeFacets.Where(f => f.ExecutionState != null)
             .GroupBy(f => f.ExecutionState!, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
         if (capabilityId != null)
             scoped = scoped.Where(t => runtimeFacets.TryGetValue(t.Id, out var facet) && facet.CapabilityId == capabilityId).ToArray();
         if (executionState != null)
             scoped = scoped.Where(t => runtimeFacets.TryGetValue(t.Id, out var facet) && facet.ExecutionState == executionState).ToArray();
+
+        // Only expand diagnostics to unselected sources when those diagnostics affect their counts.
+        var sourceFacetScope = scoped;
+        var sourceFiltered = scoped.Where(MatchesSource).ToArray();
+        var hasEvidenceFilters = selectedTags.Length > 0 || selectedFacts.Length > 0;
+        if (!hasEvidenceFilters) scoped = sourceFiltered;
         var attention = scoped.Where(t => t.Stage == "attention" || t.DownloadActivity != null).ToArray();
         var attentionIds = attention.Select(t => t.Id).ToArray();
         var attentionRunIds = attention.Where(t => t.WorkflowRunId.HasValue).Select(t => t.WorkflowRunId!.Value).Distinct().ToArray();
@@ -240,16 +248,24 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
             task.AttentionTags = task.DownloadActivity != null && projectedCodes.Count == 0 && !unresolvedWarning ? [] :
                 ExecutionProblemClassifier.Classify(projectedCodes, waitReason, task.WorkflowRunId == null ? task.WaitReason : null);
         }
-        var attentionCounts = ExecutionProblemClassifier.AttentionTags.ToDictionary(tag => tag, tag => scoped.Count(t => t.AttentionTags.Contains(tag)));
+        var attentionCounts = ExecutionProblemClassifier.AttentionTags.ToDictionary(tag => tag, tag => sourceFiltered.Count(t => t.AttentionTags.Contains(tag)));
         var facts = await new AcquisitionExecutionFactProjection(db, artifacts).ReadAsync(scoped.Select(t => t.Id).ToArray(), ct, activity,
             scoped.Where(t => t.Stage == "ready").Select(t => t.Id).ToArray());
         // A current capacity failure can be known before all local inputs are registered.
         // This task-level scope deliberately cannot satisfy the same-part conjunction.
         foreach (var taskId in currentSpaceFailures) facts[taskId] = facts[taskId].WithTaskSpaceFailure();
         var factCounts = AcquisitionExecutionFactProjection.FactTags.ToDictionary(fact => fact,
-            fact => scoped.Count(t => facts[t.Id].Tags.Contains(fact)));
-        var candidates = scoped.Where(t => selectedTags.All(tag => t.AttentionTags.Contains(tag)) &&
-            facts[t.Id].Matches(selectedFacts)).ToArray();
+            fact => sourceFiltered.Count(t => facts[t.Id].Tags.Contains(fact)));
+        bool MatchesEvidence(AcquisitionTask task) => selectedTags.All(tag => task.AttentionTags.Contains(tag)) &&
+            facts[task.Id].Matches(selectedFacts);
+        if (hasEvidenceFilters) sourceFacetScope = sourceFacetScope.Where(MatchesEvidence).ToArray();
+        if (input.DownloadSource == null)
+            sources = await sourceFilter.ReadAsync(sourceFacetScope.Select(t => t.Id).ToArray(), ct);
+        var downloadSourceCounts = new Dictionary<string, int>(StringComparer.Ordinal) {["all"] = sourceFacetScope.Length};
+        foreach (var task in sourceFacetScope)
+            if (sources.TryGetValue(task.Id, out var keys))
+                foreach (var key in keys) downloadSourceCounts[key] = downloadSourceCounts.GetValueOrDefault(key) + 1;
+        var candidates = hasEvidenceFilters ? sourceFiltered.Where(MatchesEvidence).ToArray() : sourceFiltered;
         var sizes = new AcquisitionSizeEstimateProjection(db);
         // Size order must include all matching tasks before pagination. Default sorting only
         // needs the visible page's estimates.
@@ -282,9 +298,9 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
         return new() {Items = pageIndex.Where(t => projected.ContainsKey(t.Id)).Select(t => projected[t.Id]).ToArray(),
             TotalCount = filtered.Length, TotalTasks = totalTasks,
             QueueTaskCount = await AcquisitionQueueCount.ReadAsync(db, ct), Page = page, PageSize = input.PageSize,
-            StageCounts = stageCounts, AttentionCounts = attentionCounts, FactCounts = factCounts,
+            StageCounts = stageCounts, DownloadSourceCounts = downloadSourceCounts, AttentionCounts = attentionCounts, FactCounts = factCounts,
             RuntimeCapabilityCounts = runtimeCapabilityCounts, RuntimeExecutionStateCounts = runtimeExecutionStateCounts,
-            RuntimeCapabilities = runtimeFacets.Values.Where(f => f.CapabilityId != null)
+            RuntimeCapabilities = sourceRuntimeFacets.Where(f => f.CapabilityId != null)
                 .GroupBy(f => f.CapabilityId!, StringComparer.Ordinal).Select(g => g.First()).ToArray(),
             TaskRuntimeFacets = pageIndex.Where(t => runtimeFacets.ContainsKey(t.Id))
                 .ToDictionary(t => t.Id, t => runtimeFacets[t.Id]),

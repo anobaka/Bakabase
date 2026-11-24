@@ -25,9 +25,9 @@ internal sealed class AcquisitionDownloadSourceFilter(BakabaseDbContext db)
             CultureInfo.InvariantCulture, out var id) && Enum.IsDefined((ThirdPartyId)id) &&
         source == "site:" + id.ToString(CultureInfo.InvariantCulture);
 
-    internal async Task<HashSet<int>> MatchAsync(IReadOnlyCollection<int> taskIds, string source, CancellationToken ct)
+    internal async Task<Dictionary<int, HashSet<string>>> ReadAsync(IReadOnlyCollection<int> taskIds, CancellationToken ct)
     {
-        var matched = new HashSet<int>();
+        var sources = new Dictionary<int, HashSet<string>>();
         foreach (var batch in taskIds.Distinct().Chunk(100))
         {
             var rows = await db.Database.SqlQueryRaw<SourceFact>(SourcesSql, JsonSerializer.Serialize(batch)).ToListAsync(ct);
@@ -36,10 +36,10 @@ internal sealed class AcquisitionDownloadSourceFilter(BakabaseDbContext db)
                 // The saved execution choice wins over a plan, which wins over unselected
                 // draft alternatives. A malformed fixed selection never revives its mirrors.
                 var tier = task.Min(r => r.Tier);
-                if (task.Where(r => r.Tier == tier).Any(r => Key(r) == source)) matched.Add(task.Key);
+                sources.Add(task.Key, task.Where(r => r.Tier == tier).Select(Key).OfType<string>().ToHashSet(StringComparer.Ordinal));
             }
         }
-        return matched;
+        return sources;
     }
 
     private static string? Key(SourceFact source)
@@ -95,13 +95,14 @@ internal sealed class AcquisitionDownloadSourceFilter(BakabaseDbContext db)
     // SQLite reads bounded documents and returns only source routing fields, never passwords,
     // file manifests, source history or the serialized execution payload. Malformed JSON and
     // non-object array entries degrade to an unknown category instead of breaking the list.
+    // The byte-size gate can reject oversized UTF-8 text from column metadata before length()/JSON reads its pages.
     private const string SourcesSql = """
         WITH candidates AS (
             SELECT t.Id TaskId, t.BuilderId, t.LeadKind, t.LeadValue, t.PlanJson IS NOT NULL HasPlan,
-                CASE WHEN length(t.PlanJson)<=1048576 AND json_valid(t.PlanJson) THEN t.PlanJson ELSE '{{}}' END Plan,
-                CASE WHEN length(t.BuilderStateJson)<=1048576 AND json_valid(t.BuilderStateJson) THEN t.BuilderStateJson ELSE '{{}}' END Draft,
-                CASE WHEN length(t.PreparedContextJson)<=1048576 AND json_valid(t.PreparedContextJson) THEN t.PreparedContextJson ELSE '{{}}' END Prepared,
-                CASE WHEN length(r.CurrentItemJson)<=1048576 AND json_valid(r.CurrentItemJson) THEN r.CurrentItemJson ELSE '{{}}' END Checkpoint
+                CASE WHEN octet_length(t.PlanJson)<=4194304 AND length(t.PlanJson)<=1048576 AND json_valid(t.PlanJson) THEN t.PlanJson ELSE '{{}}' END Plan,
+                CASE WHEN octet_length(t.BuilderStateJson)<=4194304 AND length(t.BuilderStateJson)<=1048576 AND json_valid(t.BuilderStateJson) THEN t.BuilderStateJson ELSE '{{}}' END Draft,
+                CASE WHEN octet_length(t.PreparedContextJson)<=4194304 AND length(t.PreparedContextJson)<=1048576 AND json_valid(t.PreparedContextJson) THEN t.PreparedContextJson ELSE '{{}}' END Prepared,
+                CASE WHEN octet_length(r.CurrentItemJson)<=4194304 AND length(r.CurrentItemJson)<=1048576 AND json_valid(r.CurrentItemJson) THEN r.CurrentItemJson ELSE '{{}}' END Checkpoint
             FROM AcquisitionTasks t LEFT JOIN WorkflowRuns r ON r.Id=t.WorkflowRunId
             WHERE t.DeletedAt IS NULL AND t.Id IN (SELECT value FROM json_each({0}))
         ), bodies AS (

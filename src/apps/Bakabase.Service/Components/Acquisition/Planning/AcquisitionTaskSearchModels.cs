@@ -34,14 +34,17 @@ public sealed record AcquisitionTaskPage
     public int QueueTaskCount { get; init; }
     public int Page { get; init; }
     public int PageSize { get; init; }
-    /// <summary>Global counts, independent of keyword and attention filtering; cancelled history is excluded.</summary>
+    /// <summary>Global navigation counts before list filters. Cancelled history is excluded.</summary>
     public IReadOnlyDictionary<string, int> StageCounts { get; init; } = new Dictionary<string, int>();
-    /// <summary>Counts within keyword and stage, before the selected attention tag; tags may overlap.</summary>
+    /// <summary>Distinct tasks matching every filter except download source, before paging. The "all" count
+    /// includes tasks with no recognized source; multipart tasks may contribute to several source keys.</summary>
+    public IReadOnlyDictionary<string, int> DownloadSourceCounts { get; init; } = new Dictionary<string, int>();
+    /// <summary>Reason counts within keyword, stage, source, capability and execution state, before reason/fact selection. Tags may overlap.</summary>
     public IReadOnlyDictionary<string, int> AttentionCounts { get; init; } = new Dictionary<string, int>();
-    /// <summary>Recorded execution facts within keyword/stage, before reason/fact filters.</summary>
+    /// <summary>Recorded execution facts in the same scope as the reason counts, before reason/fact selection.</summary>
     public IReadOnlyDictionary<string, int> FactCounts { get; init; } = new Dictionary<string, int>();
     /// <summary>Current provider-owned capability facets within keyword/stage/source scope,
-    /// before the selected capability/state filters.</summary>
+    /// before capability, state, reason and fact selection.</summary>
     public IReadOnlyDictionary<string, int> RuntimeCapabilityCounts { get; init; } = new Dictionary<string, int>();
     public IReadOnlyDictionary<string, int> RuntimeExecutionStateCounts { get; init; } = new Dictionary<string, int>();
     public IReadOnlyList<AcquisitionTaskRuntimeFacet> RuntimeCapabilities { get; init; } = [];
