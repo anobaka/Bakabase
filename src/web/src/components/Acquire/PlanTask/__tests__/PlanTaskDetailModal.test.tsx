@@ -757,6 +757,35 @@ it("allows execution to reach a later nonblocking processing confirmation", asyn
   await waitFor(() => expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 3));
 });
 
+it.each(["processing", "delivery"] as const)("starts a ready local plan from its %s stage", async (stage) => {
+  const ready = {
+    ...readyWithFiles,
+    steps: [
+      { id: "existing", kind: "acquisition.plan.continueFiles", stage, labelKey: "acquisition.plan.continueFiles" },
+      ...(stage === "processing" ? [{ id: "extract", kind: "acquisition.plan.process", stage }] : []),
+      { id: "publish", kind: "fs.publishArtifacts", stage: "delivery", labelKey: "workflow.activity.fsPublishArtifacts.name" },
+    ],
+  };
+  mocks.get.mockResolvedValue(ready);
+  mocks.run.mockResolvedValue(ready);
+  render(<PlanTaskDetailModal taskId={42} />);
+  const timeline = await screen.findByRole("region", { name: "acquisition.timeline.title" });
+  const download = within(timeline).getByRole("heading", { name: "acquisition.timeline.stage.download" }).closest("li")!;
+  expect(within(download).queryByRole("button", { name: "acquisition.continue.open" })).toBeNull();
+
+  const stageName = `acquisition.timeline.stage.${stage}`;
+  const stageRow = within(timeline).getByRole("heading", { name: stageName }).closest("li")!;
+  fireEvent.click(within(stageRow).getByRole("button", { name: "acquisition.continue.open" }));
+  const confirmation = await screen.findByRole("dialog", { name: stageName });
+  const steps = within(confirmation).getByRole("list", { name: "acquisition.plan.steps" });
+  expect(within(steps).getByText("acquisition.plan.continueFiles")).toBeVisible();
+  expect(within(steps).getByText("workflow.activity.fsPublishArtifacts.name")).toBeVisible();
+  expect(within(confirmation).queryByRole("region", { name: "acquisition.plan.parts" })).toBeNull();
+  expect(screen.queryByRole("dialog", { name: "acquisition.preparation.startTitle" })).toBeNull();
+  fireEvent.click(within(confirmation).getByRole("button", { name: "acquisition.plan.run" }));
+  await waitFor(() => expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 3));
+});
+
 it("allows a blocked prepared plan to be checked again before its first run", async () => {
   const prepared = { ...detail, task: { ...detail.task, phase: "attention", builderId: "prepared" },
     plan: { parts: [{ id: "part", sources: [] }] },

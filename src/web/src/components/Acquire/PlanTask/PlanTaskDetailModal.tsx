@@ -6,6 +6,7 @@ import { LuFolderCog, LuInfo } from "react-icons/lu";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { WorkflowRunDetailContent } from "@/components/Workflow/WorkflowRunDetailModal";
+import { activityDisplayName } from "@/components/Workflow/displayNames";
 import { acquisitionStageLabel, acquisitionTaskStage, acquisitionDownloadActivity } from "../taskStage";
 import { AcquisitionStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
@@ -129,7 +130,7 @@ export default function PlanTaskDetailModal({
   }, [editor]);
   const [preparationOpen, setPreparationOpen] = useState(false);
   const [preparationSettingsOpen, setPreparationSettingsOpen] = useState(false);
-  const [downloadStartOpen, setDownloadStartOpen] = useState(false);
+  const [runPlanOpen, setRunPlanOpen] = useState(false);
   const requestId = useRef(0);
   const mutationPending = useRef(false);
   const load = useCallback(async () => {
@@ -528,6 +529,7 @@ export default function PlanTaskDetailModal({
   );
   const preparationWaiting = !!task?.workflowRunId && task.status === AcquisitionStatus.Waiting &&
     ["download.selectSources", "cloud.chooseSources", "cloud.chooseMethod"].includes(overview?.currentNodeKind ?? "");
+  const planStartStage = asAcquisitionStage(detail?.steps[0]?.stage) ?? "download";
   const stageActions: Partial<Record<AcquisitionPresentationStage, ReactNode>> = {};
   const stageHeaderActions: Partial<Record<AcquisitionPresentationStage, ReactNode>> = {};
   stageHeaderActions.preparation = editable ? <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog"
@@ -537,8 +539,8 @@ export default function PlanTaskDetailModal({
   for (const stage of ["download", "processing", "delivery"] as const) {
     stageHeaderActions[stage] = <>
       {currentStage === stage && !preparationWaiting && currentControls}
-      {stage === "download" && editable && (task.phase === "ready" || task.phase === "attention" && !!detail?.plan && detail.steps.length > 0) && <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog"
-        isDisabled={busy || replanOpen} onPress={() => setDownloadStartOpen(true)}>{t("acquisition.continue.open")}</Button>}
+      {stage === planStartStage && editable && (task.phase === "ready" || task.phase === "attention" && !!detail?.plan && detail.steps.length > 0) && <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog"
+        isDisabled={busy || replanOpen} onPress={() => setRunPlanOpen(true)}>{t("acquisition.continue.open")}</Button>}
       {stage === "processing" && detail && processingOffered && (!continueCurrent || deliveryWait) && processingAction("processing")}
       {stage === "processing" && detail && canChoosePreparedFiles(detail, "defer") && (
         <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog" isDisabled={busy || replanOpen}
@@ -796,21 +798,31 @@ export default function PlanTaskDetailModal({
         onClose={() => setPreparationOpen(false)} />}
       {editable && detail && preparationSettingsOpen && <TaskPreparationSettingsModal detail={detail} busy={busy} onAction={mutate}
         onClose={() => setPreparationSettingsOpen(false)} />}
-      {editable && detail && downloadStartOpen && <Modal visible size="3xl" title={t("acquisition.preparation.startTitle")}
-        onClose={() => setDownloadStartOpen(false)} footer={<>
-          <Button variant="light" isDisabled={busy} onPress={() => setDownloadStartOpen(false)}>{t("common.action.cancel")}</Button>
+      {editable && detail && runPlanOpen && <Modal visible size="3xl" title={t(planStartStage === "download"
+        ? "acquisition.preparation.startTitle" : `acquisition.timeline.stage.${planStartStage}`)}
+        onClose={() => setRunPlanOpen(false)} footer={<>
+          <Button variant="light" isDisabled={busy} onPress={() => setRunPlanOpen(false)}>{t("common.action.cancel")}</Button>
           <Button variant="flat" isLoading={busy} onPress={() => void mutate(() => planTaskApi.preflight(taskId))}>{t("acquisition.plan.preflight")}</Button>
           <Button color="primary" isLoading={busy} isDisabled={task.phase !== "ready" || detail.issues.some(issue => issue.blocking !== false) || !detail.steps.length}
             onPress={() => void mutate(async () => {
               const next = attemptRunOverride?.revision === task.planRevision
                 ? await planTaskApi.run(taskId, task.planRevision, attemptRunOverride.options.useEmergencySpaceReserve)
                 : await planTaskApi.run(taskId, task.planRevision);
-              if (next.task.workflowRunId) setDownloadStartOpen(false);
+              if (next.task.workflowRunId) setRunPlanOpen(false);
               return next;
             })}>{t("acquisition.plan.run")}</Button>
         </>}>
-        <p className="mb-3 text-sm text-default-500">{t("acquisition.preparation.startHint")}</p>
-        <TaskPlanSources detail={detail} corrections={corrections.data} sourceHealth={sourceHealth} sourcesOnly />
+        {planStartStage === "download" ? <>
+          <p className="mb-3 text-sm text-default-500">{t("acquisition.preparation.startHint")}</p>
+          <TaskPlanSources detail={detail} corrections={corrections.data} sourceHealth={sourceHealth} sourcesOnly />
+        </> : (
+          <ol aria-label={t("acquisition.plan.steps")} className="list-decimal space-y-1 pl-5 text-sm">
+            {detail.steps.map((step) => {
+              const name = activityDisplayName(t, step.kind);
+              return <li key={step.id}>{step.labelKey ? t(step.labelKey, { defaultValue: name }) : name}</li>;
+            })}
+          </ol>
+        )}
         {detail.issues.map(issue => <p key={issue.code} className="mt-2 text-sm text-warning-700">{t(`acquisition.plan.issue.${issue.code}`, {
           defaultValue: t(`acquire.requirement.${issue.code}`, { defaultValue: t("acquisition.plan.issue.unknown") }),
         })}</p>)}

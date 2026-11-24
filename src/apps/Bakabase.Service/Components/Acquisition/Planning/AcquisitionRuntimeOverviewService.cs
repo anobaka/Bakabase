@@ -41,7 +41,8 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
         if (ids.Length == 0) return [];
         var tasks = await db.AcquisitionTasks.AsNoTracking().Where(t => t.DeletedAt == null && ids.Contains(t.Id)).Select(t => new AcquisitionTaskDbModel
         {Id = t.Id, PlanRevision = t.PlanRevision, WorkflowRunId = t.WorkflowRunId, Status = t.Status, Error = t.Error, UpdatedAt = t.UpdatedAt,
-            CompletedAt = t.CompletedAt, BuilderStateJson = t.BuilderStateJson, PlanJson = t.PlanJson}).ToListAsync(ct);
+            CompletedAt = t.CompletedAt, BuilderStateJson = t.BuilderStateJson, PlanJson = t.PlanJson,
+            BuilderId = t.BuilderId, Phase = t.Phase, TargetDirectory = t.TargetDirectory}).ToListAsync(ct);
         var runIds = tasks.Where(t => t.WorkflowRunId.HasValue).Select(t => t.WorkflowRunId!.Value).Distinct().ToArray();
         var runs = await db.WorkflowRuns.AsNoTracking().Where(r => runIds.Contains(r.Id)).Select(r => new WorkflowRunDbModel
         {Id = r.Id, WorkflowDefinitionId = r.WorkflowDefinitionId, PlanSnapshotJson = r.PlanSnapshotJson, Status = r.Status,
@@ -104,11 +105,12 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
             var run = task.WorkflowRunId is {} runId ? runs.GetValueOrDefault(runId) : null;
             var taskNodes = nodes.Where(n => n.WorkflowRunId == run?.Id).ToArray();
             var completed = run != null ? run.Status == WorkflowRunStatus.Success : task.Status == AcquisitionStatus.Completed;
-            // A conditional retry resumes the existing run. Its acquisition row can still
-            // carry the previous failure until the active step completes.
-            var attention = !completed && run?.Status is not (WorkflowRunStatus.Pending or WorkflowRunStatus.Running) &&
-                (run?.Status is WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted ||
-                 task.Status is AcquisitionStatus.Waiting or AcquisitionStatus.Failed);
+            // Before execution a saved plan may be ready while its underlying task is Waiting.
+            // Once a run exists its current status supersedes the task's last recorded status.
+            var attention = run != null
+                ? run.Status is WorkflowRunStatus.Waiting or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted
+                : AcquisitionTask.ResolveStage(task.Status, task.WorkflowRunId, task.BuilderId, task.Phase,
+                    task.TargetDirectory, downloadActivities.GetValueOrDefault(task.Id)?.Activity) == "attention";
             WorkflowRunPlan? executionPlan = null;
             try { executionPlan = WorkflowRunPlans.Read(run?.PlanSnapshotJson); } catch (InvalidDataException) { }
             var legacy = legacyNodes.Where(n => n.WorkflowDefinitionId == run?.WorkflowDefinitionId).OrderBy(n => n.Order).ToArray();

@@ -29,17 +29,20 @@ public record AcquisitionTask
     /// <summary>Observed activity of this run's owned downloads; never changes workflow status or authorizes continuation.</summary>
     public string? DownloadActivity { get; set; }
     /// <summary>User-facing lifecycle, independent of the execution engine's status enum.</summary>
-    public string Stage => Status switch
+    public string Stage => ResolveStage(Status, WorkflowRunId, BuilderId, Phase, TargetDirectory, DownloadActivity);
+
+    public static string ResolveStage(AcquisitionStatus status, int? workflowRunId, string? builderId,
+        string? phase, string? targetDirectory, string? downloadActivity) => status switch
     {
         AcquisitionStatus.Cancelled => "cancelled",
         AcquisitionStatus.Completed => "completed",
         AcquisitionStatus.Failed => "attention",
         AcquisitionStatus.Running => "running",
-        AcquisitionStatus.Waiting when DownloadActivity is "running" or "queued" => "running",
-        _ when WorkflowRunId != null => Status is AcquisitionStatus.Pending or AcquisitionStatus.Running
+        AcquisitionStatus.Waiting when downloadActivity is "running" or "queued" => "running",
+        _ when workflowRunId != null => status is AcquisitionStatus.Pending or AcquisitionStatus.Running
             ? "running" : "attention",
-        _ when BuilderId != null => Phase == "attention" ? "attention" :
-            Phase == "ready" && !string.IsNullOrWhiteSpace(TargetDirectory) ? "ready" : "preparing",
+        _ when builderId != null => phase == "attention" ? "attention" :
+            phase == "ready" && !string.IsNullOrWhiteSpace(targetDirectory) ? "ready" : "preparing",
         AcquisitionStatus.Pending or AcquisitionStatus.Running => "running",
         _ => "attention"
     };

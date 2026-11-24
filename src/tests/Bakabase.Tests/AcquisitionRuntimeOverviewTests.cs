@@ -344,6 +344,28 @@ public sealed class AcquisitionRuntimeOverviewTests
     }
 
     [TestMethod]
+    [DataRow("ready", "/work/delivery", "ready")]
+    [DataRow("ready", null, "preparing")]
+    [DataRow("preparing", null, "preparing")]
+    public async Task Saved_plan_uses_its_list_stage_for_runtime_problems(string phase, string? targetDirectory, string expectedStage)
+    {
+        var task = new AcquisitionTaskDbModel
+        {
+            Title = "Prepared task", BuilderId = "test", Phase = phase, Status = AcquisitionStatus.Waiting,
+            TargetDirectory = targetDirectory, Error = "BAIDU_SHARE_EXPIRED"
+        };
+        _db.AcquisitionTasks.Add(task);
+        await _db.SaveChangesAsync();
+
+        var overview = await Read(task.Id);
+        Assert.IsNull(overview.ProblemCode);
+        Assert.AreEqual(0, overview.AttentionTags.Count);
+        var search = new AcquisitionTaskSearchService(_db, _services.GetRequiredService<IAcquisitionService>());
+        var page = await search.SearchAsync(new(Stage: expectedStage));
+        Assert.AreEqual(task.Id, page.Items.Single().Id);
+    }
+
+    [TestMethod]
     public async Task UnsupportedSourcePreparationDoesNotBecomeAProcessingOrDownloadFailure()
     {
         var task = new AcquisitionTaskDbModel
