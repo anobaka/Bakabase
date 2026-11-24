@@ -30,6 +30,7 @@ public sealed record DownloadTask
     public int? WorkflowDefinitionId { get; init; }
     public int? DownloadResultId { get; init; }
     public IReadOnlyList<string> AvailableActions { get; init; } = [];
+    public Cloud.CloudDownloadOwnedCopyView? OwnedCopy { get; init; }
     public DownloadTaskExecution? Execution { get; init; }
 }
 

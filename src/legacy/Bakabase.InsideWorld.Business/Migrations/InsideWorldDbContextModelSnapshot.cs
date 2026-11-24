@@ -3444,6 +3444,48 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("DataSyncReaders");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyDbModel", b =>
+                {
+                    b.Property<int>("DownloadTaskId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CopyJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OperationKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReasonCode")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ResultId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResultKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceIdentity")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("DownloadTaskId");
+
+                    b.HasIndex("OperationKey")
+                        .IsUnique();
+
+                    b.HasIndex("State");
+
+                    b.ToTable("CloudDownloadOwnedCopies");
+                });
+
             modelBuilder.Entity("Bakabase.Modules.Downloader.Cloud.CloudOperationDbModel", b =>
                 {
                     b.Property<string>("Id")

@@ -21,6 +21,11 @@ public static class ArtifactManifestFiles
         CancellationToken ct = default, IReadOnlyCollection<string>? directories = null) =>
         CaptureAsync(rootDirectory, files, path => new FileInfo(path), ct: ct, directories: directories);
 
+    /// <summary>Looks up each generation on the same open handle as its stable content read, for subsequent rechecks.</summary>
+    public static Task<ArtifactManifest> CaptureWithFileObservationsAsync(string rootDirectory, IReadOnlyCollection<string> files,
+        Action<string, ArtifactManifestEntry, DateTime, string?> onVerified, CancellationToken ct) =>
+        CaptureAsync(rootDirectory, files, path => new FileInfo(path), ct: ct, onVerified: onVerified);
+
     // Only use immediately after an extractor successfully closes a private output tree.
     public static Task<ArtifactManifest> CaptureExtractedAsync(string rootDirectory, IReadOnlyCollection<string> files,
         CancellationToken ct, IReadOnlyCollection<string>? directories = null) =>
@@ -30,7 +35,8 @@ public static class ArtifactManifestFiles
         Func<string, FileInfo> fileInformation,
         Func<Stream, CancellationToken, ValueTask<byte[]>>? hashData = null, CancellationToken ct = default,
         IReadOnlyCollection<string>? directories = null, bool verifyTimestampChange = false,
-        Func<CancellationToken, ValueTask>? onEmptyFileVerified = null)
+        Func<CancellationToken, ValueTask>? onEmptyFileVerified = null,
+        Action<string, ArtifactManifestEntry, DateTime, string?>? onVerified = null)
     {
         var root = Absolute(rootDirectory);
         if (files.Count == 0) throw new InvalidDataException("An artifact must contain at least one file.");
@@ -54,6 +60,7 @@ public static class ArtifactManifestFiles
             // opened file, then require both that handle and its path to remain stable.
             var size = RandomAccess.GetLength(stream.SafeFileHandle);
             var written = File.GetLastWriteTimeUtc(stream.SafeFileHandle);
+            var generation = onVerified == null ? null : ArtifactFileIdentity.ReadContentGeneration(stream, path);
             var hash = await ReadHashAsync(stream);
             var difference = Changed(path, information, stream, size, written);
             if (verifyTimestampChange && !OperatingSystem.IsWindows() && difference != "path" &&
@@ -72,7 +79,13 @@ public static class ArtifactManifestFiles
                 if (!ArtifactFileIdentity.SameRegularFile(stream, second, path)) throw ManifestChanged("identity");
                 if (!hash.AsSpan().SequenceEqual(verified)) throw ManifestChanged("content");
             }
-            entries.Add(new(relative, size, Convert.ToHexString(hash).ToLowerInvariant()));
+            var entry = new ArtifactManifestEntry(relative, size, Convert.ToHexString(hash).ToLowerInvariant());
+            if (onVerified != null)
+            {
+                if (generation != ArtifactFileIdentity.ReadContentGeneration(stream, path)) throw ManifestChanged("identity");
+                onVerified(path, entry, written, generation);
+            }
+            entries.Add(entry);
             // An empty file cannot report a byte read. Finishing this distinct entry is progress
             // only after its opened handle and on-disk metadata have passed the same checks.
             if (size == 0 && onEmptyFileVerified != null) await onEmptyFileVerified(ct);

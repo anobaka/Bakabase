@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Service.Components.DownloadIntents;
+using Bakabase.Modules.Downloader.Cloud;
+using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.RemoteAccess;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -28,6 +30,18 @@ public sealed class DownloadCenterCloudController(DownloadIntentService intents)
     public Task<SingletonResponse<DownloadIntentSubmission>> Create([FromBody] DownloadIntentRequest input,
         [FromQuery] string? outputDirectory, CancellationToken ct) =>
         Change(() => intents.SubmitDownloadsOnlyAsync(input, outputDirectory, ct));
+
+    [HttpGet("{taskId:int}/owned-copy")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "GetCloudDownloadOwnedCopy")]
+    public Task<SingletonResponse<CloudDownloadOwnedCopyView>> OwnedCopy(int taskId,
+        [FromServices] CloudDownloadOwnedCopyService copies, CancellationToken ct) => Change(() => copies.GetAsync(taskId, ct));
+
+    [HttpPost("{taskId:int}/owned-copy/retry")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "RetryCloudDownloadOwnedCopy")]
+    public Task<SingletonResponse<CloudDownloadOwnedCopyView>> RetryOwnedCopy(int taskId,
+        [FromServices] CloudDownloadOwnedCopyService copies, CancellationToken ct) => Change(() => copies.RetryAsync(taskId, ct));
 
     private static async Task<SingletonResponse<T>> Change<T>(Func<Task<T>> action)
     {

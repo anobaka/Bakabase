@@ -74,6 +74,12 @@ public static class ArtifactFileIdentity
         if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS()) return null;
         ArtifactManifestFiles.RejectLinks(path);
         using var stream = File.OpenRead(path);
+        return ReadContentGeneration(stream, path);
+    }
+
+    internal static string? ReadContentGeneration(FileStream stream, string path)
+    {
+        if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS()) return null;
         if (FStat(stream.SafeFileHandle, out var file) != 0 || LStat(path, out var named) != 0 ||
             (file.Mode & 0xF000) != 0x8000 || file.Inode == 0 || file.Device != named.Device ||
             file.Inode != named.Inode || file.ChangeTime != named.ChangeTime || file.ChangeTimeNsec != named.ChangeTimeNsec)

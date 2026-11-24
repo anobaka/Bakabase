@@ -41,6 +41,7 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
         public DbSet<Bakabase.Modules.Downloader.Cloud.CloudOperationDbModel> CloudDownloadOperations { get; set; }
+        public DbSet<Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyDbModel> CloudDownloadOwnedCopies { get; set; }
         public DbSet<ManagedDownloadTaskDbModel> ManagedDownloadTasks { get; set; }
         public DbSet<DownloadTaskFileDbModel> DownloadTaskFiles { get; set; }
 
@@ -193,6 +194,11 @@ namespace Bakabase.InsideWorld.Business
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyDbModel>(t =>
+            {
+                t.HasIndex(copy => copy.OperationKey).IsUnique();
+                t.HasIndex(copy => copy.State);
+            });
             modelBuilder.Entity<ArtifactOperationDbModel>().HasIndex(x => new {x.IntentKey, x.State});
             modelBuilder.Entity<ArtifactDbModel>().HasIndex(x => new {x.OperationId, x.State});
             modelBuilder.Entity<ArtifactConsumerDbModel>().HasIndex(x => new {x.OperationId, x.ConsumerKey}).IsUnique();

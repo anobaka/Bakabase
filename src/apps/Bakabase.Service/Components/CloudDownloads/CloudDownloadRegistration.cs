@@ -71,6 +71,8 @@ public static class CloudDownloadRegistration
         services.AddScoped<Bakabase.Service.Components.SourceAvailability.SourceAvailabilityBatchService>();
         services.AddScoped<Bakabase.Modules.PostParser.Services.IPostLinkHealthChecker, Bakabase.Service.Components.SourceAvailability.SharedPostLinkHealthChecker>();
         services.AddScoped<CloudOperationService>();
+        services.AddScoped<CloudDownloadOwnedCopyService>();
+        services.AddHostedService<CloudDownloadOwnedCopyWorker>();
         services.AddScoped<CloudDownloadRecoveryService>();
         services.AddScoped<CloudManualDownloadResume>();
         services.AddScoped<ICloudDownloadDestinationService, CloudDownloadDestinationService>();

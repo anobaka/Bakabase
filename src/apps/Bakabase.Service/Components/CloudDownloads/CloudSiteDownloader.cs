@@ -137,7 +137,15 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
             ? (prepared, progress, token) => checksumRetry.RetryChecksumMismatchAsync(
                 prepared, task.DownloadStatusUpdateDt, progress, token)
             : provider.DownloadAsync;
-        Task<CloudDownloadResult> Download(CloudDownloadRequest prepared, CancellationToken token) => download(prepared, async p =>
+        var ownedCopies = provider is ICloudOwnedCopyProvider && CloudDownloadOwnedCopyService.IsShare(request)
+            ? GetRequiredService<CloudDownloadOwnedCopyService>() : null;
+        async Task<CloudDownloadResult> Download(CloudDownloadRequest prepared, CancellationToken token)
+        {
+            if (ownedCopies != null)
+                await ownedCopies.PrepareAsync(task.Id, prepared, (ICloudOwnedCopyProvider)provider, token);
+            return await download(prepared, ReportProgress, token);
+        }
+        async Task ReportProgress(CloudDownloadProgress p)
         {
             var snapshot = TransferSnapshot(p, DateTime.UtcNow);
             Volatile.Write(ref _transferProgress, snapshot);
@@ -151,7 +159,7 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
             Current = p.Stage;
             await OnCurrentChangedInternal();
             if (p.Percentage is { } percent) await OnProgressInternal((decimal)Math.Clamp(percent, 0, 100));
-        }, token);
+        }
         async Task WaitingForCapacity()
         {
             Current = "WaitingForStorageCapacity";
@@ -177,10 +185,11 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
             ClearMediaDownloadSpeed();
             Current = "Verifying";
             await OnCurrentChangedInternal();
-            await GetRequiredService<DownloadResultService>().RecordFilesAsync(task.Id, task.ThirdPartyId,
+            var receipt = await GetRequiredService<DownloadResultService>().RecordFilesAsync(task.Id, task.ThirdPartyId,
                 task.Key, task.Name ?? task.Key,
                 CloudDownloadPayloadRoot.Select(task.DownloadPath, result.PayloadRootDirectory, result.Files),
                 result.Files.ToArray(), null, _ => Touch(), ct);
+            if (ownedCopies != null) await ownedCopies.DownloadVerifiedAsync(task.Id, request, receipt);
         }
         await OnProgressInternal(100);
     }
