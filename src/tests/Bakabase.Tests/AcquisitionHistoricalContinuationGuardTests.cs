@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Text.Json;
 using Bakabase.InsideWorld.Business;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
@@ -9,6 +10,7 @@ using Bakabase.Modules.Workflow.Abstractions.Services;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.TestKit.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Tests;
@@ -16,6 +18,42 @@ namespace Bakabase.Tests;
 [TestClass]
 public sealed class AcquisitionHistoricalContinuationGuardTests
 {
+    [TestMethod]
+    public async Task Current_owner_returns_no_plan_documents_when_projecting_start_eligibility()
+    {
+        var services = await TestServiceBuilder.BuildServiceProvider();
+        await using var scope = services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<BakabaseDbContext>();
+        var owner = new AcquisitionTaskDbModel {Title = "Current acquisition", Status = AcquisitionStatus.Waiting};
+        db.AcquisitionTasks.Add(owner);
+        await db.SaveChangesAsync();
+        var run = new WorkflowRunDbModel
+        {
+            Status = WorkflowRunStatus.Waiting,
+            Sources = [new() {Module = "acquisition", EntityKind = "task", EntityId = owner.Id.ToString()}]
+        };
+        db.WorkflowRuns.Add(run);
+        await db.SaveChangesAsync();
+        var largePlan = new AcquisitionPlan {Title = new string('p', 2 * 1024 * 1024)};
+        owner.WorkflowRunId = run.Id;
+        owner.PlanJson = JsonSerializer.Serialize(largePlan, JsonSerializerOptions.Web);
+        owner.PlanHistoryJson = JsonSerializer.Serialize(new[]
+        {
+            new AcquisitionPlanRevision(1, largePlan, [], DateTime.UtcNow)
+        }, JsonSerializerOptions.Web);
+        await db.SaveChangesAsync();
+
+        var observer = new ReturnedColumns();
+        await using var readDb = new BakabaseDbContext(new DbContextOptionsBuilder<BakabaseDbContext>()
+            .UseSqlite(db.Database.GetDbConnection().ConnectionString).AddInterceptors(observer).Options);
+        var denied = await new AcquisitionWorkflowRunMutationGuard(readDb).ReadMutationRefusalsAsync([run.Id]);
+
+        Assert.AreEqual(0, denied.Count);
+        Assert.IsTrue(observer.Columns.Contains("WorkflowRunId"), "The guarded owner was read using its run metadata.");
+        Assert.IsFalse(observer.Columns.Contains("PlanJson"));
+        Assert.IsFalse(observer.Columns.Contains("PlanHistoryJson"));
+    }
+
     [DataTestMethod]
     [DataRow(false)]
     [DataRow(true)]
@@ -70,5 +108,19 @@ public sealed class AcquisitionHistoricalContinuationGuardTests
         }, JsonSerializerOptions.Web);
         await db.SaveChangesAsync();
         await new AcquisitionWorkflowRunMutationGuard(db).EnsureCanMutateAsync(unrelated.Id);
+    }
+
+    private sealed class ReturnedColumns : DbCommandInterceptor
+    {
+        public HashSet<string> Columns { get; } = new(StringComparer.Ordinal);
+
+        public override ValueTask<DbDataReader> ReaderExecutedAsync(DbCommand command, CommandExecutedEventData eventData,
+            DbDataReader result, CancellationToken cancellationToken = default)
+        {
+            if (result.HasRows)
+                for (var column = 0; column < result.FieldCount; column++)
+                    Columns.Add(result.GetName(column));
+            return ValueTask.FromResult(result);
+        }
     }
 }

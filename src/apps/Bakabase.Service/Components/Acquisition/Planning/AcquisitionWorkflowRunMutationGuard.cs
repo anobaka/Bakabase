@@ -108,7 +108,13 @@ public sealed class AcquisitionWorkflowRunMutationGuard(BakabaseDbContext db) : 
         static bool ContinuesFrom(AcquisitionPlan? plan, int ownerId, int previousRunId) =>
             plan?.Parts.Any(p => p.ContinueFrom is { } input && input.TaskId == ownerId &&
                 input.PreviousRunId == previousRunId) == true;
-        var plans = await acquisition.Where(t => ownerIds.Contains(t.Id) && (t.PlanJson != null || t.PlanHistoryJson != null))
+        var ownerGenerations = await acquisition.Where(t => ownerIds.Contains(t.Id))
+            .Select(t => new {t.Id, t.WorkflowRunId}).ToArrayAsync(ct);
+        var historicalOwnerIds = ownerGenerations
+            .Where(t => owners[t.Id].Any(run => run != t.WorkflowRunId && !refused.ContainsKey(run)))
+            .Select(t => t.Id).ToArray();
+        if (historicalOwnerIds.Length == 0) return refused;
+        var plans = await acquisition.Where(t => historicalOwnerIds.Contains(t.Id) && (t.PlanJson != null || t.PlanHistoryJson != null))
             .Select(t => new {t.Id, t.WorkflowRunId, t.PlanJson, t.PlanHistoryJson}).ToArrayAsync(ct);
         foreach (var task in plans)
         {
