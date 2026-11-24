@@ -55,6 +55,29 @@ public sealed partial class AcquisitionPreparationTests
     private async Task<string> SavedTask(int id) => JsonSerializer.Serialize(await Db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == id));
 
     [TestMethod]
+    public async Task PreparationKeepsLegacyWeiyunVisibleAndCanConfirmASupportedMirror()
+    {
+        var weiyun = Source("legacy") with {Url = "https://share.weiyun.com/Ab30x7Zq", Kind = "share", ProviderId = "unknown"};
+        var draft = await Draft(weiyun, Source("mirror"));
+        var before = await SavedTask(draft.Id);
+        var input = new AcquisitionPreparationInput(draft.Task.PlanRevision, Relationship: "mirrors", SelectedSourceIds: [weiyun.Id], CheckAvailability: false);
+        var preview = await Plans.PreviewPreparationAsync(draft.Id, input, default);
+        Assert.IsFalse(preview.CanConfirm);
+        var card = preview.Groups.Single().Sources.Single(s => s.Candidate.Id == weiyun.Id);
+        Assert.AreEqual(weiyun.Url, card.Candidate.Url);
+        Assert.AreEqual("weiyun", card.ResolvedSource!.ProviderId);
+        Assert.IsFalse(card.CanSelect || card.CanSelectManually == true);
+        Assert.IsTrue(card.Requirements.Any(r => r.Code == "WEIYUN_PUBLIC_SHARE_UNSUPPORTED"));
+        Assert.AreEqual(before, await SavedTask(draft.Id));
+
+        var confirmed = await Plans.ConfirmPreparationAsync(draft.Id, input with {SelectedSourceIds = ["mirror"]}, default);
+        var part = confirmed.Plan!.Parts.Single();
+        Assert.AreEqual("mirror", part.SelectedSourceId);
+        Assert.AreEqual(weiyun.Url, part.Sources.Single(s => s.Id == weiyun.Id).Url);
+        Assert.AreEqual(0, await Db.WorkflowRuns.CountAsync());
+    }
+
+    [TestMethod]
     public async Task UnknownRelationshipsRequireExplicitReviewAndPreviewDoesNotChangeTaskOrStartWork()
     {
         var draft = await Draft(Source("a"), Source("b")); var before = await SavedTask(draft.Id);

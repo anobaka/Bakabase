@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Chip } from "@heroui/react";
-import { CloudDownloadSources, ThirdPartyId } from "@/sdk/constants";
-import { getEnumKey } from "@/i18n";
+import { downloadSourceProviderLabel } from "@/components/DownloadSource";
 import type { PreparedCandidate } from "./models";
 
 /** Show the effective source without replacing the address supplied by the user or source module. */
@@ -12,10 +11,7 @@ export default function SourceResolution({
 }) {
   const { t } = useTranslation();
   if (!source?.originalUrl || source.originalUrl === source.url) return null;
-  const site = CloudDownloadSources.find((entry) => entry.providerId === source.providerId);
-  const provider = site
-    ? t(getEnumKey("ThirdPartyId", ThirdPartyId[site.thirdPartyId]))
-    : t(`acquire.source.${source.providerId}`, { defaultValue: source.providerId });
+  const provider = downloadSourceProviderLabel(source.providerId, t) ?? t("acquire.source.unknown");
   return (
     <div
       className="min-w-0 space-y-1 rounded-lg bg-default-50 p-2 text-xs"

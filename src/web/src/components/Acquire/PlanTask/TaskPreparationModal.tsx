@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useTranslation } from "react-i18next";
 import { EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button, Checkbox, Chip, Input, Modal, Radio, RadioGroup, Select, Spinner } from "@/components/bakaui";
+import { downloadSourceProviderLabel } from "@/components/DownloadSource";
 import ArchivePasswordInput from "@/components/PasswordSelector/ArchivePasswordInput";
 import SourceHealthBadge from "@/components/SourceAvailability/SourceHealthBadge";
 import SourcePriorityModal from "@/components/SourceAvailability/SourcePriorityModal";
@@ -264,6 +265,8 @@ export default function TaskPreparationModal({ detail, busy, onAction, onClose }
               const method = item.methods.find(value => value.id === item.selectedMethodId);
               const unavailable = item.availability?.status === "confirmedUnavailable";
               const sourceUrl = browserSourceUrl(candidate);
+              const label = downloadSourceProviderLabel(item.resolvedSource?.providerId, t) ??
+                downloadSourceProviderLabel(candidate.providerId, t) ?? sourceLabel(candidate);
               const manualOverride = chosen && unavailable && allowUnavailableSourceIds?.includes(candidate.id);
               const sourceRequirements = item.requirements.filter(requirement =>
                 !(unavailable && item.canSelectManually && requirement.code === "SOURCE_CONFIRMED_UNAVAILABLE"));
@@ -271,9 +274,9 @@ export default function TaskPreparationModal({ detail, busy, onAction, onClose }
                 <div className="flex items-start justify-between gap-2">
                   <Checkbox isSelected={chosen} isDisabled={disabled || refreshing || !item.canSelect && !item.canSelectManually}
                     onValueChange={checked => toggle(group, item, checked)}>
-                    <span className="break-words font-medium">{sourceLabel(candidate)}</span>
+                    <span className="break-words font-medium">{label}</span>
                   </Checkbox>
-                  <Button isIconOnly size="sm" variant="light" aria-label={t("acquisition.preparation.editSource", { source: sourceLabel(candidate) })}
+                  <Button isIconOnly size="sm" variant="light" aria-label={t("acquisition.preparation.editSource", { source: label })}
                     isDisabled={disabled || refreshing} onPress={() => editSource(editableSource)}><EditOutlined aria-hidden /></Button>
                 </div>
                 <div className="my-2 flex flex-wrap items-center gap-1">
@@ -283,7 +286,7 @@ export default function TaskPreparationModal({ detail, busy, onAction, onClose }
                 </div>
                 {candidate.title && <p className="mb-2 break-words text-sm">{candidate.title}</p>}
                 {sourceUrl && <ExternalLink href={sourceUrl} className="mb-2 inline-flex max-w-full break-all text-xs"
-                  aria-label={t("acquisition.preparation.openSource", { source: sourceLabel(candidate) })}>
+                  aria-label={t("acquisition.preparation.openSource", { source: label })}>
                   {sourceUrl}
                 </ExternalLink>}
                 {unavailable && item.canSelectManually && <p role="status" className="mb-2 text-xs text-warning-700">

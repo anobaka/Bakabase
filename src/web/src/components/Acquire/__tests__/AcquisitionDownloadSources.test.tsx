@@ -12,6 +12,7 @@ import { downloadSourceKey } from "@/components/DownloadSource";
 import { ThirdPartyId } from "@/sdk/constants";
 import en from "@/locales/en/pages/acquisition.json";
 import enums from "@/locales/en/enums.json";
+import enAcquire from "@/locales/en/components/acquire.json";
 
 const { copy } = vi.hoisted(() => ({ copy: vi.fn() }));
 const i18n = createInstance();
@@ -34,8 +35,8 @@ vi.mock("../AcquisitionCreationOrigin", () => ({ default: () => null }));
 vi.mock("@/components/Workflow/Activities", () => ({ getWorkflowActivityUI: () => undefined }));
 
 beforeAll(async () => {
-  await i18n.init({ lng: "en", fallbackLng: false, keySeparator: false,
-    resources: { en: { translation: { ...en, ...enums,
+  await i18n.init({ lng: "en", fallbackLng: false, keySeparator: false, parseMissingKeyHandler: key => key,
+    resources: { en: { translation: { ...en, ...enums, ...enAcquire,
       "downloadCenter.provider.http": "Direct download",
       "downloadCenter.provider.bt": "BitTorrent",
       "common.state.copied": "Copied",
@@ -110,6 +111,25 @@ it("does not classify an unrecognized website as a supported direct download", a
   await user.click(screen.getByRole("button", { name: "View unsupported.example sources (1)" }));
   expect(await screen.findByRole("link", { name: "unsupported.example/share/file" })).toBeVisible();
   expect(screen.getByText(en["sourceAvailability.status.unsupported"])).toBeVisible();
+});
+
+it("names a recognized Weiyun share in saved history without offering an executable download method", async () => {
+  const user = userEvent.setup();
+  const url = "https://share.weiyun.com/fixture";
+  show([source({ providerId: "weiyun", url, status: "unsupported", isHistorical: true,
+    reasonCode: "WEIYUN_PUBLIC_SHARE_UNSUPPORTED" })]);
+  const trigger = screen.getByRole("button", { name: "View Tencent Weiyun sources (1)" });
+  expect(trigger.querySelector("img")).toBeNull();
+  await user.click(trigger);
+  const popup = await screen.findByRole("region", { name: "Tencent Weiyun" });
+  expect(within(popup).getByRole("link", { name: "share.weiyun.com/fixture" })).toHaveAttribute("href", url);
+  expect(within(popup).getByText(enAcquire["acquire.requirement.WEIYUN_PUBLIC_SHARE_UNSUPPORTED"])).toBeVisible();
+  expect(downloadSourceKey("weiyun")).toBeUndefined();
+});
+
+it("uses the plain provider name when recognizable source metadata has no locale entry", () => {
+  show([source({ providerId: "transfer.it", url: "https://transfer.it/fixture" })]);
+  expect(screen.getByRole("button", { name: "View transfer.it sources (1)" })).toBeVisible();
 });
 
 it("rejects snapshots from a previous task or run while accepting a saved task without a run", () => {

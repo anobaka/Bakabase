@@ -193,6 +193,35 @@ public sealed class AcquisitionRuntimeOverviewTests
     public void Cleanup() { (_services as IDisposable)?.Dispose(); if (Directory.Exists(_root)) Directory.Delete(_root, true); }
 
     [TestMethod]
+    public async Task HistoricalWeiyunPlanDisplaysTheNamedShareAndPreservesItsUnsupportedTag()
+    {
+        var source = new AcquisitionPlanSource {Id = "legacy", Url = "https://share.weiyun.com/Ab30x7Zq", Kind = "share", ProviderId = "unknown"};
+        var unrelatedPage = source with {Id = "other", Url = "https://example.test/post.zip"};
+        var plan = JsonSerializer.Serialize(new AcquisitionPlan
+        {
+            Parts = [new() {Id = "part", SelectedSourceId = source.Id, Sources = [source, unrelatedPage]}]
+        }, Json);
+        var task = new AcquisitionTaskDbModel
+        {
+            Title = "Saved share", BuilderId = "prepared", Phase = "attention", Status = AcquisitionStatus.Waiting,
+            PlanRevision = 2, PlanJson = plan, BuilderStateJson = JsonSerializer.Serialize(new AcquisitionPlanBuilderState
+                {Issues = [new("SOURCE_UNSUPPORTED", "Historical unsupported source")]}, Json)
+        };
+        _db.AcquisitionTasks.Add(task);
+        await _db.SaveChangesAsync();
+
+        var result = (await _overview.GetAsync([task.Id])).Single();
+        Assert.AreEqual("weiyun", result.Sources.Single(s => s.SourceId == source.Id).ProviderId);
+        Assert.AreEqual(source.Url, result.Sources.Single(s => s.SourceId == source.Id).Url);
+        Assert.AreEqual("unknown", result.Sources.Single(s => s.SourceId == unrelatedPage.Id).ProviderId);
+        CollectionAssert.Contains(result.AttentionTags.ToArray(), "downloadSourceUnsupported");
+        Assert.AreEqual(0, _probe.Calls);
+        await _db.Entry(task).ReloadAsync();
+        Assert.AreEqual(plan, task.PlanJson);
+        Assert.IsNull(task.WorkflowRunId);
+    }
+
+    [TestMethod]
     public async Task ExplicitPreparationCheckUpdatesBothSearchAndOverviewWithoutEditingTheTask()
     {
         var source = new AcquisitionPlanSource {Id = "source", Url = "https://gofile.io/d/fixture", ProviderId = "gofile"};

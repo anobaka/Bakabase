@@ -204,8 +204,15 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 var cacheKey = JsonSerializer.Serialize(new {source.ProviderId, source.Url, source.Kind, source.AccessCode, source.MethodId, source.AccountId, source.AccountVersion});
                 if (!observations.TryGetValue(cacheKey, out var cached))
                     observations[cacheKey] = cached = await availability.GetAsync(source, ct);
+                // Recognize older saved shares for display, without changing their routing or cached evidence.
+                var provider = source.ProviderId;
+                if (provider == "unknown" && source.Kind is "share" or "auto")
+                {
+                    var recognized = CloudSourceClassifier.Classify(source.Url);
+                    if (recognized is not ("http" or "torrent" or "magnet")) provider = recognized;
+                }
                 var observation = new AcquisitionRuntimeSourceObservation {PartId = target.Id, SourceId = source.Id, Url = source.Url,
-                    AccessCode = source.AccessCode, ProviderId = source.ProviderId, Selected = selected, DownloadTaskId = selected ? downloadId : null,
+                    AccessCode = source.AccessCode, ProviderId = provider, Selected = selected, DownloadTaskId = selected ? downloadId : null,
                     ReasonCode = code, Status = AcquisitionRuntimeProblems.Status(code), Message = code == null ? null : AcquisitionRuntimeProblems.Message(code),
                     EvidenceKind = evidence, ObservedAt = time, IsHistorical = evidence != null};
                 if (selected && downloadCompleted)

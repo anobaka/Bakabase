@@ -104,7 +104,11 @@ public sealed class DownloadMethodRegistry(IEnumerable<ICloudDownloadProvider> p
         var supported = descriptor != null && sourceIssue == null;
         if (sourceIssue != null) requirements.Add(sourceIssue);
         if (!supported && requirements.Count == 0)
-            requirements.Add(new("SOURCE_UNSUPPORTED", "source", "No automatic adapter supports this source. Keep it as an acquisition lead or download it manually.", Actions: ["manualDownload"]));
+            requirements.Add(source.ProviderId == "weiyun"
+                ? new("WEIYUN_PUBLIC_SHARE_UNSUPPORTED", "source",
+                    "The official Weiyun MCP download interface only supports files in your own drive and cannot import external shares. Choose another source or open the share to download it manually.",
+                    Actions: ["chooseSource", "manualDownload"])
+                : new("SOURCE_UNSUPPORTED", "source", "No automatic adapter supports this source. Keep it as an acquisition lead or download it manually.", Actions: ["manualDownload"]));
         if (descriptor?.Availability is { } limitation)
         {
             requirements.Add(limitation.Requirement());

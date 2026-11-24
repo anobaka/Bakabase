@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FiLink } from "react-icons/fi";
 import { Button, Popover } from "@/components/bakaui";
-import { DownloadSourceIcon, downloadSourceKey, downloadSourceLabel } from "@/components/DownloadSource";
+import { DownloadSourceIcon, downloadSourceKey, downloadSourceProviderLabel } from "@/components/DownloadSource";
 import ExternalLink from "@/components/ExternalLink";
 import { copyTextToClipboard } from "@/core/clipboard";
 import { RuntimeSourceEvidence } from "./PlanTask/RuntimeOverviewSummary";
@@ -68,9 +68,7 @@ export default function AcquisitionDownloadSources({ task, overview }: {
   for (const source of overview.sources) {
     const sourceKey = downloadSourceKey(source.providerId);
     const host = sourceAddress(source.url).host;
-    const label = sourceKey ? downloadSourceLabel(sourceKey, t)
-      : source.providerId && source.providerId !== "unknown" ? source.providerId
-      : host || t("acquisition.sources.unknown");
+    const label = downloadSourceProviderLabel(source.providerId, t) ?? (host || t<string>("acquisition.sources.unknown"));
     const key = sourceKey ?? `${source.providerId}:${host}`;
     const group = groups.get(key) ?? { sourceKey, label, sources: [] };
     group.sources.push(source);

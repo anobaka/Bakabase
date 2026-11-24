@@ -19,6 +19,11 @@ public sealed class DownloadIntentRoutingTests
     [DataRow("https://www.feemoo.com/s/test", "auto", "feemoo", "manual")]
     [DataRow("https://feemoo.com/s/test", "auto", "feemoo", "manual")]
     [DataRow("https://feemoo.com/account", "auto", "unknown", "manual")]
+    [DataRow("https://share.weiyun.com/Ab30x7Zq?source=fixture", "auto", "weiyun", "manual")]
+    [DataRow("https://share.weiyun.com/Ab30x7Zq/", "share", "weiyun", "manual")]
+    [DataRow("https://share.weiyun.com/", "auto", "unknown", "manual")]
+    [DataRow("https://share.weiyun.com/extra/path.zip", "auto", "unknown", "manual")]
+    [DataRow("https://share.weiyun.com.example.test/Ab30x7Zq", "auto", "unknown", "manual")]
     [DataRow("https://files.example.test/page.zip", "share", "unknown", "manual")]
     [DataRow("https://mypikpak.com/s/test?pwd=code", "auto", "pikpak", "pikpak.share")]
     [DataRow("https://mypikpak.com/account", "auto", "unknown", "manual")]
@@ -39,6 +44,8 @@ public sealed class DownloadIntentRoutingTests
     [DataRow("https://pan.baidu.com/s/1test", "http")]
     [DataRow("https://drive.google.com/drive/folders/test", "http")]
     [DataRow("https://gofile.io/d/test", "torrent")]
+    [DataRow("https://share.weiyun.com/Ab30x7Zq", "http")]
+    [DataRow("https://share.weiyun.com/Ab30x7Zq", "torrent")]
     [DataRow("https://username:password@example.test/file.zip", "auto")]
     [DataRow("file:///etc/passwd", "auto")]
     [DataRow("https://example.test/file.zip", "unsupported-kind")]
@@ -49,6 +56,28 @@ public sealed class DownloadIntentRoutingTests
     public void AClaimedMethodCannotOverrideTheResolvedSourceAdapter() =>
         Assert.ThrowsExactly<ArgumentException>(() => DownloadMethodRegistry.Normalize(new()
             {Id = "source", Url = "https://pan.baidu.com/s/1test", MethodId = "http.native"}));
+
+    [TestMethod]
+    public async Task LegacyWeiyunShareIsRecognizedWithoutSuggestingAnAccountOrPermittingDownload()
+    {
+        const string url = "https://share.weiyun.com/Ab30x7Zq?source=fixture";
+        var input = new DownloadIntentRequest
+        {
+            Candidates = [new() {Id = "legacy", Url = url, Kind = "share", ProviderId = "unknown"}],
+            SelectedCandidateIds = ["legacy"]
+        };
+        var preflight = await Service().PreflightDownloadsOnlyAsync(input, Path.GetTempPath(), default);
+        Assert.IsFalse(preflight.CanSubmit);
+        var candidate = preflight.Candidates.Single();
+        Assert.IsFalse(candidate.CanSelect);
+        Assert.AreEqual(url, candidate.Candidate.Url);
+        Assert.AreEqual("weiyun", candidate.ResolvedSource!.ProviderId);
+        Assert.AreEqual("manual", candidate.SelectedMethodId);
+        Assert.IsNull(candidate.Methods.Single().AccountProvider);
+        var requirement = candidate.Requirements.Single();
+        Assert.AreEqual("WEIYUN_PUBLIC_SHARE_UNSUPPORTED", requirement.Code);
+        CollectionAssert.AreEqual(new[] {"chooseSource", "manualDownload"}, requirement.Actions!.ToArray());
+    }
 
     [TestMethod]
     public async Task AccountSelectionDoesNotBlockNativeMethodsAndUnsupportedSourcesRemainVisible()

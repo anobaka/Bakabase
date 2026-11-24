@@ -134,7 +134,8 @@ public static class ExecutionProblemClassifier
         // Source support is independent of link health and tool/account setup. A known
         // integration limitation cannot be fixed by adding download or processing instructions.
         Add("downloadSourceUnsupported", SourceAvailabilityStatuses.Unknown,
-            "SOURCE_UNSUPPORTED", "DOWNLOAD_METHOD_UNAVAILABLE", "NATIVE_DOCUMENT_EXPORT_UNSUPPORTED", "SHAREPOINT_FOLDER_REQUIRED");
+            "SOURCE_UNSUPPORTED", "DOWNLOAD_METHOD_UNAVAILABLE", "NATIVE_DOCUMENT_EXPORT_UNSUPPORTED", "SHAREPOINT_FOLDER_REQUIRED",
+            "WEIYUN_PUBLIC_SHARE_UNSUPPORTED");
         Add("downloadInfoMissing", SourceAvailabilityStatuses.Unknown,
             "SOURCE_INVALID", "SOURCE_URL_INVALID", "BUILDER_NO_RESULTS", "HANDOFF_NO_MAIN_SOURCE", "TERABOX_SHARE_INVALID", "TERABOX_SOURCE_INVALID",
             "MEGA_SHARE_INVALID");

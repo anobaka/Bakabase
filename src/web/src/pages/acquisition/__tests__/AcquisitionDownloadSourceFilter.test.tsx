@@ -24,6 +24,7 @@ it("uses a flat source row with protocol and site icons and clears through All s
   const http = screen.getByRole("button", { name: "downloadCenter.provider.http" });
   const bt = screen.getByRole("button", { name: "downloadCenter.provider.bt" });
   const baidu = screen.getByRole("button", { name: "enum.thirdPartyId.baiduNetdisk" });
+  expect(screen.queryByRole("button", { name: /weiyun|微云/i })).toBeNull();
   expect(http.querySelector("svg")).not.toBeNull();
   expect(bt.querySelector("svg")).not.toBeNull();
   expect(baidu.querySelector("img")).not.toBeNull();

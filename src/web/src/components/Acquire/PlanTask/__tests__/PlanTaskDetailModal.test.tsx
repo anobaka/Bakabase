@@ -1186,6 +1186,30 @@ it("shows the frozen source address and access code without starting or retrying
   expect(mocks.cancel).not.toHaveBeenCalled();
 });
 
+it("labels a legacy source from its current Weiyun observation while opening the saved address", async () => {
+  const url = "https://share.weiyun.com/fixture";
+  mocks.get.mockResolvedValue({
+    ...detail,
+    task: { ...detail.task, phase: "attention", workflowRunId: 75 },
+    plan: {
+      parts: [{
+        id: "main",
+        title: "Main content",
+        selectedSourceId: "share",
+        sources: [{ id: "share", kind: "share", providerId: "unknown", url }],
+      }],
+    },
+  });
+  mocks.sourceHealth.mockResolvedValue([{
+    taskId: 42, partId: "main", sourceId: "share", url, providerId: "weiyun",
+  }]);
+  render(<PlanTaskDetailModal taskId={42} />);
+  const diagnostics = await openDiagnostics();
+  expect(await diagnostics.findByText("weiyun · acquisition.plan.selected")).toBeVisible();
+  expect(diagnostics.getByRole("link", { name: url })).toHaveAttribute("href", url);
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
 it("keeps the task active when the user only closes the modal", async () => {
   render(<PlanTaskDetailModal taskId={42} />);
   const modal = await screen.findByRole("dialog", { name: "#42 Chosen content" });

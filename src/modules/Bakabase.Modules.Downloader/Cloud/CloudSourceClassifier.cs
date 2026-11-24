@@ -51,6 +51,9 @@ public static class CloudSourceClassifier
         if (host is "gofile.io" or "www.gofile.io" && path.StartsWith("/d/", StringComparison.Ordinal)) return "gofile";
         if (host is "feemoo.com" or "www.feemoo.com" &&
             System.Text.RegularExpressions.Regex.IsMatch(path, @"^/s/[A-Za-z0-9_-]+/?$")) return "feemoo";
+        if (host == "share.weiyun.com")
+            return uri.IsDefaultPort && uri.UserInfo.Length == 0 &&
+                System.Text.RegularExpressions.Regex.IsMatch(path, @"\A/[A-Za-z0-9_-]+/?\z") ? "weiyun" : "unknown";
         if (host is "e-hentai.org" or "exhentai.org" &&
             System.Text.RegularExpressions.Regex.IsMatch(path, @"^/g/[1-9][0-9]*/[a-zA-Z0-9]+/?$")) return "exHentai";
         if (PikPakShareLocator.TryParse(url, out _)) return "pikpak";

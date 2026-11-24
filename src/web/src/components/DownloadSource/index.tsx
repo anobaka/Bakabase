@@ -21,6 +21,19 @@ export function downloadSourceLabel(source: string, t: TFunction): string {
   return Number.isInteger(id) && ThirdPartyId[id] ? t(getEnumKey("ThirdPartyId", ThirdPartyId[id])) : source;
 }
 
+/** A recognized provider may have a display name even when it has no Download Center adapter. */
+export function downloadSourceProviderLabel(providerId: string | null | undefined, t: TFunction): string | undefined {
+  if (!providerId || providerId === "unknown") return;
+  const source = downloadSourceKey(providerId);
+  if (source) return downloadSourceLabel(source, t);
+  for (const prefix of ["downloadSource", "acquire.source"]) {
+    const key = `${prefix}.${providerId}`;
+    const label = t<string>(key);
+    if (label && label !== key) return label;
+  }
+  return providerId;
+}
+
 export function DownloadSourceIcon({ source }: { source: string }) {
   if (source === "http") return <FiGlobe size={17} />;
   if (source === "bt") return <TbMagnet size={17} />;

@@ -2,6 +2,7 @@ import ManualSourceAction from "./ManualSourceAction";
 import PostImageSourceAction, { type ReviewedImageSource } from "./PostImageSourceAction";
 import { useTranslation } from "react-i18next";
 import { Button, Chip } from "@/components/bakaui";
+import { downloadSourceProviderLabel } from "@/components/DownloadSource";
 import SourceProcessingPlanPanel from "@/components/ProcessingPlanRevisions/SourceProcessingPlanPanel";
 import type { SourceAvailabilityRow } from "@/components/SourceAvailability/models";
 import AcquisitionSourceDetails from "../AcquisitionSourceDetails";
@@ -64,6 +65,11 @@ export default function TaskPlanSources({
                     )
                   : undefined;
               const executionSource = correction?.currentSource;
+              const observed = sourceHealth.find(
+                (row) => row.partId === part.id && row.sourceId === source.id,
+              );
+              const providerLabel = downloadSourceProviderLabel(observed?.url === source.url ? observed.providerId : undefined, t) ??
+                downloadSourceProviderLabel(source.providerId, t);
               const correctionReason =
                 correction && !correction.canCorrect
                   ? (correction.reasonCode ?? corrections?.reasonCode)
@@ -75,7 +81,7 @@ export default function TaskPlanSources({
                     variant="flat"
                     color={source.id === part.selectedSourceId ? "primary" : "default"}
                   >
-                    {(() => {
+                    {providerLabel ?? (() => {
                       try {
                         return new URL(source.url).hostname;
                       } catch {
@@ -97,16 +103,8 @@ export default function TaskPlanSources({
                   )}
                   <AcquisitionSourceDetails
                     source={executionSource ?? source}
-                    health={
-                      sourceHealth.find(
-                        (row) => row.partId === part.id && row.sourceId === source.id,
-                      )?.health
-                    }
-                    disabled={
-                      sourceHealth.find(
-                        (row) => row.partId === part.id && row.sourceId === source.id,
-                      )?.disabled
-                    }
+                    health={observed?.health}
+                    disabled={observed?.disabled}
                   />
                   {onReplace && source.id === part.selectedSourceId && (
                     <div key={task.planRevision} className="flex flex-wrap items-center gap-2">

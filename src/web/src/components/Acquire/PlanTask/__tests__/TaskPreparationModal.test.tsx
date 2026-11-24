@@ -430,6 +430,45 @@ it("opens the exact source link for verification without selecting it or grantin
   expect(mocks.previewPreparation.mock.lastCall?.[1].allowUnavailableSourceIds).toEqual([]);
 });
 
+it("names a resolved Weiyun share without changing the original link or offering account setup", async () => {
+  const originalUrl = "https://links.example/saved-share";
+  const resolvedUrl = "https://share.weiyun.com/fixture";
+  const requirement = {
+    code: "WEIYUN_PUBLIC_SHARE_UNSUPPORTED",
+    category: "source",
+    message: "Recorded provider capability",
+  };
+  mocks.previewPreparation.mockImplementation(async (id, request) => {
+    const result = await mockPreview(id, { ...request, selectedSourceIds: [] });
+    return {
+      ...result,
+      canConfirm: false,
+      groups: result.groups.map(group => ({
+        ...group,
+        sources: [{
+          ...viewOf({ id: "weiyun-share", kind: "auto", url: originalUrl, providerId: "unknown" }),
+          resolvedSource: { id: "weiyun-share", kind: "share", providerId: "weiyun", originalUrl, url: resolvedUrl },
+          canSelect: false,
+          canSelectManually: false,
+          methods: [],
+          requirements: [requirement],
+        }],
+      })),
+    };
+  });
+  render(<TaskPreparationModal detail={detail} busy={false} onAction={action} onClose={onClose} />);
+  const card = within(await screen.findByRole("article"));
+  await waitFor(() => expect(card.getByRole("button", { name: "acquisition.preparation.editSource" })).toBeEnabled());
+  expect(card.getByRole("checkbox", { name: "weiyun" })).toBeDisabled();
+  expect(card.getByText("acquire.requirement.WEIYUN_PUBLIC_SHARE_UNSUPPORTED")).toBeVisible();
+  expect(card.queryByRole("button", { name: /account|token|login/i })).toBeNull();
+  const link = card.getByRole("link", { name: "acquisition.preparation.openSource" });
+  expect(link).toHaveAttribute("href", originalUrl);
+  fireEvent.click(link);
+  expect(mocks.openLink).toHaveBeenCalledExactlyOnceWith(originalUrl);
+  expect(mocks.confirmPreparation).not.toHaveBeenCalled();
+});
+
 it.each([
   { kind: "remote", url: "https://example.com/remote-locator" },
   { kind: "remote", url: "/account/folder" },
