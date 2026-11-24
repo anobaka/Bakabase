@@ -127,8 +127,11 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
         EnsureUserPathAllowed(task.DownloadPath);
         request = GuardRetainedSource(request, path => EnsureUserPathAllowed(path));
         var provider = DownloadIntents.DownloadProviderRouting.Require(GetRequiredService<IEnumerable<ICloudDownloadProvider>>(), request.Source);
-        var readiness = await provider.CheckReadyAsync(request.AccountId, ct);
-        if (!readiness.Available) throw new InvalidOperationException(readiness.Problem);
+        if (!task.IsPreparedPayloadHandoffOnly())
+        {
+            var readiness = await provider.CheckReadyAsync(request.AccountId, ct);
+            if (!readiness.Available) throw new InvalidOperationException(readiness.Problem);
+        }
         // Integrity failures require a manual start. The stored reason survives queue admission;
         // only providers that can identify the original failed member may change its checkpoint.
         Func<CloudDownloadRequest, Func<CloudDownloadProgress, Task>, CancellationToken, Task<CloudDownloadResult>> download =
@@ -147,7 +150,9 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
                     throw new InvalidOperationException("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
                 // The saved copy is already pinned. Never prepare, restore or adopt it as
                 // owned here; normal result registration below may finish an existing receipt.
-                return await retry.RetryPreparedDownloadAsync(prepared, ReportProgress, token);
+                return task.IsPreparedPayloadHandoffOnly()
+                    ? await retry.HandoffCompletedPreparedDownloadAsync(prepared, ReportProgress, token)
+                    : await retry.RetryPreparedDownloadAsync(prepared, ReportProgress, token);
             }
             if (ownedCopies != null)
                 await ownedCopies.PrepareAsync(task.Id, prepared, (ICloudOwnedCopyProvider)provider, token);

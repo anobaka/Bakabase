@@ -144,6 +144,8 @@ public sealed record CloudPreparedDownloadRetry(string OperationId, long FailedA
 {
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
     public bool WasPaused { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool HandoffOnly { get; init; }
 }
 
 public sealed record CloudSelectionSignal
@@ -166,7 +168,8 @@ public sealed record CloudSelectionSignal
     internal bool HasValidPreparedRetrySelection() => PreparedDownloadRetries == null ||
         RevalidateExistingDownloads == true && ObserveExistingOnly == true && VerifyExistingFilesOnly != true &&
         ResumeTargetIds != null && PreparedDownloadRetries.Count > 0 && PreparedDownloadRetries.Count <= ResumeTargetIds.Count &&
-        PreparedDownloadRetries.All(p => ResumeTargetIds.Contains(p.Key) && p.Value != null && !string.IsNullOrWhiteSpace(p.Value.OperationId)) &&
+        PreparedDownloadRetries.All(p => ResumeTargetIds.Contains(p.Key) && p.Value != null &&
+            !string.IsNullOrWhiteSpace(p.Value.OperationId) && !(p.Value.WasPaused && p.Value.HandoffOnly)) &&
         (!PreparedDownloadRetries.Values.Any(p => p.WasPaused) ||
          PreparedDownloadRetries.Count == ResumeTargetIds.Count && PreparedDownloadRetries.Values.All(p => p.WasPaused));
 

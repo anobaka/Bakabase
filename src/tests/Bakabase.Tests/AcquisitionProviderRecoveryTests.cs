@@ -56,6 +56,72 @@ public sealed partial class AcquisitionRecoveryTests
             CancellationToken ct) => throw new AssertFailedException("Admission never reads payload.");
     }
 
+    private sealed class SealedRecoveryProvider : RecoverableProvider, ICloudPreparedDownloadRetryProvider
+    {
+        public bool Sealed { get; set; }
+        public bool CanHandoffCompletedPreparedDownloadFailure(string failureCode) => failureCode == "PIKPAK_DOWNLOAD_INCOMPLETE";
+        public Task<CloudReadiness> CheckCompletedPreparedDownloadAsync(CloudDownloadRequest request, CancellationToken ct) =>
+            Task.FromResult(new CloudReadiness(Sealed));
+        public Task<CloudReadiness> CheckPreparedDownloadRetryAsync(CloudDownloadRequest request, CancellationToken ct) =>
+            throw new AssertFailedException("The reported failure requires a sealed original, not a regular retry.");
+        public Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress,
+            CancellationToken ct) => throw new AssertFailedException("The reported failure cannot download anything.");
+    }
+
+    [DataTestMethod]
+    [DataRow("workflow", true, false)]
+    [DataRow("downloads", true, false)]
+    [DataRow("workflow", false, false)]
+    [DataRow("workflow", true, true)]
+    [DataRow("downloads", true, true)]
+    public async Task Incomplete_registration_can_only_confirm_the_exact_sealed_payload(string scope, bool sealedPayload, bool losesSeal)
+    {
+        var (task, run, workset, download, operation, _, _) =
+            await SeedRecoverableProvider(failure: "PIKPAK_DOWNLOAD_INCOMPLETE");
+        download.Progress = 100;
+        await _db.SaveChangesAsync();
+        var provider = new SealedRecoveryProvider {Sealed = sealedPayload, Available = false};
+        var storage = new UserStoragePolicy(false);
+        var downloads = new CloudDownloadRecoveryService(_db, [provider], storage);
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, storage,
+            _services.GetRequiredService<IArtifactOperationStore>(), downloads: downloads);
+        var host = new RecordingHost();
+        var starter = new OnlyDownloadStarter(this, run.Id);
+        var service = new AcquisitionRecoveryService(_db, diagnostics, new(), host,
+            downloadOnly: OnlyDownloads(downloads, starter, new()));
+        var preview = await service.PreviewAsync(new([task.Id], scope));
+        var row = preview.Rows.Single();
+        Assert.AreEqual(sealedPayload, row.CanContinue, row.ReasonCode);
+        Assert.AreEqual(0, provider.ReadinessChecks);
+        Assert.AreEqual(0, provider.Checks);
+        if (!sealedPayload) return;
+        Assert.AreEqual("RECOVERY_SEALED_DOWNLOAD_HANDOFF_READY", row.ReasonCode);
+        if (losesSeal)
+        {
+            host.BeforeValidation = () => {provider.Sealed = false; return Task.CompletedTask;};
+            starter.BetweenLeases = () => {provider.Sealed = false; return Task.CompletedTask;};
+        }
+        var result = await service.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+        Assert.AreEqual(losesSeal ? 0 : 1, result.ContinuedTaskIds.Count);
+        if (!losesSeal && scope == "workflow")
+        {
+            var signal = JsonSerializer.Deserialize<CloudSelectionSignal>(host.Signal!, WorkflowJson.Options)!;
+            var confirmed = signal.PreparedDownloadRetries!.Values.Single();
+            Assert.IsTrue(confirmed.HandoffOnly);
+            Assert.AreEqual(operation.Id, confirmed.OperationId);
+        }
+        if (!losesSeal && scope == "downloads")
+        {
+            CollectionAssert.AreEqual(new[] {download.Id}, starter.Calls);
+            Assert.IsTrue(starter.HandoffPreparedPayloadOnly);
+            Assert.AreEqual(operation.Id, starter.PreparedRetryOperationId);
+        }
+        if (losesSeal) Assert.AreEqual(0, host.Calls + starter.Calls.Count);
+        Assert.AreEqual(0, provider.ReadinessChecks);
+        Assert.AreEqual(0, provider.Checks);
+        Assert.AreEqual(1, await _db.CloudDownloadOperations.CountAsync());
+    }
+
     [TestMethod]
     [DataRow(true, 0, true)]
     [DataRow(true, 41, true)]

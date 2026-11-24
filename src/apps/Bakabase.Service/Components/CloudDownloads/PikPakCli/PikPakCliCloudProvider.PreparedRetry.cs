@@ -16,6 +16,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
     public bool SupportsPausedPreparedDownload => _restoredOriginals != null;
 
     public bool CanRetryPreparedDownloadFailure(string failureCode) => failureCode == "PIKPAK_CLI_REQUEST_FAILED";
+    public bool CanHandoffCompletedPreparedDownloadFailure(string failureCode) =>
+        _restoredOriginals != null && failureCode is "PIKPAK_DOWNLOAD_INCOMPLETE" or "PIKPAK_NETWORK_UNAVAILABLE" or "PIKPAK_CLI_REQUEST_FAILED";
 
     public async Task<CloudReadiness> CheckLocalRecoveryAsync(CloudDownloadRequest request, CancellationToken ct)
     {
@@ -45,8 +47,11 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
     public Task<CloudReadiness> CheckPausedPreparedDownloadAsync(CloudDownloadRequest request, CancellationToken ct) =>
         CheckPreparedDownloadRetryAsync(request, requireCommittedPayload: true, ct);
 
+    public Task<CloudReadiness> CheckCompletedPreparedDownloadAsync(CloudDownloadRequest request, CancellationToken ct) =>
+        CheckPreparedDownloadRetryAsync(request, requireCommittedPayload: false, ct, requireCompletedPayload: true);
+
     private async Task<CloudReadiness> CheckPreparedDownloadRetryAsync(CloudDownloadRequest request,
-        bool requireCommittedPayload, CancellationToken ct)
+        bool requireCommittedPayload, CancellationToken ct, bool requireCompletedPayload = false)
     {
         try
         {
@@ -61,7 +66,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
                     request.Source.AccountVersion, async account =>
                     {
                         await InspectPreparedRetryAsync(request, output, account, copies, verifyContent: false, ct,
-                            requireCommittedPayload: requireCommittedPayload);
+                            requireCommittedPayload: requireCommittedPayload, requireCompletedPayload: requireCompletedPayload);
                         return new CloudReadiness(true);
                     }, ct);
             }, ct);
@@ -72,8 +77,16 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
         { return new(false, "PIKPAK_LOCAL_PATH_INVALID"); }
     }
 
-    public async Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request,
-        Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
+    public Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request,
+        Func<CloudDownloadProgress, Task> progress, CancellationToken ct) =>
+        RetryPreparedDownloadAsync(request, progress, sealedHandoffOnly: false, ct);
+
+    public Task<CloudDownloadResult> HandoffCompletedPreparedDownloadAsync(CloudDownloadRequest request,
+        Func<CloudDownloadProgress, Task> progress, CancellationToken ct) =>
+        RetryPreparedDownloadAsync(request, progress, sealedHandoffOnly: true, ct);
+
+    private async Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request,
+        Func<CloudDownloadProgress, Task> progress, bool sealedHandoffOnly, CancellationToken ct)
     {
         try
         {
@@ -81,17 +94,19 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
             return await WithOperation(request.OperationId, () => accounts.WithAccountAsync(
                 request.AccountId ?? request.Source.AccountId, request.Source.AccountVersion, async account =>
                 {
-                    await account.RequireOnline(ct);
+                    if (!sealedHandoffOnly) await account.RequireOnline(ct);
                     var copies = await ReadDownloadJournal(request.OperationId, ct);
-                    var journal = await InspectPreparedRetryAsync(request, output, account, copies, verifyContent: true, ct,
-                        PikPakPayloadActivity.ReportReads(() => progress(new(null, Stage: "Verifying"))));
-                    if (!Same(journal.Files, await ReadRemote(account, journal.FolderId!, ct)) ||
-                        !MatchesSelection(journal.Selection, journal.Files))
+                    var journal = await InspectPreparedRetryAsync(request, output, account, copies, verifyContent: !sealedHandoffOnly, ct,
+                        PikPakPayloadActivity.ReportReads(() => progress(new(null, Stage: "Verifying"))),
+                        requireCompletedPayload: sealedHandoffOnly);
+                    if (!MatchesSelection(journal.Selection, journal.Files) ||
+                        !sealedHandoffOnly && !Same(journal.Files, await ReadRemote(account, journal.FolderId!, ct)))
                         throw new PikPakCliException("PIKPAK_REMOTE_CHANGED");
                     // Repeat the path proof after the provider lookup and before creating any payload.
-                    await VerifyPreparedRetryLocationAsync(request, output, journal, copies!, verifyContent: false, ct);
+                    if (!sealedHandoffOnly)
+                        await VerifyPreparedRetryLocationAsync(request, output, journal, copies!, verifyContent: false, ct);
                     return await DownloadFiles(request, output, journal, account, progress, ct,
-                        retryRestoredOriginal: true);
+                        retryRestoredOriginal: true, sealedHandoffOnly: sealedHandoffOnly);
                 }, ct), ct);
         }
         catch (PikPakCliException error) { throw new CloudProviderException(error.Code, true); }
@@ -114,7 +129,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
 
     private async Task<Journal> InspectPreparedRetryAsync(CloudDownloadRequest request, string output,
         PikPakCliAccountLease account, DownloadJournal? copies, bool verifyContent, CancellationToken ct,
-        Func<ValueTask>? onVerificationRead = null, bool requireCommittedPayload = false)
+        Func<ValueTask>? onVerificationRead = null, bool requireCommittedPayload = false, bool requireCompletedPayload = false)
     {
         var journal = await ReadJournal(request.OperationId, ct);
         if (journal is not {State: "restored", FolderId.Length: > 0, Files.Count: > 0})
@@ -130,7 +145,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
             copies.RestoredHttpMembers is not {Count: > 0} &&
             !journal.Files.Any(file => copies.Started.Contains(file.Id) && !copies.Completed.ContainsKey(file.Path)))
             throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
-        var hasCommittedPayload = await VerifyPreparedRetryLocationAsync(request, output, journal, copies, verifyContent, ct, onVerificationRead);
+        var hasCommittedPayload = await VerifyPreparedRetryLocationAsync(request, output, journal, copies, verifyContent, ct,
+            onVerificationRead, requireCompletedPayload);
         if (requireCommittedPayload && !hasCommittedPayload)
             throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
         return journal;
@@ -140,7 +156,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
         PikPakCliStorage.ReadAsync<DownloadJournal>(Path.Combine(OperationPath(operationId), "download.json"), ct);
 
     private async Task<bool> VerifyPreparedRetryLocationAsync(CloudDownloadRequest request, string output, Journal journal,
-        DownloadJournal copies, bool verifyContent, CancellationToken ct, Func<ValueTask>? onVerificationRead = null)
+        DownloadJournal copies, bool verifyContent, CancellationToken ct, Func<ValueTask>? onVerificationRead = null,
+        bool requireCompletedPayload = false)
     {
         var planned = journal.Files.ToDictionary(file => PikPakCliStorage.Within(output, file.Path),
             ArtifactManifestFiles.PathComparer);
@@ -152,6 +169,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
             .ToDictionary(file => RestoredHttpDirectory(stage, file), ArtifactManifestFiles.PathComparer);
         var verified = new HashSet<string>(ArtifactManifestFiles.PathComparer);
         var verifiedStaged = new HashSet<string>(ArtifactManifestFiles.PathComparer);
+        var sealedMembers = requireCompletedPayload ? new HashSet<string>(ArtifactManifestFiles.PathComparer) : null;
         var pending = new Stack<(string Path, int Depth)>();
         pending.Push((output, 0));
         var entries = 0;
@@ -182,12 +200,16 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
                     if (stagedReceipt?.RestoredHttp == true && File.Exists(destination) && !Path.Exists(payload))
                     {
                         await VerifyRecordedFileAsync(destination, httpMember, stagedReceipt, verifyContent, ct, onVerificationRead);
-                        await _restoredOriginals.InspectHandedOffAsync(identity, entry, ct);
+                        var handedOff = await _restoredOriginals.InspectHandedOffAsync(identity, entry, ct);
+                        if (handedOff is {Exists: true, IsComplete: true} && handedOff.VerifiedBytes == httpMember.Size)
+                            sealedMembers?.Add(httpMember.Path);
                         verified.Add(httpMember.Path);
                         continue;
                     }
                     var checkpoint = await _restoredOriginals.InspectAsync(identity, entry, ct);
                     hasCommittedPayload |= checkpoint.Exists && checkpoint.VerifiedBytes > 0;
+                    if (checkpoint is {Exists: true, IsComplete: true} && checkpoint.VerifiedBytes == httpMember.Size)
+                        sealedMembers?.Add(httpMember.Path);
                     if (checkpoint.IsComplete && stagedReceipt?.RestoredHttp == true)
                     {
                         await VerifyRecordedFileAsync(payload, httpMember, stagedReceipt, verifyContent, ct, onVerificationRead);
@@ -211,6 +233,9 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
         }
         verified.UnionWith(verifiedStaged);
         if (verified.Count != copies.Completed.Count) throw new PikPakCliException("PIKPAK_LOCAL_CHANGED");
+        if (sealedMembers != null && (sealedMembers.Count == 0 ||
+            journal.Files.Any(file => !sealedMembers.Contains(file.Path) && !verified.Contains(file.Path))))
+            throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
         return hasCommittedPayload;
     }
 
@@ -220,6 +245,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
         PikPakCliStorage.NoLinks(path);
         ArtifactFileIdentity.RequireRegularFile(path);
         if (receipt == null || receipt.Size != member.Size || new FileInfo(path).Length != receipt.Size ||
+            receipt.FileIdentity != null && ArtifactFileIdentity.Read(path) != receipt.FileIdentity ||
             receipt.Sha256 is not {Length: 64} ||
             verifyContent && receipt.Sha256 != await PikPakCliStorage.FileHash(path, ct, onVerificationRead))
             throw new PikPakCliException("PIKPAK_LOCAL_CHANGED");

@@ -23,14 +23,16 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 public interface IAcquisitionOriginalDownloadStarter
 {
     Task<bool> StartAsync(int id, Func<CancellationToken, Task> validate,
-        Func<CancellationToken, Task> validateUnderOwnerLease, CancellationToken ct, string? preparedRetryOperationId = null);
+        Func<CancellationToken, Task> validateUnderOwnerLease, CancellationToken ct, string? preparedRetryOperationId = null,
+        bool handoffPreparedPayloadOnly = false);
 }
 
 public sealed class AcquisitionOriginalDownloadStarter(DownloadTaskService downloads) : IAcquisitionOriginalDownloadStarter
 {
     public async Task<bool> StartAsync(int id, Func<CancellationToken, Task> validate,
-        Func<CancellationToken, Task> validateUnderOwnerLease, CancellationToken ct, string? preparedRetryOperationId = null) =>
-        (await downloads.StartConditionally(id, validate, ct, validateUnderOwnerLease, preparedRetryOperationId)).Code == 0;
+        Func<CancellationToken, Task> validateUnderOwnerLease, CancellationToken ct, string? preparedRetryOperationId = null,
+        bool handoffPreparedPayloadOnly = false) =>
+        (await downloads.StartConditionally(id, validate, ct, validateUnderOwnerLease, preparedRetryOperationId, handoffPreparedPayloadOnly)).Code == 0;
 }
 
 public interface IAcquisitionDownloadOnlyRecoveryService
@@ -124,7 +126,8 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
                     await CheckCapacity(id, target, workset, token);
                 }
                 bool accepted;
-                try { accepted = await starter.StartAsync(id, Validate, ValidateOwnerLease, ct, check.PreparedRetry?.OperationId); }
+                try { accepted = await starter.StartAsync(id, Validate, ValidateOwnerLease, ct, check.PreparedRetry?.OperationId,
+                    handoffPreparedPayloadOnly: check.PreparedRetry?.HandoffOnly == true); }
                 catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException or OperationCanceledException)
                 {
                     var state = await db.DownloadTasks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id, CancellationToken.None);

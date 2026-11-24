@@ -33,8 +33,9 @@ public sealed partial class AcquisitionRecoveryTests
     {
         public List<int> Calls = []; public int LeaseChecks; public bool LoseResponse; public Func<Task>? BetweenLeases; public Func<Task>? AfterStart;
         public string? PreparedRetryOperationId;
+        public bool HandoffPreparedPayloadOnly;
         public Task<bool> StartAsync(int id,Func<CancellationToken,Task> validate,Func<CancellationToken,Task> owner,CancellationToken ct,
-            string? preparedRetryOperationId = null)=>
+            string? preparedRetryOperationId = null, bool handoffPreparedPayloadOnly = false)=>
             fixture._services.GetRequiredService<DownloaderManager>().WithTaskActionLock(id,async()=>
             {
                 await validate(ct);
@@ -46,7 +47,8 @@ public sealed partial class AcquisitionRecoveryTests
                 try {await owner(ct);LeaseChecks++;}
                 catch {await fixture._db.DownloadTasks.Where(d=>d.Id==id).ExecuteUpdateAsync(s=>s.SetProperty(d=>d.Status,DownloadTaskDbModelStatus.Failed));throw;}
                 finally {gate.Release();}
-                PreparedRetryOperationId=preparedRetryOperationId;Calls.Add(id);if(LoseResponse)throw new IOException("transport result lost");
+                PreparedRetryOperationId=preparedRetryOperationId;HandoffPreparedPayloadOnly=handoffPreparedPayloadOnly;
+                Calls.Add(id);if(LoseResponse)throw new IOException("transport result lost");
                 await fixture._db.DownloadTasks.Where(d=>d.Id==id).ExecuteUpdateAsync(s=>s.SetProperty(d=>d.Status,DownloadTaskDbModelStatus.Complete),ct);
                 if(AfterStart!=null)await AfterStart();return true;
             });

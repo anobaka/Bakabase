@@ -650,7 +650,7 @@ public abstract class CloudActivity(string kind, string name, string description
             {
                 if ((await recovery.ReadEquivalentGroupAsync(runId, target, outputDirectory, token))?.Owner.Id != target.Id)
                     throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
-            } : null, check.PreparedRetry?.OperationId);
+            } : null, check.PreparedRetry?.OperationId, handoffPreparedPayloadOnly: check.PreparedRetry?.HandoffOnly == true);
         if (response.Code != 0) throw new InvalidOperationException(response.Message ?? "RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
     }
 

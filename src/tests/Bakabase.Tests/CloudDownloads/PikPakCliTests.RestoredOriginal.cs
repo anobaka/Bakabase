@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Security.Cryptography;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Downloader.Models;
@@ -105,6 +106,68 @@ public sealed partial class PikPakCliTests
         Assert.AreEqual(1, _native.Downloads);
     }
 
+    [DataTestMethod]
+    [DataRow("sealed")]
+    [DataRow("partial")]
+    [DataRow("changed-staged")]
+    [DataRow("already-moved")]
+    [DataRow("changed-moved")]
+    public async Task Sealed_original_handoff_is_local_and_recovers_after_the_move_but_before_registration(string scenario)
+    {
+        await Login();
+        _native.FailPayload = true;
+        _native.RemoveFailedNativePartial = true;
+        await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.DownloadAsync(Request, _ => Task.CompletedTask, default));
+        _restored.Fail = true;
+        await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.RetryPreparedDownloadAsync(Request, _ => Task.CompletedTask, default));
+        var (identity, directory, _) = _restored.Transfers.Single();
+        var payload = Path.Combine(directory, "payload");
+        if (scenario != "partial")
+        {
+            File.Delete(Path.Combine(directory, "checkpoint-part"));
+            await File.WriteAllTextAsync(payload, "abc");
+            await File.WriteAllTextAsync(Path.Combine(directory, "checkpoint"), identity.AttemptScope);
+        }
+        _native.Approved = false;
+        var nativeCalls = _native.Calls.Count;
+        var canHandoff = (await _provider.CheckCompletedPreparedDownloadAsync(Request, default)).Available;
+        Assert.AreEqual(scenario != "partial", canHandoff);
+        if (scenario == "changed-staged") await File.WriteAllTextAsync(payload, "abd");
+        Task<CloudDownloadResult> Handoff(Func<CloudDownloadProgress, Task>? report = null) =>
+            _provider.HandoffCompletedPreparedDownloadAsync(Request, report ?? (_ => Task.CompletedTask), default);
+        if (scenario is "already-moved" or "changed-moved")
+        {
+            await Assert.ThrowsExactlyAsync<OperationCanceledException>(() => Handoff(progress =>
+                progress.Percentage == 100 ? Task.FromException(new OperationCanceledException()) : Task.CompletedTask));
+            Assert.IsFalse(File.Exists(payload));
+            var destination = Directory.EnumerateFiles(Request.OutputDirectory, "file.bin", SearchOption.AllDirectories).Single();
+            if (scenario == "changed-moved") await File.WriteAllTextAsync(destination, "abd");
+            Assert.IsTrue((await _provider.CheckCompletedPreparedDownloadAsync(Request, default)).Available);
+        }
+        if (scenario is "sealed" or "already-moved")
+        {
+            var accepted = await Handoff();
+            Assert.AreEqual("abc", await File.ReadAllTextAsync(accepted.Files.Single()));
+        }
+        else
+        {
+            await Assert.ThrowsExceptionAsync<CloudProviderException>(() => Handoff());
+            Assert.AreEqual(scenario is "changed-staged" or "changed-moved" ? "abd" : "a",
+                await File.ReadAllTextAsync(scenario switch
+                {
+                    "changed-moved" => Directory.EnumerateFiles(Request.OutputDirectory, "file.bin", SearchOption.AllDirectories).Single(),
+                    "changed-staged" => payload,
+                    _ => Path.Combine(directory, "checkpoint-part")
+                }));
+        }
+        Assert.AreEqual(nativeCalls, _native.Calls.Count);
+        Assert.AreEqual(1, _native.Restores);
+        Assert.AreEqual(1, _native.Downloads);
+        Assert.AreEqual(1, _restored.Transfers.Count, "Handoff must never call the transport.");
+    }
+
     private sealed class RestoredOriginal : IAuthorizedOriginalHttpDownloader
     {
         internal bool Fail;
@@ -117,11 +180,12 @@ public sealed partial class PikPakCliTests
             if (!Directory.Exists(checkpointDirectory))
                 return Task.FromResult(new AuthorizedOriginalCheckpoint(false, 0, false));
             var files = Directory.GetFileSystemEntries(checkpointDirectory).Select(Path.GetFileName).ToArray();
-            if (files.Any(name => name is not ("checkpoint-part" or "payload")) ||
+            if (files.Any(name => name is not ("checkpoint-part" or "payload" or "checkpoint")) ||
                 !Transfers.Any(call => call.Directory == checkpointDirectory && call.Identity == identity))
                 throw new AuthorizedOriginalDownloadException("ORIGINAL_HTTP_CHECKPOINT_INVALID");
-            return Task.FromResult(new AuthorizedOriginalCheckpoint(files.Length != 0,
-                files.Contains("payload") ? identity.Length : 1, files.Contains("payload")));
+            var complete = files.Contains("payload") && files.Contains("checkpoint") &&
+                File.ReadAllText(Path.Combine(checkpointDirectory, "checkpoint")) == identity.AttemptScope;
+            return Task.FromResult(new AuthorizedOriginalCheckpoint(files.Length != 0, complete ? identity.Length : 1, complete));
         }
 
         public async Task<AuthorizedOriginalCheckpoint> InspectHandedOffAsync(AuthorizedOriginalIdentity identity,
@@ -132,6 +196,16 @@ public sealed partial class PikPakCliTests
                 await File.ReadAllTextAsync(files[0], ct) != identity.AttemptScope)
                 throw new AuthorizedOriginalDownloadException("ORIGINAL_HTTP_CHECKPOINT_INVALID");
             return new(true, identity.Length, true);
+        }
+
+        public async Task<VerifiedOriginalPayload> VerifyCompletedAsync(AuthorizedOriginalIdentity identity,
+            string checkpointDirectory, CancellationToken ct, Func<ValueTask>? onRead = null)
+        {
+            var state = await InspectAsync(identity, checkpointDirectory, ct);
+            var payload = Path.Combine(checkpointDirectory, "payload");
+            if (!state.IsComplete || await File.ReadAllTextAsync(payload, ct) != "abc")
+                throw new AuthorizedOriginalDownloadException("ORIGINAL_HTTP_CHECKPOINT_INVALID");
+            return new(payload, identity.Length, Convert.ToHexString(SHA256.HashData("abc"u8)).ToLowerInvariant());
         }
 
         public async Task<string> DownloadAsync(AuthorizedOriginalIdentity identity, string checkpointDirectory,

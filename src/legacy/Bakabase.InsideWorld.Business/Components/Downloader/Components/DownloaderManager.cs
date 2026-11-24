@@ -395,7 +395,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         }
 
         private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts, bool startAutomatically,
-            Func<Task>? validateUnderOwnerLease = null, string? preparedRetryOperationId = null)
+            Func<Task>? validateUnderOwnerLease = null, string? preparedRetryOperationId = null, bool handoffPreparedPayloadOnly = false)
         {
             await using var scope = _serviceProvider.CreateAsyncScope();
             IAsyncDisposable lease;
@@ -408,11 +408,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             await using (lease)
             {
                 if (validateUnderOwnerLease != null) await validateUnderOwnerLease();
-                return await TryStartOwnedTask(task, stopConflicts, startAutomatically, preparedRetryOperationId);
+                return await TryStartOwnedTask(task, stopConflicts, startAutomatically, preparedRetryOperationId, handoffPreparedPayloadOnly);
             }
         }
 
-        private async Task<BaseResponse> TryStartOwnedTask(DownloadTask task, bool stopConflicts, bool startAutomatically, string? preparedRetryOperationId)
+        private async Task<BaseResponse> TryStartOwnedTask(DownloadTask task, bool stopConflicts, bool startAutomatically,
+            string? preparedRetryOperationId, bool handoffPreparedPayloadOnly)
         {
             // Starting an already active task is idempotent, including after its capacity was lowered.
             if (this[task.Id]?.Status is DownloaderStatus.Downloading or DownloaderStatus.Starting)
@@ -444,7 +445,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             {
                 return BaseResponseBuilder.BuildBadRequest(ex.Message);
             }
-            if (preparedRetryOperationId != null) task.BindPreparedRetry(preparedRetryOperationId);
+            if (preparedRetryOperationId != null) task.BindPreparedRetry(preparedRetryOperationId, handoffPreparedPayloadOnly);
             var helper = _downloaderFactory.GetHelper(task.ThirdPartyId, task.Type);
             var validation = await helper.ValidateOptionsAsync();
             if (!validation.IsSuccess())
@@ -558,8 +559,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
         }
 
         internal Task<BaseResponse> StartUnderTaskActionLock(DownloadTask task, bool stopConflicts,
-            Func<Task>? validateUnderOwnerLease = null, string? preparedRetryOperationId = null) =>
-            _tryStart(task, stopConflicts, startAutomatically: false, validateUnderOwnerLease, preparedRetryOperationId);
+            Func<Task>? validateUnderOwnerLease = null, string? preparedRetryOperationId = null, bool handoffPreparedPayloadOnly = false) =>
+            _tryStart(task, stopConflicts, startAutomatically: false, validateUnderOwnerLease, preparedRetryOperationId, handoffPreparedPayloadOnly);
 
         /// <summary>
         /// Force-releases downloaders that claim to be busy but have shown no sign of life for

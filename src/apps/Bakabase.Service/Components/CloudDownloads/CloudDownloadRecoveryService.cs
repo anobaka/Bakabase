@@ -146,12 +146,17 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 IsExactLegacyStorageFailure(download.Message, download.DownloadPath, download.Options)
                     ? "LOCAL_STORAGE_UNAVAILABLE" : null;
             var preparedProvider = !forSourceRevision && !requireEquivalentGroup ? provider as ICloudPreparedDownloadRetryProvider : null;
+            var canHandoff = !resumePausedPrepared && originalFailure != null &&
+                preparedProvider?.CanHandoffCompletedPreparedDownloadFailure(originalFailure) == true;
+            var canRetryPrepared = originalFailure != null && preparedProvider?.CanRetryPreparedDownloadFailure(originalFailure) == true;
+            var canRevalidate = originalFailure != null && capability?.CanRevalidateDownloadFailure(originalFailure) == true;
+            var requiresHandoff = canHandoff && !canRetryPrepared && !canRevalidate;
             var needsPreparedProof = resumePausedPrepared ||
-                originalFailure != null && preparedProvider?.CanRetryPreparedDownloadFailure(originalFailure) == true;
+                requiresHandoff || canRetryPrepared;
             if (resumePausedPrepared ? preparedProvider == null || capability == null :
                 stopped || originalFailure == null || (forSourceRevision
                     ? provider is not ICloudDownloadAbandonmentProvider
-                    : capability == null || (!needsPreparedProof && !capability.CanRevalidateDownloadFailure(originalFailure))))
+                    : capability == null || (!needsPreparedProof && !canRevalidate)))
                 return Block("RECOVERY_MANUAL_REVIEW");
             failure = originalFailure;
             if (target.RemoteEntry != null || target.DownloadArtifactId != null || target.ProcessedArtifactId != null ||
@@ -209,9 +214,13 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             var executionRequest = CloudDownloadDestinations.ExecutionRequest(request);
             // A prepared retry must prove the provider's exact saved copy and previous native
             // attempt even when filesystem deletion markers have disappeared since preview.
-            var preparedReadiness = preparedProvider == null ? null : await (resumePausedPrepared
-                ? preparedProvider.CheckPausedPreparedDownloadAsync(executionRequest, ct)
-                : preparedProvider.CheckPreparedDownloadRetryAsync(executionRequest, ct));
+            var sealedReadiness = canHandoff ? await preparedProvider!.CheckCompletedPreparedDownloadAsync(executionRequest, ct) : null;
+            var handoffOnly = sealedReadiness?.Available == true;
+            var preparedReadiness = sealedReadiness;
+            if (preparedProvider != null && !handoffOnly && !requiresHandoff)
+                preparedReadiness = await (resumePausedPrepared
+                    ? preparedProvider.CheckPausedPreparedDownloadAsync(executionRequest, ct)
+                    : preparedProvider.CheckPreparedDownloadRetryAsync(executionRequest, ct));
             var prepared = preparedReadiness?.Available == true;
             if (resumePausedPrepared && !prepared && preparedReadiness?.Problem is {} problem &&
                 WorkflowSourceRunProblems.Extract(problem).FirstOrDefault() is {} pausedFailure)
@@ -220,6 +229,7 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 return Block(pausedFailure is "PIKPAK_ACCOUNT_REQUIRED" or "PIKPAK_ACCOUNT_CHANGED"
                     ? "RECOVERY_SOURCE_STILL_BLOCKED" : PausedOriginalLocalReview);
             }
+            if (requiresHandoff && !prepared) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             if (!prepared && download.Progress != 0) return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
             if (!prepared && needsPreparedProof) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             if (prepared)
@@ -240,8 +250,12 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 if (!local.Available) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             }
             var preparedRetry = prepared ? new CloudPreparedDownloadRetry(intent, download.DownloadStatusUpdateDt.Ticks)
-                {WasPaused = resumePausedPrepared} : null;
+                {WasPaused = resumePausedPrepared, HandoffOnly = handoffOnly} : null;
             if (!revalidate) return Block("RECOVERY_RECHECK_SOURCE", candidate: true) with {PreparedRetry = preparedRetry};
+            // This action never fetches missing bytes. A verified frozen local receipt
+            // can finish even if the public link or the account's temporary copy is gone.
+            if (handoffOnly)
+                return new(true, "RECOVERY_SEALED_DOWNLOAD_HANDOFF_READY", failure, true) {PreparedRetry = preparedRetry};
             if (!capability!.RevalidationChecksReadiness)
             {
                 var ready = await provider.CheckReadyAsync(request.AccountId, ct);

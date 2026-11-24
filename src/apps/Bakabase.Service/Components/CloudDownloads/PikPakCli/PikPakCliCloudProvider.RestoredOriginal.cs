@@ -27,6 +27,20 @@ public sealed partial class PikPakCliCloudProvider
             journal.FolderId!, file.Id, PikPakCliStorage.Hash(JsonSerializer.Serialize(file, PikPakCliStorage.Json)),
             file.Size, PikPakCliStorage.Hash(copies.Identity + "\0" + RestoredHttpStage));
 
+    private async Task<VerifiedOriginalPayload> VerifySealedOriginalAsync(CloudDownloadRequest request, Journal journal,
+        DownloadJournal copies, RemoteFile file, string directory, string expectedPayload, Func<ValueTask> onRead, CancellationToken ct)
+    {
+        var identity = RestoredHttpIdentity(request, journal, copies, file);
+        if (_restoredOriginals == null || copies.RestoredHttpMembers is not {} members ||
+            !members.TryGetValue(file.Id, out var scope) || scope != identity.AttemptScope)
+            throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+        var verified = await _restoredOriginals.VerifyCompletedAsync(identity, directory, ct, onRead);
+        if (verified.Length != file.Size || !ArtifactManifestFiles.PathComparer.Equals(
+                Path.GetFullPath(verified.Path), expectedPayload))
+            throw new PikPakCliException("PIKPAK_LOCAL_CHANGED");
+        return verified;
+    }
+
     private async Task DownloadRestoredOriginalAsync(CloudDownloadRequest request, Journal journal,
         DownloadJournal copies, RemoteFile file, PikPakCliAccountLease account, string directory, string part,
         long completed, long total, Func<CloudDownloadProgress, Task> progress, CancellationToken ct)

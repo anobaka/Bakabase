@@ -18,6 +18,17 @@ public interface ICloudPreparedDownloadRetryProvider
     Task<CloudReadiness> CheckPausedPreparedDownloadAsync(CloudDownloadRequest request, CancellationToken ct) =>
         Task.FromResult(new CloudReadiness(false));
 
+    /// <summary>This failure may be recovered solely by handing off an already sealed original.</summary>
+    bool CanHandoffCompletedPreparedDownloadFailure(string failureCode) => false;
+
+    Task<CloudReadiness> CheckCompletedPreparedDownloadAsync(CloudDownloadRequest request, CancellationToken ct) =>
+        Task.FromResult(new CloudReadiness(false));
+
+    /// <summary>Verifies and hands off the local payload without beginning or resuming a transfer.</summary>
+    Task<CloudDownloadResult> HandoffCompletedPreparedDownloadAsync(CloudDownloadRequest request,
+        Func<CloudDownloadProgress, Task> progress, CancellationToken ct) =>
+        Task.FromException<CloudDownloadResult>(new InvalidOperationException("RECOVERY_DOWNLOAD_REVIEW_REQUIRED"));
+
     /// <summary>Rechecks the original prepared source and downloads missing payload without preparing it again.</summary>
     Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request,
         Func<CloudDownloadProgress, Task> progress, CancellationToken ct);

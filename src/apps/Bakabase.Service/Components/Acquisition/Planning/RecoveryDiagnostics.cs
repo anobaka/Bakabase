@@ -258,11 +258,14 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
                         .ToDictionary(t => t.Id, t => t.Check.PreparedRetry!, StringComparer.Ordinal);
                     if (!checkedRemote && prepared.Count == 0) return Result("RECOVERY_RECHECK_SOURCE");
                     var preparedReason = prepared.Count == 0 ? null : prepared.Count == targets.Count
-                        ? "RECOVERY_PREPARED_DOWNLOAD_REVALIDATED" : "RECOVERY_MIXED_DOWNLOADS_REVALIDATED";
+                        ? prepared.Values.All(p => p.HandoffOnly) ? "RECOVERY_SEALED_DOWNLOAD_HANDOFF_READY" :
+                            "RECOVERY_PREPARED_DOWNLOAD_REVALIDATED"
+                        : "RECOVERY_MIXED_DOWNLOADS_REVALIDATED";
                     var signal = new CloudSelectionSignal {ObserveExistingOnly = true, ResumeTargetIds = targets.Select(t => t.Id).ToList(),
                         RevalidateExistingDownloads = true, PreparedDownloadRetries = prepared.Count > 0 ? prepared : null};
-                    return Result(checkedRemote ? preparedReason ?? "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED" : "RECOVERY_RECHECK_SOURCE",
-                        checkedRemote, signal: JsonSerializer.Serialize(signal, WorkflowJson.Options)) with {PreparedDownloadReason = preparedReason};
+                    var ready = checkedRemote || preparedReason == "RECOVERY_SEALED_DOWNLOAD_HANDOFF_READY";
+                    return Result(ready ? preparedReason ?? "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED" : "RECOVERY_RECHECK_SOURCE",
+                        ready, signal: JsonSerializer.Serialize(signal, WorkflowJson.Options)) with {PreparedDownloadReason = preparedReason};
                 }
                 var candidates = checkedTargets.Where(t => t.Check.Candidate).ToList();
                 if (!verifyFiles && candidates.Count > 0) return OriginalRetry(candidates, false);

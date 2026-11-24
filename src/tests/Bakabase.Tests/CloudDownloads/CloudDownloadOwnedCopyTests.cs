@@ -120,12 +120,15 @@ public sealed class CloudDownloadOwnedCopyTests
     }
 
     [TestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
-    public async Task Conditional_native_retry_reads_the_saved_copy_once_and_only_finishes_existing_ownership(bool enrolled)
+    [DataRow(false, false)]
+    [DataRow(true, false)]
+    [DataRow(false, true)]
+    [DataRow(true, true)]
+    public async Task Conditional_native_retry_reads_the_saved_copy_once_and_only_finishes_existing_ownership(bool enrolled, bool sealedHandoff)
     {
         if (enrolled) await Prepare();
         _provider.DownloadedFile = _file;
+        _provider.Offline = sealedHandoff;
         _task.Status = DownloadTaskDbModelStatus.Failed;
         await _db.SaveChangesAsync();
         _db.ChangeTracker.Clear();
@@ -136,7 +139,7 @@ public sealed class CloudDownloadOwnedCopyTests
         try
         {
             var response = await downloads.StartConditionally(_task.Id, _ => Task.CompletedTask, default,
-                _ => Task.CompletedTask, _request.OperationId);
+                _ => Task.CompletedTask, _request.OperationId, handoffPreparedPayloadOnly: sealedHandoff);
             Assert.AreEqual(0, response.Code, response.Message);
         }
         finally { finishPayload.TrySetResult(); }
@@ -149,7 +152,9 @@ public sealed class CloudDownloadOwnedCopyTests
             await Task.Delay(25, timeout.Token);
             view = await _copies.GetAsync(_task.Id, timeout.Token);
         }
-        Assert.AreEqual(1, _provider.PreparedRetries);
+        Assert.AreEqual(sealedHandoff ? 0 : 1, _provider.PreparedRetries);
+        Assert.AreEqual(sealedHandoff ? 1 : 0, _provider.SealedHandoffs);
+        Assert.AreEqual(sealedHandoff ? 0 : 1, _provider.ReadinessChecks);
         Assert.AreEqual(enrolled ? 1 : 0, _provider.PrepareCalls);
         Assert.AreEqual(enrolled ? "pending" : "notApplicable", view.Status);
         Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
@@ -273,12 +278,16 @@ public sealed class CloudDownloadOwnedCopyTests
     {
         public string ProviderId => "pikpak";
         public string MethodId => "pikpak.share";
-        internal bool OptIn = true, ThrowOnRelease;
-        internal int PrepareCalls, ReleaseCalls, PreparedRetries;
+        internal bool OptIn = true, ThrowOnRelease, Offline;
+        internal int PrepareCalls, ReleaseCalls, PreparedRetries, SealedHandoffs, ReadinessChecks;
         internal CloudVerifiedLocalDownload? Verified;
         internal string? DownloadedFile;
         internal CloudOwnedCopyRelease Result = new("trashed");
-        public Task<CloudReadiness> CheckReadyAsync(string? accountId, CancellationToken ct) => Task.FromResult(new CloudReadiness(true));
+        public Task<CloudReadiness> CheckReadyAsync(string? accountId, CancellationToken ct)
+        {
+            ReadinessChecks++;
+            return Task.FromResult(new CloudReadiness(!Offline, Offline ? "PIKPAK_NETWORK_UNAVAILABLE" : null));
+        }
         public Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
         {
             if (DownloadedFile == null) throw new AssertFailedException("Releasing a cloud copy cannot run a download.");
@@ -292,6 +301,13 @@ public sealed class CloudDownloadOwnedCopyTests
             Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
         {
             PreparedRetries++;
+            await FinishPreparedPayload.WaitAsync(ct);
+            return new CloudDownloadResult([DownloadedFile!]);
+        }
+        public async Task<CloudDownloadResult> HandoffCompletedPreparedDownloadAsync(CloudDownloadRequest request,
+            Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
+        {
+            SealedHandoffs++;
             await FinishPreparedPayload.WaitAsync(ct);
             return new CloudDownloadResult([DownloadedFile!]);
         }
