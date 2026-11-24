@@ -8,6 +8,9 @@ public sealed record AuthorizedOriginalIdentity(string Provider, string Operatio
 /// <summary>Bytes acknowledged by the durable segment journal. Transfer rehashes them before reuse.</summary>
 public sealed record AuthorizedOriginalCheckpoint(bool Exists, long VerifiedBytes, bool IsComplete);
 
+/// <summary>Length and whole-file SHA-256 from the same verified read of this local payload.</summary>
+public sealed record VerifiedOriginalPayload(string Path, long Length, string Sha256);
+
 public sealed class AuthorizedOriginalDownloadException(string code) : IOException(code switch
 {
     "ORIGINAL_HTTP_RESUME_UNSUPPORTED" or "ORIGINAL_HTTP_SOURCE_CHANGED" or "ORIGINAL_HTTP_RANGE_INVALID" or

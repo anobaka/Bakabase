@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Cloud;
@@ -35,6 +36,33 @@ internal sealed partial class AuthorizedOriginalHttpDownloader(IHttpClientFactor
             using var lease = store.Lease(create: false);
             var state = await store.ReadAsync(ct, handedOff);
             return new(state != null, state?.VerifiedBytes ?? 0, handedOff || state?.Published == true);
+        }
+        catch (Exception ex) when (ex is IOException and not AuthorizedOriginalDownloadException or UnauthorizedAccessException)
+        { throw AuthorizedOriginalCheckpointStore.Invalid(); }
+    }
+
+    public async Task<VerifiedOriginalPayload> VerifyCompletedAsync(AuthorizedOriginalIdentity identity,
+        string checkpointDirectory, CancellationToken ct, Func<ValueTask>? onRead = null)
+    {
+        ct.ThrowIfCancellationRequested();
+        var store = new AuthorizedOriginalCheckpointStore(identity, checkpointDirectory);
+        try
+        {
+            using var lease = store.Lease(create: false);
+            var state = await store.ReadAsync(ct);
+            if (state is not { Published: true } || state.VerifiedBytes != identity.Length)
+                throw AuthorizedOriginalCheckpointStore.Invalid();
+            using var file = RegularFileHandle.TryOpenRead(store.Payload) ?? throw AuthorizedOriginalCheckpointStore.Invalid();
+            var version = RegularFileHandle.ReadVersion(file, store.Payload);
+            if (RandomAccess.GetLength(file.SafeFileHandle) != identity.Length) throw AuthorizedOriginalCheckpointStore.Invalid();
+            using var wholeFile = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            await store.VerifyAsync(file, state, ct, wholeFile, onRead);
+            ct.ThrowIfCancellationRequested();
+            store.ValidateDirectory();
+            AuthorizedOriginalCheckpointFile.RequirePrivateRegularFile(store.Payload, isLock: false);
+            if (file.Position != identity.Length || RegularFileHandle.ReadVersion(file, store.Payload) != version)
+                throw AuthorizedOriginalCheckpointStore.Invalid();
+            return new(store.Payload, identity.Length, Convert.ToHexStringLower(wholeFile.GetHashAndReset()));
         }
         catch (Exception ex) when (ex is IOException and not AuthorizedOriginalDownloadException or UnauthorizedAccessException)
         { throw AuthorizedOriginalCheckpointStore.Invalid(); }

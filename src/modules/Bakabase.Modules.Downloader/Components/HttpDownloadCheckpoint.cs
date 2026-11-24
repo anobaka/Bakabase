@@ -78,7 +78,7 @@ internal sealed record HttpDownloadCheckpoint(HttpRemoteIdentity Identity, Chunk
     private static Task<string> HashPrefixAsync(FileStream stream, Chunk chunk, CancellationToken ct) =>
         HashRangeAsync(stream, chunk.Start, chunk.Position, ct);
 
-    internal static async Task<string> HashRangeAsync(FileStream stream, long start, long length, CancellationToken ct, byte[]? buffer = null)
+    internal static async Task<string> HashRangeAsync(FileStream stream, long start, long length, CancellationToken ct, byte[]? buffer = null, IncrementalHash? wholeFile = null, Func<ValueTask>? onRead = null)
     {
         stream.Position = start;
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -89,6 +89,8 @@ internal sealed record HttpDownloadCheckpoint(HttpRemoteIdentity Identity, Chunk
             var read = await stream.ReadAsync(buffer.AsMemory(0, (int)Math.Min(buffer.Length, remaining)), ct);
             if (read == 0) throw new IOException("The saved download prefix is incomplete.");
             hash.AppendData(buffer, 0, read);
+            wholeFile?.AppendData(buffer, 0, read);
+            if (onRead != null) await onRead();
             remaining -= read;
         }
         return Convert.ToHexString(hash.GetHashAndReset());

@@ -36,6 +36,11 @@ internal sealed class AuthorizedOriginalCheckpointStore
         _length = identity.Length;
         DirectoryPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
         if (DirectoryPath == Path.GetPathRoot(DirectoryPath)) throw Invalid();
+        ValidateDirectory();
+    }
+
+    internal void ValidateDirectory()
+    {
         for (var ancestor = new DirectoryInfo(DirectoryPath); ancestor != null; ancestor = ancestor.Parent)
             if (ancestor.LinkTarget != null || ancestor.Exists && ancestor.Attributes.HasFlag(FileAttributes.ReparsePoint))
                 throw Invalid();
@@ -77,9 +82,16 @@ internal sealed class AuthorizedOriginalCheckpointStore
     internal async Task<State?> ReadAsync(CancellationToken ct, bool handedOff = false)
     {
         ValidateEntries();
+        // Directory entries can retain the pre-rename size on SMB. Inspect the two exact
+        // objects; only a genuinely missing leaf represents absence.
+        using var payload = RegularFileHandle.TryOpenRead(Payload);
+        using var partial = RegularFileHandle.TryOpenRead(Partial);
+        var published = payload != null;
+        if (published) AuthorizedOriginalCheckpointFile.RequirePrivateRegularFile(Payload, isLock: false);
+        if (partial != null) AuthorizedOriginalCheckpointFile.RequirePrivateRegularFile(Partial, isLock: false);
         if (!File.Exists(Ledger))
         {
-            if (handedOff || File.Exists(Partial) || File.Exists(Payload)) throw Invalid();
+            if (handedOff || partial != null || published) throw Invalid();
             // Initialization writes and flushes this small header before its atomic rename.
             if (File.Exists(NewLedger) && new FileInfo(NewLedger).Length > HeaderSize) throw Invalid();
             return null;
@@ -100,17 +112,16 @@ internal sealed class AuthorizedOriginalCheckpointStore
         journal.Position = journalEnd;
         var sealedForHandoff = verifiedBytes == _length && size == journalEnd + 1 && journal.ReadByte() == PublishedSeal;
         if (verifiedBytes == _length && size != journalEnd && !sealedForHandoff) throw Invalid();
-        var published = File.Exists(Payload);
         if (handedOff)
         {
-            if (published || File.Exists(Partial) || !sealedForHandoff) throw Invalid();
+            if (published || partial != null || !sealedForHandoff) throw Invalid();
             return new State(version, count, verifiedBytes, false);
         }
-        if (sealedForHandoff && !published && !File.Exists(Partial)) throw Invalid();
-        var path = published ? Payload : Partial;
-        var actual = File.Exists(path) ? new FileInfo(path).Length : 0;
+        if (sealedForHandoff && !published && partial == null) throw Invalid();
+        var file = payload ?? partial;
+        var actual = file == null ? 0 : RandomAccess.GetLength(file.SafeFileHandle);
         if (actual < verifiedBytes || actual > _length || actual - verifiedBytes > SegmentBytes ||
-            published && (File.Exists(Partial) || !sealedForHandoff)) throw Invalid();
+            published && (partial != null || !sealedForHandoff)) throw Invalid();
         return new State(version, count, verifiedBytes, published);
     }
 
@@ -138,30 +149,33 @@ internal sealed class AuthorizedOriginalCheckpointStore
         return new State(version, 0, 0, false);
     }
 
-    internal async Task VerifyAsync(FileStream payload, State state, CancellationToken ct)
+    internal async Task VerifyAsync(FileStream payload, State state, CancellationToken ct, IncrementalHash? wholeFile = null, Func<ValueTask>? onRead = null)
     {
-        if (state.SegmentCount == 0) return;
+        if (state.SegmentCount == 0 && !state.Published) return;
         // The writer lease spans inspection and reuse. Recheck the header on the handle
         // supplying digests, and stream it so verification also has constant memory.
         ValidateEntries();
         using var journal = File.OpenRead(Ledger);
+        var journalGeneration = wholeFile == null ? null : RegularFileHandle.ReadVersion(journal, Ledger);
         var header = new byte[HeaderSize];
         await journal.ReadExactlyAsync(header, ct);
         if (!MatchesHeader(header) || !header.AsSpan(4, DigestSize).SequenceEqual(state.Version) ||
             journal.Length < HeaderSize + (long)state.SegmentCount * DigestSize) throw Invalid();
         using var observation = FileIoObservationScope.Begin(read: true, write: false);
         var expected = new byte[DigestSize];
-        var buffer = new byte[81920];
+        var buffer = new byte[1024 * 1024];
         for (var i = 0; i < state.SegmentCount; i++)
         {
             var start = (long)i * SegmentBytes;
             var length = Math.Min(SegmentBytes, _length - start);
             await journal.ReadExactlyAsync(expected, ct);
-            var digest = await HttpDownloadCheckpoint.HashRangeAsync(payload, start, length, ct, buffer);
+            var digest = await HttpDownloadCheckpoint.HashRangeAsync(payload, start, length, ct, buffer, wholeFile, onRead);
             observation?.Add(length, 0);
             if (!Convert.FromHexString(digest).AsSpan().SequenceEqual(expected))
                 throw Invalid();
         }
+        if (state.Published && (journal.ReadByte() != PublishedSeal || journal.ReadByte() != -1)) throw Invalid();
+        if (journalGeneration != null && RegularFileHandle.ReadVersion(journal, Ledger) != journalGeneration) throw Invalid();
     }
 
     internal FileStream OpenWriter(State state)

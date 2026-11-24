@@ -93,6 +93,49 @@ public sealed class CloudPayloadHashTests
         finally { Directory.Delete(directory, true); }
     }
 
+    [TestMethod]
+    public async Task Exact_payload_receipt_uses_newly_published_handle_when_cached_name_size_is_stale()
+    {
+        var directory = Directory.CreateTempSubdirectory("cloud-handoff-");
+        var path = Path.Combine(directory.FullName, "payload");
+        try
+        {
+            await File.WriteAllBytesAsync(path, []);
+            var cached = new FileInfo(path);
+            Assert.AreEqual(0L, cached.Length);
+            var bytes = new byte[] { 11, 12, 13 };
+            await File.WriteAllBytesAsync(path + ".download", bytes);
+            File.Move(path + ".download", path, overwrite: true);
+            Assert.AreEqual(0L, cached.Length, "The retained directory metadata describes the predecessor.");
+            var receipt = await CloudPayloadHash.ComputeVerifiedFileAsync(path, bytes.Length, default);
+            Assert.AreEqual((long)bytes.Length, receipt.Length);
+            Assert.AreEqual(Convert.ToHexStringLower(SHA256.HashData(bytes)), receipt.Sha256);
+            await Assert.ThrowsExactlyAsync<IOException>(() => CloudPayloadHash.ComputeVerifiedFileAsync(path, cached.Length, default));
+        }
+        finally { directory.Delete(true); }
+    }
+
+    [TestMethod]
+    public async Task Replacing_the_named_payload_during_a_read_invalidates_its_receipt()
+    {
+        if (OperatingSystem.IsWindows()) return; // The sharing mode on Windows already denies the rename.
+        var directory = Directory.CreateTempSubdirectory("cloud-handoff-");
+        var path = Path.Combine(directory.FullName, "payload");
+        try
+        {
+            await File.WriteAllBytesAsync(path, [1, 2, 3]);
+            await File.WriteAllBytesAsync(path + ".other", [4, 5, 6]);
+            await Assert.ThrowsExactlyAsync<IOException>(() => CloudPayloadHash.ComputeVerifiedFileAsync(path, 3,
+                CancellationToken.None, () =>
+                {
+                    File.Move(path + ".other", path, overwrite: true);
+                    return ValueTask.CompletedTask;
+                }));
+            CollectionAssert.AreEqual(new byte[] { 4, 5, 6 }, await File.ReadAllBytesAsync(path));
+        }
+        finally { directory.Delete(true); }
+    }
+
     private sealed class ObservedStream(byte[] data) : MemoryStream(data, writable: false)
     {
         internal List<int> RequestSizes { get; } = [];

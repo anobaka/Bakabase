@@ -304,13 +304,127 @@ public sealed class AuthorizedOriginalHttpTests
         var downloader = services.GetRequiredService<IAuthorizedOriginalHttpDownloader>();
         var payload = await downloader.DownloadAsync(empty, DirectoryPath, ClientName, Resolve, null, default);
         Assert.AreEqual(0, new FileInfo(payload).Length);
+        Assert.AreEqual(new VerifiedOriginalPayload(payload, 0, Convert.ToHexStringLower(SHA256.HashData(Array.Empty<byte>()))),
+            await downloader.VerifyCompletedAsync(empty, DirectoryPath, default));
         Assert.AreEqual(2, count);
         File.Move(payload, Path.Combine(_root, "empty-final"));
         Assert.IsTrue((await downloader.InspectHandedOffAsync(empty, DirectoryPath, default)).IsComplete);
+        await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () => downloader.VerifyCompletedAsync(empty, DirectoryPath, default));
         await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () => downloader.InspectAsync(empty, DirectoryPath, default));
         await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () =>
             downloader.DownloadAsync(empty, DirectoryPath, ClientName, Resolve, null, default));
         Assert.IsFalse(File.Exists(payload));
+    }
+
+    [TestMethod]
+    public async Task Published_original_returns_segment_verified_full_hash_offline_and_can_be_verified_again()
+    {
+        using var services = Services(req => Reply(req));
+        var path = await Download(services.GetRequiredService<IAuthorizedOriginalHttpDownloader>());
+        using var offline = Services(_ => throw new AssertFailedException("Local handoff opened HTTP"));
+        var reader = offline.GetRequiredService<IAuthorizedOriginalHttpDownloader>();
+        var expected = new VerifiedOriginalPayload(path, _identity.Length, Convert.ToHexStringLower(SHA256.HashData(_original)));
+        var journal = Path.Combine(DirectoryPath, "checkpoint");
+        var previousJournal = await File.ReadAllBytesAsync(journal);
+        int reads = 0;
+        Assert.AreEqual(expected, await reader.VerifyCompletedAsync(_identity, DirectoryPath, default, () =>
+        {
+            reads++;
+            return ValueTask.CompletedTask;
+        }));
+        Assert.IsTrue(reads >= 2);
+        Assert.AreEqual(expected, await reader.VerifyCompletedAsync(_identity, DirectoryPath, default));
+        CollectionAssert.AreEqual(previousJournal, await File.ReadAllBytesAsync(journal));
+    }
+
+    [TestMethod]
+    [DataRow("wrong owner")]
+    [DataRow("wrong attempt")]
+    [DataRow("before rename")]
+    [DataRow("unsealed")]
+    [DataRow("same size changed first")]
+    [DataRow("same size changed last")]
+    [DataRow("bad segment hash")]
+    [DataRow("short")]
+    [DataRow("long")]
+    [DataRow("missing")]
+    [DataRow("unregistered entry")]
+    public async Task Completed_only_handoff_rejects_invalid_or_unpublished_data_without_repair(string mode)
+    {
+        using var services = Services(req => Reply(req));
+        var payload = await Download(services.GetRequiredService<IAuthorizedOriginalHttpDownloader>());
+        var identity = _identity;
+        var journal = Path.Combine(DirectoryPath, "checkpoint");
+        switch (mode)
+        {
+            case "wrong owner": identity = identity with { AccountVersion = "other-owner" }; break;
+            case "wrong attempt": identity = identity with { AttemptScope = "another-attempt" }; break;
+            case "before rename": File.Move(payload, payload + ".download"); break;
+            case "unsealed":
+                using (var write = File.OpenWrite(journal)) write.SetLength(write.Length - 1);
+                break;
+            case "same size changed first": case "same size changed last":
+                var position = mode.EndsWith("first") ? 0 : _original.Length - 1;
+                using (var write = File.OpenWrite(payload))
+                {
+                    write.Position = position;
+                    write.WriteByte((byte)(_original[position] ^ 255));
+                }
+                break;
+            case "bad segment hash":
+                using (var write = File.Open(journal, FileMode.Open, FileAccess.ReadWrite))
+                {
+                    write.Position = write.Length - 2;
+                    var previous = write.ReadByte();
+                    write.Position--;
+                    write.WriteByte((byte)(previous ^ 255));
+                }
+                break;
+            case "long": case "short":
+                using (var write = File.OpenWrite(payload)) write.SetLength(write.Length + (mode == "long" ? 1 : -1));
+                break;
+            case "missing": File.Delete(payload); break;
+            case "unregistered entry": await File.WriteAllBytesAsync(payload + ".unknown", []); break;
+        }
+        var entries = Directory.GetFileSystemEntries(DirectoryPath);
+        var previousJournal = await File.ReadAllBytesAsync(journal);
+        using var offline = Services(_ => throw new AssertFailedException("Unexpected HTTP request."));
+        await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () =>
+            offline.GetRequiredService<IAuthorizedOriginalHttpDownloader>().VerifyCompletedAsync(identity, DirectoryPath, default));
+        CollectionAssert.AreEquivalent(entries, Directory.GetFileSystemEntries(DirectoryPath));
+        CollectionAssert.AreEqual(previousJournal, await File.ReadAllBytesAsync(journal));
+    }
+
+    [TestMethod]
+    public async Task Missing_or_partial_directory_cannot_create_a_handoff_or_extend_the_checkpoint()
+    {
+        using var offline = Services(_ => throw new AssertFailedException("Unexpected HTTP request."));
+        var reader = offline.GetRequiredService<IAuthorizedOriginalHttpDownloader>();
+        await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () => reader.VerifyCompletedAsync(_identity, DirectoryPath, default));
+        Assert.IsFalse(Directory.Exists(DirectoryPath));
+        await InterruptAfterOneSegment();
+        await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () => reader.VerifyCompletedAsync(_identity, DirectoryPath, default));
+        Assert.AreEqual(new AuthorizedOriginalCheckpoint(true, Segment, false), await reader.InspectAsync(_identity, DirectoryPath, default));
+    }
+
+    [TestMethod]
+    public async Task Substituted_link_and_special_file_are_rejected_before_reading_data()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        using var services = Services(req => Reply(req));
+        var reader = services.GetRequiredService<IAuthorizedOriginalHttpDownloader>();
+        var payload = await Download(reader);
+        var outside = Path.Combine(_root, "another-owner");
+        File.Move(payload, outside);
+        File.CreateSymbolicLink(payload, outside);
+        await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () => reader.VerifyCompletedAsync(_identity, DirectoryPath, default));
+        File.Delete(payload);
+        Assert.AreEqual(0, HardLink(outside, payload));
+        await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () => reader.VerifyCompletedAsync(_identity, DirectoryPath, default));
+        File.Delete(payload);
+        Assert.AreEqual(0, CreatePipe(payload, 0x180));
+        await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () => reader.VerifyCompletedAsync(_identity, DirectoryPath, default));
+        CollectionAssert.AreEqual(_original, await File.ReadAllBytesAsync(outside));
     }
 
     [TestMethod]

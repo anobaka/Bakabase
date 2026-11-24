@@ -5,6 +5,8 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Modules.Downloader.Models;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 
 namespace Bakabase.Service.Components.CloudDownloads;
 
@@ -12,6 +14,21 @@ namespace Bakabase.Service.Components.CloudDownloads;
 internal static class CloudPayloadHash
 {
     internal const int BufferSize = 1024 * 1024;
+
+    internal static async Task<VerifiedOriginalPayload> ComputeVerifiedFileAsync(string path, long expectedLength,
+        CancellationToken ct, Func<ValueTask>? onRead = null)
+    {
+        ct.ThrowIfCancellationRequested();
+        ArtifactManifestFiles.RejectLinks(path);
+        using var file = RegularFileHandle.TryOpenRead(path) ?? throw new FileNotFoundException();
+        var version = RegularFileHandle.ReadVersion(file, path);
+        if (RandomAccess.GetLength(file.SafeFileHandle) != expectedLength) throw new IOException("The payload length changed.");
+        var hash = await ComputeAsync(file, ct, onRead);
+        ArtifactManifestFiles.RejectLinks(path);
+        if (file.Position != expectedLength || RegularFileHandle.ReadVersion(file, path) != version)
+            throw new IOException("The verified payload changed.");
+        return new(path, expectedLength, hash.ToLowerInvariant());
+    }
 
     internal static async Task<(long Length, string Sha256)> ComputeFileAsync(string path, CancellationToken ct, Func<ValueTask>? onRead = null)
     {
