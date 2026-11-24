@@ -90,10 +90,15 @@ internal static class PostSourceQr
             var codes = Scan(image, ct);
             if (codes.Length == 0 && Math.Min(image.Width, image.Height) >= 128)
             {
-                // One bounded resample helps rasterized QR modules with aliased or stylized edges.
+                // Smaller samples smooth out fine textures within rasterized QR modules.
                 var scale = Math.Min(.75, 1024d / Math.Max(image.Width, image.Height));
-                image.Mutate(x => x.Resize(Math.Max(1, (int)(image.Width * scale)), Math.Max(1, (int)(image.Height * scale))));
-                codes = Scan(image, ct);
+                foreach (var factor in new[] { scale, 2d / 3 })
+                {
+                    ct.ThrowIfCancellationRequested();
+                    image.Mutate(x => x.Resize(Math.Max(1, (int)(image.Width * factor)), Math.Max(1, (int)(image.Height * factor))));
+                    codes = Scan(image, ct);
+                    if (codes.Length > 0) break;
+                }
             }
             ct.ThrowIfCancellationRequested();
             if (codes is not { Length: > 0 }) return PostImageDecodeResult.Empty("noQrCode");

@@ -130,6 +130,29 @@ public sealed class PostSourceImageTests
         }
     }
 
+    [TestMethod]
+    public void A_rasterized_qr_with_a_dot_pattern_recovers_the_original_share()
+    {
+        var modules = new QRCodeWriter().encode(Share, BarcodeFormat.QR_CODE, 0, 0);
+        const int moduleSize = 5;
+        using var image = new Image<L8>(modules.Width * moduleSize, modules.Height * moduleSize);
+        for (var y = 0; y < image.Height; y++)
+        {
+            for (var x = 0; x < image.Width; x++)
+            {
+                var dark = modules[x / moduleSize, y / moduleSize];
+                if (x % 3 == 0 && y % 3 == 0) dark = !dark;
+                image[x, y] = new L8(dark ? (byte)0 : (byte)255);
+            }
+        }
+        using var stream = new MemoryStream();
+        image.SaveAsPng(stream);
+
+        var result = PostSourceQr.Decode(stream.ToArray(), default);
+        Assert.AreEqual("decoded", result.Status);
+        Assert.AreEqual(new DecodedPostImageSource(Share, "baidu.pcs"), result.Sources.Single());
+    }
+
     [DataTestMethod]
     [DataRow("not a link")]
     [DataRow("http://localhost/a.zip")]
