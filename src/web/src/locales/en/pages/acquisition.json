@@ -272,7 +272,6 @@
   "acquisition.recipes.title": "Configured workflows",
   "acquisition.recipes.create": "New workflow",
   "acquisition.recipes.createDescription": "Start with a shared-download template and configure the steps for parsing, receiving files, and adding them to your library.",
-  "acquisition.overview.description": "Track source discovery, download, processing and delivery in one task.",
   "acquisition.overview.unverifiedDescription": "These are known leads and supported acquisition methods. Link availability, account access, and required configuration are checked during execution. A listed source does not confirm ownership or guarantee acquisition.",
   "acquisition.overview.unverified": "Availability unverified",
   "acquisition.overview.unsupported": "Not supported yet",

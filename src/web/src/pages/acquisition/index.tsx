@@ -389,15 +389,10 @@ const AcquisitionPage: React.FC = () => {
   return (
     <div className="@container/acquisition flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold">{t<string>("menu.acquisition")}</h1>
-            <HelpCenterButton topic="acquisition" />
-            <WorkflowIntegrationHint surface="acquisition" />
-          </div>
-          <p className="mt-1 text-sm text-default-500">
-            {t<string>("acquisition.overview.description")}
-          </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-xl font-semibold">{t<string>("menu.acquisition")}</h1>
+          <HelpCenterButton topic="acquisition" />
+          <WorkflowIntegrationHint surface="acquisition" />
         </div>
         <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 lg:ml-auto">
           <AcquisitionThroughput />

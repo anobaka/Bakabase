@@ -272,7 +272,6 @@
   "acquisition.recipes.title": "已配置工作流",
   "acquisition.recipes.create": "新增工作流",
   "acquisition.recipes.createDescription": "从分享下载模板开始，配置解析、接收文件和整理入库的步骤。",
-  "acquisition.overview.description": "从查找来源、下载到处理与交付，在同一个任务中查看进度、文件和需要确认的事项。",
   "acquisition.overview.unverifiedDescription": "这里展示已知线索和当前支持的获取方式。链接有效性、账号权限及所需配置会在执行时确认，列出途径不代表已拥有或一定能获取。",
   "acquisition.overview.unverified": "可用性未验证",
   "acquisition.overview.unsupported": "暂不支持",
