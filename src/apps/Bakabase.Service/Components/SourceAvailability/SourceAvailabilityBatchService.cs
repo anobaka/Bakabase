@@ -71,7 +71,9 @@ public sealed class SourceAvailabilityBatchService(BakabaseDbContext db, SourceA
                 var chunk = batch.Items.Skip(offset).Take(4).ToArray();
                 var checkedItems = await Task.WhenAll(chunk.Select(async item =>
                 {
-                    var observed = await availability.CheckAsync(item.Source, batch.Force, args.CancellationToken);
+                    var observed = item.IsPreparation
+                        ? await availability.CheckPreparationAsync(item.Preparation, item.Source, batch.Force, args.CancellationToken)
+                        : await availability.CheckAsync(item.Source, batch.Force, args.CancellationToken);
                     return item with {Row = await ProjectAsync(item.Row, item.Source, observed, args.CancellationToken)};
                 }));
                 for (var i = 0; i < checkedItems.Length; i++) batch.Items[offset + i] = checkedItems[i];
@@ -164,6 +166,8 @@ public sealed class SourceAvailabilityBatchService(BakabaseDbContext db, SourceA
                 // A preview for the old credential cannot authorize a decision about its correction.
                 snapshotJson = JsonSerializer.Serialize(new {Original = snapshotJson, Effective = plan}, Json);
             }
+            var planHash = SourceAvailabilityStore.Hash(snapshotJson);
+            var isPreparation = task.WorkflowRunId == null && task.Status == AcquisitionStatus.Waiting;
             foreach (var part in plan.Parts)
             foreach (var source in part.Sources)
             {
@@ -175,8 +179,9 @@ public sealed class SourceAvailabilityBatchService(BakabaseDbContext db, SourceA
                 var row = new SourceAvailabilityRow {Key = SourceAvailabilityStore.Hash($"{task.Id}:{part.Id}:{source.Id}"),
                     TaskId = task.Id, Title = task.Title ?? plan.Title, PartId = part.Id, SourceId = source.Id,
                     Url = source.Url, AccessCode = source.AccessCode, ProviderId = resolved.ProviderId, Protected = active};
-                row = await ProjectAsync(row, resolved, await availability.GetAsync(resolved, ct), ct);
-                output.Add(new(row, resolved, task.PlanRevision, SourceAvailabilityStore.Hash(snapshotJson)));
+                var preparation = isPreparation ? await availability.GetPreparationCheckAsync(new(task.Id, task.PlanRevision, planHash, part.Id), resolved, ct) : null;
+                row = await ProjectAsync(row, resolved, preparation ?? await availability.GetAsync(resolved, ct), ct);
+                output.Add(new(row, resolved, task.PlanRevision, planHash, isPreparation));
             }
         }
         return output;

@@ -315,6 +315,7 @@ const AcquisitionPage: React.FC = () => {
         createPortal(SourceAvailabilityReviewModal, {
           taskIds: ids,
           scopeLabel: selectedScopeLabel(ids),
+          onChecked: load,
           onChanged: load,
         }),
     },

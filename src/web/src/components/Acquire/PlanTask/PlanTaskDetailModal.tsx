@@ -519,21 +519,27 @@ export default function PlanTaskDetailModal({
   const reviewSources = () =>
     createPortal(SourceAvailabilityReviewModal, {
       taskIds: [taskId],
-      onChecked: () => void loadHealth(),
+      onChecked: refreshAfterAction,
       onChanged: refreshAfterAction,
     });
-  const reviewAction = !readOnly && !!task?.workflowRunId && !!detail?.plan?.parts.length && (
-    <Button size="sm" variant="light" onPress={reviewSources}>
+  const reviewAction = (
+    <Button size="sm" variant="light" aria-haspopup="dialog" onPress={reviewSources}>
       {t("sourceAvailability.review.one")}
     </Button>
   );
+  const hasPreparationSources = detail?.plan
+    ? detail.plan.parts.some(part => !!part.sources?.length)
+    : !!detail?.draftSources?.length;
   const preparationWaiting = !!task?.workflowRunId && task.status === AcquisitionStatus.Waiting &&
     ["download.selectSources", "cloud.chooseSources", "cloud.chooseMethod"].includes(overview?.currentNodeKind ?? "");
   const planStartStage = asAcquisitionStage(detail?.steps[0]?.stage) ?? "download";
   const stageActions: Partial<Record<AcquisitionPresentationStage, ReactNode>> = {};
   const stageHeaderActions: Partial<Record<AcquisitionPresentationStage, ReactNode>> = {};
-  stageHeaderActions.preparation = editable ? <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog"
-    isDisabled={busy || replanOpen} onPress={() => setPreparationOpen(true)}>{t("acquisition.continue.open")}</Button>
+  stageHeaderActions.preparation = editable ? <>
+    {hasPreparationSources && reviewAction}
+    <Button size="sm" color="primary" variant="flat" aria-haspopup="dialog"
+      isDisabled={busy || replanOpen} onPress={() => setPreparationOpen(true)}>{t("acquisition.continue.open")}</Button>
+  </>
     : preparationWaiting ? currentControls : undefined;
   if (preparationWaiting && overview) stageActions.preparation = <RuntimeOverviewSummary overview={overview} showSources={false} />;
   for (const stage of ["download", "processing", "delivery"] as const) {
@@ -578,7 +584,7 @@ export default function PlanTaskDetailModal({
               </Popover>
             ) : null}
             {sourceChange}
-            {reviewAction}
+            {!readOnly && !!task?.workflowRunId && !!detail?.plan?.parts.length && reviewAction}
             {editable && detail && !!task.creationOrigins?.length && !detail.planHistory?.some(revision => revision.previousRunId != null) &&
               !detail.replanArtifacts?.length && (!detail.plan || (detail.plan.parts.length === 1 && !detail.plan.parts[0].continueFrom)) &&
               <RegisteredDownloadAction key={`${taskId}:${task.planRevision}`} taskId={taskId} revision={task.planRevision}

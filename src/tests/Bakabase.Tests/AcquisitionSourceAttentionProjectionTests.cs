@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Net.Http;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Service.Components.Acquisition.Planning;
@@ -37,6 +38,69 @@ public sealed class AcquisitionSourceAttentionProjectionTests
         IReadOnlySet<string>? acquired = null, string? activityKind = null) =>
         new AcquisitionSourceAttentionProjection(_availability).ProjectAsync(JsonSerializer.Serialize(plan, Json), codes,
             parts ?? new Dictionary<string, IReadOnlyList<string>> { ["part"] = codes }, at, default, acquired, activityKind);
+
+    [TestMethod]
+    public async Task PreparationOnlyUsesAnExplicitCurrentCheckOfEverySavedShortLink()
+    {
+        var resolver = new FixtureRedirectResolver();
+        var availability = new SourceAvailabilityService(_store, [], sourceResolver: new([resolver]));
+        var projection = new AcquisitionSourceAttentionProjection(availability);
+        var first = new AcquisitionDraftSource {Id = "first", Url = "https://cm1.hk/s/test-first"};
+        var second = first with {Id = "second", Url = "https://cm1.hk/s/test-second"};
+        var state = new AcquisitionPlanBuilderState {DraftSources = [first, second]};
+        var prior = new[] {"SOURCE_SELECTION_REQUIRED", "HANDOFF_NO_MAIN_SOURCE"};
+        Task<IReadOnlyList<string>> Read(int id = 1, int revision = 2, AcquisitionPlanBuilderState? current = null) =>
+            projection.ProjectPreparationAsync(id, revision, null, JsonSerializer.Serialize(current ?? state, Json), prior, default);
+        var hash = SourceAvailabilityStore.Hash(JsonSerializer.Serialize(state, Json));
+        Task<SourceAvailabilityResult> Check(AcquisitionDraftSource candidate) => availability.CheckPreparationAsync(
+            new(1, 2, hash, "draft:" + candidate.Id), DownloadMethodRegistry.Normalize(new DownloadCandidate {Id = candidate.Id, Url = candidate.Url}), true, default);
+
+        CollectionAssert.AreEqual(prior, (await Read()).ToArray());
+        Assert.AreEqual(0, resolver.Calls);
+        Assert.AreEqual("SOURCE_UNSUPPORTED", (await Check(first)).ReasonCode);
+        CollectionAssert.AreEqual(prior, (await Read()).ToArray());
+        Assert.AreEqual("SOURCE_UNSUPPORTED", (await Check(second)).ReasonCode);
+        CollectionAssert.AreEqual(new[] {"HANDOFF_NO_MAIN_SOURCE", "SOURCE_UNSUPPORTED"}, (await Read()).ToArray());
+        CollectionAssert.AreEqual(prior, (await Read(id: 6)).ToArray());
+        CollectionAssert.AreEqual(prior, (await Read(revision: 3)).ToArray());
+        CollectionAssert.AreEqual(prior, (await Read(current: state with {DraftSources = [first, second with {Url = first.Url}]})).ToArray());
+        Assert.AreEqual(2, resolver.Calls, "Projection must not resolve a link.");
+
+        resolver.Fail = true;
+        Assert.AreEqual(SourceAvailabilityStatuses.Unknown, (await Check(second)).Status);
+        CollectionAssert.AreEqual(prior, (await Read()).ToArray());
+    }
+
+    [TestMethod]
+    public async Task PreparationAbsenceRequiresFreshEvidenceForTheExactAccountAndEveryPart()
+    {
+        var source = Source("first1") with {AccountId = Guid.NewGuid().ToString("N")};
+        var plan = Plan(source);
+        var projection = new AcquisitionSourceAttentionProjection(_availability);
+        var prior = new[] {"SOURCE_UNSUPPORTED"};
+        var normalized = DownloadMethodRegistry.Normalize(new DownloadCandidate
+            {Id = source.Id, Url = source.Url, ProviderId = source.ProviderId, AccountId = source.AccountId});
+        var scope = new PreparationSourceCheck(1, 2, SourceAvailabilityStore.Hash(JsonSerializer.Serialize(plan, Json)), "part");
+        Task<IReadOnlyList<string>> Read(AcquisitionPlan current) => projection.ProjectPreparationAsync(1, 2,
+            JsonSerializer.Serialize(current, Json), null, prior, default);
+        _probe.Result = new() {Status = SourceAvailabilityStatuses.ConfirmedUnavailable, ReasonCode = "SOURCE_NOT_FOUND",
+            ProbeId = "test", ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(10)};
+        await _availability.CheckAsync(normalized, true, default);
+        CollectionAssert.AreEqual(prior, (await Read(plan)).ToArray());
+        await _availability.CheckPreparationAsync(scope, normalized, true, default);
+        CollectionAssert.AreEqual(new[] {"SOURCE_NOT_FOUND"}, (await Read(plan)).ToArray());
+        CollectionAssert.AreEqual(prior, (await Read(Plan(source with {AccountId = Guid.NewGuid().ToString("N")}))).ToArray());
+        CollectionAssert.AreEqual(prior, (await Read(plan with {Parts = [plan.Parts[0], plan.Parts[0] with {Id = "other"}]})).ToArray());
+        _probe.Result = _probe.Result with {Status = SourceAvailabilityStatuses.TemporarilyUnavailable, ReasonCode = "SOURCE_NETWORK_ERROR",
+            CheckedAt = DateTimeOffset.UtcNow.AddSeconds(1)};
+        await _availability.CheckAsync(normalized, true, default);
+        CollectionAssert.AreEqual(prior, (await Read(plan)).ToArray());
+
+        _probe.Result = _probe.Result with {Status = SourceAvailabilityStatuses.ConfirmedUnavailable, ReasonCode = "SOURCE_NOT_FOUND",
+            CheckedAt = DateTimeOffset.UtcNow.AddMinutes(-10), ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(-5)};
+        await _availability.CheckPreparationAsync(scope, normalized, true, default);
+        CollectionAssert.AreEqual(prior, (await Read(plan)).ToArray());
+    }
 
     [DataTestMethod]
     [DataRow("SOURCE_ATTENTION_REQUIRED")]
@@ -266,5 +330,18 @@ public sealed class AcquisitionSourceAttentionProjectionTests
         public bool CanHandle(CloudSource source) => true;
         public Task<SourceAvailabilityResult> CheckAsync(CloudSource source, CancellationToken ct)
         { Calls++; return Task.FromResult(Result); }
+    }
+    private sealed class FixtureRedirectResolver : IDownloadSourceResolver
+    {
+        public int Calls;
+        public bool Fail;
+        public bool CanResolve(Uri source) => source.Host == "cm1.hk";
+        public Task<DownloadSourceResolution> ResolveAsync(Uri source, CancellationToken ct)
+        {
+            Calls++;
+            if (Fail) throw new HttpRequestException("Fixture network error");
+            const string terminal = "https://feemoo.com/s/fixture";
+            return Task.FromResult(new DownloadSourceResolution(terminal, [source.AbsoluteUri, terminal]));
+        }
     }
 }

@@ -257,7 +257,11 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 .Concat(preparationCodes).Distinct().ToArray();
             if (attention && sourceAttention != null)
             {
-                problemCodes = await sourceAttention.ProjectAsync(AcquisitionEffectiveSourceProjection.Apply(task.PlanJson,
+                var checkedCodes = task.WorkflowRunId == null
+                    ? await sourceAttention.ProjectPreparationAsync(task.Id, task.PlanRevision, task.PlanJson, task.BuilderStateJson, problemCodes, ct)
+                    : problemCodes;
+                problemCodes = !ReferenceEquals(checkedCodes, problemCodes) ? checkedCodes :
+                    await sourceAttention.ProjectAsync(AcquisitionEffectiveSourceProjection.Apply(task.PlanJson,
                     run == null ? null : correctionWorksets.GetValueOrDefault(run.Id)), problemCodes, partProblems,
                     node == null ? null : AcquisitionRuntimeDownloadReader.Utc(node.CompletedAt ?? node.StartedAt), ct,
                     targets.Where(t => t.DownloadArtifactId != null || t.ProcessedArtifactId != null || t.PublishedArtifactId != null)

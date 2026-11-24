@@ -1011,6 +1011,26 @@ it("allows deletion preview without checkable sources and disables only source r
   expect(screen.getByRole("button", { name: "acquisition.actionbar.delete" })).not.toBeDisabled();
 });
 
+it("refreshes source tags when the check of a selected draft finishes", async () => {
+  const draft = {
+    items: [{ id: 60, title: "Draft acquisition", builderId: "draft", status: Status.Waiting }],
+    filteredTaskIds: [60],
+    checkableTaskIds: [60],
+    attentionCounts: { sourceUnavailable: 0 },
+  };
+  mocks.search.mockResolvedValue(response(draft));
+  show();
+  await screen.findByText("Draft acquisition");
+  reviewSources();
+  const [modal, props] = mocks.portal.mock.lastCall!;
+  expect(modal).toBe(SourceAvailabilityReviewModal);
+  expect(props.taskIds).toEqual([60]);
+
+  mocks.search.mockResolvedValue(response({ ...draft, attentionCounts: { sourceUnavailable: 1 } }));
+  await act(async () => props.onChecked());
+  expect(await screen.findByRole("button", { name: "acquisition.attention.tag.sourceUnavailable 1" })).toBeVisible();
+});
+
 it("never calls a truncated ID list all results but permits explicitly selecting the visible page", async () => {
   mocks.search.mockResolvedValue(response({ taskIdsTruncated: true }));
   show();

@@ -19,6 +19,55 @@ public sealed class AcquisitionSourceAttentionProjection(SourceAvailabilityServi
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    internal async Task<IReadOnlyList<string>> ProjectPreparationAsync(int taskId, int revision, string? planJson,
+        string? builderStateJson, IReadOnlyList<string> codes, CancellationToken ct)
+    {
+        static bool Replaceable(string code) => code is "SOURCE_SELECTION_REQUIRED" or "SOURCE_UNSUPPORTED";
+        if (!codes.Any(Replaceable) || (planJson ?? builderStateJson) is not {Length: > 0 and <= 1048576} snapshot) return codes;
+        var sources = new List<(string PartId, DownloadCandidate Candidate)>();
+        try
+        {
+            if (planJson != null)
+            {
+                var plan = JsonSerializer.Deserialize<AcquisitionPlan>(snapshot, Json);
+                if (plan?.Parts is not {Count: > 0} || plan.Parts.Any(p => p.ContinueFrom != null || p.Sources.Count == 0)) return codes;
+                foreach (var part in plan.Parts)
+                    sources.AddRange(part.Sources.Select(s => (part.Id, new DownloadCandidate {Id = s.Id, Url = s.Url, Kind = s.Kind,
+                        ProviderId = s.ProviderId, MethodId = s.MethodId, AccountId = s.AccountId, AccessCode = s.AccessCode})));
+            }
+            else
+            {
+                var state = JsonSerializer.Deserialize<AcquisitionPlanBuilderState>(snapshot, Json);
+                if (state?.DraftSources is not {Count: > 0}) return codes;
+                sources.AddRange(state.DraftSources.Select(s => ("draft:" + s.Id, new DownloadCandidate {Id = s.Id, Url = s.Url, Kind = s.Kind,
+                    ProviderId = s.ProviderId, MethodId = s.MethodId, AccountId = s.AccountId, AccessCode = s.AccessCode})));
+            }
+        }
+        catch (JsonException) { return codes; }
+        if (sources.Count is < 1 or > 100) return codes;
+
+        // An old preparation issue has no failing part attached. Replace it only when
+        // every saved option has the same definitive category of current evidence.
+        var planHash = SourceAvailabilityStore.Hash(snapshot);
+        var checks = new List<SourceAvailabilityResult>();
+        foreach (var (partId, candidate) in sources)
+        {
+            CloudSource source;
+            try { source = DownloadMethodRegistry.Normalize(candidate); }
+            catch (ArgumentException) { return codes; }
+            var check = await availability.GetPreparationCheckAsync(new(taskId, revision, planHash, partId), source, ct);
+            if (check == null) return codes;
+            checks.Add(check);
+        }
+        string? revised = null;
+        if (checks.All(c => c is {Status: SourceAvailabilityStatuses.Unsupported, ReasonCode: "SOURCE_UNSUPPORTED"}))
+            revised = "SOURCE_UNSUPPORTED";
+        else if (checks.All(c => SourceAvailabilityService.IsConfirmedUnavailable(c) &&
+                 ExecutionProblemClassifier.AvailabilityStatus(c.ReasonCode) == SourceAvailabilityStatuses.ConfirmedUnavailable))
+            revised = checks.All(c => c.ReasonCode == checks[0].ReasonCode) ? checks[0].ReasonCode : "SOURCE_CONFIRMED_UNAVAILABLE";
+        return revised == null ? codes : codes.Where(c => !Replaceable(c)).Append(revised).Distinct(StringComparer.Ordinal).ToArray();
+    }
+
     public async Task<IReadOnlyList<string>> ProjectAsync(string? planJson, IReadOnlyList<string> codes,
         IReadOnlyDictionary<string, IReadOnlyList<string>> partCodes, DateTimeOffset? executionAt,
         CancellationToken ct, IReadOnlySet<string>? acquiredPartIds = null, string? activityKind = null)

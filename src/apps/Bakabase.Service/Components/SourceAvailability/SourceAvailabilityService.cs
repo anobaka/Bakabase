@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +14,8 @@ namespace Bakabase.Service.Components.SourceAvailability;
 
 /// <summary>Shared conservative observations. Checking never buys, transfers, downloads or edits a running execution.</summary>
 public sealed class SourceAvailabilityService(SourceAvailabilityStore store, IEnumerable<ISourceAvailabilityProbe> probes,
-    IBOptions<NetworkOptions>? network = null, IEnumerable<ICloudDownloadAccountResolver>? accountResolvers = null)
+    IBOptions<NetworkOptions>? network = null, IEnumerable<ICloudDownloadAccountResolver>? accountResolvers = null,
+    DownloadSourceResolver? sourceResolver = null)
 {
     private readonly Dictionary<string, ICloudDownloadAccountResolver> _accountResolvers =
         (accountResolvers ?? []).ToDictionary(a => a.AccountProvider, StringComparer.Ordinal);
@@ -38,6 +40,60 @@ public sealed class SourceAvailabilityService(SourceAvailabilityStore store, IEn
         {context, source.ProviderId, source.Url, source.Kind, source.AccessCode}));
     public async Task<SourceAvailabilityResult?> GetAsync(CloudSource source, CancellationToken ct) =>
         await store.ObservationAsync(CacheKey(await BindAccountScopeAsync(source, ct)), ct);
+
+    private string PreparationCheckKey(PreparationSourceCheck check, CloudSource source) =>
+        SourceAvailabilityStore.Hash(JsonSerializer.Serialize(new {scope = "acquisition-preparation-v1", check,
+            source.Id, source.MethodId, source.AccountId, source.AccountVersion, sourceKey = CacheKey(source)}));
+
+    internal async Task<SourceAvailabilityResult?> GetPreparationCheckAsync(PreparationSourceCheck check,
+        CloudSource source, CancellationToken ct)
+    {
+        source = await BindAccountScopeAsync(source, ct);
+        var key = PreparationCheckKey(check, source);
+        var result = await store.ObservationAsync(key, ct);
+        if (result == null || result.ExpiresAt <= DateTimeOffset.UtcNow) return null;
+        // A capability can arrive in a newer application without changing a saved URL.
+        if (result.ProbeId == "reviewed-source-method")
+            return result.Evidence.TryGetValue("provider", out var provider) && DownloadMethodCatalog.Find(provider) == null ? result : null;
+        // An explicit metadata check elsewhere can contradict this snapshot. Do not
+        // continue treating an earlier scoped check as current in that case.
+        var newer = await store.ObservationAsync(CacheKey(source), ct);
+        if (newer?.CheckedAt > result.CheckedAt) return null;
+        return result;
+    }
+
+    internal async Task<SourceAvailabilityResult> CheckPreparationAsync(PreparationSourceCheck check,
+        CloudSource source, bool force, CancellationToken ct)
+    {
+        if (!force && await GetPreparationCheckAsync(check, source, ct) is {} cached) return cached;
+        source = await BindAccountScopeAsync(source, ct);
+        var key = PreparationCheckKey(check, source);
+        SourceAvailabilityResult? result = null;
+        if (source.ProviderId == "unknown" && sourceResolver != null)
+        {
+            try
+            {
+                // The existing resolver only contacts reviewed short-link shapes. A
+                // recognized terminal provider with no method is capability evidence.
+                var resolved = await sourceResolver.ResolveAsync(source, ct);
+                if (resolved.ResolutionChain.Count > 1 && resolved.ProviderId != "unknown" &&
+                    DownloadMethodCatalog.Select(resolved) == null)
+                    result = new() {Status = SourceAvailabilityStatuses.Unsupported, ReasonCode = "SOURCE_UNSUPPORTED",
+                        ProbeId = "reviewed-source-method", Evidence = new() {{"provider", resolved.ProviderId}},
+                        ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(10)};
+            }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException or HttpRequestException)
+            {
+                result = new() {Status = SourceAvailabilityStatuses.Unknown, ReasonCode = "SOURCE_VALIDITY_UNKNOWN",
+                    ProbeId = "reviewed-source-resolution", ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(2)};
+            }
+        }
+        result ??= await CheckAsync(source, force, ct);
+        // This scope cannot affect a changed plan, another content part or credentials.
+        // The underlying provider cache stays available to running workflows.
+        await store.SaveObservationAsync(key, result, ct);
+        return result;
+    }
 
     private async Task<CloudSource> BindAccountScopeAsync(CloudSource source, CancellationToken ct)
     {

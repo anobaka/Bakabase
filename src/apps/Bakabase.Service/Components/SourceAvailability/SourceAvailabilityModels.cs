@@ -28,7 +28,12 @@ public sealed record SourceAvailabilityRow
 }
 public sealed record SourceAvailabilityBatchView(string BatchId, string Status, int Processed, int Total,
     DateTimeOffset ExpiresAt, List<SourceAvailabilityRow> Rows, string TaskId);
-internal sealed record SourceAvailabilitySnapshot(SourceAvailabilityRow Row, CloudSource Source, int Revision, string PlanHash);
+internal sealed record PreparationSourceCheck(int TaskId, int Revision, string PlanHash, string PartId);
+internal sealed record SourceAvailabilitySnapshot(SourceAvailabilityRow Row, CloudSource Source, int Revision, string PlanHash,
+    bool IsPreparation = false)
+{
+    internal PreparationSourceCheck Preparation => new(Row.TaskId, Revision, PlanHash, Row.PartId);
+}
 internal sealed record SourceAvailabilityBatch
 {
     public string BatchId { get; init; } = "";

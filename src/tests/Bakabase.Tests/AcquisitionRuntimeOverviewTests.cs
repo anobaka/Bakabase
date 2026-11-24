@@ -192,6 +192,42 @@ public sealed class AcquisitionRuntimeOverviewTests
     [TestCleanup]
     public void Cleanup() { (_services as IDisposable)?.Dispose(); if (Directory.Exists(_root)) Directory.Delete(_root, true); }
 
+    [TestMethod]
+    public async Task ExplicitPreparationCheckUpdatesBothSearchAndOverviewWithoutEditingTheTask()
+    {
+        var source = new AcquisitionPlanSource {Id = "source", Url = "https://gofile.io/d/fixture", ProviderId = "gofile"};
+        var plan = JsonSerializer.Serialize(new AcquisitionPlan {Parts = [new() {Id = "part", SelectedSourceId = source.Id, Sources = [source]}]}, Json);
+        var builderState = JsonSerializer.Serialize(new AcquisitionPlanBuilderState {Issues = [new("SOURCE_UNSUPPORTED", "Earlier capability check")]}, Json);
+        var task = new AcquisitionTaskDbModel {Title = "Prepared task", BuilderId = "prepared", Status = AcquisitionStatus.Waiting,
+            Phase = "attention", PlanRevision = 2, PlanJson = plan, BuilderStateJson = builderState};
+        _db.AcquisitionTasks.Add(task);
+        await _db.SaveChangesAsync();
+        var projection = new AcquisitionSourceAttentionProjection(_availability);
+        var search = new AcquisitionTaskSearchService(_db, _services.GetRequiredService<IAcquisitionService>(), projection);
+        var overview = new AcquisitionRuntimeOverviewService(_db, _reader, _availability, projection);
+        Assert.AreEqual("SOURCE_UNSUPPORTED", (await overview.GetAsync([task.Id])).Single().ProblemCode);
+        Assert.AreEqual(0, (await search.SearchAsync(new(AttentionTag: "sourceUnavailable"))).TotalCount);
+
+        _probe.Status = SourceAvailabilityStatuses.ConfirmedUnavailable;
+        _probe.ReasonCode = "SOURCE_NOT_FOUND";
+        var batches = new SourceAvailabilityBatchService(_db, new SourceAvailabilityStore(_root), _availability, null!, null!);
+        var item = (await batches.SnapshotAsync([task.Id], default)).Single();
+        Assert.IsTrue(item.IsPreparation);
+        await _availability.CheckPreparationAsync(item.Preparation, item.Source, true, default);
+
+        var result = (await overview.GetAsync([task.Id])).Single();
+        Assert.AreEqual("SOURCE_NOT_FOUND", result.ProblemCode);
+        CollectionAssert.AreEqual(new[] {"sourceUnavailable"}, result.AttentionTags.ToArray());
+        var filtered = await search.SearchAsync(new(AttentionTag: "sourceUnavailable"));
+        CollectionAssert.AreEqual(new[] {task.Id}, filtered.FilteredTaskIds.ToArray());
+        CollectionAssert.AreEqual(new[] {"sourceUnavailable"}, filtered.Items.Single().AttentionTags.ToArray());
+        Assert.AreEqual(1, _probe.Calls, "Search and overview must only read cached evidence.");
+        await _db.Entry(task).ReloadAsync();
+        Assert.AreEqual(plan, task.PlanJson);
+        Assert.AreEqual(builderState, task.BuilderStateJson);
+        Assert.IsNull(task.WorkflowRunId);
+    }
+
     private static CloudDownloadTarget Target(string id = "part", string? problem = null, int? download = null) => new()
     {
         Id = id, SelectedSourceId = "source", Problem = problem, DownloadTaskId = download,
@@ -1015,9 +1051,9 @@ public sealed class AcquisitionRuntimeOverviewTests
     }
     private sealed class Probe : ISourceAvailabilityProbe
     {
-        public int Calls; public string Status = "unknown";
+        public int Calls; public string Status = "unknown"; public string ReasonCode = "TEST_OBSERVATION";
         public bool CanHandle(CloudSource source) => true;
         public Task<SourceAvailabilityResult> CheckAsync(CloudSource source, CancellationToken ct)
-        { Calls++; return Task.FromResult(new SourceAvailabilityResult {Status = Status, ReasonCode = "TEST_OBSERVATION", ProbeId = "test", ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5)}); }
+        { Calls++; return Task.FromResult(new SourceAvailabilityResult {Status = Status, ReasonCode = ReasonCode, ProbeId = "test", ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(5)}); }
     }
 }

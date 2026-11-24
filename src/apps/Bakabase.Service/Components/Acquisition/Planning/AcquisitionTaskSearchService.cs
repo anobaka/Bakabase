@@ -155,7 +155,7 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
         var correctedRuns = sourceAttention == null ? null :
             await AcquisitionEffectiveSourceProjection.ReadCorrectedRunsAsync(db, sourceAttentionRuns, ct);
         var preparation = await db.AcquisitionTasks.AsNoTracking().Where(t => attentionIds.Contains(t.Id) && t.WorkflowRunId == null)
-            .Select(t => new {t.Id, t.Error, t.BuilderStateJson}).ToListAsync(ct);
+            .Select(t => new {t.Id, t.Error, t.BuilderStateJson, t.PlanRevision}).ToDictionaryAsync(t => t.Id, ct);
         var currentSpaceFailures = new HashSet<int>();
         foreach (var task in attention)
         {
@@ -218,15 +218,23 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
             }
             else
             {
-                var saved = preparation.FirstOrDefault(p => p.Id == task.Id);
+                var saved = preparation.GetValueOrDefault(task.Id);
                 codes.AddRange(WorkflowSourceRunProblems.Extract(saved?.Error));
                 foreach (var issue in Read<AcquisitionPlanBuilderState>(saved?.BuilderStateJson)?.Issues ?? [])
                     if (issue.Blocking && ExecutionProblemClassifier.IsKnown(issue.Code)) codes.Add(issue.Code);
             }
-            var projectedCodes = sourceAttention == null ? codes : await sourceAttention.ProjectAsync(
-                AcquisitionEffectiveSourceProjection.Apply(plans.GetValueOrDefault(task.Id),
-                    task.WorkflowRunId is {} owner ? correctedRuns?.GetValueOrDefault(owner) : null),
-                codes, partCodes, executionAt, ct, acquiredPartIds, activityKind);
+            IReadOnlyList<string> projectedCodes = codes;
+            if (sourceAttention != null)
+            {
+                if (preparation.TryGetValue(task.Id, out var draft))
+                    projectedCodes = await sourceAttention.ProjectPreparationAsync(task.Id, draft.PlanRevision, plans.GetValueOrDefault(task.Id),
+                        draft.BuilderStateJson, codes, ct);
+                if (ReferenceEquals(projectedCodes, codes))
+                    projectedCodes = await sourceAttention.ProjectAsync(
+                        AcquisitionEffectiveSourceProjection.Apply(plans.GetValueOrDefault(task.Id),
+                            task.WorkflowRunId is {} owner ? correctedRuns?.GetValueOrDefault(owner) : null),
+                        codes, partCodes, executionAt, ct, acquiredPartIds, activityKind);
+            }
             // The classifier's empty-code fallback describes an actual unexplained wait,
             // not a healthy download which is still owned by a suspended workflow.
             task.AttentionTags = task.DownloadActivity != null && projectedCodes.Count == 0 && !unresolvedWarning ? [] :

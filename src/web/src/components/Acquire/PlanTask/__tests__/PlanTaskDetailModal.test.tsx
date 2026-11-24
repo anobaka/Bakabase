@@ -8,6 +8,7 @@ import TaskPlanSnapshot from "../TaskPlanSnapshot";
 import AcquisitionSourceDetails from "../../AcquisitionSourceDetails";
 import { AcquisitionStatus, WorkflowRunStatus } from "@/sdk/constants";
 import AcquisitionRecoveryModal from "@/pages/acquisition/components/AcquisitionRecoveryModal";
+import SourceAvailabilityReviewModal from "@/components/SourceAvailability/SourceAvailabilityReviewModal";
 const mocks = vi.hoisted(() => ({
   preflight: vi.fn(),
   builders: vi.fn(),
@@ -33,6 +34,7 @@ const mocks = vi.hoisted(() => ({
   retry: vi.fn(),
   copy: vi.fn(),
   sourceCorrections: vi.fn(),
+  sourceHealth: vi.fn(),
   correctAccessCode: vi.fn(),
   completedRevision: vi.fn(),
   runContent: vi.fn(),
@@ -71,6 +73,8 @@ vi.mock("@/core/clipboard", () => ({ copyTextToClipboard: mocks.copy }));
 vi.mock("../../MethodPreparation", () => ({ default: () => null }));
 vi.mock("../PostImageSourceAction", () => ({ default: () => null }));
 vi.mock("@/components/SourceAvailability/SourcePriorityModal", () => ({ default: () => null }));
+vi.mock("@/components/SourceAvailability/SourceAvailabilityReviewModal", () => ({ default: () => null }));
+vi.mock("@/components/SourceAvailability/api", () => ({ sourceAvailabilityApi: { acquisition: mocks.sourceHealth } }));
 vi.mock("@/components/PasswordSelector/ArchivePasswordInput", () => ({ default: () => null }));
 vi.mock("@/components/FilePathValue", () => ({ default: ({ path, pathActions }: { path: string; pathActions?: ReactNode }) => <span><code>{path}</code>{pathActions}</span> }));
 vi.mock("@/components/bakaui", async () => ({
@@ -261,6 +265,7 @@ beforeEach(() => {
     canCorrect: false,
     sources: [],
   });
+  mocks.sourceHealth.mockReset().mockRejectedValue(new Error("Source observations unavailable"));
   mocks.select.mockResolvedValue({ ...detail, task: { ...detail.task, phase: "ready" } });
 });
 
@@ -532,6 +537,7 @@ it("keeps preparation inside Continue Processing and its modal", async () => {
   mocks.search.mockResolvedValue(detail);
   render(<PlanTaskDetailModal taskId={42} />);
   await screen.findByRole("region", {name: "acquisition.timeline.title"});
+  expect(screen.queryByRole("button", { name: "sourceAvailability.review.one" })).toBeNull();
   expect(screen.queryByRole("button", { name: "acquisition.draft.search" })).toBeNull();
   expect(screen.queryByRole("button", { name: "filesystem selector" })).toBeNull();
   await openPreparation();
@@ -539,6 +545,35 @@ it("keeps preparation inside Continue Processing and its modal", async () => {
   await waitFor(() => expect(search).toBeEnabled());
   fireEvent.click(search);
   expect(await screen.findByText("First gallery")).toBeVisible();
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
+it.each(["draft", "plan"])("checks saved %s sources from preparation and refreshes the detail and list", async (type) => {
+  const onChanged = vi.fn();
+  const source = { id: "saved", kind: "auto", url: "https://example.com/saved" };
+  mocks.sourceHealth.mockResolvedValue([]);
+  mocks.get.mockResolvedValue({
+    ...detail,
+    task: { ...detail.task, builderId: "draft", phase: "attention" },
+    ...(type === "draft" ? { draftSources: [source] } : { plan: { parts: [{ id: "part", sources: [source] }] } }),
+  });
+  render(<PlanTaskDetailModal taskId={42} onChanged={onChanged} />);
+  const timeline = await screen.findByRole("region", { name: "acquisition.timeline.title" });
+  const preparation = within(timeline).getByRole("heading", { name: "acquisition.timeline.stage.preparation" }).closest("li")!;
+  const reviewButton = { name: "sourceAvailability.review.one" };
+  expect(within(timeline).getAllByRole("button", reviewButton)).toHaveLength(1);
+  fireEvent.click(within(preparation).getByRole("button", reviewButton));
+  const [modal, props] = mocks.createPortal.mock.lastCall!;
+  expect(modal).toBe(SourceAvailabilityReviewModal);
+  expect(props.taskIds).toEqual([42]);
+  expect(mocks.previewPreparation).not.toHaveBeenCalled();
+
+  mocks.get.mockClear();
+  mocks.sourceHealth.mockClear();
+  await act(async () => props.onChecked());
+  expect(mocks.get).toHaveBeenCalledExactlyOnceWith(42);
+  expect(mocks.sourceHealth).toHaveBeenCalledExactlyOnceWith(42);
+  expect(onChanged).toHaveBeenCalledOnce();
   expect(mocks.run).not.toHaveBeenCalled();
 });
 
