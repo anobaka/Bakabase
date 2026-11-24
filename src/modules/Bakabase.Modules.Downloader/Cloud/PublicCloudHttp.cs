@@ -42,13 +42,14 @@ public static class PublicCloudHttp
     }
 
     /// <summary>Resolve once per connection and connect to that checked address, preventing DNS rebinding.</summary>
-    public static HttpMessageHandler CreateHandler() => new SocketsHttpHandler
+    public static HttpMessageHandler CreateHandler(bool preserveRepresentation = false) => new SocketsHttpHandler
     {
         AllowAutoRedirect = false,
         UseCookies = false,
         UseProxy = false,
         ConnectTimeout = TimeSpan.FromSeconds(10),
-        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+        AutomaticDecompression = preserveRepresentation ? DecompressionMethods.None : DecompressionMethods.GZip | DecompressionMethods.Deflate,
+        ActivityHeadersPropagator = preserveRepresentation ? null : System.Diagnostics.DistributedContextPropagator.Current,
         ConnectCallback = async (context, ct) =>
         {
             EnsureSafeUri(context.InitialRequestMessage.RequestUri!);

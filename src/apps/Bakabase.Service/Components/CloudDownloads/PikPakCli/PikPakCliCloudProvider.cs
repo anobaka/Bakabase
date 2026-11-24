@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Cloud;
 
 namespace Bakabase.Service.Components.CloudDownloads.PikPakCli;
@@ -18,11 +19,14 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
 {
     private readonly PikPakCliAccountService accounts;
     private readonly IUserStoragePolicy? storage;
+    private readonly IAuthorizedOriginalHttpDownloader? _restoredOriginals;
     private readonly Func<CancellationToken, Task> _restoreDelay;
-    public PikPakCliCloudProvider(PikPakCliAccountService accounts, IUserStoragePolicy? storage = null)
-        : this(accounts, storage, ct => Task.Delay(TimeSpan.FromSeconds(2), ct)) { }
-    internal PikPakCliCloudProvider(PikPakCliAccountService accounts, IUserStoragePolicy? storage, Func<CancellationToken, Task> restoreDelay)
-    { this.accounts = accounts; this.storage = storage; _restoreDelay = restoreDelay; }
+    public PikPakCliCloudProvider(PikPakCliAccountService accounts, IUserStoragePolicy? storage = null,
+        IAuthorizedOriginalHttpDownloader? restoredOriginals = null)
+        : this(accounts, storage, ct => Task.Delay(TimeSpan.FromSeconds(2), ct), restoredOriginals) { }
+    internal PikPakCliCloudProvider(PikPakCliAccountService accounts, IUserStoragePolicy? storage,
+        Func<CancellationToken, Task> restoreDelay, IAuthorizedOriginalHttpDownloader? restoredOriginals = null)
+    { this.accounts = accounts; this.storage = storage; _restoreDelay = restoreDelay; _restoredOriginals = restoredOriginals; }
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _operations = new(StringComparer.Ordinal);
     public string ProviderId => "pikpak";
     public string MethodId => "pikpak.share";
@@ -131,7 +135,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
 
     private async Task<CloudDownloadResult> DownloadFiles(CloudDownloadRequest request, string output, Journal journal,
         PikPakCliAccountLease account, Func<CloudDownloadProgress, Task> progress, CancellationToken ct,
-        string? retryAttempt = null)
+        bool retryRestoredOriginal = false)
     {
         var state = OperationPath(request.OperationId);
         var copies = await ReadDownloadJournal(request.OperationId, ct);
@@ -140,7 +144,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         copies ??= new() {Identity = identity};
         await PikPakCliStorage.WriteAsync(Path.Combine(state, "download.json"), copies, ct);
         Directory.CreateDirectory(output);
-        var stage = Path.Combine(output, ".bakabase-pikpak-" + PikPakCliStorage.Hash(request.OperationId));
+        var stage = DownloadStage(output, request.OperationId);
         PikPakCliStorage.Directory(stage);
         long total = journal.Files.Aggregate(0L, (value, file) => checked(value + file.Size));
         long completed = 0; var result = new List<string>();
@@ -151,8 +155,9 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
             ct.ThrowIfCancellationRequested();
             var destination = PikPakCliStorage.Within(output, file.Path);
             copies.Completed.TryGetValue(file.Path, out var receipt);
-            var partDirectory = StagingAttemptDirectory(stage, receipt?.StagingAttempt ?? retryAttempt);
-            var part = Path.Combine(partDirectory, PikPakCliStorage.Hash(file.Id) + ".payload");
+            var restoredHttp = receipt?.RestoredHttp == true || receipt == null && retryRestoredOriginal;
+            var partDirectory = restoredHttp ? RestoredHttpDirectory(stage, file) : StagingAttemptDirectory(stage, receipt?.StagingAttempt);
+            var part = Path.Combine(partDirectory, restoredHttp ? "payload" : PikPakCliStorage.Hash(file.Id) + ".payload");
             PikPakCliStorage.NoLinks(part);
             if (File.Exists(destination))
             {
@@ -171,22 +176,26 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
                 {
                     // CLI parallel downloads may preallocate their file. Size alone does not
                     // prove a cancelled attempt completed; preserve it for explicit recovery.
-                    PikPakCliStorage.NoLinks(part + ".part");
-                    if (Path.Exists(part) || Path.Exists(part + ".part") || retryAttempt == null && copies.Started.Contains(file.Id))
-                        throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
-                    if (retryAttempt != null && !Directory.Exists(partDirectory))
-                        PikPakCliStorage.Directory(partDirectory);
-                    copies.Started.Add(file.Id);
-                    await PikPakCliStorage.WriteAsync(Path.Combine(state, "download.json"), copies, ct);
-                    // The exact byte count is known only at each finished-file boundary.
-                    await progress(new(null, null, total, transferStage));
-                    await PikPakPayloadActivity.DownloadAsync(account, file.Id, part,
-                        () => progress(new(null, null, total, transferStage)), ct);
+                    if (restoredHttp)
+                        await DownloadRestoredOriginalAsync(request, journal, copies, file, account, partDirectory, part,
+                            completed, total, progress, ct);
+                    else
+                    {
+                        PikPakCliStorage.NoLinks(part + ".part");
+                        if (Path.Exists(part) || Path.Exists(part + ".part") || copies.Started.Contains(file.Id))
+                            throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+                        copies.Started.Add(file.Id);
+                        await PikPakCliStorage.WriteAsync(Path.Combine(state, "download.json"), copies, ct);
+                        // The CLI's exact byte count is known only at each finished-file boundary.
+                        await progress(new(null, null, total, transferStage));
+                        await PikPakPayloadActivity.DownloadAsync(account, file.Id, part,
+                            () => progress(new(null, null, total, transferStage)), ct);
+                    }
                     if (!File.Exists(part) || new FileInfo(part).Length != file.Size) throw new PikPakCliException("PIKPAK_DOWNLOAD_INCOMPLETE");
                     PikPakCliStorage.NoLinks(part);
                     await ReportVerifying();
                     receipt = new(file.Size, await PikPakCliStorage.FileHash(part, ct, PikPakPayloadActivity.ReportReads(ReportVerifying)))
-                        {StagingAttempt = retryAttempt};
+                        {RestoredHttp = restoredHttp ? true : null};
                     copies.Completed[file.Path] = receipt;
                     await PikPakCliStorage.WriteAsync(Path.Combine(state, "download.json"), copies, CancellationToken.None);
                 }
@@ -197,11 +206,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
             await progress(new(total == 0 ? 100d * result.Count / journal.Files.Count : 100d * completed / total,
                 completed, total, transferStage));
         }
-        var executionStage = StagingAttemptDirectory(stage, retryAttempt);
-        var temporary = Path.Combine(executionStage, "temporary"); PikPakCliStorage.NoLinks(temporary);
+        var temporary = Path.Combine(stage, "temporary"); PikPakCliStorage.NoLinks(temporary);
         if (Directory.Exists(temporary) && !Directory.EnumerateFileSystemEntries(temporary).Any()) Directory.Delete(temporary);
-        if (retryAttempt != null && Directory.Exists(executionStage) && !Directory.EnumerateFileSystemEntries(executionStage).Any())
-            Directory.Delete(executionStage);
         if (!Directory.EnumerateFileSystemEntries(stage).Any()) Directory.Delete(stage);
         if (!Same(journal.Files, await ReadRemote(account, journal.FolderId!, ct)))
             throw new PikPakCliException("PIKPAK_REMOTE_CHANGED");
@@ -504,6 +510,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
     {
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
         public string? StagingAttempt { get; init; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public bool? RestoredHttp { get; init; }
     }
     private sealed class Journal
     {
@@ -539,5 +547,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         public string Identity { get; set; } = "";
         public HashSet<string> Started { get; set; } = [];
         public Dictionary<string, FileReceipt> Completed { get; set; } = new(StringComparer.Ordinal);
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, string>? RestoredHttpMembers { get; set; }
     }
 }

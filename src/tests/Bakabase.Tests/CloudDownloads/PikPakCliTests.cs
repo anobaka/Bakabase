@@ -13,7 +13,7 @@ using Microsoft.AspNetCore.Routing;
 namespace Bakabase.Tests.CloudDownloads;
 
 [TestClass]
-public sealed class PikPakCliTests
+public sealed partial class PikPakCliTests
 {
     private string _root = null!;
     private Native _native = null!;
@@ -27,7 +27,9 @@ public sealed class PikPakCliTests
     public void Setup()
     {
         _root = Path.Combine(Path.GetTempPath(), "pikpak-cli-tests-" + Guid.NewGuid().ToString("N"));
-        _native = new(); _accounts = new(Path.Combine(_root, "appdata"), _native); _provider = new(_accounts, null, _ => Task.CompletedTask);
+        _native = new(); _accounts = new(Path.Combine(_root, "appdata"), _native);
+        _restored = new();
+        _provider = new(_accounts, null, _ => Task.CompletedTask, _restored);
     }
     [TestCleanup]
     public void Cleanup() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
@@ -494,25 +496,35 @@ public sealed class PikPakCliTests
         Assert.AreEqual(1, _native.Downloads);
         _native.WrongRestoredName = false;
 
+        _restored.Fail = true;
         var failedRetry = await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
             _provider.RetryPreparedDownloadAsync(Request, _ => Task.CompletedTask, default));
         Assert.AreEqual("PIKPAK_NETWORK_UNAVAILABLE", failedRetry.Message);
-        Assert.AreEqual(2, _native.Downloads);
+        Assert.AreEqual(1, _native.Downloads);
+        Assert.AreEqual(1, _restored.Transfers.Count);
         Assert.IsTrue((await _provider.CheckPreparedDownloadRetryAsync(Request, default)).Available);
+        var preserved = _restored.Transfers.Single().Directory;
+        Assert.IsTrue(File.Exists(Path.Combine(preserved, "checkpoint-part")));
 
         _native.FailPayload = false;
+        _native.OriginalUrl = "https://download.mypikpak.net/original?signature=second-fixture-url";
+        _restored.Fail = false;
         var files = await _provider.RetryPreparedDownloadAsync(Request, _ => Task.CompletedTask, default);
         Assert.AreEqual("abc", await File.ReadAllTextAsync(files.Files.Single()));
         Assert.AreEqual("existing root marker", await File.ReadAllTextAsync(rootMarker));
         Assert.AreEqual("existing payload marker", await File.ReadAllTextAsync(privateMarker));
         var downloads = _native.Calls.Where(call => call[0] == "download").ToArray();
-        Assert.AreEqual(3, downloads.Length);
-        Assert.AreEqual(3, downloads.Select(call => call[3]).Distinct().Count());
-        Assert.AreEqual(1, downloads.Select(call => call[1]).Distinct().Count());
+        Assert.AreEqual(1, downloads.Length);
+        Assert.AreEqual(2, _restored.Transfers.Count);
+        Assert.AreEqual(1, _restored.Transfers.Select(call => call.Directory).Distinct().Count());
+        Assert.AreEqual(1, _restored.Transfers.Select(call => call.Identity).Distinct().Count());
+        Assert.AreNotEqual(_restored.Transfers[0].Original, _restored.Transfers[1].Original);
+        Assert.AreEqual(_restored.Transfers[1].Identity.MemberId, downloads.Single()[1]);
         Assert.AreEqual(1, _native.Mkdirs);
         Assert.AreEqual(1, _native.Restores);
         Assert.AreEqual(transfer, await File.ReadAllTextAsync(savedTransfer));
-        Assert.IsFalse((await _provider.CheckPreparedDownloadRetryAsync(Request, default)).Available);
+        Assert.IsTrue((await _provider.CheckPreparedDownloadRetryAsync(Request, default)).Available,
+            "A provider-verified file can still need registration after a transient final check failure.");
     }
 
     [DataTestMethod]
@@ -789,6 +801,7 @@ public sealed class PikPakCliTests
         internal List<string[]> Calls { get; } = [];
         internal bool Approved, FailAfterRestore, FailBeforeRestoreCommit, FailPayload, WrongRestoredName, RepeatToken, RejectRestorePermission, RejectRestoreQuota, ExtraRestoredFile, OriginalExpired;
         internal bool RemoveFailedNativePartial;
+        internal string OriginalUrl = "https://download.mypikpak.com/original?signature=first-fixture-url";
         internal int Restores, SuccessfulRestores, Downloads, Mkdirs;
         internal string VerificationUri = "https://mypikpak.com/drive/activate";
         internal string? Continuation;
@@ -856,6 +869,9 @@ public sealed class PikPakCliTests
                 if (FailPayload) throw new PikPakCliException("PIKPAK_NETWORK_UNAVAILABLE");
                 return J("{}");
             }
+            if (arguments[0] == "get" && arguments[1] == "restored-file" && Value("--url-type") == "download")
+                return JsonSerializer.SerializeToElement(new {id = "restored-file", type = "file", name = "file.bin",
+                    size = "3 B", hash = "remote-hash", download_url = OriginalUrl, play_url = "https://invalid.example/video"});
             throw new InvalidOperationException("Unexpected fixture command: " + string.Join(' ', arguments));
         }
         private static JsonElement J(string json) => JsonDocument.Parse(json).RootElement.Clone();

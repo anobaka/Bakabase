@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Modules.Downloader.Cloud;
+using Bakabase.Modules.Downloader.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Service.Components.CloudDownloads.WebProviders;
@@ -30,13 +31,15 @@ public sealed class ProxyAwarePublicHttpHandler : HttpMessageHandler
     private readonly Func<Uri, CancellationToken, Task>? _checkProxyTarget;
 
     public ProxyAwarePublicHttpHandler(IWebProxy proxy, Func<Uri, bool>? allowed = null, bool followRedirects = true,
-        Func<Uri, CancellationToken, Task>? checkProxyTarget = null, Action<Uri, Uri>? validateRoute = null)
+        Func<Uri, CancellationToken, Task>? checkProxyTarget = null, Action<Uri, Uri>? validateRoute = null,
+        bool preserveRepresentation = false)
         : this(proxy, allowed ?? (_ => true), PublicCloudHttp.EnsurePublicHostAsync,
-            PublicCloudHttp.CreateHandler(), (uri, credentials) => new SocketsHttpHandler
+            PublicCloudHttp.CreateHandler(preserveRepresentation), (uri, credentials) => new SocketsHttpHandler
             {
                 Proxy = new WebProxy(uri) {Credentials = credentials}, UseProxy = true,
                 UseCookies = false, AllowAutoRedirect = false, ConnectTimeout = TimeSpan.FromSeconds(15),
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                AutomaticDecompression = preserveRepresentation ? DecompressionMethods.None : DecompressionMethods.GZip | DecompressionMethods.Deflate,
+                ActivityHeadersPropagator = preserveRepresentation ? null : System.Diagnostics.DistributedContextPropagator.Current
             }, followRedirects, checkProxyTarget, validateRoute) { }
 
     // Fixed provider metadata endpoints may use the host's TUN/fake-IP DNS. Authenticate the
@@ -141,6 +144,7 @@ public sealed class ProxyAwarePublicHttpHandler : HttpMessageHandler
 public static class PublicShareDownloadClients
 {
     public const string PikPak = "Bakabase.PublicShare.PikPak";
+    public const string PikPakOfficialOriginal = "Bakabase.PikPak.OfficialOriginal";
     public const string SharePointAttachment = "Bakabase.PublicShare.SharePointAttachment";
     public const string SharePoint = "Bakabase.PublicShare.SharePoint";
 
@@ -148,6 +152,10 @@ public static class PublicShareDownloadClients
     {
         Add(PikPak, "pikpak"); Add(SharePoint, "oneDrive");
         Add(SharePointAttachment, "oneDrive", SharePointCloudProvider.RequireAttachmentRoute);
+        services.AddHttpClient(PikPakOfficialOriginal, client => client.Timeout = Timeout.InfiniteTimeSpan)
+            .ForAuthorizedOriginalDownloads().ConfigurePrimaryHttpMessageHandler(sp => new ProxyAwarePublicHttpHandler(
+                sp.GetRequiredService<BakabaseWebProxy>().ForDownloadTool("pikpak-cli", CloudSites.Site("pikpak")),
+                uri => IsProviderHost("pikpak", uri), preserveRepresentation: true));
         return services;
         void Add(string name, string provider, Action<Uri, Uri>? route = null) => services.AddHttpClient(name, client =>
         {
