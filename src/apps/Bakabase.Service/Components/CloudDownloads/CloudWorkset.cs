@@ -139,6 +139,8 @@ public sealed record CloudDownloadResumeTarget(string TargetId, string DownloadI
 
 public sealed record CloudTransferReplaySignal(string RemoteDirectory, IReadOnlyDictionary<string, string> Attempts);
 
+public sealed record CloudPreparedDownloadRetry(string OperationId, long FailedAtTicks);
+
 public sealed record CloudSelectionSignal
 {
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
@@ -153,6 +155,14 @@ public sealed record CloudSelectionSignal
     /// <summary>Diagnostic opt-in: revalidate only selected original failed downloads immediately before
     /// resuming them. Does not remove the workset's prohibition on other retries or new generations.</summary>
     public bool? RevalidateExistingDownloads { get; init; }
+    /// <summary>Freezes which targets the user confirmed to retry exclusively against an existing prepared copy.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public Dictionary<string, CloudPreparedDownloadRetry>? PreparedDownloadRetries { get; init; }
+    internal bool HasValidPreparedRetrySelection() => PreparedDownloadRetries == null ||
+        RevalidateExistingDownloads == true && ObserveExistingOnly == true && VerifyExistingFilesOnly != true &&
+        ResumeTargetIds != null && PreparedDownloadRetries.Count > 0 && PreparedDownloadRetries.Count <= ResumeTargetIds.Count &&
+        PreparedDownloadRetries.All(p => ResumeTargetIds.Contains(p.Key) && p.Value != null && !string.IsNullOrWhiteSpace(p.Value.OperationId));
+
     /// <summary>Only verify and register original existing files. Never restart a downloader or transfer.</summary>
     public bool? VerifyExistingFilesOnly { get; init; }
     /// <summary>Verify these exact completed native receipts before handing their files to processing.</summary>

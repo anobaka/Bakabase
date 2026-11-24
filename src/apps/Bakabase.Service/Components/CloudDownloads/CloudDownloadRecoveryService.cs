@@ -21,6 +21,7 @@ namespace Bakabase.Service.Components.CloudDownloads;
 public sealed record CloudDownloadRecoveryCheck(bool CanRetry, string ReasonCode, string? FailureCode = null,
     bool Candidate = false, bool VerifyExistingOnly = false)
 {
+    internal CloudPreparedDownloadRetry? PreparedRetry { get; init; }
     internal string? VerificationIdentity { get; init; }
     internal CloudExistingDownloadInventory? Inventory { get; init; }
 }
@@ -38,6 +39,16 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
         CheckCoreAsync(runId, target, outputRoot, revalidate, forSourceRevision: false, ct, includeStopped, includeStoppedForVerification,
             requireEquivalentGroup);
 
+    internal async Task ValidatePreparedAdmissionAsync(int runId, CloudDownloadTarget target, string outputRoot,
+        CloudPreparedDownloadRetry confirmed, CancellationToken ct)
+    {
+        // The native service holds the task/owner leases and may already have enabled this
+        // exact row before allocating a source slot. No other recovery accepts InProgress.
+        var local = await CheckCoreAsync(runId, target, outputRoot, false, false, ct, enablingPreparedOperationId: confirmed.OperationId);
+        if (!local.Candidate || local.PreparedRetry != confirmed)
+            throw new InvalidOperationException(local.Candidate ? "RECOVERY_DOWNLOAD_IDENTITY_CHANGED" : local.ReasonCode);
+    }
+
     /// <summary>Checks the retained execution identity and absence of local outputs without
     /// authorizing another attempt against the old source. The caller must separately prove
     /// provider-side abandonment safety and exclusive ownership under the action lock.</summary>
@@ -47,7 +58,7 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
 
     private async Task<CloudDownloadRecoveryCheck> CheckCoreAsync(int runId, CloudDownloadTarget target,
         string outputRoot, bool revalidate, bool forSourceRevision, CancellationToken ct, bool includeStopped = false,
-        bool includeStoppedForVerification = false, bool requireEquivalentGroup = false, NativeVerificationScope? nativeVerification = null)
+        bool includeStoppedForVerification = false, bool requireEquivalentGroup = false, NativeVerificationScope? nativeVerification = null, string? enablingPreparedOperationId = null)
     {
         string? failure = null;
         CloudDownloadRecoveryCheck Block(string code, bool candidate = false) => new(false, code, failure, candidate);
@@ -59,7 +70,8 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             var download = await db.DownloadTasks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id, ct);
             if (download == null) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             var stopped = download.Status == DownloadTaskDbModelStatus.Disabled;
-            if (download.Status != DownloadTaskDbModelStatus.Failed &&
+            var enabling = enablingPreparedOperationId != null && download.Status == DownloadTaskDbModelStatus.InProgress;
+            if (!enabling && download.Status != DownloadTaskDbModelStatus.Failed &&
                 !(stopped && (includeStopped || includeStoppedForVerification)))
                 return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             var provider = DownloadProviderRouting.Require(providers, source);
@@ -135,7 +147,8 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 await db.DownloadResultOwners.AsNoTracking().AnyAsync(r => r.DownloadTaskId == id, ct))
                 return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
             var intent = DownloadArtifactCoordinator.DownloadIntent(target, outputRoot, workspaces);
-            if (target.DownloadOperationId != null && target.DownloadOperationId != intent)
+            if (enablingPreparedOperationId != null && enablingPreparedOperationId != intent ||
+                target.DownloadOperationId != null && target.DownloadOperationId != intent)
                 return Block("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
             var owner = runId.ToString();
             var bindings = await db.ArtifactOperationBindings.AsNoTracking().Where(b => b.OwnerKind == "workflow" &&
@@ -175,16 +188,31 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             storage.EnsurePathAllowed(download.DownloadPath);
             FileProcessingFiles.Within(download.DownloadPath, executionRoot);
             if (!Directory.Exists(executionRoot)) return Block("RECOVERY_STORAGE_UNAVAILABLE");
-            // Include hidden and partial files. A failed receipt alone never proves that no bytes were written.
-            if (File.Exists(download.DownloadPath) || HasRetainedFiles(executionRoot, download.DownloadPath, ct))
-                return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
+            if (File.Exists(download.DownloadPath)) return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
             var executionRequest = CloudDownloadDestinations.ExecutionRequest(request);
-            if (!forSourceRevision && capability != null)
+            // A prepared retry must prove the provider's exact saved copy and previous native
+            // attempt even when filesystem deletion markers have disappeared since preview.
+            var prepared = !forSourceRevision && !requireEquivalentGroup && provider is ICloudPreparedDownloadRetryProvider retry &&
+                (await retry.CheckPreparedDownloadRetryAsync(executionRequest, ct)).Available;
+            if (prepared)
+            {
+                if (await db.DownloadTaskFiles.AsNoTracking().AnyAsync(f => f.DownloadTaskId == id, ct))
+                    return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
+                var competingDirectories = await db.DownloadTasks.AsNoTracking().Where(d => d.Id != id &&
+                    (d.DownloadPath == download.DownloadPath || d.Status == DownloadTaskDbModelStatus.InProgress))
+                    .Select(d => d.DownloadPath).Distinct().ToListAsync(ct);
+                if (competingDirectories.Any(path => CloudDownloadDestinationService.Overlaps(path, download.DownloadPath)))
+                    return Block("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
+            }
+            else if (HasRetainedFiles(executionRoot, download.DownloadPath, ct))
+                return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
+            if (!prepared && !forSourceRevision && capability != null)
             {
                 var local = await capability.CheckLocalRecoveryAsync(executionRequest, ct);
                 if (!local.Available) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             }
-            if (!revalidate) return Block("RECOVERY_RECHECK_SOURCE", candidate: true);
+            var preparedRetry = prepared ? new CloudPreparedDownloadRetry(intent, download.DownloadStatusUpdateDt.Ticks) : null;
+            if (!revalidate) return Block("RECOVERY_RECHECK_SOURCE", candidate: true) with {PreparedRetry = preparedRetry};
             if (!capability!.RevalidationChecksReadiness)
             {
                 var ready = await provider.CheckReadyAsync(request.AccountId, ct);
@@ -204,7 +232,10 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             // local snapshot; execution repeats this local guard under the downloader action lock.
             var latest = await CheckAsync(runId, target, outputRoot, revalidate: false, ct, requireEquivalentGroup: requireEquivalentGroup);
             if (!latest.Candidate) return latest;
-            return new(true, "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED", failure, true);
+            if (latest.PreparedRetry != preparedRetry)
+                return Block("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
+            return new(true, prepared ? "RECOVERY_PREPARED_DOWNLOAD_REVALIDATED" : "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED", failure, true)
+                {PreparedRetry = latest.PreparedRetry};
         }
         catch (UserStoragePathException) {return Block("RECOVERY_STORAGE_UNAVAILABLE");}
         catch (InvalidDataException) {return Block("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");}

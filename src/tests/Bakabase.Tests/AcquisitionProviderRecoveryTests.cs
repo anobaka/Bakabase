@@ -23,7 +23,7 @@ namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionRecoveryTests
 {
-    private sealed class RecoverableProvider : ICloudDownloadProvider, ICloudDownloadRecoveryProvider, ICloudDownloadAbandonmentProvider
+    private class RecoverableProvider : ICloudDownloadProvider, ICloudDownloadRecoveryProvider, ICloudDownloadAbandonmentProvider
     {
         public string ProviderId => "pikpak";
         public int Checks;
@@ -43,6 +43,96 @@ public sealed partial class AcquisitionRecoveryTests
         {Checks++; if (DuringProbe != null) await DuringProbe(); return new CloudReadiness(Available, Available ? null : "PIKPAK_ORIGINAL_FILE_UNAVAILABLE");}
         public Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
             => throw new AssertFailedException("Diagnosis must never download payloads.");
+    }
+
+    private sealed class PreparedRecoveryProvider : RecoverableProvider, ICloudPreparedDownloadRetryProvider
+    {
+        public bool Prepared = true;
+        public Task<CloudReadiness> CheckPreparedDownloadRetryAsync(CloudDownloadRequest request, CancellationToken ct) =>
+            Task.FromResult(new CloudReadiness(Prepared));
+        public Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress,
+            CancellationToken ct) => throw new AssertFailedException("Admission never reads payload.");
+    }
+
+    [TestMethod]
+    [DataRow("confirmed")]
+    [DataRow("became-unproven")]
+    [DataRow("another-failure")]
+    [DataRow("shared-directory")]
+    [DataRow("overlapping-writer")]
+    [DataRow("registered-output")]
+    public async Task Prepared_download_retry_pins_the_native_failure_and_rechecks_before_start(string scenario)
+    {
+        var (task, run, workset, download, operation, _, _) = await SeedRecoverableProvider();
+        var provider = new PreparedRecoveryProvider();
+        var recovery = new CloudDownloadRecoveryService(_db, [provider], new UserStoragePolicy(false));
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, new UserStoragePolicy(false),
+            _services.GetRequiredService<IArtifactOperationStore>(), downloads: recovery);
+        var starter = new OnlyDownloadStarter(this, run.Id);
+        var service = new AcquisitionRecoveryService(_db, diagnostics, new(), new RecordingHost(),
+            downloadOnly: OnlyDownloads(recovery, starter, new OnlyDownloadGuard()));
+        Directory.CreateDirectory(download.DownloadPath);
+        var marker = Path.Combine(download.DownloadPath, ".smbdeleteAAA012344.4");
+        await File.WriteAllTextAsync(marker, "system placeholder");
+        Assert.IsFalse((await recovery.CheckNoOutputForSourceRevisionAsync(run.Id, workset.Targets.Single(),
+            workset.OutputDirectory, default)).Candidate);
+        var preview = await service.PreviewAsync(new([task.Id], "downloads"));
+        Assert.AreEqual("RECOVERY_PREPARED_DOWNLOAD_REVALIDATED", preview.Rows.Single().ReasonCode);
+        var action = await diagnostics.DiagnoseAsync(task, run, default);
+        var signal = JsonSerializer.Deserialize<CloudSelectionSignal>(action.SignalJson, JsonSerializerOptions.Web)!;
+        Assert.AreEqual(operation.Id, signal.PreparedDownloadRetries![workset.Targets.Single().Id].OperationId);
+        switch (scenario)
+        {
+            case "became-unproven":
+                starter.BetweenLeases = () => { provider.Prepared = false; return Task.CompletedTask; };
+                break;
+            case "another-failure":
+                download.DownloadStatusUpdateDt = download.DownloadStatusUpdateDt.AddSeconds(1);
+                break;
+            case "shared-directory":
+                _db.DownloadTasks.Add(new() {DownloadPath = download.DownloadPath});
+                break;
+            case "overlapping-writer":
+                _db.DownloadTasks.Add(new() {DownloadPath = Path.Combine(download.DownloadPath, "other"), Status = DownloadTaskDbModelStatus.InProgress});
+                break;
+            case "registered-output":
+                _db.DownloadTaskFiles.Add(new() {DownloadTaskId = download.Id, Path = Path.Combine(download.DownloadPath, "original")});
+                break;
+        }
+        await _db.SaveChangesAsync();
+        var result = await service.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+        Assert.AreEqual(scenario == "confirmed" ? 1 : 0, result.ContinuedTaskIds.Count);
+        if (scenario == "confirmed")
+        {
+            CollectionAssert.AreEqual(new[] {download.Id}, starter.Calls);
+            Assert.AreEqual(operation.Id, starter.PreparedRetryOperationId);
+        }
+        else
+        {
+            Assert.AreEqual(0, starter.Calls.Count);
+            Assert.AreEqual(DownloadTaskDbModelStatus.Failed,
+                (await _db.DownloadTasks.AsNoTracking().SingleAsync(d => d.Id == download.Id)).Status);
+        }
+        Assert.AreEqual("system placeholder", await File.ReadAllTextAsync(marker));
+        Assert.AreEqual(1, await _db.CloudDownloadOperations.CountAsync());
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Workflow_does_not_dispatch_a_saved_copy_via_an_older_or_different_confirmation(bool stale)
+    {
+        var (_, run, workset, _, operation, _, _) = await SeedRecoverableProvider();
+        var target = workset.Targets.Single();
+        var recovery = new CloudDownloadRecoveryService(_db, [new PreparedRecoveryProvider()], new UserStoragePolicy(false));
+        using var services = new ServiceCollection().AddSingleton(recovery).BuildServiceProvider();
+        var context = new WorkflowExecutionContext {RunId = run.Id, WorkflowDefinitionId = 0,
+            TriggerKind = CloudWorkflow.Trigger, Payload = workset, ActivityConfigJson = "{}", Services = services, Logger = NullLogger.Instance};
+        var signal = new CloudSelectionSignal {ObserveExistingOnly = true, RevalidateExistingDownloads = true,
+            ResumeTargetIds = [target.Id], PreparedDownloadRetries = stale ? new() {{target.Id, new(operation.Id, 1)}} : null};
+        var outcome = await new AwaitCloudDownloadsActivity().ResumeAsync(context, workset, JsonSerializer.Serialize(signal, WorkflowJson.Options), default);
+        Assert.AreEqual("RECOVERY_DOWNLOAD_IDENTITY_CHANGED", ((DownloadWorkset)outcome.Suspension!.Item!).Targets.Single().Problem);
+        Assert.AreEqual(DownloadTaskDbModelStatus.Failed, (await _db.DownloadTasks.AsNoTracking().SingleAsync()).Status);
     }
 
     private async Task<(AcquisitionTaskDbModel Task, WorkflowRunDbModel Run, DownloadWorkset Workset,

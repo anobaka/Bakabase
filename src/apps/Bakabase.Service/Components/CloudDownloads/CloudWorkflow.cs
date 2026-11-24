@@ -209,6 +209,8 @@ public abstract class CloudActivity(string kind, string name, string description
             workset = await ctx.Services.GetRequiredService<Bakabase.Service.Components.Acquisition.Planning.AcquisitionTransferredDownloadRecovery>()
                 .RestoreAsync(checked((int)ctx.RunId), workset, placement, ct);
         }
+        if (signal?.HasValidPreparedRetrySelection() == false)
+            throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
         if (signal?.ObserveExistingOnly == true || signal?.RevalidateExistingDownloads == true || signal?.VerifyExistingFilesOnly == true)
             workset = workset with {NoRepeatExistingDownloads = true};
         if (signal?.VerifyExistingFilesOnly == true && (signal.ResumeTargetIds == null || signal.RevalidateExistingDownloads == true))
@@ -227,7 +229,8 @@ public abstract class CloudActivity(string kind, string name, string description
             if (workset.Targets.Any(t => selected.Contains(t.Id) && t.DownloadTaskId == null && t.TransportTaskId == null &&
                 t.DownloadArtifactId == null && t.ProcessedArtifactId == null && t.PublishedArtifactId == null))
                 throw new ArgumentException("Selected targets must already have a download or a saved artifact.");
-            return await ResumeSelectedDownloads(ctx, workset, selected, ct, signal.RevalidateExistingDownloads == true, signal.VerifyExistingFilesOnly == true);
+            return await ResumeSelectedDownloads(ctx, workset, selected, ct, signal.RevalidateExistingDownloads == true,
+                signal.VerifyExistingFilesOnly == true, signal.PreparedDownloadRetries);
         }
         if (kind == "download.awaitCompletion" && signal != null && signal.ObserveExistingOnly != true &&
             workset.Targets.Count > 1)
@@ -496,7 +499,8 @@ public abstract class CloudActivity(string kind, string name, string description
             item.OutputDirectory}, WorkflowJson.Options), item));
 
     private static async Task<WorkflowItemOutcome> ResumeSelectedDownloads(WorkflowExecutionContext ctx,
-        DownloadWorkset workset, IReadOnlySet<string> selected, CancellationToken ct, bool revalidate = false, bool verifyExisting = false)
+        DownloadWorkset workset, IReadOnlySet<string> selected, CancellationToken ct, bool revalidate = false, bool verifyExisting = false,
+        IReadOnlyDictionary<string, CloudPreparedDownloadRetry>? preparedRetries = null)
     {
         var artifacts = ctx.Services.GetService<DownloadArtifactCoordinator>();
         var recovery = revalidate ? ctx.Services.GetRequiredService<CloudDownloadRecoveryService>() : null;
@@ -537,7 +541,7 @@ public abstract class CloudActivity(string kind, string name, string description
                             var grouped = owner != null;
                             if (!grouped && groupedNativeIds.Contains(target.DownloadTaskId.GetValueOrDefault()))
                                 throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
-                            await StartRevalidatedDownload(ctx, recovery, target, workset.OutputDirectory, grouped, ct);
+                            await StartRevalidatedDownload(ctx, recovery, target, workset.OutputDirectory, grouped, preparedRetries?.GetValueOrDefault(target.Id), ct);
                         }
                         else if (target.DownloadArtifactId == null)
                         {
@@ -603,22 +607,28 @@ public abstract class CloudActivity(string kind, string name, string description
     }
 
     private static async Task StartRevalidatedDownload(WorkflowExecutionContext ctx, CloudDownloadRecoveryService recovery,
-        CloudDownloadTarget target, string outputDirectory, bool grouped, CancellationToken ct)
+        CloudDownloadTarget target, string outputDirectory, bool grouped, CloudPreparedDownloadRetry? confirmedPrepared, CancellationToken ct)
     {
         var runId = checked((int)ctx.RunId);
         var check = await recovery.CheckAsync(runId, target, outputDirectory, true, ct, requireEquivalentGroup: grouped);
         if (!check.CanRetry || check.VerifyExistingOnly) throw new InvalidOperationException(check.ReasonCode == "RECOVERY_SOURCE_STILL_BLOCKED"
             ? check.FailureCode ?? check.ReasonCode : check.ReasonCode);
+        if (check.PreparedRetry != confirmedPrepared)
+            throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
         var response = await ctx.Services.GetRequiredService<DownloadTaskService>().StartConditionally(
             target.DownloadTaskId!.Value, async token =>
             {
                 var local = await recovery.CheckAsync(runId, target, outputDirectory, false, token, requireEquivalentGroup: grouped);
                 if (!local.Candidate || local.VerifyExistingOnly) throw new InvalidOperationException(local.ReasonCode);
-            }, ct, grouped ? async token =>
+                if (local.PreparedRetry != check.PreparedRetry)
+                    throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
+            }, ct, check.PreparedRetry is { } prepared
+                ? token => recovery.ValidatePreparedAdmissionAsync(runId, target, outputDirectory, prepared, token)
+                : grouped ? async token =>
             {
                 if ((await recovery.ReadEquivalentGroupAsync(runId, target, outputDirectory, token))?.Owner.Id != target.Id)
                     throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
-            } : null);
+            } : null, check.PreparedRetry?.OperationId);
         if (response.Code != 0) throw new InvalidOperationException(response.Message ?? "RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
     }
 

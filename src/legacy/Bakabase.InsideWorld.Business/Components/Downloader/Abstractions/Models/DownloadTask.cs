@@ -15,6 +15,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
 
     public class DownloadTask
     {
+        // Bound to this worker snapshot only. A queued start, process restart or new
+        // operator action gets a fresh snapshot with no prepared-download permission.
+        private string? _preparedRetryOperationId;
+        private int _preparedRetryClaimed;
+        internal void BindPreparedRetry(string operationId) => _preparedRetryOperationId = operationId;
+        public bool HasPreparedRetry() => _preparedRetryOperationId != null;
+        public bool TryConsumePreparedRetry(string operationId) =>
+            _preparedRetryOperationId != null && _preparedRetryOperationId == operationId &&
+            System.Threading.Interlocked.Exchange(ref _preparedRetryClaimed, 1) == 0;
+
         public int Id { get; set; }
         public string Key { get; set; } = null!;
 

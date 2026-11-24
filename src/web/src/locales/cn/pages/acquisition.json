@@ -1126,6 +1126,8 @@
   "acquisition.recovery.reason.RECOVERY_PROCESSING_FILES_REFERENCED": "其他任务或资源仍在使用此处理目录或文件。请先核对引用。",
   "acquisition.recovery.reason.RECOVERY_RECHECK_SOURCE": "需要重新检查当前来源是否提供原文件下载。",
   "acquisition.recovery.reason.RECOVERY_EXISTING_FILES_VERIFY_REQUIRED": "将只核验原任务已有文件与原网盘文件的完整校验值；通过后补记完成，不重新下载或转存。缺少校验信息或内容不一致时保留待处理。",
+  "acquisition.recovery.reason.RECOVERY_MIXED_DOWNLOADS_REVALIDATED": "已转存的分组会从副本重试，仅复用已校验的本地文件。其他就绪分组继续原下载。",
+  "acquisition.recovery.reason.RECOVERY_PREPARED_DOWNLOAD_REVALIDATED": "从已转存的副本重试原下载。仅复用已校验的本地文件，无需再次转存。",
   "acquisition.recovery.reason.RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED": "原文件下载能力已重新确认，且原任务没有已下载文件；确认后只重试原下载，不新建任务或重复转存。",
   "acquisition.recovery.reason.RECOVERY_SOURCE_STILL_BLOCKED": "已重新检查，当前来源仍未具备下载条件；可按上方原因处理后再次诊断。看见文件列表并不代表可以下载原文件。",
   "acquisition.recovery.reason.RECOVERY_DOWNLOAD_HAS_OUTPUT": "原任务已有文件、进度或产物记录，暂不自动重试，避免覆盖或重复下载。",

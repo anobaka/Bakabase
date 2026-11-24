@@ -141,6 +141,14 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
             ? GetRequiredService<CloudDownloadOwnedCopyService>() : null;
         async Task<CloudDownloadResult> Download(CloudDownloadRequest prepared, CancellationToken token)
         {
+            if (task.HasPreparedRetry())
+            {
+                if (provider is not ICloudPreparedDownloadRetryProvider retry || !task.TryConsumePreparedRetry(prepared.OperationId))
+                    throw new InvalidOperationException("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
+                // The saved copy is already pinned. Never prepare, restore or adopt it as
+                // owned here; normal result registration below may finish an existing receipt.
+                return await retry.RetryPreparedDownloadAsync(prepared, ReportProgress, token);
+            }
             if (ownedCopies != null)
                 await ownedCopies.PrepareAsync(task.Id, prepared, (ICloudOwnedCopyProvider)provider, token);
             return await download(prepared, ReportProgress, token);

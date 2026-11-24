@@ -120,6 +120,55 @@ public sealed class CloudDownloadOwnedCopyTests
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Conditional_native_retry_reads_the_saved_copy_once_and_only_finishes_existing_ownership(bool enrolled)
+    {
+        if (enrolled) await Prepare();
+        _provider.DownloadedFile = _file;
+        _task.Status = DownloadTaskDbModelStatus.Failed;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        using var start = _services.CreateScope();
+        var downloads = start.ServiceProvider.GetRequiredService<DownloadTaskService>();
+        var finishPayload = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _provider.FinishPreparedPayload = finishPayload.Task;
+        try
+        {
+            var response = await downloads.StartConditionally(_task.Id, _ => Task.CompletedTask, default,
+                _ => Task.CompletedTask, _request.OperationId);
+            Assert.AreEqual(0, response.Code, response.Message);
+        }
+        finally { finishPayload.TrySetResult(); }
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        while (!await _db.DownloadTasks.AsNoTracking().AnyAsync(r => r.Id == _task.Id && r.Status == DownloadTaskDbModelStatus.Complete, timeout.Token))
+            await Task.Delay(25, timeout.Token);
+        var view = await _copies.GetAsync(_task.Id, timeout.Token);
+        while (enrolled && view.Status == "waitingDownload")
+        {
+            await Task.Delay(25, timeout.Token);
+            view = await _copies.GetAsync(_task.Id, timeout.Token);
+        }
+        Assert.AreEqual(1, _provider.PreparedRetries);
+        Assert.AreEqual(enrolled ? 1 : 0, _provider.PrepareCalls);
+        Assert.AreEqual(enrolled ? "pending" : "notApplicable", view.Status);
+        Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+        Assert.AreEqual(1, await _db.DownloadResults.CountAsync());
+    }
+
+    [TestMethod]
+    public void Native_prepared_permission_is_bound_to_one_operation_on_one_worker_instance()
+    {
+        var task = new DownloadTask();
+        task.BindPreparedRetry("original");
+        Assert.IsFalse(task.TryConsumePreparedRetry("different"));
+        Assert.IsTrue(task.TryConsumePreparedRetry("original"));
+        Assert.IsFalse(task.TryConsumePreparedRetry("original"));
+        Assert.IsTrue(task.HasPreparedRetry(), "A second attempt cannot fall back to a new preparation.");
+        Assert.IsFalse(new DownloadTask().HasPreparedRetry());
+    }
+
+    [TestMethod]
     public async Task OptOutAndRemoteInputsNeverBecomeCleanupCandidates()
     {
         _provider.OptIn = false;
@@ -220,12 +269,12 @@ public sealed class CloudDownloadOwnedCopyTests
         return result;
     }
 
-    private sealed class OwnedProvider : ICloudDownloadProvider, ICloudOwnedCopyProvider
+    private sealed class OwnedProvider : ICloudDownloadProvider, ICloudOwnedCopyProvider, ICloudPreparedDownloadRetryProvider
     {
         public string ProviderId => "pikpak";
         public string MethodId => "pikpak.share";
         internal bool OptIn = true, ThrowOnRelease;
-        internal int PrepareCalls, ReleaseCalls;
+        internal int PrepareCalls, ReleaseCalls, PreparedRetries;
         internal CloudVerifiedLocalDownload? Verified;
         internal string? DownloadedFile;
         internal CloudOwnedCopyRelease Result = new("trashed");
@@ -235,6 +284,16 @@ public sealed class CloudDownloadOwnedCopyTests
             if (DownloadedFile == null) throw new AssertFailedException("Releasing a cloud copy cannot run a download.");
             Assert.AreEqual(1, PrepareCalls);
             return Task.FromResult(new CloudDownloadResult([DownloadedFile]));
+        }
+        public Task<CloudReadiness> CheckPreparedDownloadRetryAsync(CloudDownloadRequest request, CancellationToken ct) =>
+            Task.FromResult(new CloudReadiness(true));
+        internal Task FinishPreparedPayload = Task.CompletedTask;
+        public async Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request,
+            Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
+        {
+            PreparedRetries++;
+            await FinishPreparedPayload.WaitAsync(ct);
+            return new CloudDownloadResult([DownloadedFile!]);
         }
         public Task<bool> IsOwnedCopyEnabledAsync(CloudDownloadRequest request, CancellationToken ct) => Task.FromResult(OptIn);
         public Task<CloudOwnedCopyReceipt?> PrepareOwnedCopyAsync(CloudDownloadRequest request, CancellationToken ct)

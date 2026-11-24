@@ -140,9 +140,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         /// holding the same action lock used by editing, stopping and starting that task. Network
         /// probes belong before this call; a failed guard must leave task status and files unchanged.</summary>
         public Task<BaseResponse> StartConditionally(int id, Func<CancellationToken, Task> validate,
-            CancellationToken ct = default, Func<CancellationToken, Task>? validateUnderOwnerLease = null) => DownloaderManager.WithTaskActionLock(id, async () =>
+            CancellationToken ct = default, Func<CancellationToken, Task>? validateUnderOwnerLease = null,
+            string? preparedRetryOperationId = null) => DownloaderManager.WithTaskActionLock(id, async () =>
         {
             ct.ThrowIfCancellationRequested();
+            if (preparedRetryOperationId != null && validateUnderOwnerLease == null)
+                throw new ArgumentException("A prepared download retry needs a final owner check.");
             await validate(ct);
             var db = GetRequiredService<BakabaseDbContext>();
             var before = await db.DownloadTasks.AsNoTracking().SingleOrDefaultAsync(t => t.Id == id, ct);
@@ -156,7 +159,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             {
                 var result = await StartCore(t => t.Id == id, DownloadTaskActionOnConflict.Ignore,
                     targeted: true, taskActionLockHeld: true, validateUnderOwnerLease == null ? null : ValidateOwner,
-                    preserveMountFailure: true);
+                    preserveMountFailure: true, preparedRetryOperationId: preparedRetryOperationId);
                 if (validateUnderOwnerLease != null && result.Code == 0 &&
                     DownloaderManager[id]?.IsOccupyingDownloadTaskSource() != true &&
                     !await db.DownloadTasks.AsNoTracking().AnyAsync(t => t.Id == id && t.Status == DownloadTaskDbModelStatus.Complete, ct))
@@ -181,7 +184,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
         private async Task<BaseResponse> StartCore(Expression<Func<DownloadTaskDbModel, bool>>? exp,
             DownloadTaskActionOnConflict actionOnConflict, bool targeted, bool taskActionLockHeld,
-            Func<Task>? validateUnderOwnerLease = null, bool preserveMountFailure = false)
+            Func<Task>? validateUnderOwnerLease = null, bool preserveMountFailure = false, string? preparedRetryOperationId = null)
         {
             var tasks = await GetAll(exp);
             // Authorization also covers completed tasks: a targeted retry may download them again.
@@ -218,7 +221,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             }
 
             var rsp = await TryStartAllTasksCore(DownloadTaskStartMode.ManualStart, tasks.Select(a => a.Id).ToArray(),
-                actionOnConflict, skipSatisfiedTasks: !targeted, taskActionLockHeld, validateUnderOwnerLease);
+                actionOnConflict, skipSatisfiedTasks: !targeted, taskActionLockHeld, validateUnderOwnerLease, preparedRetryOperationId);
 
             if (rsp.IsSuccess())
                 foreach (var lifecycle in GetRequiredService<IEnumerable<IDownloadTaskExecutionLifecycle>>())
@@ -475,7 +478,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
         private async Task<BaseResponse> TryStartAllTasksCore(DownloadTaskStartMode mode, int[]? ids,
             DownloadTaskActionOnConflict actionOnConflict, bool skipSatisfiedTasks, bool taskActionLockHeld,
-            Func<Task>? validateUnderOwnerLease = null)
+            Func<Task>? validateUnderOwnerLease = null, string? preparedRetryOperationId = null)
         {
             var tasks = (await (ids == null ? GetAll() : GetByKeys(ids))).ToDictionary(a => a.ToDomainModel(DownloaderManager),
                 a => a);
@@ -556,7 +559,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     continue;
                 var stopConflicts = !sourceAlreadyStarted && actionOnConflict == DownloadTaskActionOnConflict.StopOthers;
                 var rsp = taskActionLockHeld
-                    ? await DownloaderManager.StartUnderTaskActionLock(tt, stopConflicts, validateUnderOwnerLease)
+                    ? await DownloaderManager.StartUnderTaskActionLock(tt, stopConflicts, validateUnderOwnerLease, preparedRetryOperationId)
                     : await DownloaderManager.Start(tt, stopConflicts,
                         startAutomatically: mode == DownloadTaskStartMode.AutoStart);
 

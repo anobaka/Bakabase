@@ -592,8 +592,13 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             }
             var incomplete = estimate.Partial || estimate.Bytes == null || working.Length > 0;
             var canOverrideStorage = offered == null && (category == "localProcessing" || diagnosis.PreparedWorkset != null || AcquisitionContinuationReserve.IsDownload(run));
-            var readyReason = diagnosis.Row.ReasonCode is AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired or
-                "RECOVERY_TRANSFER_RECOVERY_READY" or "RECOVERY_COMPLETED_DOWNLOAD_READY" or "RECOVERY_PREPARED_PLAN_READY" ? diagnosis.Row.ReasonCode : "LOCAL_BATCH_READY";
+            // A fast preview can already identify a saved cloud copy from local receipts.
+            // Bind that exact selection before the worker's remote check so loss of the
+            // copy can never turn this confirmation into a fresh transfer.
+            if (diagnosis.PreparedDownloadReason != null)
+                storageStamp = Hash(new {Storage = storageStamp, PreparedDownload = diagnosis.SignalJson});
+            var readyReason = diagnosis.PreparedDownloadReason ?? (diagnosis.Row.ReasonCode is AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired or
+                "RECOVERY_TRANSFER_RECOVERY_READY" or "RECOVERY_COMPLETED_DOWNLOAD_READY" or "RECOVERY_PREPARED_PLAN_READY" ? diagnosis.Row.ReasonCode : "LOCAL_BATCH_READY");
             return new(new(task.Id, task.Title, run?.Id, true, readyReason, estimate.Bytes, incomplete, scope,
                 working.FirstOrDefault(), delivery.FirstOrDefault(), category, CanOverrideStorage: canOverrideStorage,
                 CurrentStepKind: diagnosis.Row.CurrentStepKind, RecoveryAction: diagnosis.TransferRetryTargets.Count > 0

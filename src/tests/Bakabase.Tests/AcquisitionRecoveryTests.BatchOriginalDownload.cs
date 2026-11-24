@@ -17,14 +17,23 @@ namespace Bakabase.Tests;
 public sealed partial class AcquisitionRecoveryTests
 {
     [DataTestMethod]
-    [DataRow("automatic", true, false)]
-    [DataRow("automatic", false, false)]
-    [DataRow("localOnly", true, false)]
-    [DataRow("automatic", true, true)]
-    public async Task Batch_changed_storage_defaults_do_not_require_completed_files_to_resume_original_download(string mode, bool available, bool retainedBytes)
+    [DataRow("automatic", true, false, false, false)]
+    [DataRow("automatic", false, false, false, false)]
+    [DataRow("localOnly", true, false, false, false)]
+    [DataRow("automatic", true, true, false, false)]
+    [DataRow("automatic", true, false, true, false)]
+    [DataRow("automatic", true, false, true, true)]
+    public async Task Batch_changed_storage_defaults_do_not_require_completed_files_to_resume_original_download(string mode, bool available,
+        bool retainedBytes, bool preparedCopy, bool loseCopy)
     {
         var (task, run, workset, download, _, provider, _) = await SeedRecoverableProvider();
         var storage = new UserStoragePolicy(false);
+        if (preparedCopy)
+        {
+            provider = new PreparedRecoveryProvider();
+            var downloads = new CloudDownloadRecoveryService(_db, [provider], storage);
+            _diagnostics = new(_db, storage, _services.GetRequiredService<IArtifactOperationStore>(), downloads: downloads);
+        }
         var options = new TestBOptionsManager<AcquisitionOptions>(new()
         {ProcessingWorkspaceDirectory = Directory.CreateDirectory(Path.Combine(_root, "current-work")).FullName,
             DeliveryRootDirectory = Directory.CreateDirectory(Path.Combine(_root, "current-delivery")).FullName});
@@ -63,6 +72,7 @@ public sealed partial class AcquisitionRecoveryTests
         }
         var preview = await service.PreviewAsync(new([task.Id], mode));
         var row = preview.Rows.Single();
+        if (preparedCopy) Assert.AreEqual("RECOVERY_PREPARED_DOWNLOAD_REVALIDATED", row.ReasonCode);
         Assert.AreEqual(mode == "automatic" && !retainedBytes, row.CanQueue, row.ReasonCode);
         if (retainedBytes)
         {
@@ -80,8 +90,9 @@ public sealed partial class AcquisitionRecoveryTests
         CollectionAssert.AreEqual(new[] {download.DownloadPath}, preview.Volumes.SelectMany(v => v.Paths).ToArray());
         var batch = await service.ApplyAsync(new(preview.PreviewToken, [task.Id]));
         provider.Available = available;
+        if (loseCopy) ((PreparedRecoveryProvider)provider).Prepared = false;
         await service.TickAsync();
-        Assert.AreEqual(available ? 1 : 0, host.Calls, (await service.GetAsync(batch.BatchId)).Rows.Single().ReasonCode);
+        Assert.AreEqual(available && !loseCopy ? 1 : 0, host.Calls, (await service.GetAsync(batch.BatchId)).Rows.Single().ReasonCode);
         Assert.IsTrue(provider.Checks > 0);
         if (!available)
         {
@@ -89,7 +100,7 @@ public sealed partial class AcquisitionRecoveryTests
             Assert.AreEqual("RECOVERY_SOURCE_STILL_BLOCKED", expected.Row.ReasonCode);
             Assert.AreEqual(expected.Row.CurrentProblemCode, (await service.GetAsync(batch.BatchId)).Rows.Single().ReasonCode);
         }
-        if (available)
+        if (available && !loseCopy)
         {
             var signal = JsonSerializer.Deserialize<CloudSelectionSignal>(host.Signal!, WorkflowJson.Options)!;
             Assert.IsTrue(signal.ObserveExistingOnly == true && signal.RevalidateExistingDownloads == true);

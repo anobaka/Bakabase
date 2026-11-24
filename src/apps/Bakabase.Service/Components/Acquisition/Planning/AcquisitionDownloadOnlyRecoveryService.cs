@@ -23,14 +23,14 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 public interface IAcquisitionOriginalDownloadStarter
 {
     Task<bool> StartAsync(int id, Func<CancellationToken, Task> validate,
-        Func<CancellationToken, Task> validateUnderOwnerLease, CancellationToken ct);
+        Func<CancellationToken, Task> validateUnderOwnerLease, CancellationToken ct, string? preparedRetryOperationId = null);
 }
 
 public sealed class AcquisitionOriginalDownloadStarter(DownloadTaskService downloads) : IAcquisitionOriginalDownloadStarter
 {
     public async Task<bool> StartAsync(int id, Func<CancellationToken, Task> validate,
-        Func<CancellationToken, Task> validateUnderOwnerLease, CancellationToken ct) =>
-        (await downloads.StartConditionally(id, validate, ct, validateUnderOwnerLease)).Code == 0;
+        Func<CancellationToken, Task> validateUnderOwnerLease, CancellationToken ct, string? preparedRetryOperationId = null) =>
+        (await downloads.StartConditionally(id, validate, ct, validateUnderOwnerLease, preparedRetryOperationId)).Code == 0;
 }
 
 public interface IAcquisitionDownloadOnlyRecoveryService
@@ -56,7 +56,7 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
             var matchesMode = verificationOnly
                 ? signal is {VerifyExistingFilesOnly: true, RevalidateExistingDownloads: not true}
                 : signal is {RevalidateExistingDownloads: true, VerifyExistingFilesOnly: not true};
-            if (signal?.ObserveExistingOnly != true || !matchesMode ||
+            if (signal?.ObserveExistingOnly != true || !matchesMode || !signal.HasValidPreparedRetrySelection() ||
                 signal.ResumeTargetIds is not {Count: > 0 and <= 100} ids || ids.Distinct().Count() != ids.Count || workset == null ||
                 signal.SourceIds.Count > 0 || signal.SourceMethods.Count > 0 || signal.SourceAccounts.Count > 0 ||
                 signal.SourceCredentialCorrections.Count > 0 || signal.AccountId != null || signal.OutputDirectory != null) return null;
@@ -75,6 +75,7 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
         if (Targets(run, signalJson, verificationOnly: true) is { } verificationTargets)
             return await VerifyOnlyAsync(taskId, run.Id, workset.OutputDirectory, verificationTargets, validateOwner, ct);
         var targets = Targets(run, signalJson) ?? throw new InvalidOperationException("RECOVERY_DOWNLOAD_SCOPE_UNAVAILABLE");
+        var confirmedPrepared = JsonSerializer.Deserialize<CloudSelectionSignal>(signalJson, WorkflowJson.Options)!.PreparedDownloadRetries;
         var started = new List<int>(); var unknown = new List<int>(); string? reason = null;
         foreach (var target in targets)
         {
@@ -90,6 +91,8 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             { reason = "RECOVERY_CHECK_INCOMPLETE"; break; }
             if (!check.CanRetry || check.VerifyExistingOnly) {reason = check.ReasonCode; break;}
+            if (confirmedPrepared?.GetValueOrDefault(target.Id) != check.PreparedRetry)
+            {reason = "RECOVERY_DOWNLOAD_IDENTITY_CHANGED"; break;}
             try
             {
                 var id = target.DownloadTaskId!.Value;
@@ -104,6 +107,8 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
                         var local = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, false, token,
                             includeStopped: true, requireEquivalentGroup: grouped);
                         if (!local.Candidate || local.VerifyExistingOnly) throw new InvalidOperationException(local.ReasonCode);
+                        if (local.PreparedRetry != check.PreparedRetry)
+                            throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
                         await CheckCapacity(id, target, workset, token);
                     }
                     finally {gate.Release();}
@@ -112,12 +117,14 @@ public sealed class AcquisitionDownloadOnlyRecoveryService(BakabaseDbContext db,
                 {
                     // Do not recursively take the run gate. No callback is retained by a worker.
                     await validateOwner(token);
+                    if (check.PreparedRetry is { } prepared)
+                        await recovery.ValidatePreparedAdmissionAsync(run.Id, target, workset.OutputDirectory, prepared, token);
                     if (grouped && (await recovery.ReadEquivalentGroupAsync(run.Id, target, workset.OutputDirectory, token))?.Owner.Id != target.Id)
                         throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
                     await CheckCapacity(id, target, workset, token);
                 }
                 bool accepted;
-                try { accepted = await starter.StartAsync(id, Validate, ValidateOwnerLease, ct); }
+                try { accepted = await starter.StartAsync(id, Validate, ValidateOwnerLease, ct, check.PreparedRetry?.OperationId); }
                 catch (Exception error) when (error is InvalidOperationException or IOException or UnauthorizedAccessException or OperationCanceledException)
                 {
                     var state = await db.DownloadTasks.AsNoTracking().SingleOrDefaultAsync(d => d.Id == id, CancellationToken.None);

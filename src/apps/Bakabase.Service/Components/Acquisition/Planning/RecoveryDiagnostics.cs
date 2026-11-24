@@ -28,6 +28,7 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 
 public sealed record AcquisitionRecoveryDiagnosis(AcquisitionRecoveryRow Row, string SignalJson = "{}")
 {
+    internal string? PreparedDownloadReason { get; init; }
     internal DownloadWorkset? PreparedWorkset { get; init; }
     // A suspended attempt can have pinned writes even without a workspace policy on its old plan.
     internal IReadOnlyDictionary<int, CompletedDownloadPlacement> CompletedDownloads { get; init; } = new Dictionary<int, CompletedDownloadPlacement>();
@@ -240,11 +241,21 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
                         includeStoppedDownloads, includeStoppedForVerification: includeStoppedVerification && task.WorkflowRunId == run.Id,
                         requireEquivalentGroup: grouped)));
                 }
-                if (!verifyFiles && checkedTargets.FirstOrDefault(t => t.Check.Candidate).Check is { } candidate)
+                AcquisitionRecoveryDiagnosis OriginalRetry(List<(string Id, CloudDownloadRecoveryCheck Check)> targets, bool checkedRemote)
                 {
-                    problem = candidate.FailureCode ?? problem;
-                    return Result("RECOVERY_RECHECK_SOURCE");
+                    problem = targets[0].Check.FailureCode ?? problem;
+                    var prepared = targets.Where(t => t.Check.PreparedRetry != null)
+                        .ToDictionary(t => t.Id, t => t.Check.PreparedRetry!, StringComparer.Ordinal);
+                    if (!checkedRemote && prepared.Count == 0) return Result("RECOVERY_RECHECK_SOURCE");
+                    var preparedReason = prepared.Count == 0 ? null : prepared.Count == targets.Count
+                        ? "RECOVERY_PREPARED_DOWNLOAD_REVALIDATED" : "RECOVERY_MIXED_DOWNLOADS_REVALIDATED";
+                    var signal = new CloudSelectionSignal {ObserveExistingOnly = true, ResumeTargetIds = targets.Select(t => t.Id).ToList(),
+                        RevalidateExistingDownloads = true, PreparedDownloadRetries = prepared.Count > 0 ? prepared : null};
+                    return Result(checkedRemote ? preparedReason ?? "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED" : "RECOVERY_RECHECK_SOURCE",
+                        checkedRemote, signal: JsonSerializer.Serialize(signal, WorkflowJson.Options)) with {PreparedDownloadReason = preparedReason};
                 }
+                var candidates = checkedTargets.Where(t => t.Check.Candidate).ToList();
+                if (!verifyFiles && candidates.Count > 0) return OriginalRetry(candidates, false);
                 // The latest workflow message can describe a failed recovery probe.
                 // Report the native failure on which this recovery action depends.
                 var verifyOnly = checkedTargets.Where(t => t.Check.CanRetry && t.Check.VerifyExistingOnly).ToList();
@@ -261,12 +272,7 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
                         with {InitialDownloadDirectories = directories};
                 }
                 var ready = checkedTargets.Where(t => t.Check.CanRetry && !t.Check.VerifyExistingOnly).ToList();
-                if (ready.Count > 0)
-                {
-                    problem = ready[0].Check.FailureCode ?? problem;
-                    return Result("RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED", true, signal: JsonSerializer.Serialize(new CloudSelectionSignal
-                        {ObserveExistingOnly = true, ResumeTargetIds = ready.Select(t => t.Id).ToList(), RevalidateExistingDownloads = true}, WorkflowJson.Options));
-                }
+                if (ready.Count > 0) return OriginalRetry(ready, true);
                 var checkedFailure = checkedTargets.FirstOrDefault(t => t.Check.FailureCode != null).Check;
                 if (checkedFailure != null)
                 {
