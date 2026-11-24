@@ -10,6 +10,8 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.FileProcessing;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +21,8 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 internal sealed record AcquisitionManualDownloadCaptureReceipt(int Version, int TaskId, string PartId,
     int Revision, string SourceId, string BindingId, string Directory, string Fingerprint,
     IReadOnlyList<OwnedWorkspaceDirectory> ExcludedWorkspaces);
+
+internal sealed record AcquisitionReceivedDownloadCleanup(ArtifactStoragePolicy? Policy);
 
 internal static partial class AcquisitionCurrentDirectoryFiles
 {
@@ -65,6 +69,44 @@ internal static partial class AcquisitionCurrentDirectoryFiles
         artifact.Kind == Kind && !artifact.Managed && artifact.MetadataJson != null &&
         JsonSerializer.Deserialize<AcquisitionManualDownloadCaptureReceipt>(artifact.MetadataJson, Json) is
             {Version: ManualDownloadReceiptVersion} receipt ? receipt : null;
+
+    internal static bool IsReceivedDownload(ArtifactRecord artifact)
+    {
+        try { return ManualDownloadReceipt(artifact) != null; }
+        catch (JsonException) { return false; }
+    }
+
+    internal static async Task<AcquisitionReceivedDownloadCleanup?> ReadReceivedDownloadCleanupAsync(BakabaseDbContext db,
+        IArtifactOperationStore store, FileProcessingWorkspaceResolver? workspaces, ArtifactRecord artifact,
+        ArtifactRecord output, IReadOnlyList<int> owners, CancellationToken ct)
+    {
+        try
+        {
+            if (workspaces == null || ManualDownloadReceipt(artifact) is not { } receipt ||
+                ArtifactManifestFiles.PathComparer.Equals(artifact.RootDirectory, output.RootDirectory) ||
+                ArtifactCleanupPathReferences.StrictlyUnder(output.RootDirectory, artifact.RootDirectory) ||
+                ArtifactCleanupPathReferences.StrictlyUnder(artifact.RootDirectory, output.RootDirectory)) return null;
+            var task = await db.AcquisitionTasks.AsNoTracking().Where(t => t.Id == receipt.TaskId && t.DeletedAt == null)
+                .Select(t => new {t.Status, t.WorkflowRunId, t.PlanJson}).SingleOrDefaultAsync(ct);
+            if (task is not {Status: AcquisitionStatus.Completed, WorkflowRunId: { } runId, PlanJson: not null} ||
+                !owners.Contains(runId) || !await db.WorkflowRuns.AnyAsync(r => r.Id == runId &&
+                    r.Status == WorkflowRunStatus.Success && r.FailedItemCount == 0 && r.PendingSignalJson == null, ct)) return null;
+            var plan = JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson, Json);
+            if (plan?.StageDirectories is not { } stages || stages.TaskId != receipt.TaskId || !ManualDownloadBindingMatches(plan, receipt) ||
+                plan.Parts.SingleOrDefault(p => p.Id == receipt.PartId) is not {ContinueFrom: { } input} part ||
+                part.SelectedSourceId != receipt.SourceId ||
+                input != new AcquisitionPlanArtifactInput(receipt.TaskId, 0, artifact.Id, artifact.OperationId, artifact.Fingerprint)
+                    {ManualDownload = true}) return null;
+            AcquisitionStageDirectoryResolver.Validate(stages, plan);
+            if (Entry(stages, receipt.PartId, "download")?.Allocation is not {} allocation ||
+                !await workspaces.HasScopedDirectoryAsync(allocation, ct) ||
+                !await db.ArtifactOperationBindings.AsNoTracking().AnyAsync(b => b.OwnerKind == "workflow" &&
+                    b.OwnerId == runId.ToString() && b.Slot == part.Id + ":artifact.publish" && b.OperationId == output.OperationId, ct) ||
+                !await IsManualDownloadOwnedAsync(db, store, artifact, receipt, receipt.TaskId, runId, receipt.PartId, ct)) return null;
+            return new(plan.StoragePolicy == null ? null : ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy));
+        }
+        catch (Exception error) when (error is JsonException or ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException) { return null; }
+    }
 
     // An interrupted first reception may have recorded a non-managed artifact but not its
     // plan revision. It can be recognized only in its own matching task/part allocation.

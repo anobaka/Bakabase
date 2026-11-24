@@ -14,6 +14,7 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -256,8 +257,9 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
             // coverage for older ancestors; no input has to be reacquired to prove the graph.
             // Siblings are a separate candidate list, never fabricated ancestry. In particular
             // a raw parent remains protected by any still-retained sibling child.
-            foreach (var registered in DescendantsFirst(siblings.Concat(graph.Values).Where(a => a.Id != output.Id && a.Managed &&
-                         a.Kind is "processedFiles" or "download")))
+            foreach (var registered in DescendantsFirst(siblings.Concat(graph.Values).Where(a => a.Id != output.Id &&
+                         (a.Managed && a.Kind is "processedFiles" or "download" ||
+                          authorization?.Consent.DeliveryAccepted != true && AcquisitionCurrentDirectoryFiles.IsReceivedDownload(a)))))
             {
                 if (!included.Add(registered.Id)) continue;
                 var source = registered;
@@ -310,6 +312,12 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
                     // Resuming the same receipt can retire a registration with no physical payload left.
                     // The quarantine operation independently rechecks the whole signed manifest on apply.
                     var remaining = await quarantine.PendingDeletionSizeAsync(pending, source.Manifest, ct);
+                    if (remaining == null) { reason = "SelectionChanged"; fingerprint = null; }
+                    (count, bytes) = remaining ?? (0, 0L);
+                }
+                else if (reason == null && !source.Managed)
+                {
+                    var remaining = ArchiveQuarantineService.PreviewMovedSourceSize(source, new HashSet<string>(StringComparer.Ordinal), ct);
                     if (remaining == null) { reason = "SelectionChanged"; fingerprint = null; }
                     (count, bytes) = remaining ?? (0, 0L);
                 }
@@ -388,6 +396,9 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
             Files = ArtifactManifestFiles.ResolveFiles(expected.ResultDirectory, source.Manifest)};
         var reason = await IneligibleAsync(referenceSource, output, graph, ownerRunIds, ct, authorization);
         if (reason != null) return new(source.Id, false, reason);
+        var received = !source.Managed && AcquisitionCurrentDirectoryFiles.ManualDownloadReceipt(source) is {} receipt
+            ? new ArchiveQuarantineService.ReceivedDownloadRetirement(receipt.PartId, ownerRunIds)
+            : null;
         var result = await quarantine.DeleteManagedAncestorAfterDeliveryAsync(source.Id, [output.Id], async (current, token) =>
         {
             var latestOutput = await store.GetArtifactAsync(output.Id, token);
@@ -403,7 +414,7 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
                 await IneligibleAsync(original, latestOutput, latestGraph, ownerRunIds, token, authorization) == null;
         }, ct, authorization, async (original, token) =>
         {
-            if (workspaces == null || await Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessingStageCommit
+            if (received != null || workspaces == null || await Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessingStageCommit
                     .ReadMovedEntriesAsync(db, store, workspaces, original, token) is not {} moved) return new HashSet<string>(StringComparer.Ordinal);
             var paths = moved.RelativePaths.ToHashSet(StringComparer.Ordinal);
             if ((authorization == null || expected.ExpectedMovedFiles is {Count: > 0}) && original.Fingerprint == output.Fingerprint)
@@ -412,7 +423,7 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
         },
             async token => await store.GetArtifactAsync(output.Id, token) is {} latest
                 ? await ReadReleasedStageViewsAsync(latest, await AncestorsAsync(latest, token), ownerRunIds, token) : [],
-            expected.ExpectedMovedFiles);
+            expected.ExpectedMovedFiles, received);
         return new(source.Id, result.Completed, result.Completed ? null : result.Message ?? result.Status,
             result.RemovedFiles, result.RemovedBytes);
     }
@@ -435,11 +446,18 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
     {
         if (owners.Count == 0 || owners.Any(i => i <= 0)) return "UnboundArtifact";
         var allowed = owners.Distinct().Select(i => i.ToString(CultureInfo.InvariantCulture)).ToArray();
-        if (!source.Managed || source.Kind is not ("processedFiles" or "download")) return "NotManagedInput";
         if (source.State == ArtifactLocationState.Retired) return "AlreadyRetired";
         if (source.State is not (ArtifactLocationState.Available or ArtifactLocationState.Quarantined)) return "InputUnavailable";
+        AcquisitionReceivedDownloadCleanup? received = null;
+        if (!source.Managed || source.Kind is not ("processedFiles" or "download"))
+        {
+            if (authorization?.Consent.DeliveryAccepted == true || !graph.ContainsKey(source.Id) ||
+                (received = await AcquisitionCurrentDirectoryFiles.ReadReceivedDownloadCleanupAsync(db, store, workspaces, source, output, owners, ct)) == null)
+                return "NotManagedInput";
+        }
         if (authorization != null && !await authorization.MatchesAsync(output, ct)) return "DeliveryAcceptanceChanged";
-        if (authorization == null && !PolicyAllows(source, graph)) return "RetentionPolicyKeep";
+        if (authorization == null && (received != null && received.Policy?.SourceCleanup != "delete" ||
+            !PolicyAllows(source, graph, allowDirectPublication: received != null))) return "RetentionPolicyKeep";
         var previewInactive = authorization?.PreviewSupersededRuns ?? [];
         if (await db.Set<WorkflowRunDbModel>().CountAsync(r => owners.Contains(r.Id) &&
                 (r.Status != WorkflowRunStatus.Pending && r.Status != WorkflowRunStatus.Running && r.Status != WorkflowRunStatus.Waiting ||
@@ -451,8 +469,10 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
             bindings.Any(b => b.OwnerKind != "workflow" || !allowed.Contains(b.OwnerId))) return "SharedOwner";
         var operation = await store.GetOperationAsync(source.OperationId, ct);
         var publication = await store.GetOperationAsync(output.OperationId, ct);
+        var expectedOperation = received != null ? AcquisitionCurrentDirectoryFiles.OperationKind :
+            source.Kind == "download" ? "download" : "files.process";
         if (operation?.State != ArtifactOperationState.Completed || operation.OutputArtifactId != source.Id ||
-            operation.Kind != (source.Kind == "download" ? "download" : "files.process") ||
+            operation.Kind != expectedOperation ||
             publication?.State != ArtifactOperationState.Completed || publication.Kind != "files.publish" ||
             publication.OutputArtifactId != output.Id) return "OperationNotCompleted";
         if (await (authorization?.HasActiveConsumersAsync(source.OperationId, ct) ?? store.HasActiveConsumersAsync(source.OperationId, ct))) return "ActiveConsumer";
@@ -528,7 +548,7 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
         return true;
     }
 
-    private static bool PolicyAllows(ArtifactRecord source, IReadOnlyDictionary<string, ArtifactRecord> graph)
+    private static bool PolicyAllows(ArtifactRecord source, IReadOnlyDictionary<string, ArtifactRecord> graph, bool allowDirectPublication)
     {
         static FileArtifactRetentionMetadata? Metadata(ArtifactRecord artifact) =>
             artifact.MetadataJson != null && FileArtifactRetentionMetadata.TryRead(artifact.MetadataJson, out var metadata) ? metadata : null;
@@ -554,7 +574,7 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
         // A raw input is retained unless every direct processing consumer explicitly opted
         // into deletion. Unknown modules and publications never authorize source deletion.
         // Nested overrides are retained too: coverage alone cannot cancel their explicit keep.
-        return children.Length > 0 && children.All(a => a.Kind == "processedFiles") &&
+        return children.Length > 0 && children.All(a => a.Kind == "processedFiles" || allowDirectPublication && a.Kind == "publishedFiles") &&
             graph.Values.Where(a => a.Kind == "processedFiles").All(a => Metadata(a) is {} metadata &&
                 (!a.ParentArtifactIds.Contains(source.Id) || metadata.StoragePolicy?.SourceCleanup == "delete") &&
                 StepsAllow(metadata, false));

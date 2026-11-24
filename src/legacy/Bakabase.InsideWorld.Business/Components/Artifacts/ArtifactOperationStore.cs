@@ -466,13 +466,36 @@ public sealed class ArtifactOperationStore : IArtifactOperationStore
         string downloadId, int retainedByRunId, CancellationToken ct) =>
         TryQuarantineCoreAsync(artifactId, fingerprint, downloadId, retainedByRunId, ct);
 
-    private async Task<bool> TryQuarantineCoreAsync(string artifactId, string? fingerprint, string? downloadId, int retainedByRunId, CancellationToken ct)
+    private sealed record ReceivedDownload(string OperationId, string Fingerprint, string PartId, IReadOnlyList<int> OwnerRunIds);
+
+    public Task<bool> TryQuarantineReceivedDownloadAsync(string artifactId, string operationId, string fingerprint,
+        string partId, IReadOnlyList<int> ownerRunIds, CancellationToken ct) =>
+        TryQuarantineCoreAsync(artifactId, null, null, 0, ct, new(operationId, fingerprint, partId, ownerRunIds));
+
+    private async Task<bool> TryQuarantineCoreAsync(string artifactId, string? fingerprint, string? downloadId,
+        int retainedByRunId, CancellationToken ct, ReceivedDownload? received = null)
     {
         await using var mutation = await ArtifactMaintenanceGate.For(_appData()).EnterMutationAsync(ct);
         await using var transaction = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var artifacts = await FileReferences().ToListAsync(ct);
         var target = artifacts.SingleOrDefault(a => a.Id == artifactId);
-        if (target == null || target.State != ArtifactLocationState.Available || !target.Managed) return false;
+        if (target == null || target.State != ArtifactLocationState.Available || !target.Managed && received == null) return false;
+        if (received != null)
+        {
+            var owners = received.OwnerRunIds.Select(id => id.ToString(System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+            if (target.Managed || target.OperationId != received.OperationId || target.Fingerprint != received.Fingerprint ||
+                !await _db.Artifacts.AnyAsync(a => a.Id == artifactId && a.Kind == "currentFiles", ct) ||
+                !await _db.ArtifactOperations.AnyAsync(o => o.Id == received.OperationId && o.OutputArtifactId == artifactId &&
+                    o.State == ArtifactOperationState.Completed && o.Kind == "files.captureCurrentDirectory" &&
+                    o.IntentKey == "acquisition.manual-download:" + o.InputFingerprint, ct)) return false;
+            var bindings = await _db.ArtifactOperationBindings.AsNoTracking()
+                .Where(b => b.OperationId == target.OperationId).ToArrayAsync(ct);
+            var continuation = received.PartId + ":artifact.continuation";
+            // Publishing without a transformation binds the same exact input as the processing result.
+            var passthrough = received.PartId + ":process:complete";
+            if (!bindings.Any(b => b.Slot == continuation) || bindings.Any(b => b.OwnerKind != "workflow" ||
+                    !owners.Contains(b.OwnerId) || b.Slot != continuation && b.Slot != passthrough)) return false;
+        }
         var targetPaths = Paths(target).ToHashSet(ArtifactManifestFiles.PathComparer);
         var related = artifacts.Where(a => a.Id == artifactId || Paths(a).Any(targetPaths.Contains)).Select(a => a.Id).ToHashSet();
         var edges = await _db.Set<ArtifactLineageDbModel>().AsNoTracking().ToListAsync(ct);

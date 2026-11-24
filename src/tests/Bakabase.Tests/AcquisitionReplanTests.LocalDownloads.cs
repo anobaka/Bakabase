@@ -21,14 +21,16 @@ namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionReplanTests
 {
-    private async Task<AcquisitionPlanTaskDetail> LegacyManualSource(string name, bool twoGroups = false, bool unknown = false)
+    private async Task<AcquisitionPlanTaskDetail> LegacyManualSource(string name, bool twoGroups = false, bool unknown = false,
+        bool explicitlyKeepFiles = false, FileProcessingPlan? processing = null)
     {
         var directory = Directory.CreateDirectory(Path.Combine(_root, "incoming")).FullName;
         AcquisitionPlanPart Part(string id) => new()
         {
             Id = id, SelectedSourceId = "source-" + id,
             Sources = [new() {Id = "source-" + id, Url = "https://example.test/unsupported/" + id, ProviderId = "unknown"}],
-            Processing = new() {Requirement = unknown ? "unknown" : "notRequired"}
+            Processing = processing ?? new() {Requirement = unknown ? "unknown" : "notRequired"},
+            UseAdaptiveAssessment = explicitlyKeepFiles ? false : null
         };
         var plan = new AcquisitionPlan {Title = name, OutputDirectory = directory, Parts = twoGroups ? [Part("a"), Part("b")] : [Part("a")]};
         var task = await Plans.CreatePreparedPlanAsync(plan, [new("test", "post", name, "1", "0")]);
@@ -83,6 +85,13 @@ public sealed partial class AcquisitionReplanTests
         Assert.AreEqual(1, await Db.Artifacts.CountAsync());
         Assert.IsFalse((await Artifacts.GetArtifactAsync(part.ContinueFrom.ArtifactId))!.Managed);
 
+        var (_, output) = await PublishReceivedFilesAsync(received);
+        Assert.AreEqual(await File.ReadAllTextAsync(input), await File.ReadAllTextAsync(output.PublishedFiles.Single()));
+        Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
+    }
+
+    private async Task<(int RunId, CloudDownloadTarget Output)> PublishReceivedFilesAsync(AcquisitionPlanTaskDetail received)
+    {
         WorkflowRunPlan? snapshot = null;
         DownloadWorkset? workset = null;
         var runner = new ReserveRunHost(async (plan, payload, refs, ct) =>
@@ -99,7 +108,7 @@ public sealed partial class AcquisitionReplanTests
         var plans = new AcquisitionPlanService(Db, [], _services.GetRequiredService<IAcquisitionService>(), runner,
             _services.GetRequiredService<DownloadIntentService>(), _services.GetRequiredService<IUserStoragePolicy>(),
             artifacts: Artifacts, workspaces: _services.GetRequiredService<FileProcessingWorkspaceResolver>());
-        var started = await plans.RunAsync(task.Id, received.Task.PlanRevision, default);
+        var started = await plans.RunAsync(received.Id, received.Task.PlanRevision, default);
         Assert.IsNotNull(started.Task.WorkflowRunId);
         Assert.IsNotNull(snapshot);
         Assert.IsNotNull(workset);
@@ -117,9 +126,150 @@ public sealed partial class AcquisitionReplanTests
         Assert.IsNull(delivered.Suspension, delivered.Suspension?.PromptJson);
         var output = ((DownloadWorkset)delivered.Replacement!).Targets.Single();
         Assert.IsNotNull(output.PublishedArtifactId);
-        Assert.AreEqual(await File.ReadAllTextAsync(input), await File.ReadAllTextAsync(output.PublishedFiles.Single()));
-        Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
         Assert.IsNull(started.CanReceiveLocalDownloads);
+        return (started.Task.WorkflowRunId.Value, output);
+    }
+
+    [DataTestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public async Task Local_download_reclamation_only_removes_the_verified_input_of_a_completed_delivery(bool automaticRemoval)
+    {
+        var task = await LegacyManualSource("Received download to reclaim", explicitlyKeepFiles: true);
+        task = await Plans.UpdateAsync(task.Id, new(task.Task.PlanRevision,
+            StoragePolicy: new() {SourceCleanup = automaticRemoval ? "delete" : "keep"}), default);
+        var prepared = await Plans.PrepareLocalDownloadsAsync(task.Id, new(task.Task.PlanRevision), null, default);
+        var folder = prepared.Parts.Single().Directory!;
+        var input = Path.Combine(folder, "received.txt");
+        const string payload = "verified received file";
+        await File.WriteAllTextAsync(input, payload);
+        var size = new FileInfo(input).Length;
+        var intake = await Plans.PreviewLocalDownloadsAsync(task.Id, new(prepared.Revision), null, default);
+        Assert.IsTrue(intake.CanApply, intake.ReasonCode);
+        var received = await Plans.ApplyLocalDownloadsAsync(task.Id, new(intake.Revision, intake.Token!), null, default);
+        var originalId = received.Plan!.Parts.Single().ContinueFrom!.ArtifactId;
+        var original = (await Artifacts.GetArtifactAsync(originalId))!;
+        Assert.IsFalse(original.Managed);
+        var (runId, output) = await PublishReceivedFilesAsync(received);
+        var publication = (await Artifacts.GetArtifactAsync(output.PublishedArtifactId!))!;
+        CollectionAssert.AreEqual(new[] {originalId}, publication.ParentArtifactIds.ToArray());
+        var deliveredFile = publication.Files.Single();
+        Assert.AreNotEqual(input, deliveredFile);
+        await Db.WorkflowRuns.Where(run => run.Id == runId).ExecuteUpdateAsync(update => update
+            .SetProperty(run => run.Status, WorkflowRunStatus.Success));
+        await Db.AcquisitionTasks.Where(row => row.Id == task.Id).ExecuteUpdateAsync(update => update
+            .SetProperty(row => row.Status, AcquisitionStatus.Completed).SetProperty(row => row.Phase, "completed"));
+        var completed = await Db.AcquisitionTasks.AsNoTracking().SingleAsync(row => row.Id == task.Id);
+        var unrelated = Path.Combine(folder, "user-added.txt");
+        await File.WriteAllTextAsync(unrelated, "independent user file");
+
+        var workspaces = _services.GetRequiredService<FileProcessingWorkspaceResolver>();
+        var maintenance = _services.GetRequiredService<ArtifactWorkspaceMaintenance>();
+        var storage = _services.GetRequiredService<IUserStoragePolicy>();
+        var ancestors = new PublishedArtifactAncestorCleanup(Db, Artifacts,
+            new ArchiveQuarantineService(Artifacts, Path.Combine(_root, "appdata"), storage),
+            workspaces: workspaces, maintenance: maintenance);
+        var previews = new AcquisitionStoragePolicyPreviewStore();
+        Task<AcquisitionWorkspaceCleanupPreview> Preview(bool explicitCleanup, bool preserveOriginal = false) =>
+            Plans.PreviewWorkspaceCleanupAsync(new([task.Id], OverrideRetention: explicitCleanup,
+                PreserveOriginalDownloads: preserveOriginal), previews, maintenance, _ => Task.CompletedTask, default, ancestors);
+        Task<AcquisitionWorkspaceCleanupResult> Apply(AcquisitionWorkspaceCleanupPreview preview) =>
+            Plans.ReclaimWorkspacesAsync(new(preview.PreviewId, [task.Id]), previews, maintenance, _ => Task.CompletedTask, default, ancestors);
+
+        var respectPolicy = (await Preview(false)).Rows.Single();
+        Assert.AreEqual(automaticRemoval, respectPolicy.ArtifactIds.Contains(originalId), respectPolicy.ReasonCode);
+        Assert.IsFalse((await Preview(true, preserveOriginal: true)).Rows.Single().ArtifactIds.Contains(originalId));
+        var selection = await Preview(!automaticRemoval);
+        var candidate = selection.Rows.Single();
+        Assert.IsTrue(candidate.Eligible, candidate.ReasonCode);
+        CollectionAssert.AreEqual(new[] {originalId}, candidate.ArtifactIds.ToArray());
+        Assert.AreEqual(1, candidate.FileCount);
+        Assert.AreEqual(size, candidate.Bytes);
+        Assert.AreEqual(payload, await File.ReadAllTextAsync(input));
+
+        // The receipt identifies a specific server-issued binding; changing only that
+        // value must stop an already-previewed application as well as new previews.
+        var json = JsonSerializerOptions.Web;
+        var receipt = JsonSerializer.Deserialize<AcquisitionManualDownloadCaptureReceipt>(original.MetadataJson!, json)!;
+        var forged = JsonSerializer.Serialize(receipt with {BindingId = Guid.NewGuid().ToString("N")}, json);
+        await Db.Artifacts.Where(artifact => artifact.Id == originalId).ExecuteUpdateAsync(update => update
+            .SetProperty(artifact => artifact.MetadataJson, forged));
+        Assert.AreEqual(0, (await Apply(selection)).RemovedFiles);
+        Assert.IsFalse((await Preview(true)).Rows.Single().ArtifactIds.Contains(originalId));
+        Assert.AreEqual(payload, await File.ReadAllTextAsync(input));
+        await Db.Artifacts.Where(artifact => artifact.Id == originalId).ExecuteUpdateAsync(update => update
+            .SetProperty(artifact => artifact.MetadataJson, original.MetadataJson));
+
+        selection = await Preview(!automaticRemoval);
+        Assert.IsTrue(selection.Rows.Single().Eligible, selection.Rows.Single().ReasonCode);
+        Db.ResourcesV2.Add(new() {Path = input, IsFile = true});
+        await Db.SaveChangesAsync();
+        Assert.AreEqual(0, (await Apply(selection)).RemovedFiles);
+        Assert.AreEqual(payload, await File.ReadAllTextAsync(input));
+        await Db.ResourcesV2.Where(resource => resource.Path == input).ExecuteDeleteAsync();
+
+        selection = await Preview(!automaticRemoval);
+        Assert.IsTrue(selection.Rows.Single().Eligible, selection.Rows.Single().ReasonCode);
+        var result = await Apply(selection);
+        CollectionAssert.AreEqual(new[] {task.Id}, result.CompletedTaskIds.ToArray());
+        Assert.AreEqual(1, result.RemovedFiles);
+        Assert.AreEqual(size, result.RemovedBytes);
+        Assert.IsFalse(File.Exists(input));
+        Assert.AreEqual(payload, await File.ReadAllTextAsync(deliveredFile));
+        Assert.AreEqual("independent user file", await File.ReadAllTextAsync(unrelated));
+        Assert.IsNotNull(await Artifacts.ResolveByIdAsync(publication.Id));
+        Assert.AreEqual(ArtifactLocationState.Retired, (await Artifacts.GetArtifactAsync(originalId))!.State);
+        Assert.IsFalse((await Preview(true)).Rows.Single().ArtifactIds.Contains(originalId));
+        var after = await Db.AcquisitionTasks.AsNoTracking().SingleAsync(row => row.Id == task.Id);
+        Assert.AreEqual(AcquisitionStatus.Completed, after.Status);
+        Assert.IsNull(after.DeletedAt);
+        Assert.AreEqual(completed.WorkflowRunId, after.WorkflowRunId);
+        Assert.AreEqual(completed.PlanRevision, after.PlanRevision);
+        Assert.AreEqual(completed.PlanHistoryJson, after.PlanHistoryJson);
+    }
+
+    [TestMethod]
+    public async Task Local_download_reclamation_uses_retired_processing_lineage()
+    {
+        var plan = new FileProcessingPlan {Requirement = "required", Steps =
+            [new() {Id = "rename", Op = "renameFile", Selector = "received.txt", TargetName = "delivered.txt"}]};
+        var task = await LegacyManualSource("Received input with processing", processing: plan);
+        task = await Plans.UpdateAsync(task.Id, new(task.Task.PlanRevision, StoragePolicy: new() {SourceCleanup = "delete"}), default);
+        var prepared = await Plans.PrepareLocalDownloadsAsync(task.Id, new(task.Task.PlanRevision), null, default);
+        var file = Path.Combine(prepared.Parts.Single().Directory!, "received.txt");
+        await File.WriteAllTextAsync(file, "verified received contents");
+        var intake = await Plans.PreviewLocalDownloadsAsync(task.Id, new(prepared.Revision), null, default);
+        var received = await Plans.ApplyLocalDownloadsAsync(task.Id, new(intake.Revision, intake.Token!), null, default);
+        var source = received.Plan!.Parts.Single().ContinueFrom!.ArtifactId;
+        var (runId, output) = await PublishReceivedFilesAsync(received);
+        Assert.IsNotNull(output.ProcessedArtifactId);
+        Assert.AreNotEqual(source, output.ProcessedArtifactId);
+        await Db.WorkflowRuns.Where(run => run.Id == runId).ExecuteUpdateAsync(update => update
+            .SetProperty(run => run.Status, WorkflowRunStatus.Success));
+        await Db.AcquisitionTasks.Where(row => row.Id == task.Id).ExecuteUpdateAsync(update => update
+            .SetProperty(row => row.Status, AcquisitionStatus.Completed).SetProperty(row => row.Phase, "completed"));
+        var workspaces = _services.GetRequiredService<FileProcessingWorkspaceResolver>();
+        var maintenance = _services.GetRequiredService<ArtifactWorkspaceMaintenance>();
+        var storage = _services.GetRequiredService<IUserStoragePolicy>();
+        var ancestors = new PublishedArtifactAncestorCleanup(Db, Artifacts,
+            new ArchiveQuarantineService(Artifacts, Path.Combine(_root, "appdata"), storage), workspaces: workspaces, maintenance: maintenance);
+        var previews = new AcquisitionStoragePolicyPreviewStore();
+        Task<AcquisitionWorkspaceCleanupPreview> Preview(bool onlyIntermediate) =>
+            Plans.PreviewWorkspaceCleanupAsync(new([task.Id], OverrideRetention: onlyIntermediate, PreserveOriginalDownloads: onlyIntermediate),
+                previews, maintenance, _ => Task.CompletedTask, default, ancestors);
+        Task<AcquisitionWorkspaceCleanupResult> Apply(AcquisitionWorkspaceCleanupPreview preview) =>
+            Plans.ReclaimWorkspacesAsync(new(preview.PreviewId, [task.Id]), previews, maintenance, _ => Task.CompletedTask, default, ancestors);
+        var intermediates = await Preview(true);
+        Assert.IsTrue(intermediates.Rows.Single().Eligible, intermediates.Rows.Single().ReasonCode);
+        Assert.IsFalse(intermediates.Rows.Single().ArtifactIds.Contains(source));
+        Assert.IsTrue((await Apply(intermediates)).CompletedTaskIds.Contains(task.Id));
+        Assert.AreEqual(ArtifactLocationState.Retired, (await Artifacts.GetArtifactAsync(output.ProcessedArtifactId!))!.State);
+        Assert.IsTrue(File.Exists(file));
+        var original = await Preview(false);
+        CollectionAssert.AreEqual(new[] {source}, original.Rows.Single().ArtifactIds.ToArray(), original.Rows.Single().ReasonCode);
+        Assert.AreEqual(1, (await Apply(original)).RemovedFiles);
+        Assert.IsFalse(File.Exists(file));
+        Assert.AreEqual("verified received contents", await File.ReadAllTextAsync(output.PublishedFiles.Single()));
     }
 
     [TestMethod]

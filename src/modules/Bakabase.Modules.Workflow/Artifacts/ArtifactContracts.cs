@@ -117,6 +117,9 @@ public interface IArtifactOperationStore
     /// pins on the distinct original download may survive. Other stores retain their normal fence.</summary>
     Task<bool> TryQuarantineProcessingBoundaryAsync(string artifactId, string fingerprint,
         string downloadId, int retainedByRunId, CancellationToken ct) => TryQuarantineAsync(artifactId, ct);
+    /// <summary>Fence an explicitly received download without promoting other captured views to managed files.</summary>
+    Task<bool> TryQuarantineReceivedDownloadAsync(string artifactId, string operationId, string fingerprint,
+        string partId, IReadOnlyList<int> ownerRunIds, CancellationToken ct) => Task.FromResult(false);
     /// <summary>Update a quarantined artifact's location; restoring Available verifies every hash first.</summary>
     Task SetLocationAsync(string artifactId, string rootDirectory, ArtifactLocationState state,
         CancellationToken ct = default);
