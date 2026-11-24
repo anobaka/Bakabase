@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.PikPakCli;
 
 namespace Bakabase.Service.Components.CloudDownloads.PikPakCli;
@@ -50,6 +51,57 @@ public sealed class PikPakCliAccountService
             return View(account);
         }
         finally { _gate.Release(); }
+    }
+
+    public async Task<PikPakCliCapacityViewModel> GetCapacityAsync(string? expectedAccountId,
+        string? expectedAccountVersion, CancellationToken ct)
+    {
+        try
+        {
+            return await WithAccountAsync(expectedAccountId, expectedAccountVersion, async account =>
+            {
+                var view = new PikPakCliCapacityViewModel {AccountId = account.Id, AccountVersion = account.Version};
+                using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                deadline.CancelAfter(TimeSpan.FromSeconds(12));
+                try
+                {
+                    var status = await account.TryReadStatusAsync(deadline.Token);
+                    return status is {} current ? CapacityView(view, current) :
+                        view with {Status = "busy", Problem = "PIKPAK_ACCOUNT_IN_USE"};
+                }
+                catch (PikPakCliException error) { return view with {Problem = error.Code}; }
+                catch (DependencyNotInstalledException) { return view with {Problem = "PIKPAK_CLI_DEPENDENCY_REQUIRED"}; }
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                { return view with {Problem = "PIKPAK_NETWORK_UNAVAILABLE"}; }
+            }, ct);
+        }
+        catch (PikPakCliException error) { return new() {Problem = error.Code}; }
+    }
+
+    private static PikPakCliCapacityViewModel CapacityView(PikPakCliCapacityViewModel view, JsonElement status)
+    {
+        var capacity = PikPakCliCapacity.Evaluate(status, []);
+        if (!status.TryGetProperty("storage", out var storage) || storage.ValueKind != JsonValueKind.Object)
+            return view with {CheckedAt = capacity.CheckedAt, Problem = "PIKPAK_CAPACITY_UNAVAILABLE"};
+
+        var unlimited = PikPakCliJson.True(storage, "is_unlimited");
+        var total = !unlimited && capacity.Total is {Minimum: > 0} ? capacity.Total : null;
+        var trash = PikPakCliCapacity.Parse(PikPakCliJson.Text(storage, "in_trash"));
+        return view with
+        {
+            Status = unlimited || capacity.Used != null || total != null || trash != null ? "fresh" : "unavailable",
+            Problem = !unlimited && capacity.Used == null && total == null && trash == null ? "PIKPAK_CAPACITY_UNAVAILABLE" : null,
+            CheckedAt = capacity.CheckedAt,
+            UsedBytes = Range(capacity.Used),
+            TotalBytes = Range(total),
+            TrashBytes = Range(trash),
+            AvailableBytes = total == null || capacity.Used is not {} used ? null :
+                new(Math.Max(0, total.Minimum - used.Maximum), Math.Max(0, total.Maximum - used.Minimum)),
+            Unlimited = unlimited
+        };
+
+        static PikPakCliCapacityRangeViewModel? Range(PikPakCliCapacity.Bounds? bounds) =>
+            bounds == null ? null : new(bounds.Minimum, bounds.Maximum);
     }
 
     public async Task<PikPakCliAccountViewModel> SetCleanupSettingsAsync(
@@ -467,9 +519,21 @@ internal sealed record PikPakCliAccountLease(string Id, string Version, string P
     internal async Task<JsonElement> ReadStatusAsync(CancellationToken ct)
     {
         var status = await Run(["auth", "status"], ct);
-        if (!PikPakCliJson.True(status, "logged_in")) throw new PikPakCliException("PIKPAK_ACCOUNT_REQUIRED");
-        if (CanManageFiles && (ProviderIdentity == null || PikPakCliAccountService.ReadProviderIdentity(status) != ProviderIdentity))
-            throw new PikPakCliException("PIKPAK_ACCOUNT_CHANGED");
+        ValidateStatus(status, CanManageFiles);
         return status;
+    }
+
+    internal async Task<JsonElement?> TryReadStatusAsync(CancellationToken ct)
+    {
+        var status = await Process.TryReadStatusAsync(Profile, ct);
+        if (status is {} current) ValidateStatus(current, CanManageFiles || ProviderIdentity != null);
+        return status;
+    }
+
+    private void ValidateStatus(JsonElement status, bool requireProviderIdentity)
+    {
+        if (!PikPakCliJson.True(status, "logged_in")) throw new PikPakCliException("PIKPAK_ACCOUNT_REQUIRED");
+        if (requireProviderIdentity && (ProviderIdentity == null || PikPakCliAccountService.ReadProviderIdentity(status) != ProviderIdentity))
+            throw new PikPakCliException("PIKPAK_ACCOUNT_CHANGED");
     }
 }

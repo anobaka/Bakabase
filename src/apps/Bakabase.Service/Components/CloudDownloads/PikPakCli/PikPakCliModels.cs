@@ -19,6 +19,23 @@ public sealed record PikPakCliCleanupSettingsInputModel(string ExpectedAccountId
 
 public sealed record PikPakCliQuotaViewModel(long? UsedBytes, long? LimitBytes, long? RemainingTransferBytes);
 
+public sealed record PikPakCliCapacityRangeViewModel(decimal Minimum, decimal Maximum);
+
+public sealed record PikPakCliCapacityViewModel
+{
+    public string? AccountId { get; init; }
+    public string? AccountVersion { get; init; }
+    public string Status { get; init; } = "unavailable";
+    public string? Problem { get; init; }
+    [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.IsoDateTimeConverter))]
+    public DateTimeOffset? CheckedAt { get; init; }
+    public PikPakCliCapacityRangeViewModel? UsedBytes { get; init; }
+    public PikPakCliCapacityRangeViewModel? TotalBytes { get; init; }
+    public PikPakCliCapacityRangeViewModel? TrashBytes { get; init; }
+    public PikPakCliCapacityRangeViewModel? AvailableBytes { get; init; }
+    public bool Unlimited { get; init; }
+}
+
 public sealed record PikPakCliAuthorizationViewModel
 {
     public required string Id { get; init; }

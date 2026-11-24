@@ -19,6 +19,9 @@ internal interface IPikPakCliProcess
 {
     Task<JsonElement> RunAsync(string profile, IReadOnlyList<string> arguments, CancellationToken ct,
         bool payload = false, Action? observeProgress = null);
+
+    /// <summary>Read current status without waiting for another command on the credential profile.</summary>
+    Task<JsonElement?> TryReadStatusAsync(string profile, CancellationToken ct) => Task.FromResult<JsonElement?>(null);
 }
 
 /// <summary>Only the official CLI owns OAuth and account protocols. Never logs its raw output,
@@ -34,6 +37,14 @@ internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebP
         var gate = _profiles.GetOrAdd(profile, _ => new(1, 1));
         await gate.WaitAsync(ct);
         try { return await RunCore(profile, arguments, ct, payload); }
+        finally { gate.Release(); }
+    }
+
+    public async Task<JsonElement?> TryReadStatusAsync(string profile, CancellationToken ct)
+    {
+        var gate = _profiles.GetOrAdd(profile, _ => new(1, 1));
+        if (!await gate.WaitAsync(0, ct)) return null;
+        try { return await RunCore(profile, ["auth", "status"], ct, payload: false); }
         finally { gate.Release(); }
     }
 

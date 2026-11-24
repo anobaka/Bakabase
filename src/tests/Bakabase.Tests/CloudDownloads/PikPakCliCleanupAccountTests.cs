@@ -155,6 +155,96 @@ public sealed class PikPakCliCleanupAccountTests
         }, default);
     }
 
+    [TestMethod]
+    public async Task LiveCapacityUsesFreshRoundedBoundsAndDoesNotSubtractTrashFromUsedSpace()
+    {
+        var account = await AuthorizeAsync();
+        _native.SetStorage("""{"used":"1.00 GB","total":"6.00 GB","in_trash":"2 B","remainingTransferBytes":7}""");
+        var since = DateTimeOffset.UtcNow;
+
+        var first = await CapacityAsync(account);
+
+        Assert.AreEqual("fresh", first.Status);
+        Assert.AreEqual(account.AccountId, first.AccountId);
+        Assert.AreEqual(account.AccountVersion, first.AccountVersion);
+        Assert.IsTrue(first.CheckedAt >= since && first.CheckedAt <= DateTimeOffset.UtcNow);
+        const decimal gibibyte = 1_073_741_824m;
+        Assert.AreEqual(new PikPakCliCapacityRangeViewModel(0.995m * gibibyte, 1.005m * gibibyte), first.UsedBytes);
+        Assert.AreEqual(new PikPakCliCapacityRangeViewModel(5.995m * gibibyte, 6.005m * gibibyte), first.TotalBytes);
+        Assert.AreEqual(new PikPakCliCapacityRangeViewModel(2, 2), first.TrashBytes);
+        Assert.AreEqual(new PikPakCliCapacityRangeViewModel(4.99m * gibibyte, 5.01m * gibibyte), first.AvailableBytes);
+
+        var ordinary = await _accounts.GetAsync(default);
+        Assert.IsNull(ordinary.Quota);
+        Assert.AreEqual(1, _native.CapacityRequests);
+        _native.SetStorage("""{"used":"0 B","total":"5 B"}""");
+        var next = await CapacityAsync(account);
+        Assert.AreEqual(new PikPakCliCapacityRangeViewModel(5, 5), next.AvailableBytes);
+        Assert.AreEqual(2, _native.CapacityRequests);
+        Assert.IsNull(next.TrashBytes);
+    }
+
+    [TestMethod]
+    public async Task BusyCapacityDoesNotJoinTheProfileQueueOrReturnOldValues()
+    {
+        var account = await AuthorizeAsync();
+        _native.SetStorage("""{"used":"1 B","total":"5 B"}""");
+        Assert.AreEqual("fresh", (await CapacityAsync(account)).Status);
+        _native.ProfileBusy = true;
+        _native.Calls.Clear();
+
+        var busy = await CapacityAsync(account).WaitAsync(TimeSpan.FromSeconds(1));
+
+        Assert.AreEqual("busy", busy.Status);
+        Assert.AreEqual("PIKPAK_ACCOUNT_IN_USE", busy.Problem);
+        Assert.AreEqual(account.AccountId, busy.AccountId);
+        Assert.AreEqual(account.AccountVersion, busy.AccountVersion);
+        Assert.IsNull(busy.CheckedAt);
+        Assert.IsNull(busy.UsedBytes);
+        Assert.IsNull(busy.AvailableBytes);
+        Assert.AreEqual(0, _native.Calls.Count, "The busy probe must never fall back to the waiting command path.");
+    }
+
+    [TestMethod]
+    public async Task LiveCapacityTreatsMissingInvalidAndUnlimitedValuesSeparately()
+    {
+        var account = await AuthorizeAsync();
+        _native.SetStorage("""{"used":"?","total":"0 B","in_trash":"unknown"}""");
+        var missing = await CapacityAsync(account);
+        Assert.AreEqual("unavailable", missing.Status);
+        Assert.AreEqual("PIKPAK_CAPACITY_UNAVAILABLE", missing.Problem);
+        Assert.IsNotNull(missing.CheckedAt);
+        Assert.IsNull(missing.TotalBytes);
+        Assert.IsNull(missing.AvailableBytes);
+
+        _native.SetStorage("""{"used":"7 B","total":"0 B","is_unlimited":true}""");
+        var unlimited = await CapacityAsync(account);
+        Assert.AreEqual("fresh", unlimited.Status);
+        Assert.IsTrue(unlimited.Unlimited);
+        Assert.AreEqual(new PikPakCliCapacityRangeViewModel(7, 7), unlimited.UsedBytes);
+        Assert.IsNull(unlimited.AvailableBytes);
+        Assert.IsNull(unlimited.TotalBytes);
+    }
+
+    [TestMethod]
+    public async Task LiveCapacityRejectsStaleGenerationAndUnrelatedOfficialIdentity()
+    {
+        var account = await AuthorizeAsync();
+        _native.SetStorage("""{"used":"1 B","total":"5 B"}""");
+        Assert.AreEqual("PIKPAK_ACCOUNT_CHANGED", (await CapacityAsync(account with {AccountVersion = "old"})).Problem);
+        Assert.AreEqual(0, _native.CapacityRequests);
+
+        _native.Approve(account.AccountId!, "different-provider-user", "account", "files:write");
+        var changed = await CapacityAsync(account);
+        Assert.AreEqual("unavailable", changed.Status);
+        Assert.AreEqual("PIKPAK_ACCOUNT_CHANGED", changed.Problem);
+        Assert.IsNull(changed.CheckedAt);
+        Assert.IsNull(changed.UsedBytes);
+    }
+
+    private Task<PikPakCliCapacityViewModel> CapacityAsync(PikPakCliAccountViewModel account) =>
+        _accounts.GetCapacityAsync(account.AccountId, account.AccountVersion, default);
+
     private async Task<PikPakCliAccountViewModel> AuthorizeAsync(string? providerId = "same-provider-user", bool manageFiles = false)
     {
         var session = manageFiles ? await _accounts.StartManageFilesAuthorizationAsync(default) : await _accounts.StartAsync(default);
@@ -178,6 +268,20 @@ public sealed class PikPakCliCleanupAccountTests
         private readonly Dictionary<string, string> _requestedScopes = new();
         internal List<(string Profile, string Command)> Calls { get; } = [];
         internal HashSet<string> FailStatusOnce { get; } = [];
+        internal bool ProfileBusy { get; set; }
+        internal int CapacityRequests { get; private set; }
+        private JsonElement? _storage;
+        internal void SetStorage(string value)
+        {
+            using var json = JsonDocument.Parse(value);
+            _storage = json.RootElement.Clone();
+        }
+
+        public async Task<JsonElement?> TryReadStatusAsync(string profile, CancellationToken ct)
+        {
+            CapacityRequests++;
+            return ProfileBusy ? null : await RunAsync(profile, ["auth", "status"], ct);
+        }
 
         internal void Approve(string profile, string? identity, params string[] scopes) => _approved[profile] = (identity, scopes);
         internal string RequestedScope(string profile) => _requestedScopes[profile];
@@ -201,7 +305,7 @@ public sealed class PikPakCliCleanupAccountTests
                     break;
                 case "status":
                     if (FailStatusOnce.Remove(id)) throw new PikPakCliException("PIKPAK_NETWORK_UNAVAILABLE");
-                    result = new {logged_in = approved, name = "Same display name", user_id = response.Identity};
+                    result = new {logged_in = approved, name = "Same display name", user_id = response.Identity, storage = _storage};
                     break;
                 default:
                     throw new AssertFailedException("Unexpected native command.");

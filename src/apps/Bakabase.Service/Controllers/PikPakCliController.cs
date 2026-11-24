@@ -20,6 +20,14 @@ public sealed class PikPakCliController(PikPakCliAccountService accounts) : Cont
     [HttpGet("account")]
     [SwaggerOperation(OperationId = "GetPikPakCliAccount")]
     public async Task<SingletonResponse<PikPakCliAccountViewModel>> Get(CancellationToken ct) => new(await accounts.GetAsync(ct));
+    [HttpGet("account/capacity")]
+    [SwaggerOperation(OperationId = "GetPikPakCliCapacity")]
+    public async Task<SingletonResponse<PikPakCliCapacityViewModel>> GetCapacity(
+        [FromQuery] string? expectedAccountId, [FromQuery] string? expectedAccountVersion, CancellationToken ct)
+    {
+        Response.Headers.CacheControl = "no-store";
+        return new(await accounts.GetCapacityAsync(expectedAccountId, expectedAccountVersion, ct));
+    }
     [HttpPut("account/cleanup-settings")]
     [SwaggerOperation(OperationId = "SetPikPakCliCleanupSettings")]
     public async Task<SingletonResponse<PikPakCliAccountViewModel>> SetCleanupSettings(
