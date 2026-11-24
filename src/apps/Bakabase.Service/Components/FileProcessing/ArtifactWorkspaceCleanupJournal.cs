@@ -11,7 +11,7 @@ using Bakabase.Modules.Workflow.Artifacts;
 namespace Bakabase.Service.Components.FileProcessing;
 
 /// <summary>Small metadata receipts live in AppData; payload removal is always exact-manifest based.</summary>
-internal sealed class ArtifactWorkspaceCleanupJournal(string appData)
+internal sealed class ArtifactWorkspaceCleanupJournal(string appData, Func<string, FileAttributes>? readAttributes = null)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private readonly string root = Path.Combine(Path.GetFullPath(appData), "file-processing", "workspace-cleanup-receipts");
@@ -76,7 +76,8 @@ internal sealed class ArtifactWorkspaceCleanupJournal(string appData)
             ArtifactManifestFiles.RejectLinks(resultRoot);
             _ = Directory.EnumerateFileSystemEntries(resultRoot).Take(1).ToArray();
         }
-        var files = receipt.Files.Select(file => file with {Removed = IsAbsent(Decode(file.Path), boundary)}).ToArray();
+        var listing = new ArtifactCleanupAbsence.DirectoryListing();
+        var files = receipt.Files.Select(file => file with {Removed = IsAbsent(Decode(file.Path), boundary, listing, ct)}).ToArray();
         if (status == "Completed" && files.Any(file => !file.Removed)) status = "Partial";
         var updated = receipt with {Status = status, Files = files, FinishedAt = DateTime.UtcNow};
         await Save(updated, ct);
@@ -95,29 +96,37 @@ internal sealed class ArtifactWorkspaceCleanupJournal(string appData)
         return new(Encode(directory), manifest.Fingerprint);
     }
 
-    private static bool IsAbsent(string path, string? boundary)
+    private bool IsAbsent(string path, string? boundary, ArtifactCleanupAbsence.DirectoryListing listing, CancellationToken ct)
     {
         ArtifactManifestFiles.RejectLinks(path);
         if (boundary != null && !FileProcessingPlanExecutor.IsInside(boundary, path))
             throw new InvalidDataException("The cleanup file is outside its retained checkpoint.");
-        try { _ = File.GetAttributes(path); return false; }
-        catch (FileNotFoundException) { }
-        catch (DirectoryNotFoundException) { }
+        var reportedPresent = true;
+        try { _ = (readAttributes ?? File.GetAttributes)(path); }
+        catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+        { reportedPresent = false; }
         var directory = Path.GetDirectoryName(path)!;
+        var member = path;
         // Executors remove only empty private parents; find the surviving checkpoint owner.
         while (true)
         {
             try
             {
                 if (!File.GetAttributes(directory).HasFlag(FileAttributes.Directory)) return false;
-                _ = Directory.EnumerateFileSystemEntries(directory).Take(1).ToArray();
-                return true;
+                // A durable receipt selected the exact path before unlink. A matching directory
+                // entry and stat agree on presence; after pruning parents, check the first
+                // missing child of the nearest readable directory within the checkpoint.
+                var listed = listing.Contains(directory, member, ct);
+                if (listed == reportedPresent) return !listed;
+                return ArtifactCleanupAbsence.Probe(boundary ?? directory, path,
+                    ArtifactCleanupAbsence.OpenFileForObservation, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent;
             }
             catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
             {
                 if (boundary != null && ArtifactManifestFiles.PathComparer.Equals(directory, boundary))
                     throw new IOException("The retained cleanup checkpoint became unavailable.", error);
                 if (Path.GetDirectoryName(directory) is not { } parent) return false;
+                member = directory;
                 directory = parent;
             }
         }

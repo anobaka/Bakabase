@@ -274,7 +274,7 @@ public sealed partial class ArchiveQuarantineService
                     var file = FileProcessingFiles.Within(Path.Combine(root, entry.RelativePath), root);
                     ArtifactManifestFiles.RejectLinks(file);
                     var presence = resumingDeletion
-                        ? ArtifactCleanupAbsence.Probe(root, file, ArtifactCleanupAbsence.OpenPendingDeletionFile, ct)
+                        ? ArtifactCleanupAbsence.Probe(root, file, ArtifactCleanupAbsence.OpenFileForObservation, ct)
                         : ArtifactCleanupAbsence.Probe(root, file, ct);
                     if (presence == ArtifactCleanupPathPresence.ConfirmedAbsent) continue;
                     if (presence == ArtifactCleanupPathPresence.Unavailable)
@@ -289,7 +289,7 @@ public sealed partial class ArchiveQuarantineService
                 await VerifyMovedEntriesAsync(receipt, source, movedEntries, ct);
                 VerifyRecordedAbsence(receipt, ct);
                 if (files.Length > 0 && !ArtifactCleanupAbsence.AllConfirmedAbsent(root, files, ct,
-                        ArtifactCleanupAbsence.OpenPendingDeletionFile))
+                        ArtifactCleanupAbsence.OpenFileForObservation))
                     throw new IOException("A cleanup path reappeared or its storage became unavailable before retirement.");
             }
             // The source's quarantine state keeps new consumers fenced while location is committed.

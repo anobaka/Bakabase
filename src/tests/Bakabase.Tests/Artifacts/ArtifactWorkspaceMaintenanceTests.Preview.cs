@@ -71,6 +71,46 @@ public sealed partial class ArtifactWorkspaceMaintenanceTests
         Assert.IsTrue(File.Exists(fixture.Artifact.Files.Single()));
     }
 
+    [TestMethod]
+    public async Task A_private_input_unlink_receipt_and_later_previews_do_not_charge_the_same_copy_twice()
+    {
+        var fixture = await Fixture();
+        var previous = (await _maintenance.PreviewAsync([fixture.Artifact.Id], default)).Single();
+        var bytes = new FileInfo(fixture.Intermediate).Length;
+        // Reproduce the NAS stat cache after unlink. The actual directory listing and open
+        // below still run against the filesystem rather than inheriting this observation.
+        var journal = new ArtifactWorkspaceCleanupJournal(_root, path =>
+            path == fixture.Intermediate ? FileAttributes.Normal : File.GetAttributes(path));
+        var receipt = await journal.BeginAsync(fixture.Artifact,
+            new Dictionary<string, long> {{fixture.Intermediate, bytes}}, default);
+        var marker = Path.Combine(Path.GetDirectoryName(fixture.Intermediate)!, ".smbdeleteAAA59fc4.4");
+        File.Move(fixture.Intermediate, marker);
+        var finished = await journal.FinishAsync(receipt, "Completed", default);
+        Assert.AreEqual(1, finished.RemovedFiles);
+        Assert.AreEqual(bytes, finished.RemovedBytes);
+        var retry = (await _maintenance.ReclaimAsync([fixture.Artifact.Id], default,
+            new Dictionary<string, string> {{fixture.Artifact.Id, previous.SelectionFingerprint!}})).Single();
+        Assert.IsFalse(retry.Completed);
+        Assert.AreEqual("SelectionChanged", retry.Reason);
+        Assert.AreEqual(0, retry.RemovedFiles);
+        Assert.AreEqual(0L, retry.RemovedBytes);
+        var next = (await _maintenance.PreviewAsync([fixture.Artifact.Id], default)).Single();
+        Assert.IsFalse(next.Eligible);
+        Assert.AreEqual(0, next.FileCount);
+        Assert.IsTrue(File.Exists(marker));
+        Assert.IsTrue(File.Exists(fixture.Original));
+        Assert.IsTrue(File.Exists(fixture.Artifact.Files.Single()));
+
+        // Conversely, a missing-stat verdict alone cannot complete a receipt if that
+        // name is still listed and readable. The independent file at that name survives.
+        await File.WriteAllTextAsync(fixture.Intermediate, "new file");
+        var staleNegative = new ArtifactWorkspaceCleanupJournal(_root, _ => throw new FileNotFoundException());
+        var replacement = await staleNegative.FinishAsync(receipt, "Completed", default);
+        Assert.AreEqual(0L, replacement.RemovedBytes);
+        Assert.AreEqual("Partial", replacement.Status);
+        Assert.AreEqual("new file", await File.ReadAllTextAsync(fixture.Intermediate));
+    }
+
     [DataTestMethod]
     [DataRow(false)]
     [DataRow(true)]

@@ -984,11 +984,7 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
         if (state != null) state.ExecutionRoot = directory;
         if (state is not {Completed: true, LineageVersion: 1} || state.FinalFiles.Count == 0 || state.FinalManifest == null) return [];
         var boundaries = state.BoundaryResults.Values.SelectMany(b => b.Files).Select(a => a.Path).ToHashSet(FileProcessingFiles.PathComparer);
-        var allowedRoots = new[] {"inputs", "outputs", "merged-inputs"}.Select(n => Path.Combine(directory, n)).ToArray();
-        var candidates = state.Outputs.Values.SelectMany(v => v).Select(v => v.Path).Concat(state.StagedFiles)
-            .Select(Path.GetFullPath).Distinct(FileProcessingFiles.PathComparer)
-            .Where(p => allowedRoots.Any(r => IsInside(r, p)) && File.Exists(p) &&
-                (overrideRetention || !state.RetainedFiles.Contains(p, FileProcessingFiles.PathComparer)) && !boundaries.Contains(p)).ToArray();
+        var candidates = PrivateCleanupCandidates(state, directory, boundaries, overrideRetention, ct);
         var covered = new List<string>();
         var coverage = new ReplacementCoverage(state, ct);
         foreach (var path in candidates)
@@ -999,6 +995,17 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
                       ArtifactCleanupPreviewFiles.MatchesLength(path, expected.Length))) covered.Add(path);
         }
         return covered;
+    }
+
+    private static IReadOnlyList<string> PrivateCleanupCandidates(State state, string directory,
+        IReadOnlySet<string> protectedFiles, bool overrideRetention, CancellationToken ct)
+    {
+        var allowedRoots = new[] {"inputs", "outputs", "merged-inputs"}.Select(n => Path.Combine(directory, n)).ToArray();
+        var recorded = state.Outputs.Values.SelectMany(files => files).Select(file => file.Path).Concat(state.StagedFiles)
+            .Select(Path.GetFullPath).Distinct(FileProcessingFiles.PathComparer)
+            .Where(path => allowedRoots.Any(root => IsInside(root, path)) && !protectedFiles.Contains(path) &&
+                (overrideRetention || !state.RetainedFiles.Contains(path, FileProcessingFiles.PathComparer)) && File.Exists(path));
+        return ArtifactCleanupAbsence.ConfirmReportedFiles(directory, recorded, ct);
     }
 
     /// <summary>Retires only recorded private snapshots after the complete immutable result exists.
@@ -1031,14 +1038,11 @@ public sealed partial class FileProcessingPlanExecutor(IArchiveExtractionService
             var allowedRoots = new[] {"inputs", "outputs", "merged-inputs"}
                 .Select(name => Path.Combine(directory, name)).ToArray();
             var boundaries = state.BoundaryResults.Values.SelectMany(b => b.Files).Select(a => a.Path).ToHashSet(FileProcessingFiles.PathComparer);
-            var files = state.Outputs.Values.SelectMany(value => value).Select(value => value.Path)
-                .Concat(state.StagedFiles).Select(Path.GetFullPath).Distinct(FileProcessingFiles.PathComparer)
-                .Where(path => allowedRoots.Any(root => IsInside(root, path)) && File.Exists(path) &&
-                    (overrideRetention || !state.RetainedFiles.Contains(path, FileProcessingFiles.PathComparer)) && !boundaries.Contains(path)).ToArray();
             // The maintenance fence audited registered references for this exact set. Never
             // expand deletion if a checkpoint changed after that audit.
             var coverage = new ReplacementCoverage(state, ct);
-            files = files.Where(coverage.IsComplete).ToArray();
+            var files = PrivateCleanupCandidates(state, directory, boundaries, overrideRetention, ct)
+                .Where(coverage.IsComplete).ToArray();
             if (files.Any(path => !approvedFiles.Contains(path))) return;
             if (relocatedResult != null && !relocatedResult.Matches(resultRoot, expected)) return;
             if (snapshot == null && !(await ArtifactManifestFiles.ValidateAsync(relocatedResult?.VerificationRoot ?? resultRoot, expected, ct)).Available) return;

@@ -18,8 +18,8 @@ internal static class ArtifactCleanupAbsence
     private static void ReadAttributes(string path) => _ = File.GetAttributes(path);
 
     // SMB can retain successful stat results for an unlinked name. Opening the exact
-    // receipt file observes the server namespace without reading the payload.
-    internal static void OpenPendingDeletionFile(string path)
+    // file observes the server namespace without reading the payload.
+    internal static void OpenFileForObservation(string path)
     {
         using var handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
     }
@@ -46,6 +46,59 @@ internal static class ArtifactCleanupAbsence
         }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException)
         { return ArtifactCleanupPathPresence.Unavailable; }
+    }
+
+    // One snapshot per read-only selection or post-unlink receipt. A directory with thousands
+    // of siblings is enumerated once, and the next preview or mutation starts a new snapshot.
+    internal sealed class DirectoryListing
+    {
+        private readonly Dictionary<string, HashSet<string>> directories = new(ArtifactManifestFiles.PathComparer);
+
+        internal bool Contains(string directory, string path, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!directories.TryGetValue(directory, out var entries))
+            {
+                ArtifactManifestFiles.RejectLinks(directory);
+                entries = new(ArtifactManifestFiles.PathComparer);
+                foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    entries.Add(entry);
+                }
+                directories.Add(directory, entries);
+            }
+            return entries.Contains(path);
+        }
+    }
+
+    // The processing ledger identifies the candidates. A listing can corroborate those names,
+    // but it never adds neighbours (including SMB delete markers) to the selection.
+    internal static IReadOnlyList<string> ConfirmReportedFiles(string root, IEnumerable<string> reportedFiles,
+        CancellationToken ct)
+    {
+        var present = new List<string>();
+        var listing = new DirectoryListing();
+        foreach (var path in reportedFiles)
+        {
+            ArtifactManifestFiles.RelativeFile(root, path);
+            var directory = Path.GetDirectoryName(path)!;
+            try
+            {
+                if (listing.Contains(directory, path, ct)) { present.Add(path); continue; }
+            }
+            catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException)
+            { /* Resolve a vanished parent within the recorded checkpoint below. */ }
+            // Normal previews need no payload handle. Only conflicting metadata requires
+            // an open and independent directory checks under the checkpoint root.
+            switch (Probe(root, path, OpenFileForObservation, ct))
+            {
+                case ArtifactCleanupPathPresence.Present: present.Add(path); break;
+                case ArtifactCleanupPathPresence.Unavailable:
+                    throw new IOException("The processing file or its storage could not be verified.");
+            }
+        }
+        return present;
     }
 
     private static bool MissingWithinReadableRoot(string root, string path, CancellationToken ct)

@@ -68,11 +68,8 @@ public sealed partial class FileProcessingPlanExecutor
     {
         var state = checkpoint.State;
         var protectedFiles = state.BoundaryResults.Values.SelectMany(b => b.Files).Select(f => f.Path)
-            .Concat(state.FinalFiles).Concat(overrideRetention ? [] : state.RetainedFiles).ToHashSet(FileProcessingFiles.PathComparer);
-        var allowed = new[] {"inputs", "outputs", "merged-inputs"}.Select(n => Path.Combine(checkpoint.Directory, n)).ToArray();
-        var candidates = state.Outputs.Values.SelectMany(v => v).Select(v => v.Path).Concat(state.StagedFiles)
-            .Select(Path.GetFullPath).Distinct(FileProcessingFiles.PathComparer)
-            .Where(p => allowed.Any(r => IsInside(r, p)) && !protectedFiles.Contains(p) && File.Exists(p)).ToArray();
+            .Concat(state.FinalFiles).ToHashSet(FileProcessingFiles.PathComparer);
+        var candidates = PrivateCleanupCandidates(state, checkpoint.Directory, protectedFiles, overrideRetention, ct);
         var result = new List<string>();
         var coverage = new ReplacementCoverage(checkpoint.Projection, ct);
         foreach (var path in candidates)

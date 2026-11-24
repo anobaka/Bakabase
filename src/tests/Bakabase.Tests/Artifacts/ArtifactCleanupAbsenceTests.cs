@@ -65,18 +65,40 @@ public sealed class ArtifactCleanupAbsenceTests
         // The directory lookup is cached as present even though opening that name returns ENOENT.
         Assert.AreEqual(ArtifactCleanupPathPresence.Present, ArtifactCleanupAbsence.Probe(root, file, _ => { }));
         Assert.IsTrue(ArtifactCleanupAbsence.AllConfirmedAbsent(root, [file],
-            observe: ArtifactCleanupAbsence.OpenPendingDeletionFile));
+            observe: ArtifactCleanupAbsence.OpenFileForObservation));
         Assert.AreEqual("held by a client", await File.ReadAllTextAsync(held));
 
         await File.WriteAllTextAsync(file, "new content");
         Assert.AreEqual(ArtifactCleanupPathPresence.Present,
-            ArtifactCleanupAbsence.Probe(root, file, ArtifactCleanupAbsence.OpenPendingDeletionFile));
+            ArtifactCleanupAbsence.Probe(root, file, ArtifactCleanupAbsence.OpenFileForObservation));
         // An open failure with the name still in a readable directory is inconclusive.
         Assert.AreEqual(ArtifactCleanupPathPresence.Unavailable,
             ArtifactCleanupAbsence.Probe(root, file, _ => throw new FileNotFoundException()));
         Assert.IsFalse(ArtifactCleanupAbsence.AllConfirmedAbsent(root, [file],
-            observe: ArtifactCleanupAbsence.OpenPendingDeletionFile));
+            observe: ArtifactCleanupAbsence.OpenFileForObservation));
         Assert.AreEqual("new content", await File.ReadAllTextAsync(file));
+    }
+
+    [TestMethod]
+    public async Task Private_selection_confirms_reported_names_without_opening_listed_payloads_or_claiming_absence()
+    {
+        var directory = Path.Combine(root, "inputs");
+        Directory.CreateDirectory(directory);
+        var stale = Path.Combine(directory, "archive.7z");
+        var marker = Path.Combine(directory, ".smbdeleteAAA59fc4.4");
+        var real = Path.Combine(directory, "second.7z");
+        await File.WriteAllTextAsync(marker, "held by the NAS");
+        await File.WriteAllTextAsync(real, "visible data");
+        await using (var locked = new FileStream(real, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            // Both names were reported present by stat, but the server namespace lists only one.
+            CollectionAssert.AreEqual(new[] {real},
+                ArtifactCleanupAbsence.ConfirmReportedFiles(root, [stale, real], default).ToArray());
+        }
+        Assert.AreEqual("held by the NAS", await File.ReadAllTextAsync(marker));
+        var offline = Path.Combine(root, "detached");
+        Assert.ThrowsExactly<IOException>(() =>
+            ArtifactCleanupAbsence.ConfirmReportedFiles(offline, [Path.Combine(offline, "archive.7z")], default));
     }
 
     [TestMethod]
