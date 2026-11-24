@@ -49,10 +49,31 @@ public sealed partial class AcquisitionRecoveryTests
     private sealed class PreparedRecoveryProvider : RecoverableProvider, ICloudPreparedDownloadRetryProvider
     {
         public bool Prepared = true;
+        public bool CanRetryPreparedDownloadFailure(string code) => code == "PIKPAK_CLI_REQUEST_FAILED";
         public Task<CloudReadiness> CheckPreparedDownloadRetryAsync(CloudDownloadRequest request, CancellationToken ct) =>
             Task.FromResult(new CloudReadiness(Prepared));
         public Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress,
             CancellationToken ct) => throw new AssertFailedException("Admission never reads payload.");
+    }
+
+    [TestMethod]
+    [DataRow(true, 0, true)]
+    [DataRow(true, 41, true)]
+    [DataRow(false, 0, false)]
+    [DataRow(false, 41, false)]
+    public async Task Unclassified_provider_failure_requires_the_saved_original_even_when_no_files_are_visible(
+        bool hasSavedCopy, int reportedProgress, bool canRetry)
+    {
+        var (_, run, workset, download, _, _, _) = await SeedRecoverableProvider(failure: "PIKPAK_CLI_REQUEST_FAILED");
+        download.Progress = reportedProgress;
+        await _db.SaveChangesAsync();
+        var provider = new PreparedRecoveryProvider {Prepared = hasSavedCopy};
+        var recovery = new CloudDownloadRecoveryService(_db, [provider], new UserStoragePolicy(false));
+        var target = workset.Targets.Single();
+        var result = await recovery.CheckAsync(run.Id, target, workset.OutputDirectory, true, default);
+        Assert.AreEqual(canRetry, result.CanRetry);
+        Assert.AreEqual(canRetry, result.PreparedRetry != null);
+        Assert.AreEqual(canRetry ? 1 : 0, provider.Checks);
     }
 
     [TestMethod]

@@ -133,16 +133,19 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 !stopped && !forSourceRevision && !requireEquivalentGroup && codes.Length == 0 &&
                 IsExactLegacyStorageFailure(download.Message, download.DownloadPath, download.Options)
                     ? "LOCAL_STORAGE_UNAVAILABLE" : null;
+            var preparedProvider = !forSourceRevision && !requireEquivalentGroup ? provider as ICloudPreparedDownloadRetryProvider : null;
+            var needsPreparedProof = originalFailure != null && preparedProvider?.CanRetryPreparedDownloadFailure(originalFailure) == true;
             if (stopped || originalFailure == null || (forSourceRevision
                     ? provider is not ICloudDownloadAbandonmentProvider
-                    : capability == null || !capability.CanRevalidateDownloadFailure(originalFailure)))
+                    : capability == null || (!needsPreparedProof && !capability.CanRevalidateDownloadFailure(originalFailure))))
                 return Block("RECOVERY_MANUAL_REVIEW");
             failure = originalFailure;
             if (target.RemoteEntry != null || target.DownloadArtifactId != null || target.ProcessedArtifactId != null ||
                 target.PublishedArtifactId != null || target.ProcessingOperationId != null || target.PublicationOperationId != null ||
                 target.CleanupReceiptId != null || target.Files.Count != 0 || target.ProcessedFiles.Count != 0 ||
                 target.PublishedFiles.Count != 0 || target.ProcessingStepArtifacts.Count != 0 ||
-                download.CompletedAt != null || download.Progress != 0 || !string.IsNullOrEmpty(download.Checkpoint) ||
+                download.CompletedAt != null || !string.IsNullOrEmpty(download.Checkpoint) ||
+                download.Progress != 0 && preparedProvider == null ||
                 await db.DownloadResults.AsNoTracking().AnyAsync(r => r.DownloadTaskId == id, ct) ||
                 await db.DownloadResultOwners.AsNoTracking().AnyAsync(r => r.DownloadTaskId == id, ct))
                 return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
@@ -192,8 +195,10 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             var executionRequest = CloudDownloadDestinations.ExecutionRequest(request);
             // A prepared retry must prove the provider's exact saved copy and previous native
             // attempt even when filesystem deletion markers have disappeared since preview.
-            var prepared = !forSourceRevision && !requireEquivalentGroup && provider is ICloudPreparedDownloadRetryProvider retry &&
-                (await retry.CheckPreparedDownloadRetryAsync(executionRequest, ct)).Available;
+            var prepared = preparedProvider != null &&
+                (await preparedProvider.CheckPreparedDownloadRetryAsync(executionRequest, ct)).Available;
+            if (!prepared && download.Progress != 0) return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
+            if (!prepared && needsPreparedProof) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             if (prepared)
             {
                 if (await db.DownloadTaskFiles.AsNoTracking().AnyAsync(f => f.DownloadTaskId == id, ct))
