@@ -11,8 +11,18 @@ namespace Bakabase.Service.Components.FileProcessing;
 
 public sealed partial class ArchiveQuarantineService
 {
-    internal async Task<(int Files, long Bytes)?> PendingDeletionSizeAsync(ArchiveQuarantineReceipt header,
+    internal Task<(int Files, long Bytes)?> PendingDeletionSizeAsync(ArchiveQuarantineReceipt header,
+        ArtifactManifest manifest, CancellationToken ct) => InspectPendingDeletionAsync(header, manifest, null, ct);
+
+    internal async Task<IReadOnlyList<(string Path, long Bytes)>?> PreviewPendingDeletionFilesAsync(ArchiveQuarantineReceipt header,
         ArtifactManifest manifest, CancellationToken ct)
+    {
+        var selection = new List<(string Path, long Bytes)>();
+        return await InspectPendingDeletionAsync(header, manifest, selection, ct) != null ? selection : null;
+    }
+
+    private async Task<(int Files, long Bytes)?> InspectPendingDeletionAsync(ArchiveQuarantineReceipt header,
+        ArtifactManifest manifest, List<(string Path, long Bytes)>? selection, CancellationToken ct)
     {
         try
         {
@@ -42,6 +52,7 @@ public sealed partial class ArchiveQuarantineService
                 if (new FileInfo(held).Length != entry.Length) return null;
                 files++;
                 bytes += entry.Length;
+                selection?.Add((held, entry.Length));
             }
             return (files, bytes);
         }
@@ -50,7 +61,17 @@ public sealed partial class ArchiveQuarantineService
     }
 
     internal static (int Files, long Bytes)? PreviewMovedSourceSize(ArtifactRecord source,
+        IReadOnlySet<string> moved, CancellationToken ct) => InspectMovedSource(source, moved, null, ct);
+
+    internal static IReadOnlyList<(string Path, long Bytes)>? PreviewMovedSourceFiles(ArtifactRecord source,
         IReadOnlySet<string> moved, CancellationToken ct)
+    {
+        var selection = new List<(string Path, long Bytes)>();
+        return InspectMovedSource(source, moved, selection, ct) != null ? selection : null;
+    }
+
+    private static (int Files, long Bytes)? InspectMovedSource(ArtifactRecord source,
+        IReadOnlySet<string> moved, List<(string Path, long Bytes)>? selection, CancellationToken ct)
     {
         try
         {
@@ -83,11 +104,11 @@ public sealed partial class ArchiveQuarantineService
                 }
                 else
                 {
-                    var path = Path.Combine(source.RootDirectory, entry.RelativePath);
-                    if (ArtifactCleanupAbsence.Probe(source.RootDirectory, path, ct) !=
-                        ArtifactCleanupPathPresence.Present || new FileInfo(path).Length != entry.Length) return null;
+                    var path = FileProcessingFiles.Within(Path.Combine(source.RootDirectory, entry.RelativePath), source.RootDirectory);
+                    if (!ArtifactCleanupPreviewFiles.MatchesLength(path, entry.Length)) return null;
                     files++;
                     bytes += entry.Length;
+                    selection?.Add((path, entry.Length));
                 }
             }
             return (files, bytes);

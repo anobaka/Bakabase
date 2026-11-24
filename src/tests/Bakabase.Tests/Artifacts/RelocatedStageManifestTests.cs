@@ -50,6 +50,34 @@ public class RelocatedStageManifestTests
     }
 
     [TestMethod]
+    public void Registered_cleanup_preview_counts_only_the_paths_left_after_a_stage_move()
+    {
+        var root = Directory.CreateTempSubdirectory("moved-stage-preview-");
+        try
+        {
+            var kept = Path.Combine(root.FullName, "present.txt");
+            var moved = Path.Combine(root.FullName, "moved.txt");
+            File.WriteAllText(kept, "1234567");
+            var manifest = new ArtifactManifest([Entry("present.txt", 7), Entry("moved.txt", 700)], "manifest");
+            var source = new ArtifactRecord("artifact", "operation", "processedFiles", root.FullName, [kept, moved],
+                manifest, manifest.Fingerprint, ArtifactLocationState.Available, true, [], null);
+            var movedPaths = new HashSet<string>(StringComparer.Ordinal) {"moved.txt"};
+
+            var remaining = ArchiveQuarantineService.PreviewMovedSourceFiles(source, movedPaths, default);
+
+            CollectionAssert.AreEqual(new[] {(kept, 7L)}, remaining!.ToArray());
+            Assert.IsNull(ArchiveQuarantineService.PreviewMovedSourceFiles(source, new HashSet<string>(StringComparer.Ordinal), default));
+            File.WriteAllText(moved, new string('x', 700));
+            Assert.IsNull(ArchiveQuarantineService.PreviewMovedSourceFiles(source, movedPaths, default));
+            File.Delete(moved);
+            File.Delete(kept);
+            movedPaths.Add("present.txt");
+            Assert.AreEqual(0, ArchiveQuarantineService.PreviewMovedSourceFiles(source, movedPaths, default)!.Count);
+        }
+        finally { root.Delete(recursive: true); }
+    }
+
+    [TestMethod]
     public void Owned_subset_requires_distinct_ordinal_paths_and_matching_lengths_and_hashes()
     {
         var a = Entry("a"); var b = Entry("b");

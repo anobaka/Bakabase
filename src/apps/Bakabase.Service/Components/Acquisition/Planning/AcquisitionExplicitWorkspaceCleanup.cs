@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Components;
 using Bakabase.Modules.Workflow.Artifacts;
@@ -64,6 +66,7 @@ public sealed partial class AcquisitionPlanService
         var dependencies = new Dictionary<int, IReadOnlyDictionary<string, IReadOnlyList<ArtifactCleanupRetirementDependency>>>();
         var reviewed = new Dictionary<int, ReviewedCheckpointSelection>();
         var included = new HashSet<string>(StringComparer.Ordinal);
+        var includedPaths = new HashSet<string>(ArtifactManifestFiles.PathComparer);
         foreach (var id in ids)
         {
             var row = rows.SingleOrDefault(t => t.Id == id);
@@ -106,7 +109,8 @@ public sealed partial class AcquisitionPlanService
                 foreach (var chunk in artifactIds.Chunk(100))
                     candidates.AddRange(await maintenance.PreviewForDeletionAsync(chunk, authorization, ct));
                 candidates.AddRange(await ancestors!.PreviewForDeletionAsync(
-                    authorization.Consent.Publications.Select(p => p.ArtifactId).ToArray(), owners, authorization, ct));
+                    authorization.Consent.Publications.Select(p => p.ArtifactId).ToArray(), owners, authorization, ct,
+                    includeRegisteredFiles: true));
                 candidates = candidates.Where(c => c.Eligible && !included.Contains(c.ArtifactId)).ToList();
                 if (input.PreserveOriginalDownloads && candidates.Count > 0)
                 {
@@ -114,16 +118,20 @@ public sealed partial class AcquisitionPlanService
                     candidates.RemoveAll(c => !intermediates.Contains(c.ArtifactId));
                 }
                 foreach (var candidate in candidates) await guard(candidate.ResultDirectory);
-                if (candidates.Count == 0) reason = "nothing_to_reclaim";
+                var selection = SelectExplicitWorkspaceCleanup(candidates, includedPaths);
+                candidates = selection ?? [];
+                if (selection == null) reason = "cleanup_overlap_requires_review";
+                else if (candidates.Count == 0) reason = "nothing_to_reclaim";
                 else
                 {
-                    versions[id] = version; captured[id] = candidates; ownerRuns[id] = owners;
+                    versions[id] = version; ownerRuns[id] = owners;
+                    captured[id] = candidates.Select(c => c.RegisteredPreviewFiles == null ? c : c with {RegisteredPreviewFiles = null}).ToArray();
                     consents[id] = authorization.Consent;
                     dependencies[id] = authorization.RetirementDependencies.ToDictionary(p => p.Key, p => p.Value);
                     included.UnionWith(candidates.Select(c => c.ArtifactId));
                 }
             }
-            result.Add(new(id, row?.Title, reason == null, reason, candidates.Select(c => c.ArtifactId).ToArray(),
+            result.Add(new(id, row?.Title, reason == null, reason, candidates.Select(c => c.ArtifactId).Distinct(StringComparer.Ordinal).ToArray(),
                 candidates.Sum(c => c.FileCount), candidates.Sum(c => c.Bytes)));
         }
         var preview = new AcquisitionWorkspaceCleanupPreview(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddMinutes(10), result, versions.Count);
@@ -131,6 +139,43 @@ public sealed partial class AcquisitionPlanService
             {Artifacts = captured, CleanupOwnerRuns = ownerRuns, CleanupConsents = consents, CleanupDependencies = dependencies,
                 PreserveOriginalDownloads = input.PreserveOriginalDownloads, ReviewedCheckpoints = reviewed});
         return preview;
+    }
+
+    internal static List<ArtifactWorkspaceCleanupPreview>? SelectExplicitWorkspaceCleanup(
+        IReadOnlyList<ArtifactWorkspaceCleanupPreview> candidates, HashSet<string> includedPaths)
+    {
+        var selected = new bool[candidates.Count];
+        var selectedPaths = new HashSet<string>(includedPaths.Comparer);
+        var overlappingPrivatePaths = new HashSet<string>(includedPaths.Comparer);
+        // Keep registered retirement proofs ahead of overlapping private selections. Among
+        // private selections prefer a complete larger proof. Each proof is indivisible:
+        // editing its file list would invalidate its fingerprint on apply.
+        foreach (var index in Enumerable.Range(0, candidates.Count)
+                     .OrderByDescending(i => candidates[i].RegisteredPreviewFiles != null)
+                     .ThenByDescending(i => candidates[i].PreviewFiles?.Count ?? 0))
+        {
+            var candidate = candidates[index];
+            var files = candidate.RegisteredPreviewFiles ?? candidate.PreviewFiles;
+            if (files == null || files.Count == 0 && candidate.RegisteredPreviewFiles == null) continue;
+            var paths = files.Select(file => Path.GetFullPath(file.Path)).ToArray();
+            // Confirmation can execute just this row. Another task's selected files
+            // cannot be used to prove this row's cleanup is complete.
+            if (paths.Any(includedPaths.Contains)) return null;
+            if (paths.Any(selectedPaths.Contains))
+            {
+                // Retirement is a distinct operation and may be a prerequisite for a
+                // different artifact. An overlap alone cannot replace that proof.
+                if (candidate.RegisteredPreviewFiles != null) return null;
+                overlappingPrivatePaths.UnionWith(paths);
+                continue;
+            }
+            selectedPaths.UnionWith(paths);
+            selected[index] = true;
+        }
+        if (overlappingPrivatePaths.Any(path => !selectedPaths.Contains(path))) return null;
+        includedPaths.UnionWith(selectedPaths);
+        // Apply still uses the original order and the original candidate fingerprints.
+        return candidates.Where((_, index) => selected[index]).ToList();
     }
 
     private async Task<AcquisitionWorkspaceCleanupResult> ReclaimExplicitWorkspacesAsync(int[] ids,

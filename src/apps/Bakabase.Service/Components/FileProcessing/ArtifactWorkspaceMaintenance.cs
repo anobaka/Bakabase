@@ -23,6 +23,9 @@ public sealed record ArtifactWorkspaceCleanupPreview(string ArtifactId, string O
 {
     // Request-local presentation only. Never serialized as authority or reused by execution.
     internal IReadOnlyList<(string Path, long Bytes)>? PreviewFiles { get; init; }
+    // Registered inputs may have already moved or be partly quarantined. Keep their
+    // remaining paths separate from private workspace files and the retirement proof.
+    internal IReadOnlyList<(string Path, long Bytes)>? RegisteredPreviewFiles { get; init; }
     // A confirmed moved source may retire its registration, but never unlink a file
     // which reappeared at a path the user previewed as already absent.
     internal IReadOnlySet<string>? ExpectedMovedFiles { get; init; }

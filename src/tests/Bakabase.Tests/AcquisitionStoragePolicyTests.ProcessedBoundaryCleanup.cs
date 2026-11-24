@@ -223,6 +223,48 @@ public sealed partial class AcquisitionStoragePolicyTests
     }
 
     [TestMethod]
+    public void Explicit_cleanup_selects_disjoint_physical_work_without_losing_same_artifact_retirement()
+    {
+        var root = Path.GetFullPath("cleanup-fixture");
+        (string Path, long Bytes) FileAt(string name, long bytes) => (Path.Combine(root, name), bytes);
+        var archive = FileAt("private.zip", 7);
+        var nested = FileAt("nested.zip", 11);
+        var registered = FileAt("registered.txt", 13);
+        ArtifactWorkspaceCleanupPreview Private(string artifactId, string proof, params (string Path, long Bytes)[] files) =>
+            new(artifactId, artifactId, root, true, null, files.Length, files.Sum(f => f.Bytes), proof) {PreviewFiles = files};
+        var sameInput = Private("same-id", "smaller", archive);
+        var fullInput = Private("other-id", "larger", archive, nested);
+        var duplicateInput = Private("historical-id", "duplicate", archive, nested);
+        var sameRegistration = new ArtifactWorkspaceCleanupPreview("same-id", "same-id", root, true, null, 1, registered.Bytes,
+            "registered-proof", "publication") {RegisteredPreviewFiles = [registered]};
+        var overlapping = Private("overlapping-id", "partial", registered, FileAt("otherwise-independent.txt", 17));
+        var movedRegistration = sameRegistration with {ArtifactId = "moved-id", FileCount = 0, Bytes = 0, RegisteredPreviewFiles = []};
+        var claimedPaths = new HashSet<string>(ArtifactManifestFiles.PathComparer);
+
+        var selected = AcquisitionPlanService.SelectExplicitWorkspaceCleanup(
+            [sameInput, fullInput, duplicateInput, sameRegistration, movedRegistration], claimedPaths)!;
+
+        CollectionAssert.AreEqual(new[] {fullInput, sameRegistration, movedRegistration}, selected);
+        CollectionAssert.AreEquivalent(new[] {archive.Path, nested.Path, registered.Path}, claimedPaths.ToArray());
+        Assert.AreEqual(3, selected.Sum(c => c.FileCount));
+        Assert.AreEqual(31L, selected.Sum(c => c.Bytes));
+        // The same registration can also own a disjoint private file. A registration ID
+        // alone gives no reason to remove either proof from the apply plan.
+        var disjointInput = Private("same-id", "different-files", FileAt("other-private.zip", 19));
+        var disjoint = AcquisitionPlanService.SelectExplicitWorkspaceCleanup([disjointInput, sameRegistration],
+            new HashSet<string>(ArtifactManifestFiles.PathComparer));
+        CollectionAssert.AreEqual(new[] {disjointInput, sameRegistration}, disjoint);
+        Assert.IsNull(AcquisitionPlanService.SelectExplicitWorkspaceCleanup([sameInput, disjointInput], claimedPaths));
+        Assert.AreEqual(3, claimedPaths.Count);
+
+        var unclaimed = new HashSet<string>(ArtifactManifestFiles.PathComparer);
+        Assert.IsNull(AcquisitionPlanService.SelectExplicitWorkspaceCleanup([overlapping, sameRegistration], unclaimed));
+        Assert.IsNull(AcquisitionPlanService.SelectExplicitWorkspaceCleanup([sameRegistration,
+            sameRegistration with {ArtifactId = "other-registered-id"}], unclaimed));
+        Assert.AreEqual(0, unclaimed.Count);
+    }
+
+    [TestMethod]
     public async Task Completed_processing_only_cleanup_can_keep_previously_eligible_downloads()
     {
         using var fixture = new BoundaryCleanupTestDirectory();
@@ -263,9 +305,15 @@ public sealed partial class AcquisitionStoragePolicyTests
         var request = JsonSerializer.Deserialize<AcquisitionStoragePolicyPreviewInput>(
             JsonSerializer.Serialize(new {taskIds = new[] {task.Id},overrideRetention = true,preserveOriginalDownloads = true}), WorkflowJson.Options)!;
         var onlyIntermediate = await service.PreviewWorkspaceCleanupAsync(request,cache,maintenance,Guard,default,ancestors);
-        CollectionAssert.AreEquivalent(new[] {result.Id},onlyIntermediate.Rows.Single().ArtifactIds.ToArray());
+        var previewRow = onlyIntermediate.Rows.Single();
+        var expectedBytes = new FileInfo(result.Files.Single()).Length;
+        CollectionAssert.AreEquivalent(new[] {result.Id},previewRow.ArtifactIds.ToArray());
+        Assert.AreEqual(1, previewRow.FileCount);
+        Assert.AreEqual(expectedBytes, previewRow.Bytes);
         var applied = await service.ReclaimWorkspacesAsync(new(onlyIntermediate.PreviewId,[task.Id]),cache,maintenance,Guard,default,ancestors);
         CollectionAssert.Contains(applied.CompletedTaskIds.ToArray(),task.Id);
+        Assert.AreEqual(previewRow.FileCount, applied.RemovedFiles);
+        Assert.AreEqual(previewRow.Bytes, applied.RemovedBytes);
         Assert.IsFalse(result.Files.Any(File.Exists)); Assert.IsTrue(raw.Files.Concat(formal.Files).All(File.Exists));
         Assert.AreEqual(ArtifactLocationState.Available,(await store.GetArtifactAsync(raw.Id))!.State);
         Assert.AreEqual(ArtifactLocationState.Retired,(await store.GetArtifactAsync(result.Id))!.State);

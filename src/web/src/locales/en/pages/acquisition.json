@@ -1297,6 +1297,7 @@
   "acquisition.storage.reason.processed_checkpoint_requires_confirmation": "This task is awaiting delivery review. Select the option above to check whether its intermediates can be cleaned now.",
   "acquisition.storage.reason.processed_checkpoint_not_reclaimable": "No intermediate files have both a verified replacement and no other references.",
   "acquisition.storage.reason.nothing_to_reclaim": "No intermediate copies need cleanup",
+  "acquisition.storage.reason.cleanup_overlap_requires_review": "Some cleanup records point to the same files and cannot be verified independently. The files were kept.",
   "acquisition.storage.reason.artifact_busy": "Files are still used by another task or node",
   "acquisition.storage.reason.files_changed": "Files changed; refresh the preview",
   "acquisition.storage.reason.preview_expired": "Preview expired; refresh it",

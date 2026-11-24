@@ -1297,6 +1297,7 @@
   "acquisition.storage.reason.processed_checkpoint_requires_confirmation": "任务正在等待交付复核。勾选上方选项即可查看能否提前清理中间文件。",
   "acquisition.storage.reason.processed_checkpoint_not_reclaimable": "找不到已确认完整替代且没有其他引用的中间文件。",
   "acquisition.storage.reason.nothing_to_reclaim": "没有可清理的中间副本",
+  "acquisition.storage.reason.cleanup_overlap_requires_review": "部分清理记录指向相同文件，无法分别核验，文件已保留。",
   "acquisition.storage.reason.artifact_busy": "文件仍被其他任务或节点使用",
   "acquisition.storage.reason.files_changed": "文件状态已变化，请重新预览",
   "acquisition.storage.reason.preview_expired": "预览已过期，请重新预览",

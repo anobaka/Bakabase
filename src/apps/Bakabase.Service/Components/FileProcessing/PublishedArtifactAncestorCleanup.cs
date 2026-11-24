@@ -182,12 +182,12 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
 
     internal Task<IReadOnlyList<ArtifactWorkspaceCleanupPreview>> PreviewForDeletionAsync(IReadOnlyList<string> publications,
         IReadOnlyList<int> ownerRunIds, ArtifactDeliveryCleanupAuthorization authorization, CancellationToken ct,
-        ArtifactCleanupReferenceGuard? previewReferences = null) =>
-        PreviewCoreAsync(publications, ownerRunIds, ct, authorization, previewReferences);
+        ArtifactCleanupReferenceGuard? previewReferences = null, bool includeRegisteredFiles = false) =>
+        PreviewCoreAsync(publications, ownerRunIds, ct, authorization, previewReferences, includeRegisteredFiles);
 
     private async Task<IReadOnlyList<ArtifactWorkspaceCleanupPreview>> PreviewCoreAsync(IReadOnlyList<string> publications,
         IReadOnlyList<int> ownerRunIds, CancellationToken ct, ArtifactDeliveryCleanupAuthorization? authorization,
-        ArtifactCleanupReferenceGuard? previewReferences = null)
+        ArtifactCleanupReferenceGuard? previewReferences = null, bool includeRegisteredFiles = false)
     {
         previewReferences ??= new(db, workspaces, cachePreviewReads: true);
         var rows = new List<ArtifactWorkspaceCleanupPreview>();
@@ -256,16 +256,30 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
                     prerequisites.Select(p => p.ArtifactId).ToArray(), previewReferences);
                 var proof = reason == null && !graph.ContainsKey(source.Id) ? await BoundaryProofAsync(source, output, graph, ct) : null;
                 var fingerprint = reason == null ? Fingerprint(source, output, ownerRunIds, proof, prerequisites) : null;
-                if (reason == null && authorization != null)
-                {
-                    authorization.RecordRetirementDependencies(source.Id, prerequisites);
-                    approved.Add(source.Id, new(source.Id, source.OperationId, source.Fingerprint,
-                        source.RootDirectory, fingerprint!, output.Id));
-                }
                 var count = reason == null ? source.Manifest.Entries.Count : 0;
                 long bytes = reason == null ? source.Manifest.Entries.Sum(e => e.Length) : 0;
                 IReadOnlySet<string>? expectedMovedFiles = null;
-                if (reason == null && pending != null && authorization == null)
+                IReadOnlyList<(string Path, long Bytes)>? registeredFiles = null;
+                var moved = reason == null && pending == null && (includeRegisteredFiles || authorization == null) &&
+                    workspaces != null && source.Kind == "processedFiles"
+                    ? await Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessingStageCommit
+                        .ReadMovedEntriesAsync(db, store, workspaces, source, ct, includeQuarantinedTargetForPreview: true)
+                    : null;
+                if (reason == null && includeRegisteredFiles)
+                {
+                    if (pending != null)
+                        registeredFiles = await quarantine.PreviewPendingDeletionFilesAsync(pending, source.Manifest, ct);
+                    else if (moved?.TargetQuarantined != true)
+                    {
+                        expectedMovedFiles = moved?.RelativePaths.ToHashSet(StringComparer.Ordinal);
+                        registeredFiles = ArchiveQuarantineService.PreviewMovedSourceFiles(source, expectedMovedFiles ??
+                            new HashSet<string>(StringComparer.Ordinal), ct);
+                    }
+                    if (registeredFiles == null) { reason = moved?.TargetQuarantined == true ? "ReferencedDescendant" : "SelectionChanged"; fingerprint = null; }
+                    count = registeredFiles?.Count ?? 0;
+                    bytes = registeredFiles?.Sum(f => f.Bytes) ?? 0;
+                }
+                else if (reason == null && pending != null && authorization == null)
                 {
                     // Resuming the same receipt can retire a registration with no physical payload left.
                     // The quarantine operation independently rechecks the whole signed manifest on apply.
@@ -273,10 +287,7 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
                     if (remaining == null) { reason = "SelectionChanged"; fingerprint = null; }
                     (count, bytes) = remaining ?? (0, 0L);
                 }
-                else if (reason == null && authorization == null && workspaces != null && source.Kind == "processedFiles" &&
-                    await Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessingStageCommit
-                        .ReadMovedEntriesAsync(db, store, workspaces, source, ct, includeQuarantinedTargetForPreview: true)
-                        is {RelativePaths.Count: > 0} moved)
+                else if (reason == null && authorization == null && moved is {RelativePaths.Count: > 0})
                 {
                     expectedMovedFiles = moved.RelativePaths.ToHashSet(StringComparer.Ordinal);
                     // The canonical cleanup must finish before the original registration can retire.
@@ -285,8 +296,14 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
                     if (remaining == null) { reason = moved.TargetQuarantined ? "ReferencedDescendant" : "SelectionChanged"; fingerprint = null; }
                     (count, bytes) = remaining ?? (0, 0L);
                 }
+                if (reason == null && authorization != null)
+                {
+                    authorization.RecordRetirementDependencies(source.Id, prerequisites);
+                    approved.Add(source.Id, new(source.Id, source.OperationId, source.Fingerprint,
+                        source.RootDirectory, fingerprint!, output.Id));
+                }
                 rows.Add(new(source.Id, source.OperationId, source.RootDirectory, reason == null, reason,
-                    count, bytes, fingerprint, output.Id) {ExpectedMovedFiles = expectedMovedFiles});
+                    count, bytes, fingerprint, output.Id) {ExpectedMovedFiles = expectedMovedFiles, RegisteredPreviewFiles = registeredFiles});
             }
         }
         return rows;
@@ -363,7 +380,7 @@ public sealed partial class PublishedArtifactAncestorCleanup(BakabaseDbContext d
             if (workspaces == null || await Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessingStageCommit
                     .ReadMovedEntriesAsync(db, store, workspaces, original, token) is not {} moved) return new HashSet<string>(StringComparer.Ordinal);
             var paths = moved.RelativePaths.ToHashSet(StringComparer.Ordinal);
-            if (authorization == null && original.Fingerprint == output.Fingerprint)
+            if ((authorization == null || expected.ExpectedMovedFiles is {Count: > 0}) && original.Fingerprint == output.Fingerprint)
                 paths.UnionWith(moved.EmptyDirectories);
             return paths;
         },
