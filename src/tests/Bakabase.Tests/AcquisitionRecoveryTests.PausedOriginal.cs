@@ -5,6 +5,7 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Models.Domain;
@@ -206,7 +207,23 @@ public sealed partial class AcquisitionRecoveryTests
         var batchRecovery = new AcquisitionLocalRecoveryBatchService(_db, recovery, diagnostics, null!, null!, options, storage,
             new PinnedBatchCapacity(), new(), continuations: continuation);
 
+        if (hasCheckpoint && stoppedByDownloader)
+        {
+            var other = new AcquisitionTaskDbModel
+                {Title = "An unrelated task", Status = AcquisitionStatus.Cancelled};
+            _db.AcquisitionTasks.Add(other);
+            await _db.SaveChangesAsync();
+            provider.DuringPausedProof = ct => Task.Delay(TimeSpan.FromSeconds(5), ct);
+
+            var multiple = await batchRecovery.PreviewAsync(new([task.Id, other.Id], "automatic"));
+            var slow = multiple.Rows.Single(previewRow => previewRow.TaskId == task.Id);
+            Assert.AreEqual("download.awaitCompletion", slow.CurrentStepKind);
+            Assert.AreEqual(AcquisitionRecoveryDiagnostics.PausedOriginalCheckTimedOut, slow.ReasonCode);
+            Assert.IsFalse(slow.CanQueue);
+            Assert.AreEqual("RECOVERY_ALREADY_COMPLETED", multiple.Rows.Single(previewRow => previewRow.TaskId == other.Id).ReasonCode);
+        }
         var preview = await batchRecovery.PreviewAsync(new([task.Id], "automatic"));
+        provider.DuringPausedProof = null;
         var row = preview.Rows.Single();
         Assert.AreEqual(hasCheckpoint && stoppedByDownloader, row.CanQueue, row.ReasonCode);
         Assert.AreEqual(0, provider.Checks);
@@ -218,7 +235,8 @@ public sealed partial class AcquisitionRecoveryTests
         Assert.AreEqual(operation.Id, JsonSerializer.Deserialize<CloudSelectionSignal>(host.Signal!, WorkflowJson.Options)!
             .PreparedDownloadRetries!.Values.Single().OperationId);
         Assert.AreEqual(download.Id, (await _db.DownloadTasks.AsNoTracking().SingleAsync()).Id);
-        Assert.AreEqual("configured", AcquisitionStorageOverrideGrant.Read(await _db.AcquisitionTasks.AsNoTracking().SingleAsync())?.ReserveMode);
+        Assert.AreEqual("configured", AcquisitionStorageOverrideGrant.Read(
+            await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == task.Id))?.ReserveMode);
     }
 
     [DataTestMethod]
@@ -366,6 +384,7 @@ public sealed partial class AcquisitionRecoveryTests
 
     private sealed class PausedOriginalProvider : RecoverableProvider, ICloudDownloadRecoveryProvider, ICloudPreparedDownloadRetryProvider
     {
+        public bool SupportsPausedPreparedDownload => true;
         public bool HasCheckpoint { get; set; }
         public Func<CancellationToken, Task>? DuringPausedProof { get; set; }
         public string? UnavailableSourceId { get; set; }

@@ -89,6 +89,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
         // provider does not serialize the whole selection. The parent request scope is
         // never used concurrently (EF DbContext is not thread-safe).
         var itemResults = new CheckedResult[ids.Length];
+        var allowLongSingleCheck = ids.Length == 1 && input.Mode == "automatic";
         var next = -1;
         var workers = Enumerable.Range(0, scopeFactory == null ? 1 : Math.Min(PreviewConcurrency, ids.Length))
             .Select(_ => PreviewWorkerAsync()).ToArray();
@@ -113,14 +114,14 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                 if (scopeFactory == null)
                 {
                     result = await PreviewItemAsync(id, estimate, queueStatuses, capacityOnly, mode, restricted, maxAdaptiveIterations,
-                        budget.Token, ct, guardDirectory);
+                        budget.Token, ct, guardDirectory, allowLongSingleCheck);
                 }
                 else
                 {
                     await using var scope = scopeFactory.CreateAsyncScope();
                     var worker = scope.ServiceProvider.GetRequiredService<AcquisitionLocalRecoveryBatchService>();
                     result = await worker.PreviewItemAsync(id, estimate, queueStatuses, capacityOnly, mode, restricted, maxAdaptiveIterations,
-                        budget.Token, ct, guardDirectory);
+                        budget.Token, ct, guardDirectory, allowLongSingleCheck);
                 }
                 itemResults[index] = result;
             }
@@ -159,8 +160,11 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
 
     private async Task<CheckedResult> PreviewItemAsync(int id, AcquisitionSizeEstimate estimate,
         IReadOnlyDictionary<string, string>? queueStatuses, bool capacityOnly, string mode, bool restricted, int maxAdaptiveIterations,
-        CancellationToken budgetToken, CancellationToken requestToken, Func<string?, Task>? guardDirectory)
+        CancellationToken budgetToken, CancellationToken requestToken, Func<string?, Task>? guardDirectory, bool allowLongSingleCheck)
     {
+        string? title = null;
+        int? runId = null;
+        var pausedOriginal = false;
         try
         {
             using var item = CancellationTokenSource.CreateLinkedTokenSource(budgetToken, requestToken);
@@ -169,7 +173,13 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             if (task == null)
                 return new([new(id, null, null, false, "ACQUISITION_TASK_NOT_FOUND", null, true, null, null, null)],
                     new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>());
-            if (mode == "automatic" && (IsPreparedStart(task, run) || IsTransferCursor(run))) item.CancelAfter(TimeSpan.FromSeconds(10));
+            title = task.Title;
+            runId = run?.Id;
+            pausedOriginal = !capacityOnly && mode == "automatic" && diagnostics.CanInspectPausedOriginal(task, run);
+            // An explicit single selection can use the existing request deadline. A slow
+            // parked download must not claim that time slice for every row of a batch.
+            if (pausedOriginal && allowLongSingleCheck) item.CancelAfter(Timeout.InfiniteTimeSpan);
+            else if (mode == "automatic" && (IsPreparedStart(task, run) || IsTransferCursor(run))) item.CancelAfter(TimeSpan.FromSeconds(10));
             var queue = queueStatuses == null ? null : await QueueReference(task, run, queueStatuses, item.Token);
             if (queue != null && (mode != "automatic" || !queue.CanRequeue))
                 return new([new(id, task.Title, run?.Id, false, "LOCAL_BATCH_ALREADY_QUEUED", estimate.Bytes,
@@ -183,6 +193,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                 ? await DownloadCapacityAsync(task, run!, estimate, item.Token, guardDirectory)
                 : await CheckAsync(task, run, estimate, item.Token, guardDirectory, mode,
                     verifyFiles: mode != "automatic", restricted: restricted);
+            item.Token.ThrowIfCancellationRequested();
             var evidence = new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>();
             if (checkedTask.Evidence is { } valid) evidence[id] = valid with {QueueStamp = QueueStamp(task)};
             var alternatives = new Dictionary<string, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>();
@@ -207,7 +218,9 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
         }
         catch (OperationCanceledException) when (!requestToken.IsCancellationRequested)
         {
-            return new([new(id, null, null, false, "RECOVERY_CHECK_INCOMPLETE", estimate.Bytes, true, null, null, null)],
+            return new([new(id, title, runId, false, pausedOriginal ? AcquisitionRecoveryDiagnostics.PausedOriginalCheckTimedOut :
+                "RECOVERY_CHECK_INCOMPLETE", estimate.Bytes, true, null, null, null,
+                CurrentStepKind: pausedOriginal ? "download.awaitCompletion" : null)],
                 new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>());
         }
     }

@@ -13,6 +13,8 @@ namespace Bakabase.Service.Components.CloudDownloads.PikPakCli;
 
 public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetryProvider
 {
+    public bool SupportsPausedPreparedDownload => _restoredOriginals != null;
+
     public bool CanRetryPreparedDownloadFailure(string failureCode) => failureCode == "PIKPAK_CLI_REQUEST_FAILED";
 
     public async Task<CloudReadiness> CheckLocalRecoveryAsync(CloudDownloadRequest request, CancellationToken ct)

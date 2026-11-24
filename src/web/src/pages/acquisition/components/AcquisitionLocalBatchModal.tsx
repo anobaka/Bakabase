@@ -57,6 +57,8 @@ const supportsAction = (row: PreviewRow, action: string) =>
   row.availableActions?.includes(action) === true;
 const usesCompletedDownload = (row: PreviewRow) =>
   row.reasonCode === "RECOVERY_COMPLETED_DOWNLOAD_READY";
+const needsSinglePausedCheck = (row: PreviewRow) =>
+  row.reasonCode === "RECOVERY_PAUSED_ORIGINAL_CHECK_TIMED_OUT";
 const resumesOriginalDownload = (row: PreviewRow) =>
   row.actionCategory === "workflow" &&
   row.currentStepKind === "download.awaitCompletion" &&
@@ -153,6 +155,7 @@ export default function AcquisitionLocalBatchModal({
   onOpenQueue,
   onShowDownloads,
   onOpenTask,
+  onInspectPausedOriginal,
   initialSelection,
   onSelectionChange,
 }: DestroyableProps &
@@ -167,6 +170,7 @@ export default function AcquisitionLocalBatchModal({
     onOpenQueue?: (queue: QueueReference) => void;
     onShowDownloads?: () => void;
     onOpenTask?: (id: number) => void;
+    onInspectPausedOriginal?: (id: number) => void;
     initialSelection?: LocalBatchSelection;
     onSelectionChange?: (selection: LocalBatchSelection) => void;
   }) {
@@ -992,6 +996,19 @@ export default function AcquisitionLocalBatchModal({
                           {t("acquisition.continueActions.transferRetry.hint")}
                         </p>
                       )}
+                      {automatic && captured.current.length > 1 && onInspectPausedOriginal &&
+                        needsSinglePausedCheck(row) && (
+                          <Button
+                            size="sm"
+                            variant="light"
+                            isDisabled={busy}
+                            onPress={() => {
+                              if (!mutation.current) onInspectPausedOriginal(row.taskId);
+                            }}
+                          >
+                            {t("acquisition.continueActions.inspectPausedOriginal")}
+                          </Button>
+                        )}
                       {automatic &&
                         !supportsAction(row, "continue") &&
                         !row.queue &&

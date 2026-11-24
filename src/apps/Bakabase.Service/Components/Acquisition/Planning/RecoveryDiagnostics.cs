@@ -52,6 +52,7 @@ public interface IAcquisitionRecoveryDiagnostics
         DownloadWorkset workset, CloudDownloadTarget target, AcquisitionPlanProcessingConfig config, AcquisitionRecoveryDiagnosis diagnosis, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<string>?>(null);
     bool IsTransferStep(string? kind) => CloudWorkflow.TransferActivity(kind) != null;
+    bool CanInspectPausedOriginal(AcquisitionTaskDbModel task, WorkflowRunDbModel? run) => false;
     Task<AcquisitionRecoveryDiagnosis> DiagnoseTransferRetryAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel? run,
         CancellationToken ct) => Task.FromResult(new AcquisitionRecoveryDiagnosis(new(task.Id, task.Title, run?.Id,
             false, null, "RECOVERY_CHECKPOINT_UNSUPPORTED")));

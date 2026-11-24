@@ -185,6 +185,23 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+it("offers separate inspection only for the paused download whose batch check timed out", async () => {
+  const inspect = vi.fn();
+  api.preview.mockResolvedValue(preview({
+    rows: [
+      row(1, { canQueue: true, canOverrideStorage: false }),
+      row(2, { canQueue: false, canOverrideStorage: false, reasonCode: "RECOVERY_PAUSED_ORIGINAL_CHECK_TIMED_OUT" }),
+      row(3, { canQueue: false, canOverrideStorage: false, reasonCode: "RECOVERY_CHECK_INCOMPLETE" }),
+    ],
+  }));
+  show({ automatic: true, taskIds: [1, 2, 3], onInspectPausedOriginal: inspect });
+  const button = await screen.findByRole("button", { name: "acquisition.continueActions.inspectPausedOriginal" });
+  expect(screen.getAllByRole("button", { name: "acquisition.continueActions.inspectPausedOriginal" })).toHaveLength(1);
+  expect(cell(1, "continue")).toBeChecked();
+  fireEvent.click(button);
+  expect(inspect).toHaveBeenCalledExactlyOnceWith(2);
+});
+
 it("keeps oversized selections intact and offers an explicit scope change without requesting a truncated preview", async () => {
   const change = vi.fn();
   show({

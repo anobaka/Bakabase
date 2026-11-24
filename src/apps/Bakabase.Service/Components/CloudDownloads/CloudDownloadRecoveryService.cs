@@ -34,6 +34,9 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
     internal const string PausedOriginalLocalReview = "RECOVERY_PAUSED_ORIGINAL_LOCAL_REVIEW";
     private enum NativeVerificationScope { IdentityOnly, InspectInventory }
 
+    internal bool SupportsPausedPreparedDownload(CloudSource source) =>
+        DownloadProviderRouting.Find(providers, source) is ICloudPreparedDownloadRetryProvider {SupportsPausedPreparedDownload: true};
+
     public Task<CloudDownloadRecoveryCheck> CheckAsync(int runId, CloudDownloadTarget target,
         string outputRoot, bool revalidate, CancellationToken ct, bool includeStopped = false, bool includeStoppedForVerification = false,
         bool requireEquivalentGroup = false) =>

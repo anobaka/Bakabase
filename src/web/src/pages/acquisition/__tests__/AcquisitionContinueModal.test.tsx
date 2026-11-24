@@ -24,6 +24,12 @@ vi.mock("../components/AcquisitionLocalBatchModal", () => ({
           </button>
         )}
         {props.onBackToSelection && <button onClick={props.onBackToSelection}>back</button>}
+        {props.onInspectPausedOriginal && (
+          <button onClick={() => {
+            props.onSelectionChange({ 1: "continue" });
+            props.onInspectPausedOriginal(3);
+          }}>check separately</button>
+        )}
         {props.onShowContinuationHistory && (
           <button onClick={props.onShowContinuationHistory}>history</button>
         )}
@@ -99,6 +105,17 @@ it("preserves action and task choices while opening the exact existing queue in 
   expect(panes.local.mock.calls.at(-1)![0].initialSelection).toEqual({
     1: "continue",
   });
+});
+
+it("checks the timed-out paused task separately and preserves the other batch choices", () => {
+  render(<AcquisitionContinueModal taskIds={[1, 3]} />);
+  fireEvent.click(screen.getByRole("button", { name: "check separately" }));
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  expect(panes.local.mock.calls.at(-1)![0].taskIds).toEqual([3]);
+  expect(panes.local.mock.calls.at(-1)![0].onInspectPausedOriginal).toBeUndefined();
+  fireEvent.click(screen.getByRole("button", { name: "back" }));
+  expect(panes.local.mock.calls.at(-1)![0].taskIds).toEqual([1, 3]);
+  expect(panes.local.mock.calls.at(-1)![0].initialSelection).toEqual({ 1: "continue" });
 });
 
 it("opens local queue history and can inspect continuation records without task selection", () => {

@@ -4,7 +4,7 @@ import AcquisitionLocalBatchModal, { type LocalBatchSelection } from "./Acquisit
 import AcquisitionRecoveryModal from "./AcquisitionRecoveryModal";
 import AcquisitionContinuationJobsModal from "./AcquisitionContinuationJobsModal";
 
-type Pane = "automatic" | "localQueue" | "history" | "downloads";
+type Pane = "automatic" | "localQueue" | "history" | "downloads" | "pausedOriginal";
 /** One visible modal. Queue inspection never starts a task or carries an old acknowledgement. */
 export default function AcquisitionContinueModal({
   taskIds,
@@ -30,6 +30,7 @@ export default function AcquisitionContinueModal({
   const [navigation, setNavigation] = useState<{
     pane: Pane;
     batchId?: string;
+    taskId?: number;
     generation: number;
   }>({
     pane: captured.current.length ? "automatic" : "localQueue",
@@ -55,10 +56,24 @@ export default function AcquisitionContinueModal({
         onSelectionChange={(value) => {
           selection.current = value;
         }}
+        onInspectPausedOriginal={(taskId) =>
+          setNavigation({ pane: "pausedOriginal", taskId, generation: ++generation.current })
+        }
         onShowDownloads={() => navigate("downloads")}
         onOpenQueue={(queue) =>
           navigate(queue.kind === "localQueue" ? "localQueue" : "history", queue.batchId)
         }
+      />
+    );
+  if (navigation.pane === "pausedOriginal" && navigation.taskId != null)
+    return (
+      <AcquisitionLocalBatchModal
+        key={navigation.generation}
+        {...shared}
+        automatic
+        taskIds={[navigation.taskId]}
+        onBackToSelection={back}
+        onOpenTask={onOpenTask}
       />
     );
   if (navigation.pane === "downloads")

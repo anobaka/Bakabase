@@ -11,6 +11,9 @@ public interface ICloudPreparedDownloadRetryProvider
     /// <summary>Read-only local handling of the original journal and execution location.</summary>
     Task<CloudReadiness> CheckPreparedDownloadRetryAsync(CloudDownloadRequest request, CancellationToken ct);
 
+    /// <summary>The provider can inspect durable payload checkpoints after a manual stop.</summary>
+    bool SupportsPausedPreparedDownload => false;
+
     /// <summary>A manual pause with a provider-owned, committed payload checkpoint. Does not contact the provider.</summary>
     Task<CloudReadiness> CheckPausedPreparedDownloadAsync(CloudDownloadRequest request, CancellationToken ct) =>
         Task.FromResult(new CloudReadiness(false));

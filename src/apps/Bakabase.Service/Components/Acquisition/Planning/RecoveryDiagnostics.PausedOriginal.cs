@@ -19,6 +19,20 @@ public sealed partial class AcquisitionRecoveryDiagnostics
     internal const string PausedOriginalReady = "RECOVERY_PAUSED_ORIGINAL_READY";
     internal const string PausedOriginalCheckTimedOut = "RECOVERY_PAUSED_ORIGINAL_CHECK_TIMED_OUT";
 
+    public bool CanInspectPausedOriginal(AcquisitionTaskDbModel task, WorkflowRunDbModel? run)
+    {
+        try
+        {
+            return downloads != null && run != null && AcquisitionDownloadContinuationService.IsPausedDownloadOwner(task, run) &&
+                AcquisitionContinuationReserve.Kind(run) == "download.awaitCompletion" &&
+                ReadWorkset(run.CurrentItemJson) is {} workset &&
+                workset.Id == FormattableString.Invariant($"acquisition:{task.Id}:{task.PlanRevision}") &&
+                workset.Targets.Any(target => target is {Excluded: false, DownloadTaskId: not null, DownloadArtifactId: null, SelectedSource: {} source} &&
+                    downloads.SupportsPausedPreparedDownload(source));
+        }
+        catch (Exception error) when (error is JsonException or InvalidOperationException) {return false;}
+    }
+
     private async Task<AcquisitionRecoveryDiagnosis?> InspectPausedOriginalAsync(AcquisitionTaskDbModel task,
         WorkflowRunDbModel run, DownloadWorkset workset, bool verifyRemote, CancellationToken ct)
     {
