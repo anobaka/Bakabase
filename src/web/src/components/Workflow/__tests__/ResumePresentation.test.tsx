@@ -17,19 +17,23 @@ vi.mock("@/components/bakaui", () => ({
   ),
 }));
 
-it("shows a localized provider reason and only an allowlisted code in technical details", () => {
+it.each([
+  "PIKPAK_ORIGINAL_FILE_UNAVAILABLE",
+  "ORIGINAL_HTTP_RESUME_UNSUPPORTED",
+  "ORIGINAL_HTTP_RANGE_INVALID",
+] as const)("shows the localized %s reason and only its code in technical details", (code) => {
   render(
     <ResumeProblem
-      problem="CloudProviderException: PIKPAK_ORIGINAL_FILE_UNAVAILABLE\n at PrivateStack SECRET_TOKEN_VALUE"
+      problem={`CloudProviderException: ${code}\n at PrivateStack SECRET_TOKEN_VALUE`}
       fallback="Cannot continue"
     />,
   );
   expect(
-    screen.getByText(cn["cloudDownload.problemCode.PIKPAK_ORIGINAL_FILE_UNAVAILABLE"]),
+    screen.getByText(cn[`cloudDownload.problemCode.${code}`]),
   ).toBeVisible();
-  expect(screen.queryByText("PIKPAK_ORIGINAL_FILE_UNAVAILABLE")).toBeNull();
+  expect(screen.queryByText(code)).toBeNull();
   fireEvent.click(screen.getByRole("button"));
-  expect(screen.getByText("PIKPAK_ORIGINAL_FILE_UNAVAILABLE")).toBeVisible();
+  expect(screen.getByText(code)).toBeVisible();
   expect(screen.queryByText(/PrivateStack|SECRET_TOKEN_VALUE/)).toBeNull();
 });
 

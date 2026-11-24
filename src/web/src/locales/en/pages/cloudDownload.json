@@ -1,4 +1,6 @@
 {
+  "cloudDownload.problemCode.ORIGINAL_HTTP_RESUME_UNSUPPORTED": "The server did not provide the information needed to resume this original file. You can download the complete original with the provider’s client and attach it to the task.",
+  "cloudDownload.problemCode.ORIGINAL_HTTP_RANGE_INVALID": "The server returned a different byte range than requested. The download has stopped. Check the file version at the source.",
   "cloudDownload.problemCode.TERABOX_DOWNLOAD_IDENTITY_REJECTED": "The TeraBox download server did not recognize the current authorization (HTTP 403, upstream 31045: user not exists). This does not establish that the share expired or the account does not exist. Check tool compatibility and authorization, and resolve the download rejection before continuing.",
   "cloudDownload.problemCode.TERABOX_DOWNLOAD_ACCESS_DENIED": "The TeraBox download server denied access (HTTP 403) without a recognized specific reason. The share may still be browsable; check download access in the official client before continuing.",
   "cloudDownload.title": "Cloud drive download",

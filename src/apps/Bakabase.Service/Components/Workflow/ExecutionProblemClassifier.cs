@@ -15,9 +15,10 @@ public static class ExecutionProblemClassifier
     public static bool IsKnown(string code) => Rules.ContainsKey(code);
     internal static bool IsUnsupportedDownloadSource(string? code) =>
         code != null && Rules.TryGetValue(code, out var rule) && rule.Tag == "downloadSourceUnsupported";
-    // A successful public listing cannot supersede a missing original-download URL.
-    // That requires the provider's download recovery check, not a source-health probe.
-    public static bool IsRefreshableSourceCode(string code) => code != "PIKPAK_ORIGINAL_FILE_UNAVAILABLE" && Rules.TryGetValue(code, out var rule) &&
+    // Listing a share cannot establish the availability or range semantics of its original bytes.
+    public static bool IsRefreshableSourceCode(string code) =>
+        code is not ("PIKPAK_ORIGINAL_FILE_UNAVAILABLE" or "ORIGINAL_HTTP_RESUME_UNSUPPORTED" or "ORIGINAL_HTTP_RANGE_INVALID") &&
+        Rules.TryGetValue(code, out var rule) &&
         (rule.Tag is "sourceUnavailable" or "sourceNeedsVerification" or "networkIssue" || code is "SOURCE_CHECK_PASSED_RETRY_REQUIRED" or
             "BAIDU_SHARE_ACCESS_RESTRICTED" or "BAIDU_SHARE_VISITOR_LIMIT_REACHED" or "BAIDU_SHARE_FROZEN" or
             "SOURCE_SHARE_ACCESS_RESTRICTED" or "SOURCE_SHARE_VISITOR_LIMIT_REACHED" or "SOURCE_SHARE_FROZEN" or
@@ -102,6 +103,7 @@ public static class ExecutionProblemClassifier
             "SOURCE_SHARE_CANCELLED", "SOURCE_SHARE_EXPIRED", "SOURCE_SHARE_NOT_FOUND", "SOURCE_FILE_NOT_FOUND", "SOURCE_NOT_FOUND",
             "GOFILE_CONTENT_NOT_FOUND", "PIKPAK_SHARE_EXPIRED", "SHAREPOINT_ATTACHMENT_REMOVED", "TERABOX_SHARE_EXPIRED", "TERABOX_SHARE_DELETED");
         Add("sourceNeedsVerification", SourceAvailabilityStatuses.Unknown,
+            "ORIGINAL_HTTP_RESUME_UNSUPPORTED", "ORIGINAL_HTTP_RANGE_INVALID",
             "BAIDU_SHARE_UNAVAILABLE", "BAIDU_SHARE_PAGE_INVALID", "BAIDU_SHARE_RESPONSE_INVALID", "BAIDU_SHARE_VERIFICATION_FAILED",
             "PIKPAK_SHARE_UNAVAILABLE", "MEGA_SHARE_UNAVAILABLE", "GOFILE_SHARE_NOT_FOUND", "SHAREPOINT_ATTACHMENT_UNAVAILABLE",
             "SHAREPOINT_ATTACHMENT_RESPONSE_UNRECOGNIZED", "SHAREPOINT_ATTACHMENT_VERSION_UNAVAILABLE",

@@ -1,4 +1,6 @@
 {
+  "cloudDownload.problemCode.ORIGINAL_HTTP_RESUME_UNSUPPORTED": "原件服务器未提供可验证的断点续传。可用来源客户端完整下载原件，再将本地文件关联到任务。",
+  "cloudDownload.problemCode.ORIGINAL_HTTP_RANGE_INVALID": "原件服务器返回的文件范围与请求不符，下载已暂停。请核对来源中的文件版本。",
   "cloudDownload.problemCode.TERABOX_DOWNLOAD_IDENTITY_REJECTED": "TeraBox 下载服务器未识别当前授权（HTTP 403，上游 31045：user not exists）。这不代表分享失效或账号不存在；请核对工具兼容性和账号授权，解决下载端拒绝后再继续。",
   "cloudDownload.problemCode.TERABOX_DOWNLOAD_ACCESS_DENIED": "TeraBox 下载服务器拒绝访问（HTTP 403），未返回可确认的具体原因。分享可能仍可浏览；请核对官方客户端的下载权限后再继续。",
   "cloudDownload.title": "网盘下载",

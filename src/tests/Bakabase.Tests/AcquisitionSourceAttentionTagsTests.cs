@@ -8,6 +8,17 @@ namespace Bakabase.Tests;
 public sealed class AcquisitionSourceAttentionTagsTests
 {
     [TestMethod]
+    [DataRow("ORIGINAL_HTTP_RESUME_UNSUPPORTED")]
+    [DataRow("ORIGINAL_HTTP_RANGE_INVALID")]
+    public void Listing_a_share_cannot_resolve_its_original_file_range_failure(string code)
+    {
+        CollectionAssert.AreEqual(new[] {"sourceNeedsVerification"}, ExecutionProblemClassifier.Classify([code]).ToArray());
+        Assert.AreEqual(SourceAvailabilityStatuses.Unknown, ExecutionProblemClassifier.AvailabilityStatus(code));
+        Assert.IsFalse(ExecutionProblemClassifier.IsRefreshableSourceCode(code));
+        CollectionAssert.AreEqual(new[] {code}, WorkflowSourceRunProblems.Extract("CloudProviderException: " + code).ToArray());
+    }
+
+    [TestMethod]
     [DataRow("SOURCE_UNSUPPORTED")]
     [DataRow("DOWNLOAD_METHOD_UNAVAILABLE")]
     [DataRow("NATIVE_DOCUMENT_EXPORT_UNSUPPORTED")]
