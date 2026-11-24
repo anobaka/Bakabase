@@ -11,7 +11,7 @@ public sealed record AuthorizedOriginalCheckpoint(bool Exists, long VerifiedByte
 public sealed class AuthorizedOriginalDownloadException(string code) : IOException(code switch
 {
     "ORIGINAL_HTTP_RESUME_UNSUPPORTED" or "ORIGINAL_HTTP_SOURCE_CHANGED" or "ORIGINAL_HTTP_RANGE_INVALID" or
-    "ORIGINAL_HTTP_CHECKPOINT_INVALID" or "ORIGINAL_HTTP_BUSY" or "ORIGINAL_HTTP_LOCATION_UNAVAILABLE" => code,
+    "ORIGINAL_HTTP_RATE_LIMITED" or "ORIGINAL_HTTP_CHECKPOINT_INVALID" or "ORIGINAL_HTTP_BUSY" or "ORIGINAL_HTTP_LOCATION_UNAVAILABLE" => code,
     _ => "ORIGINAL_HTTP_TRANSFER_FAILED"
 })
 {

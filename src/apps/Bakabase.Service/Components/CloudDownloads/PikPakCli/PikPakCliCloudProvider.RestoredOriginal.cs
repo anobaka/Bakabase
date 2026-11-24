@@ -84,6 +84,7 @@ public sealed partial class PikPakCliCloudProvider
     private static PikPakCliException RestoredHttpProblem(AuthorizedOriginalDownloadException error) => new(error.Code switch
     {
         "ORIGINAL_HTTP_TRANSFER_FAILED" or "ORIGINAL_HTTP_LOCATION_UNAVAILABLE" => "PIKPAK_NETWORK_UNAVAILABLE",
+        "ORIGINAL_HTTP_RATE_LIMITED" => "CLOUD_RATE_LIMITED",
         "ORIGINAL_HTTP_SOURCE_CHANGED" => "PIKPAK_REMOTE_CHANGED",
         "ORIGINAL_HTTP_CHECKPOINT_INVALID" or "ORIGINAL_HTTP_BUSY" => "PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED",
         _ => error.Code

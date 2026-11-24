@@ -23,7 +23,7 @@ internal sealed class AuthorizedOriginalCheckpointStore
     private string Ledger => Path.Combine(DirectoryPath, "checkpoint");
     private string NewLedger => Path.Combine(DirectoryPath, "checkpoint.new");
     private string LockFile => Path.Combine(DirectoryPath, "transfer.lock");
-    internal sealed record State(byte[] Version, byte[] Digests, long VerifiedBytes, bool Published);
+    internal sealed record State(byte[] Version, int SegmentCount, long VerifiedBytes, bool Published);
 
     internal AuthorizedOriginalCheckpointStore(AuthorizedOriginalIdentity identity, string directory)
     {
@@ -85,29 +85,33 @@ internal sealed class AuthorizedOriginalCheckpointStore
             return null;
         }
         if (File.Exists(NewLedger)) throw Invalid();
-        var size = new FileInfo(Ledger).Length;
+        using var journal = File.OpenRead(Ledger);
+        var size = journal.Length;
         var segmentCount = _length == 0 ? 0 : 1 + (_length - 1) / SegmentBytes;
         if (size < HeaderSize || (size - HeaderSize) / DigestSize > segmentCount || size > 64 * 1024 * 1024)
             throw Invalid();
-        var data = await File.ReadAllBytesAsync(Ledger, ct);
-        if (!MatchesHeader(data)) throw Invalid();
-        var count = (data.Length - HeaderSize) / DigestSize;
+        var header = new byte[HeaderSize];
+        await journal.ReadExactlyAsync(header, ct);
+        if (!MatchesHeader(header)) throw Invalid();
+        var version = header[4..(4 + DigestSize)];
+        var count = (int)((size - HeaderSize) / DigestSize);
         var verifiedBytes = Math.Min((long)count * SegmentBytes, _length);
         var journalEnd = HeaderSize + count * DigestSize;
-        var sealedForHandoff = verifiedBytes == _length && data.Length == journalEnd + 1 && data[journalEnd] == PublishedSeal;
-        if (verifiedBytes == _length && data.Length != journalEnd && !sealedForHandoff) throw Invalid();
+        journal.Position = journalEnd;
+        var sealedForHandoff = verifiedBytes == _length && size == journalEnd + 1 && journal.ReadByte() == PublishedSeal;
+        if (verifiedBytes == _length && size != journalEnd && !sealedForHandoff) throw Invalid();
         var published = File.Exists(Payload);
         if (handedOff)
         {
             if (published || File.Exists(Partial) || !sealedForHandoff) throw Invalid();
-            return new State(data[4..(4 + DigestSize)], data[HeaderSize..journalEnd], verifiedBytes, false);
+            return new State(version, count, verifiedBytes, false);
         }
         if (sealedForHandoff && !published && !File.Exists(Partial)) throw Invalid();
         var path = published ? Payload : Partial;
         var actual = File.Exists(path) ? new FileInfo(path).Length : 0;
         if (actual < verifiedBytes || actual > _length || actual - verifiedBytes > SegmentBytes ||
             published && (File.Exists(Partial) || !sealedForHandoff)) throw Invalid();
-        return new State(data[4..(4 + DigestSize)], data[HeaderSize..(HeaderSize + count * DigestSize)], verifiedBytes, published);
+        return new State(version, count, verifiedBytes, published);
     }
 
     private bool MatchesHeader(byte[] data) => data.Length >= HeaderSize && data.AsSpan(0, 4).SequenceEqual(Magic) &&
@@ -131,19 +135,31 @@ internal sealed class AuthorizedOriginalCheckpointStore
             file.Flush(flushToDisk: true);
         }
         File.Move(NewLedger, Ledger);
-        return new State(version, [], 0, false);
+        return new State(version, 0, 0, false);
     }
 
     internal async Task VerifyAsync(FileStream payload, State state, CancellationToken ct)
     {
+        if (state.SegmentCount == 0) return;
+        // The writer lease spans inspection and reuse. Recheck the header on the handle
+        // supplying digests, and stream it so verification also has constant memory.
+        ValidateEntries();
+        using var journal = File.OpenRead(Ledger);
+        var header = new byte[HeaderSize];
+        await journal.ReadExactlyAsync(header, ct);
+        if (!MatchesHeader(header) || !header.AsSpan(4, DigestSize).SequenceEqual(state.Version) ||
+            journal.Length < HeaderSize + (long)state.SegmentCount * DigestSize) throw Invalid();
         using var observation = FileIoObservationScope.Begin(read: true, write: false);
-        for (var offset = 0; offset < state.Digests.Length; offset += DigestSize)
+        var expected = new byte[DigestSize];
+        var buffer = new byte[81920];
+        for (var i = 0; i < state.SegmentCount; i++)
         {
-            var start = (long)(offset / DigestSize) * SegmentBytes;
+            var start = (long)i * SegmentBytes;
             var length = Math.Min(SegmentBytes, _length - start);
-            var digest = await HttpDownloadCheckpoint.HashRangeAsync(payload, start, length, ct);
+            await journal.ReadExactlyAsync(expected, ct);
+            var digest = await HttpDownloadCheckpoint.HashRangeAsync(payload, start, length, ct, buffer);
             observation?.Add(length, 0);
-            if (!Convert.FromHexString(digest).AsSpan().SequenceEqual(state.Digests.AsSpan(offset, DigestSize)))
+            if (!Convert.FromHexString(digest).AsSpan().SequenceEqual(expected))
                 throw Invalid();
         }
     }
@@ -152,7 +168,7 @@ internal sealed class AuthorizedOriginalCheckpointStore
     {
         var journal = new FileStream(Ledger, FileMode.Open, FileAccess.Write, FileShare.Read);
         // A process can die after writing part of a digest. Only the full records count.
-        journal.Position = HeaderSize + state.Digests.Length;
+        journal.Position = HeaderSize + (long)state.SegmentCount * DigestSize;
         journal.SetLength(journal.Position);
         return journal;
     }

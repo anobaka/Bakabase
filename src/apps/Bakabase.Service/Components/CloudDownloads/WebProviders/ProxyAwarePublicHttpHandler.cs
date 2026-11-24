@@ -153,7 +153,8 @@ public static class PublicShareDownloadClients
         Add(PikPak, "pikpak"); Add(SharePoint, "oneDrive");
         Add(SharePointAttachment, "oneDrive", SharePointCloudProvider.RequireAttachmentRoute);
         services.AddHttpClient(PikPakOfficialOriginal, client => client.Timeout = Timeout.InfiniteTimeSpan)
-            .ForAuthorizedOriginalDownloads().ConfigurePrimaryHttpMessageHandler(sp => new ProxyAwarePublicHttpHandler(
+            .ForAuthorizedOriginalDownloads(maxParallelRanges: 8, minimumParallelBytes: 16 * 1024 * 1024)
+            .ConfigurePrimaryHttpMessageHandler(sp => new ProxyAwarePublicHttpHandler(
                 sp.GetRequiredService<BakabaseWebProxy>().ForDownloadTool("pikpak-cli", CloudSites.Site("pikpak")),
                 uri => IsProviderHost("pikpak", uri), preserveRepresentation: true));
         return services;

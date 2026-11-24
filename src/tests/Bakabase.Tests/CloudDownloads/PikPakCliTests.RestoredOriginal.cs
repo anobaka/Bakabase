@@ -85,9 +85,27 @@ public sealed partial class PikPakCliTests
         Assert.AreEqual(1, _native.Downloads);
     }
 
+    [TestMethod]
+    public async Task Cdn_throttling_uses_the_existing_retry_later_problem_without_repeating_restore()
+    {
+        await Login();
+        _native.FailPayload = true;
+        _native.RemoveFailedNativePartial = true;
+        await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.DownloadAsync(Request, _ => Task.CompletedTask, default));
+        Assert.AreEqual(1, _native.Restores);
+        _restored.FailureCode = "ORIGINAL_HTTP_RATE_LIMITED";
+        var failure = await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.RetryPreparedDownloadAsync(Request, _ => Task.CompletedTask, default));
+        Assert.AreEqual("CLOUD_RATE_LIMITED", failure.Message);
+        Assert.AreEqual(1, _native.Restores);
+        Assert.AreEqual(1, _native.Downloads);
+    }
+
     private sealed class RestoredOriginal : IAuthorizedOriginalHttpDownloader
     {
         internal bool Fail;
+        internal string? FailureCode;
         internal List<(AuthorizedOriginalIdentity Identity, string Directory, Uri Original)> Transfers { get; } = [];
 
         public Task<AuthorizedOriginalCheckpoint> InspectAsync(AuthorizedOriginalIdentity identity,
@@ -122,6 +140,7 @@ public sealed partial class PikPakCliTests
             Transfers.Add((identity, checkpointDirectory, uri));
             Directory.CreateDirectory(checkpointDirectory);
             var partial = Path.Combine(checkpointDirectory, "checkpoint-part");
+            if (FailureCode != null) throw new AuthorizedOriginalDownloadException(FailureCode);
             if (Fail)
             {
                 await File.WriteAllTextAsync(partial, "a", ct);

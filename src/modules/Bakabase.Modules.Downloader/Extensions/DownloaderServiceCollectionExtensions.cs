@@ -9,13 +9,16 @@ namespace Bakabase.Modules.Downloader.Extensions;
 
 public static class DownloaderServiceCollectionExtensions
 {
-    internal sealed record AuthorizedClient(string Name);
+    internal sealed record AuthorizedClient(string Name, int MaxParallelRanges, long MinimumParallelBytes);
 
     /// <summary>Opt a provider's HTTPS/CDN-restricted client into signed original reads, without HTTP factory loggers.</summary>
-    public static IHttpClientBuilder ForAuthorizedOriginalDownloads(this IHttpClientBuilder builder)
+    public static IHttpClientBuilder ForAuthorizedOriginalDownloads(this IHttpClientBuilder builder,
+        int maxParallelRanges = 1, long minimumParallelBytes = 0)
     {
+        if (maxParallelRanges is < 1 or > 8) throw new ArgumentOutOfRangeException(nameof(maxParallelRanges));
+        ArgumentOutOfRangeException.ThrowIfNegative(minimumParallelBytes);
         builder.RemoveAllLoggers();
-        builder.Services.AddSingleton(new AuthorizedClient(builder.Name));
+        builder.Services.AddSingleton(new AuthorizedClient(builder.Name, maxParallelRanges, minimumParallelBytes));
         return builder;
     }
 

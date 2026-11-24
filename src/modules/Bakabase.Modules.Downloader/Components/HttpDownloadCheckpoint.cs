@@ -78,11 +78,11 @@ internal sealed record HttpDownloadCheckpoint(HttpRemoteIdentity Identity, Chunk
     private static Task<string> HashPrefixAsync(FileStream stream, Chunk chunk, CancellationToken ct) =>
         HashRangeAsync(stream, chunk.Start, chunk.Position, ct);
 
-    internal static async Task<string> HashRangeAsync(FileStream stream, long start, long length, CancellationToken ct)
+    internal static async Task<string> HashRangeAsync(FileStream stream, long start, long length, CancellationToken ct, byte[]? buffer = null)
     {
         stream.Position = start;
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        var buffer = new byte[81920];
+        buffer ??= new byte[81920];
         var remaining = length;
         while (remaining > 0)
         {

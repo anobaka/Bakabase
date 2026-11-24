@@ -1,7 +1,5 @@
-using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
-using System.Security.Cryptography;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Cloud;
@@ -10,11 +8,11 @@ using Bakabase.Modules.Downloader.Models;
 
 namespace Bakabase.Modules.Downloader.Components;
 
-internal sealed class AuthorizedOriginalHttpDownloader(IHttpClientFactory clients,
+internal sealed partial class AuthorizedOriginalHttpDownloader(IHttpClientFactory clients,
     IEnumerable<DownloaderServiceCollectionExtensions.AuthorizedClient> authorizedClients,
     IStorageWriteGuard? storage = null) : IAuthorizedOriginalHttpDownloader
 {
-    private readonly HashSet<string> _clients = authorizedClients.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+    private readonly AuthorizedOriginalRangeBudget _budget = new(authorizedClients);
 
     public Task<AuthorizedOriginalCheckpoint> InspectAsync(AuthorizedOriginalIdentity identity,
         string checkpointDirectory, CancellationToken ct) => Inspect(identity, checkpointDirectory, false, ct);
@@ -46,7 +44,7 @@ internal sealed class AuthorizedOriginalHttpDownloader(IHttpClientFactory client
         string httpClientName, Func<CancellationToken, Task<Uri>> resolveOriginal,
         Func<HttpTransferProgress, Task>? progress, CancellationToken ct)
     {
-        if (!_clients.Contains(httpClientName)) throw new AuthorizedOriginalDownloadException("ORIGINAL_HTTP_LOCATION_UNAVAILABLE");
+        var policy = _budget.RequireClient(httpClientName);
         var store = new AuthorizedOriginalCheckpointStore(identity, checkpointDirectory);
         return storage == null ? Transfer(ct) : storage.RunAsync([store.DirectoryPath], StorageWriteScope.Current, Transfer, ct);
 
@@ -57,16 +55,13 @@ internal sealed class AuthorizedOriginalHttpDownloader(IHttpClientFactory client
             store.EnsureDirectory();
             using var lease = store.Lease(create: true);
             var state = await store.ReadAsync(token);
+            using var primaryLane = await policy.EnterAsync(token);
             var tag = await origin.ProbeAsync(null, token);
             var version = AuthorizedOriginalCheckpointStore.Fingerprint(tag.ToString());
             if (state != null && !state.Version.AsSpan().SequenceEqual(version)) throw Changed();
             state ??= await store.InitializeAsync(version, token);
             var offset = state.VerifiedBytes;
-            var progressClock = Stopwatch.StartNew();
-            var lastReported = offset;
             if (progress != null) await progress(Snapshot(offset, identity.Length, 0));
-            using var observation = FileIoObservationScope.Begin(read: false, write: true);
-            using var network = FileIoObservationScope.BeginNetworkReceive(FileIoObservationScope.NetworkDownloadId);
 
             await using (var file = new FileStream(state.Published ? store.Payload : store.Partial,
                              state.Published ? FileMode.Open : FileMode.OpenOrCreate,
@@ -78,39 +73,8 @@ internal sealed class AuthorizedOriginalHttpDownloader(IHttpClientFactory client
                     file.SetLength(offset);
                     file.Position = offset;
                     using var ledger = store.OpenWriter(state);
-                    while (offset < identity.Length)
-                    {
-                        var end = offset + Math.Min(AuthorizedOriginalCheckpointStore.SegmentBytes, identity.Length - offset) - 1;
-                        using var response = await origin.OpenRangeAsync(offset, end, tag, token);
-                        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-                        var remaining = end - offset + 1;
-                        var buffer = new byte[81920];
-                        await using var stream = await OpenBodyAsync(response.Content, token);
-                        using var readDeadline = CancellationTokenSource.CreateLinkedTokenSource(token);
-                        while (remaining > 0)
-                        {
-                            var size = (int)Math.Min(remaining, buffer.Length);
-                            var count = await ReadBodyAsync(stream, buffer.AsMemory(0, size), readDeadline, token);
-                            if (count == 0) throw Failed();
-                            network?.AddReceivedBytes(count);
-                            await file.WriteAsync(buffer.AsMemory(0, count), token);
-                            observation?.Add(0, count);
-                            hash.AppendData(buffer, 0, count);
-                            remaining -= count;
-                            if (progress != null && progressClock.ElapsedMilliseconds >= 500)
-                            {
-                                await progress(Snapshot(file.Position, identity.Length,
-                                    (file.Position - lastReported) / progressClock.Elapsed.TotalSeconds));
-                                lastReported = file.Position;
-                                progressClock.Restart();
-                            }
-                        }
-                        if (await ReadBodyAsync(stream, buffer.AsMemory(0, 1), readDeadline, token) != 0) throw InvalidRange();
-                        file.Flush(flushToDisk: true);
-                        await ledger.WriteAsync(hash.GetHashAndReset(), token);
-                        ledger.Flush(flushToDisk: true);
-                        offset = end + 1;
-                    }
+                    var writer = new RangeWriter(file, ledger, origin, tag, policy, identity.Length, progress);
+                    await writer.WriteAsync(token);
                 }
                 // Verify authorization/immutable identity again while holding the payload open.
                 // This also applies when all content came from the prior process's journal.
@@ -146,13 +110,34 @@ internal sealed class AuthorizedOriginalHttpDownloader(IHttpClientFactory client
 
     private sealed class OriginalConnection(HttpClient client, Func<CancellationToken, Task<Uri>> resolve, long length)
     {
-        private Uri? _location;
+        private sealed record Location(Uri Address);
+        private Location? _location;
+        private readonly SemaphoreSlim _resolution = new(1);
+        internal bool Throttled { get; private set; }
+
+        internal async Task BackOffAsync(RateLimited limit, CancellationToken ct)
+        {
+            if (Throttled || limit.Delay > TimeSpan.FromMinutes(1))
+                throw new AuthorizedOriginalDownloadException("ORIGINAL_HTTP_RATE_LIMITED");
+            Throttled = true;
+            await Task.Delay(limit.Delay, ct);
+        }
 
         internal async Task<EntityTagHeaderValue> ProbeAsync(EntityTagHeaderValue? expected, CancellationToken ct)
         {
-            _location = null;
-            using var response = await RequestAsync(length == 0 ? HttpMethod.Head : HttpMethod.Get,
-                length == 0 ? null : new RangeHeaderValue(0, 0), expected, ct);
+            _location = null; // Probes run outside all concurrent range reads.
+            HttpResponseMessage probe;
+            while (true)
+            {
+                try
+                {
+                    probe = await RequestAsync(length == 0 ? HttpMethod.Head : HttpMethod.Get,
+                        length == 0 ? null : new RangeHeaderValue(0, 0), expected, ct);
+                    break;
+                }
+                catch (RateLimited limit) { await BackOffAsync(limit, ct); }
+            }
+            using var response = probe;
             var tag = response.Headers.ETag;
             if (expected != null && !expected.Equals(tag)) throw Changed();
             if (tag == null || tag.IsWeak || tag.Tag == "*") throw Unsupported();
@@ -165,10 +150,11 @@ internal sealed class AuthorizedOriginalHttpDownloader(IHttpClientFactory client
         private async Task<HttpResponseMessage> RequestAsync(HttpMethod method, RangeHeaderValue? range,
             EntityTagHeaderValue? tag, CancellationToken ct)
         {
+            Location? rejected = null;
             for (var attempt = 0; ; attempt++)
             {
-                _location ??= await ResolveAsync(ct);
-                using var request = new HttpRequestMessage(method, _location);
+                var location = await LocationAsync(rejected, ct);
+                using var request = new HttpRequestMessage(method, location.Address);
                 request.Headers.Range = range;
                 request.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("identity"));
                 if (tag != null)
@@ -187,8 +173,14 @@ internal sealed class AuthorizedOriginalHttpDownloader(IHttpClientFactory client
                     {
                         if (attempt > 0) throw new AuthorizedOriginalDownloadException("ORIGINAL_HTTP_LOCATION_UNAVAILABLE");
                         response.Dispose();
-                        _location = null;
+                        rejected = location;
                         continue;
+                    }
+                    if (response.StatusCode is HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable)
+                    {
+                        var retryAfter = response.Headers.RetryAfter;
+                        var delay = retryAfter?.Delta ?? retryAfter?.Date - DateTimeOffset.UtcNow ?? TimeSpan.Zero;
+                        throw new RateLimited(delay < TimeSpan.FromSeconds(2) ? TimeSpan.FromSeconds(2) : delay);
                     }
                     if (response.StatusCode == HttpStatusCode.PreconditionFailed) throw Changed();
                     if (range != null && response.StatusCode == HttpStatusCode.OK)
@@ -210,6 +202,18 @@ internal sealed class AuthorizedOriginalHttpDownloader(IHttpClientFactory client
             }
         }
 
+        private async Task<Location> LocationAsync(Location? rejected, CancellationToken ct)
+        {
+            await _resolution.WaitAsync(ct);
+            try
+            {
+                if (_location == null || ReferenceEquals(_location, rejected))
+                    _location = new Location(await ResolveAsync(ct));
+                return _location;
+            }
+            finally { _resolution.Release(); }
+        }
+
         private async Task<Uri> ResolveAsync(CancellationToken ct)
         {
             try
@@ -227,6 +231,8 @@ internal sealed class AuthorizedOriginalHttpDownloader(IHttpClientFactory client
             }
         }
     }
+
+    private sealed class RateLimited(TimeSpan delay) : Exception { public TimeSpan Delay { get; } = delay; }
 
     private static AuthorizedOriginalDownloadException Unsupported() => new("ORIGINAL_HTTP_RESUME_UNSUPPORTED");
     private static AuthorizedOriginalDownloadException Changed() => new("ORIGINAL_HTTP_SOURCE_CHANGED");
