@@ -10,7 +10,12 @@ public sealed record PikPakCliAccountViewModel
     public string? DisplayName { get; init; }
     public string? Problem { get; init; }
     public PikPakCliQuotaViewModel? Quota { get; init; }
+    public bool CanManageFiles { get; init; }
+    public bool TrashTemporaryCopiesAfterDownload { get; init; }
 }
+
+public sealed record PikPakCliCleanupSettingsInputModel(string ExpectedAccountId, string ExpectedAccountVersion,
+    bool TrashTemporaryCopiesAfterDownload);
 
 public sealed record PikPakCliQuotaViewModel(long? UsedBytes, long? LimitBytes, long? RemainingTransferBytes);
 

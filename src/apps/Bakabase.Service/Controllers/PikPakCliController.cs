@@ -20,6 +20,11 @@ public sealed class PikPakCliController(PikPakCliAccountService accounts) : Cont
     [HttpGet("account")]
     [SwaggerOperation(OperationId = "GetPikPakCliAccount")]
     public async Task<SingletonResponse<PikPakCliAccountViewModel>> Get(CancellationToken ct) => new(await accounts.GetAsync(ct));
+    [HttpPut("account/cleanup-settings")]
+    [SwaggerOperation(OperationId = "SetPikPakCliCleanupSettings")]
+    public async Task<SingletonResponse<PikPakCliAccountViewModel>> SetCleanupSettings(
+        [FromBody] PikPakCliCleanupSettingsInputModel input, CancellationToken ct) =>
+        new(await accounts.SetCleanupSettingsAsync(input, ct));
     [HttpGet("account/authorization")]
     [SwaggerOperation(OperationId = "GetActivePikPakCliAuthorization")]
     public async Task<SingletonResponse<PikPakCliAuthorizationViewModel?>> GetActiveAuthorization(CancellationToken ct) =>
@@ -27,6 +32,10 @@ public sealed class PikPakCliController(PikPakCliAccountService accounts) : Cont
     [HttpPost("account/authorization")]
     [SwaggerOperation(OperationId = "StartPikPakCliAuthorization")]
     public async Task<SingletonResponse<PikPakCliAuthorizationViewModel>> Start(CancellationToken ct) => new(await accounts.StartAsync(ct));
+    [HttpPost("account/authorization/manage-files")]
+    [SwaggerOperation(OperationId = "StartPikPakCliManageFilesAuthorization")]
+    public async Task<SingletonResponse<PikPakCliAuthorizationViewModel>> StartManageFilesAuthorization(CancellationToken ct) =>
+        new(await accounts.StartManageFilesAuthorizationAsync(ct));
     [HttpPost("account/authorization/{id}/poll")]
     [SwaggerOperation(OperationId = "PollPikPakCliAuthorization")]
     public async Task<SingletonResponse<PikPakCliAuthorizationViewModel>> Poll(string id, CancellationToken ct) => new(await accounts.PollAsync(id, ct));

@@ -16,6 +16,7 @@ namespace Bakabase.Service.Components.CloudDownloads.PikPakCli;
 /// profiles; only opaque generations and bounded device-challenge views leave this service.</summary>
 public sealed class PikPakCliAccountService
 {
+    private const string ManageFilesScope = "files:manage";
     private readonly string _root;
     private readonly IPikPakCliProcess _process;
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -27,7 +28,10 @@ public sealed class PikPakCliAccountService
     internal string Root => _root;
     public Task<PikPakCliAccountViewModel> ResolveConfiguredAccountAsync(string? accountId, CancellationToken ct) =>
         WithAccountAsync(accountId, null, account => Task.FromResult(new PikPakCliAccountViewModel
-            {IsConfigured = true, AccountId = account.Id, AccountVersion = account.Version}), ct);
+        {
+            IsConfigured = true, AccountId = account.Id, AccountVersion = account.Version,
+            CanManageFiles = account.CanManageFiles, TrashTemporaryCopiesAfterDownload = account.TrashTemporaryCopiesAfterDownload
+        }), ct);
     private string AccountPath => Path.Combine(_root, "account.json");
     private string ActiveAuthorizationPath => Path.Combine(_root, "active-authorization.json");
     private string Profile(string id) { CheckId(id); return Path.Combine(_root, "profiles", id); }
@@ -43,8 +47,29 @@ public sealed class PikPakCliAccountService
             if (account == null) return new() {Problem = "PIKPAK_ACCOUNT_REQUIRED"};
             // Configuration views must remain responsive while a large CLI download holds
             // its own profile's command lock. Live permission checks happen in provider work.
-            return new() {IsConfigured = true, AccountId = account.Id,
-                AccountVersion = account.Version, DisplayName = account.Name};
+            return View(account);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task<PikPakCliAccountViewModel> SetCleanupSettingsAsync(
+        PikPakCliCleanupSettingsInputModel input, CancellationToken ct)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var account = await PikPakCliStorage.ReadAsync<Account>(AccountPath, ct)
+                ?? throw new PikPakCliException("PIKPAK_ACCOUNT_REQUIRED");
+            if (account.Id != input.ExpectedAccountId || account.Version != input.ExpectedAccountVersion)
+                throw new PikPakCliException("PIKPAK_ACCOUNT_CHANGED");
+            if (input.TrashTemporaryCopiesAfterDownload && !account.CanManageFiles)
+                throw new PikPakCliException("PIKPAK_MANAGE_FILES_SCOPE_REQUIRED");
+            if (input.TrashTemporaryCopiesAfterDownload == account.TrashTemporaryCopiesAfterDownload)
+                return View(account);
+            if (_leases.GetValueOrDefault(account.Id) != 0) throw new PikPakCliException("PIKPAK_ACCOUNT_IN_USE");
+            account = account with {TrashTemporaryCopiesAfterDownload = input.TrashTemporaryCopiesAfterDownload};
+            await PikPakCliStorage.WriteAsync(AccountPath, account, ct);
+            return View(account);
         }
         finally { _gate.Release(); }
     }
@@ -68,19 +93,35 @@ public sealed class PikPakCliAccountService
         finally { _gate.Release(); }
     }
 
-    public async Task<PikPakCliAuthorizationViewModel> StartAsync(CancellationToken ct)
+    public Task<PikPakCliAuthorizationViewModel> StartAsync(CancellationToken ct) => StartAsync(false, ct);
+
+    public Task<PikPakCliAuthorizationViewModel> StartManageFilesAuthorizationAsync(CancellationToken ct) => StartAsync(true, ct);
+
+    private async Task<PikPakCliAuthorizationViewModel> StartAsync(bool manageFiles, CancellationToken ct)
     {
         await _gate.WaitAsync(ct);
         try
         {
             if (_leases.Values.Any(n => n > 0)) throw new PikPakCliException("PIKPAK_ACCOUNT_IN_USE");
+            var current = manageFiles ? await PikPakCliStorage.ReadAsync<Account>(AccountPath, ct) : null;
+            var expectedIdentity = current?.ProviderIdentity;
+            if (current != null && expectedIdentity == null)
+            {
+                // Older registrations did not save an identity. Check the original profile
+                // before opening the challenge, while the account cannot be replaced.
+                var status = await _process.RunAsync(Profile(current.EffectiveProfileId), ["auth", "status"], ct);
+                if (!PikPakCliJson.True(status, "logged_in"))
+                    throw new PikPakCliException("PIKPAK_ACCOUNT_IDENTITY_UNVERIFIED");
+                expectedIdentity = ReadProviderIdentity(status)
+                    ?? throw new PikPakCliException("PIKPAK_ACCOUNT_IDENTITY_UNVERIFIED");
+            }
             PikPakCliStorage.Directory(_root); PikPakCliStorage.Directory(Path.Combine(_root, "profiles"));
             var id = Guid.NewGuid().ToString("N");
+            // Account scope permits the CLI's post-login identity lookup. File management
+            // includes read/write and moving items to the trash. Never request purge.
+            var scopes = manageFiles ? $"account,{ManageFilesScope}" : "account,files:write";
             var result = await _process.RunAsync(Profile(id), ["auth", "login", "--method", "device", "--no-launch-browser",
-                // The CLI looks up the account profile after receiving its token. Its
-                // SDK invalidates credentials when that request lacks account access.
-                // File write includes read; manage/purge are not needed for this flow.
-                "--scope", "account,files:write", "--label", "Bakabase"], ct);
+                "--scope", scopes, "--label", "Bakabase"], ct);
             var verification = PikPakCliJson.Required(result, "verification_uri");
             if (!Uri.TryCreate(verification, UriKind.Absolute, out var uri) || uri.Scheme != "https" ||
                 uri.UserInfo.Length != 0 || !uri.IsDefaultPort || uri.IdnHost is not ("mypikpak.com" or "www.mypikpak.com" or "user.mypikpak.com"))
@@ -88,7 +129,9 @@ public sealed class PikPakCliAccountService
             var session = new Session {Id = id, DeviceCode = PikPakCliJson.Required(result, "device_code"),
                 VerificationUri = verification, UserCode = PikPakCliJson.Required(result, "user_code"),
                 ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(PikPakCliJson.Number(result, "expires_in") ?? 300, 30, 1800)),
-                IntervalSeconds = (int)Math.Clamp(PikPakCliJson.Number(result, "interval") ?? 3, 2, 30)};
+                IntervalSeconds = (int)Math.Clamp(PikPakCliJson.Number(result, "interval") ?? 3, 2, 30),
+                ManageFilesRequested = manageFiles, PreviousAccountId = current?.Id, PreviousAccountVersion = current?.Version,
+                PreviousProviderIdentity = expectedIdentity};
             await CancelActivePending(ct);
             await PikPakCliStorage.WriteAsync(SessionPath(id), session, ct);
             await PikPakCliStorage.WriteAsync(ActiveAuthorizationPath, id, ct);
@@ -116,10 +159,13 @@ public sealed class PikPakCliAccountService
                 {
                     // A previous process may have committed credentials before its response
                     // was interrupted. Do not exchange the same device code a second time.
-                    if (HasProfileCredentials(id) && await TryPromote(session, ct)) return View(session);
+                    if ((HasProfileCredentials(id) || session.ManageFilesConsentVerified) &&
+                        await TryPromote(session, ct)) return View(session);
                     if (session.Status != "pending") return View(session);
                     if (session.ExpiresAt <= DateTimeOffset.UtcNow)
                     { session.Status = "expired"; session.DeviceCode = ""; }
+                    else if (session.ManageFilesConsentVerified)
+                        session.Problem = "PIKPAK_AUTHORIZATION_AWAITING_CREDENTIALS";
                     else
                     {
                         var result = await _process.RunAsync(Profile(id), ["auth", "login", "--continue", session.DeviceCode], ct);
@@ -129,6 +175,19 @@ public sealed class PikPakCliAccountService
                             ? status : "unknown";
                         var explicitScopes = ReadGrantedScopes(result, out var knownScopeList);
                         if (explicitScopes != null) session.GrantedScopes = explicitScopes;
+                        if (session.ManageFilesRequested && status == "success")
+                        {
+                            if (explicitScopes?.Contains("account") != true || !explicitScopes.Contains(ManageFilesScope) ||
+                                explicitScopes.Contains("files:purge"))
+                            {
+                                await RejectPromotionAsync(session, "PIKPAK_MANAGE_FILES_SCOPE_REQUIRED");
+                                return View(session);
+                            }
+                            // The CLI may already have written credentials. Save the scope
+                            // evidence before checking identity so promotion can resume.
+                            session.ManageFilesConsentVerified = true;
+                            await PikPakCliStorage.WriteAsync(SessionPath(id), session, CancellationToken.None);
+                        }
                         switch (status)
                         {
                             case "pending": case "authorization_pending": break;
@@ -207,16 +266,46 @@ public sealed class PikPakCliAccountService
     }
 
     private static bool CanRecoverCredentials(Session session) => session.Status is "pending" ||
-        session.Status == "failed" && session.Problem is not "PIKPAK_AUTHORIZATION_DENIED";
+        !session.ManageFilesRequested && session.Status == "failed" && session.Problem is not "PIKPAK_AUTHORIZATION_DENIED";
 
     private async Task<bool> TryPromote(Session session, CancellationToken ct)
     {
         var status = await _process.RunAsync(Profile(session.Id), ["auth", "status"], ct);
         if (!PikPakCliJson.True(status, "logged_in")) return false;
-        var account = new Account(session.Id, Guid.NewGuid().ToString("N"), DisplayName(status));
+        var providerIdentity = ReadProviderIdentity(status);
+        var account = new Account(session.Id, Guid.NewGuid().ToString("N"), DisplayName(status)) {ProviderIdentity = providerIdentity};
+        if (session.ManageFilesRequested)
+        {
+            if (!session.ManageFilesConsentVerified)
+                return await RejectPromotionAsync(session, "PIKPAK_MANAGE_FILES_SCOPE_REQUIRED");
+            if (providerIdentity == null)
+                return await RejectPromotionAsync(session, "PIKPAK_ACCOUNT_IDENTITY_UNVERIFIED");
+            var current = await PikPakCliStorage.ReadAsync<Account>(AccountPath, ct);
+            if (session.PreviousAccountId != current?.Id || session.PreviousAccountVersion != current?.Version ||
+                current != null && session.PreviousProviderIdentity != providerIdentity)
+                return await RejectPromotionAsync(session, "PIKPAK_ACCOUNT_CHANGED");
+            if (current != null)
+            {
+                // Only a verified scope upgrade on the same provider identity can
+                // retain operation ownership while installing a fresh credential profile.
+                account = current with {ProfileId = session.Id, ProviderIdentity = providerIdentity,
+                    Name = account.Name ?? current.Name};
+            }
+            account = account with {CanManageFiles = true};
+        }
         await PikPakCliStorage.WriteAsync(AccountPath, account, CancellationToken.None);
         session.Status = "authorized"; session.DeviceCode = ""; session.Problem = null;
         await PikPakCliStorage.WriteAsync(SessionPath(session.Id), session, CancellationToken.None);
+        return true;
+    }
+
+    private async Task<bool> RejectPromotionAsync(Session session, string problem)
+    {
+        session.Status = "failed";
+        session.DeviceCode = "";
+        session.Problem = problem;
+        await PikPakCliStorage.WriteAsync(SessionPath(session.Id), session, CancellationToken.None);
+        RemoveProfileCredentials(Profile(session.Id));
         return true;
     }
 
@@ -243,8 +332,8 @@ public sealed class PikPakCliAccountService
             if (account != null && _leases.GetValueOrDefault(account.Id) != 0) throw new PikPakCliException("PIKPAK_ACCOUNT_IN_USE");
             await CancelActivePending(ct);
             if (account == null) return;
-            await _process.RunAsync(Profile(account.Id), ["auth", "logout"], ct);
-            RemoveProfileCredentials(Profile(account.Id));
+            await _process.RunAsync(Profile(account.EffectiveProfileId), ["auth", "logout"], ct);
+            RemoveProfileCredentials(Profile(account.EffectiveProfileId));
             PikPakCliStorage.NoLinks(AccountPath); File.Delete(AccountPath);
         }
         finally { _gate.Release(); }
@@ -263,7 +352,14 @@ public sealed class PikPakCliAccountService
             _leases[account.Id] = _leases.GetValueOrDefault(account.Id) + 1;
         }
         finally { _gate.Release(); }
-        try { return await action(new(account.Id, account.Version, Profile(account.Id), _process)); }
+        try
+        {
+            return await action(new(account.Id, account.Version, Profile(account.EffectiveProfileId), _process)
+            {
+                CanManageFiles = account.CanManageFiles, ProviderIdentity = account.ProviderIdentity,
+                TrashTemporaryCopiesAfterDownload = account.TrashTemporaryCopiesAfterDownload
+            });
+        }
         finally
         {
             await _gate.WaitAsync(CancellationToken.None);
@@ -288,7 +384,7 @@ public sealed class PikPakCliAccountService
         // Account promotion is the commit point. A crash after that write but before the
         // session acknowledgement must never let cancellation erase active credentials.
         var account = await PikPakCliStorage.ReadAsync<Account>(AccountPath, ct);
-        if (account?.Id == id && session.Status != "authorized")
+        if (account?.EffectiveProfileId == id && session.Status != "authorized")
         {
             session.Status = "authorized"; session.DeviceCode = ""; session.Problem = null;
             await PikPakCliStorage.WriteAsync(SessionPath(id), session, CancellationToken.None);
@@ -308,10 +404,13 @@ public sealed class PikPakCliAccountService
     private static PikPakCliAuthorizationViewModel View(Session s) => new() {Id = s.Id, Status = s.Status,
         VerificationUri = s.Status == "pending" ? s.VerificationUri : null, UserCode = s.Status == "pending" ? s.UserCode : null,
         ExpiresAt = s.ExpiresAt, IntervalSeconds = s.IntervalSeconds, Problem = s.Problem};
-    private static PikPakCliAccountViewModel View(Account account, JsonElement status) => new() {IsConfigured = true,
-        AccountId = account.Id, AccountVersion = account.Version, DisplayName = DisplayName(status) ?? account.Name,
-        Quota = status.TryGetProperty("storage", out var storage) ? new(PikPakCliJson.Number(storage, "usage"),
-            PikPakCliJson.Number(storage, "limit"), null) : null};
+    private static PikPakCliAccountViewModel View(Account account) => new() {IsConfigured = true,
+        AccountId = account.Id, AccountVersion = account.Version, DisplayName = account.Name,
+        CanManageFiles = account.CanManageFiles, TrashTemporaryCopiesAfterDownload = account.TrashTemporaryCopiesAfterDownload};
+    // The official CLI auth status JSON exposes user_id as a stable identity.
+    internal static string? ReadProviderIdentity(JsonElement status) =>
+        PikPakCliJson.Text(status, "user_id") is {Length: > 0 and <= 160} id && !id.Any(c => char.IsWhiteSpace(c) || char.IsControl(c))
+            ? PikPakCliStorage.Hash(id) : null;
     private static string? DisplayName(JsonElement data)
     {
         var name = PikPakCliJson.Text(data, "name") ?? PikPakCliJson.Text(data, "username");
@@ -324,7 +423,16 @@ public sealed class PikPakCliAccountService
         foreach (var file in Directory.EnumerateFiles(path).Where(f => Path.GetFileName(f) is "credentials.json" or ".credentials.json" or "pat.json" || Path.GetFileName(f).StartsWith(".device-", StringComparison.Ordinal)))
         { PikPakCliStorage.NoLinks(file); File.Delete(file); }
     }
-    internal sealed record Account(string Id, string Version, string? Name);
+    internal sealed record Account(string Id, string Version, string? Name)
+    {
+        public string? ProfileId { get; init; }
+        public string? ProviderIdentity { get; init; }
+        public bool CanManageFiles { get; init; }
+        public bool TrashTemporaryCopiesAfterDownload { get; init; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string EffectiveProfileId => ProfileId ?? Id;
+    }
     internal sealed class Session
     {
         public Session() { }
@@ -339,11 +447,20 @@ public sealed class PikPakCliAccountService
         public string? Problem { get; set; }
         public string? LastProviderStatus { get; set; }
         public List<string>? GrantedScopes { get; set; }
+        public bool ManageFilesRequested { get; set; }
+        public bool ManageFilesConsentVerified { get; set; }
+        public string? PreviousAccountId { get; set; }
+        public string? PreviousAccountVersion { get; set; }
+        public string? PreviousProviderIdentity { get; set; }
     }
 }
 
 internal sealed record PikPakCliAccountLease(string Id, string Version, string Profile, IPikPakCliProcess Process)
 {
+    internal bool CanManageFiles { get; init; }
+    internal bool TrashTemporaryCopiesAfterDownload { get; init; }
+    internal string? ProviderIdentity { get; init; }
+
     internal Task<JsonElement> Run(System.Collections.Generic.IReadOnlyList<string> arguments, CancellationToken ct,
         bool payload = false, Action? progress = null) => Process.RunAsync(Profile, arguments, ct, payload, progress);
     internal async Task RequireOnline(CancellationToken ct) { await ReadStatusAsync(ct); }
@@ -351,6 +468,8 @@ internal sealed record PikPakCliAccountLease(string Id, string Version, string P
     {
         var status = await Run(["auth", "status"], ct);
         if (!PikPakCliJson.True(status, "logged_in")) throw new PikPakCliException("PIKPAK_ACCOUNT_REQUIRED");
+        if (CanManageFiles && (ProviderIdentity == null || PikPakCliAccountService.ReadProviderIdentity(status) != ProviderIdentity))
+            throw new PikPakCliException("PIKPAK_ACCOUNT_CHANGED");
         return status;
     }
 }
