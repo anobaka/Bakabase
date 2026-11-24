@@ -87,13 +87,14 @@ public sealed partial class HttpDownloadManager(
         finally { _gate.Release(); }
     }
 
-    public async Task<IReadOnlyList<HttpDownloadJob>> ReadActiveStatusAsync(IReadOnlySet<int> activeParents, CancellationToken ct)
+    public async Task<IReadOnlyList<HttpDownloadJob>> ReadActiveStatusAsync(IReadOnlySet<int> activeParents, CancellationToken ct,
+        IReadOnlySet<string>? observedIds = null)
     {
         await _gate.WaitAsync(ct);
         try
         {
             return _jobs.Values.Select(s => s.Job).Where(j => j.Status is HttpDownloadStatus.Running or HttpDownloadStatus.Queued or
-                HttpDownloadStatus.Stopping || j.DownloadTaskId is { } parent && activeParents.Contains(parent))
+                HttpDownloadStatus.Stopping || j.DownloadTaskId is { } parent && activeParents.Contains(parent) || observedIds != null && observedIds.Contains(j.Id))
                 .Select(j => j with {Files = []}).ToArray();
         }
         finally { _gate.Release(); }

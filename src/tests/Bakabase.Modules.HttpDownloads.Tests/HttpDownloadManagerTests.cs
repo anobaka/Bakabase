@@ -73,6 +73,13 @@ public sealed class HttpDownloadManagerTests
         Assert.AreEqual((long)server.Body.Length, done.CompletedBytes);
         Assert.AreEqual((long)server.Body.Length, done.TotalBytes);
         Assert.AreEqual(Output, Path.GetDirectoryName(done.Files.Single()));
+        var idle = await manager.ReadActiveStatusAsync(new HashSet<int>(), default);
+        Assert.AreEqual(0, idle.Count);
+        var observed = (await manager.ReadActiveStatusAsync(new HashSet<int>(), default, new HashSet<string> {job.Id})).Single();
+        Assert.AreEqual(job.Id, observed.Id);
+        Assert.AreEqual(HttpDownloadStatus.Completed, observed.Status);
+        Assert.AreEqual(0, observed.Files.Count);
+        Assert.AreEqual(1, (await manager.GetAsync(job.Id))!.Files.Count);
         CollectionAssert.AreEqual(server.Body, await File.ReadAllBytesAsync(done.Files.Single()));
         Assert.IsFalse(JsonSerializer.Serialize(done).Contains("private-secret"));
         Assert.IsFalse(Directory.EnumerateFiles(Output).Any(p => p.EndsWith(".tmp")));

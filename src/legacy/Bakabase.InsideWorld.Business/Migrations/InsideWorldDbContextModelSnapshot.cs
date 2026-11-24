@@ -2374,6 +2374,8 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("Status");
 
+                    b.HasIndex("WorkflowRunId");
+
                     b.HasIndex("DeletedAt", "Id");
 
                     b.ToTable("AcquisitionTasks");
@@ -4251,6 +4253,8 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OperationId");
 
                     b.HasIndex("OwnerKind", "OwnerId", "Slot")
                         .IsUnique();

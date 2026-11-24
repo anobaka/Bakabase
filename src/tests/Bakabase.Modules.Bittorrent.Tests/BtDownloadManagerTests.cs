@@ -52,6 +52,13 @@ public sealed class BtDownloadManagerTests
         Assert.AreEqual(100L, completed.CompletedBytes);
         Assert.IsNotNull(completed.CompletedAt);
         Assert.AreEqual(1, completed.Files.Count);
+        var idle = await manager.ReadActiveStatusAsync(new HashSet<int>(), default);
+        Assert.AreEqual(0, idle.Count);
+        var observed = (await manager.ReadActiveStatusAsync(new HashSet<int>(), default, new HashSet<string> {job.Id})).Single();
+        Assert.AreEqual(job.Id, observed.Id);
+        Assert.AreEqual(BtDownloadStatus.Completed, observed.Status);
+        Assert.AreEqual(0, observed.Files.Count);
+        Assert.AreEqual(1, (await manager.GetAsync(job.Id))!.Files.Count);
         Assert.IsFalse(JsonSerializer.Serialize(completed).Contains("MagnetUri"));
         var json = await File.ReadAllTextAsync(Path.Combine(_root, "store", job.Id + ".json"));
         StringAssert.Contains(json, $"metadata/{job.Id}.torrent");

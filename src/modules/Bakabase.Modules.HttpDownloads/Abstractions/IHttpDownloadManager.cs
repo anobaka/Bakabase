@@ -9,9 +9,10 @@ public interface IHttpDownloadManager
     /// <summary>Already loaded runtime state only; never initializes or resumes a queue.</summary>
     Task<IReadOnlyList<HttpDownloadJob>> ReadSnapshotAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<HttpDownloadJob>>([]);
     /// <summary>Active transport states and children of active parents, without file inventories or queue initialization.</summary>
-    async Task<IReadOnlyList<HttpDownloadJob>> ReadActiveStatusAsync(IReadOnlySet<int> activeParents, CancellationToken ct) =>
+    async Task<IReadOnlyList<HttpDownloadJob>> ReadActiveStatusAsync(IReadOnlySet<int> activeParents, CancellationToken ct,
+        IReadOnlySet<string>? observedIds = null) =>
         (await ReadSnapshotAsync(ct)).Where(j => j.Status is HttpDownloadStatus.Running or HttpDownloadStatus.Queued or
-            HttpDownloadStatus.Stopping || j.DownloadTaskId is { } parent && activeParents.Contains(parent))
+            HttpDownloadStatus.Stopping || j.DownloadTaskId is { } parent && activeParents.Contains(parent) || observedIds != null && observedIds.Contains(j.Id))
             .Select(j => j with {Files = []}).ToArray();
     Task<HttpDownloadJob?> GetAsync(string id, CancellationToken ct = default);
     Task<HttpDownloadJob?> FindByIdempotencyKeyAsync(string key, CancellationToken ct = default);

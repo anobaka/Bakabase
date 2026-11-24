@@ -44,6 +44,12 @@ public sealed class AcquisitionRuntimeDownloadReader(BakabaseDbContext db, Downl
     private async Task<IReadOnlyList<AcquisitionRuntimeDownload>> ReadStatesAsync(IReadOnlyCollection<int> siteIds,
         IReadOnlyCollection<string> transportIds, IReadOnlyCollection<int> runIds, bool throughputOnly, CancellationToken ct)
     {
+        if (throughputOnly)
+        {
+            var activeSites = await sites.GetActiveRuntimeIds(ct);
+            activeSites.UnionWith(siteIds);
+            siteIds = activeSites;
+        }
         var result = new List<AcquisitionRuntimeDownload>();
         var activeParents = new HashSet<int>();
         foreach (var task in await sites.GetRuntimeDtos(siteIds, ct, includeFileSizes: !throughputOnly))
@@ -70,20 +76,23 @@ public sealed class AcquisitionRuntimeDownloadReader(BakabaseDbContext db, Downl
 
         IReadOnlyList<BtDownloadJob> btJobs = [];
         IReadOnlyList<HttpDownloadJob> httpJobs = [];
-        if (runIds.Count > 0 || siteIds.Count > 0 || transportIds.Any(i => i.StartsWith("bt:", StringComparison.Ordinal)))
-            btJobs = throughputOnly ? await bt.ReadActiveStatusAsync(activeParents, ct) : await bt.ReadSnapshotAsync(ct);
-        if (runIds.Count > 0 || siteIds.Count > 0 || transportIds.Any(i => i.StartsWith("http:", StringComparison.Ordinal)))
-            httpJobs = throughputOnly ? await http.ReadActiveStatusAsync(activeParents, ct) : await http.ReadSnapshotAsync(ct);
+        if (throughputOnly || runIds.Count > 0 || siteIds.Count > 0 || transportIds.Any(i => i.StartsWith("bt:", StringComparison.Ordinal)))
+            btJobs = throughputOnly ? await bt.ReadActiveStatusAsync(activeParents, ct, NativeIds("bt:")) : await bt.ReadSnapshotAsync(ct);
+        if (throughputOnly || runIds.Count > 0 || siteIds.Count > 0 || transportIds.Any(i => i.StartsWith("http:", StringComparison.Ordinal)))
+            httpJobs = throughputOnly ? await http.ReadActiveStatusAsync(activeParents, ct, NativeIds("http:")) : await http.ReadSnapshotAsync(ct);
+        HashSet<string> NativeIds(string prefix) => transportIds.Where(id => id.StartsWith(prefix, StringComparison.Ordinal))
+            .Select(id => id[prefix.Length..]).ToHashSet();
         // Validate only candidate native children; each must belong to its site's latest result generation.
-        var candidates = btJobs.Where(j => j.DownloadTaskId is {} site && siteIds.Contains(site)).Select(j => j.DownloadResultId)
-            .Concat(httpJobs.Where(j => j.DownloadTaskId is {} site && siteIds.Contains(site)).Select(j => j.DownloadResultId))
+        var candidates = btJobs.Where(j => j.DownloadTaskId is {} site && (throughputOnly || siteIds.Contains(site))).Select(j => j.DownloadResultId)
+            .Concat(httpJobs.Where(j => j.DownloadTaskId is {} site && (throughputOnly || siteIds.Contains(site))).Select(j => j.DownloadResultId))
             .OfType<int>().ToHashSet();
         var latestResults = candidates.Count == 0 ? [] : (await db.DownloadResults.AsNoTracking().Where(r =>
             candidates.Contains(r.Id) && !db.DownloadResults.Any(n => n.DownloadTaskId == r.DownloadTaskId &&
                 n.SourceKey == r.SourceKey && n.Id > r.Id)).Select(r => r.Id).ToListAsync(ct)).ToHashSet();
-        bool Included(string id, int? runId, int? parent, int? resultId) => transportIds.Contains(id) ||
-            (parent.HasValue ? siteIds.Contains(parent.Value) && resultId.HasValue && latestResults.Contains(resultId.Value) :
-                runId.HasValue && runIds.Contains(runId.Value));
+        bool Included(string id, int? runId, int? parent, int? resultId) => throughputOnly
+            ? parent == null || resultId.HasValue && latestResults.Contains(resultId.Value)
+            : transportIds.Contains(id) || (parent.HasValue ? siteIds.Contains(parent.Value) &&
+                resultId.HasValue && latestResults.Contains(resultId.Value) : runId.HasValue && runIds.Contains(runId.Value));
         string? Problem(string? error) => AcquisitionRuntimeProblems.Code(error) ??
             (throughputOnly && !string.IsNullOrEmpty(error) ? "TRANSFER_ERROR" : null);
         foreach (var task in btJobs)

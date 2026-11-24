@@ -90,13 +90,14 @@ public sealed class BtDownloadManager(
         finally { _gate.Release(); }
     }
 
-    public async Task<IReadOnlyList<BtDownloadJob>> ReadActiveStatusAsync(IReadOnlySet<int> activeParents, CancellationToken ct)
+    public async Task<IReadOnlyList<BtDownloadJob>> ReadActiveStatusAsync(IReadOnlySet<int> activeParents, CancellationToken ct,
+        IReadOnlySet<string>? observedIds = null)
     {
         await _gate.WaitAsync(ct);
         try
         {
             return _jobs.Values.Select(s => s.Job).Where(j => j.Status is BtDownloadStatus.Running or BtDownloadStatus.Queued or
-                BtDownloadStatus.Stopping || j.DownloadTaskId is { } parent && activeParents.Contains(parent))
+                BtDownloadStatus.Stopping || j.DownloadTaskId is { } parent && activeParents.Contains(parent) || observedIds != null && observedIds.Contains(j.Id))
                 .Select(j => j with {Files = []}).ToArray();
         }
         finally { _gate.Release(); }

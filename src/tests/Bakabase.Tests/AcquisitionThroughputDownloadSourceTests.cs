@@ -125,16 +125,42 @@ public sealed class AcquisitionThroughputDownloadSourceTests
         Assert.AreEqual(first.Task, result.FileOwners[("artifactOperation", "op")]);
     }
 
+    [TestMethod]
+    public async Task Only_the_observed_terminal_native_identity_is_requested_and_remains_attributed_after_replan()
+    {
+        var former = await Owner(WorkflowRunStatus.Success, "files.publish");
+        var task = await _db.AcquisitionTasks.FindAsync(former.Task);
+        task!.WorkflowRunId = null;
+        _db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = former.Run, Module = "acquisition",
+            EntityKind = "task", EntityId = former.Task.ToString()});
+        await _db.SaveChangesAsync();
+        var id = Guid.NewGuid().ToString("N");
+        _reader.Rows = [Transfer("http:" + id, null, former.Run, "completed", 200)];
+        var result = await new AcquisitionThroughputDownloadSource(_db, _reader, new Clock(_at))
+            .ReadAsync([new FileIoObservationSample("independentDownload", id, 0, 100, false, true)], default);
+        Assert.AreEqual(former.Task, result.FileOwners[("independentDownload", id)]);
+        Assert.AreEqual(0, result.Tasks.Single().Downloads.Count);
+        CollectionAssert.AreEquivalent(new[] {"http:" + id, "bt:" + id}, _reader.RequestedIds);
+        Assert.AreEqual(0, _reader.RequestedRuns.Length);
+    }
+
     private sealed class Clock(DateTimeOffset at) : TimeProvider {public override DateTimeOffset GetUtcNow() => at;}
     private sealed class Reader : IAcquisitionRuntimeDownloadReader
     {
         public int Calls;
+        public string[] RequestedIds = [];
+        public int[] RequestedRuns = [];
         public IReadOnlyList<AcquisitionRuntimeDownload> Rows = [];
         public Task<IReadOnlyList<AcquisitionRuntimeDownload>> ReadAsync(IReadOnlyCollection<int> sites,
             IReadOnlyCollection<string> native, IReadOnlyCollection<int> runs, CancellationToken ct) =>
             throw new AssertFailedException("Sampling must use the lightweight reader.");
         public Task<IReadOnlyList<AcquisitionRuntimeDownload>> ReadThroughputAsync(IReadOnlyCollection<int> sites,
             IReadOnlyCollection<string> native, IReadOnlyCollection<int> runs, CancellationToken ct)
-        { Calls++; return Task.FromResult(Rows); }
+        {
+            Calls++;
+            RequestedIds = native.ToArray();
+            RequestedRuns = runs.ToArray();
+            return Task.FromResult(Rows);
+        }
     }
 }

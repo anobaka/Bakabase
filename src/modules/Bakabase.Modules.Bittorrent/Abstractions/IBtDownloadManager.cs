@@ -9,9 +9,10 @@ public interface IBtDownloadManager
     /// <summary>Already loaded runtime state only; never initializes or resumes a queue.</summary>
     Task<IReadOnlyList<BtDownloadJob>> ReadSnapshotAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<BtDownloadJob>>([]);
     /// <summary>Active transport states and children of active parents, without file inventories or queue initialization.</summary>
-    async Task<IReadOnlyList<BtDownloadJob>> ReadActiveStatusAsync(IReadOnlySet<int> activeParents, CancellationToken ct) =>
+    async Task<IReadOnlyList<BtDownloadJob>> ReadActiveStatusAsync(IReadOnlySet<int> activeParents, CancellationToken ct,
+        IReadOnlySet<string>? observedIds = null) =>
         (await ReadSnapshotAsync(ct)).Where(j => j.Status is BtDownloadStatus.Running or BtDownloadStatus.Queued or
-            BtDownloadStatus.Stopping || j.DownloadTaskId is { } parent && activeParents.Contains(parent))
+            BtDownloadStatus.Stopping || j.DownloadTaskId is { } parent && activeParents.Contains(parent) || observedIds != null && observedIds.Contains(j.Id))
             .Select(j => j with {Files = []}).ToArray();
     Task<BtDownloadJob?> GetAsync(string id, CancellationToken ct = default);
     Task<BtDownloadJob?> FindByIdempotencyKeyAsync(string key, CancellationToken ct = default);

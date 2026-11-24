@@ -812,6 +812,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             ids.Count == 0 ? [] : await ToDto(await GetByKeys(ids.Distinct().ToArray()));
 
         /// <summary>Live status/counters without credentials, options or checkpoint manifests.</summary>
+        public async Task<HashSet<int>> GetActiveRuntimeIds(CancellationToken ct)
+        {
+            var ids = (await GetRequiredService<BakabaseDbContext>().DownloadTasks.AsNoTracking()
+                .Where(t => t.Status == DownloadTaskDbModelStatus.InProgress).Select(t => t.Id).ToListAsync(ct)).ToHashSet();
+            ids.UnionWith(DownloaderManager.GetFileVerificationIds());
+            return ids;
+        }
+
         public async Task<DownloadTask[]> GetRuntimeDtos(IReadOnlyCollection<int> ids, CancellationToken ct = default, bool includeFileSizes = true)
         {
             if (ids.Count == 0) return [];

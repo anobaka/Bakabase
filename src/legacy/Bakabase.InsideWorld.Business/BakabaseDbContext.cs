@@ -199,6 +199,7 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<ArtifactConsumerDbModel>().HasIndex(x => new {x.OperationId, x.LeaseUntil});
             modelBuilder.Entity<ArtifactLineageDbModel>().HasIndex(x => new {x.ParentArtifactId, x.ChildArtifactId}).IsUnique();
             modelBuilder.Entity<ArtifactLineageDbModel>().HasIndex(x => x.ChildArtifactId);
+            modelBuilder.Entity<ArtifactOperationBindingDbModel>().HasIndex(x => x.OperationId);
             modelBuilder.Entity<ArtifactOperationBindingDbModel>().HasIndex(x => new {x.OwnerKind, x.OwnerId, x.Slot}).IsUnique();
             modelBuilder.Entity<Bakabase.Modules.Downloader.Cloud.CloudOperationDbModel>(t =>
             {
@@ -312,6 +313,7 @@ namespace Bakabase.InsideWorld.Business
                 // asks "is this one being got?" — both are one indexed lookup.
                 t.HasIndex(a => a.Status);
                 t.HasIndex(a => new {a.DeletedAt, a.Id});
+                t.HasIndex(a => a.WorkflowRunId);
                 t.HasIndex(a => a.ResourceId);
             });
 

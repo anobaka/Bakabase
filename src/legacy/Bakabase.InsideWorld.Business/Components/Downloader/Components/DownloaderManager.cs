@@ -371,6 +371,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             }
         }
 
+        internal IReadOnlyCollection<int> GetFileVerificationIds() => _fileVerifications.Keys.ToArray();
+
         internal DownloadFileVerification? GetFileVerification(int taskId) => _fileVerifications.GetValueOrDefault(taskId);
 
         // Begin, update and clear under the same task action lock. No other confirmation for
