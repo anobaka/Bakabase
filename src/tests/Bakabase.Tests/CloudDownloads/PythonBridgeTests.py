@@ -799,6 +799,64 @@ class BridgeTests(unittest.TestCase):
             self.assertEqual("bytes=3-", session.requests[0]["Range"])
             self.assertEqual(body, part.read_bytes())
 
+    def test_payload_file_io_counts_suffix_and_in_place_repair_without_the_saved_prefix(self):
+        original = b'prefix' + b'X' * 70000 + b'abcdefghij'
+        partial = b'prefix' + bytes(70000) + b'abc'
+        with tempfile.TemporaryDirectory() as temp:
+            part = Path(temp) / 'local.part'
+            part.write_bytes(partial)
+            session = OriginalRanges(original)
+            events = []
+            with patch.object(bridge, 'emit', events.append), patch.object(bridge.time, 'monotonic', return_value=0):
+                bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None, observe_file_io=True)
+            self.assertEqual(original, part.read_bytes())
+            self.assertEqual([{'type': 'fileIo', 'state': 'opened'},
+                              {'type': 'fileIo', 'state': 'written', 'writtenBytes': 70007},
+                              {'type': 'fileIo', 'state': 'closed'}], events)
+
+            events.clear()
+            with patch.object(bridge, 'emit', events.append):
+                bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None)
+            self.assertEqual([], events)
+
+    def test_payload_file_io_flushes_before_a_transfer_error_and_skips_unopened_files(self):
+        body = b'abcdef'
+        entry = {'url': 'https://pixeldrain.com/api/file/fixture', 'size': len(body), 'sha256': hashlib.sha256(body).hexdigest()}
+        with tempfile.TemporaryDirectory() as temp:
+            part = Path(temp) / 'local.part'
+            part.write_bytes(body[:2])
+            session = RangeSession(206, {'Content-Range': 'bytes 2-5/6'}, [b'c', ConnectionError()])
+            events = []
+            with patch.object(bridge, 'emit', events.append), patch.object(bridge.time, 'monotonic', return_value=0):
+                with self.assertRaises(ConnectionError):
+                    bridge.http_original(session, entry, part, 'pixeldrain', lambda *_: None, observe_file_io=True)
+                self.assertEqual(b'abc', part.read_bytes())
+                self.assertEqual([{'type': 'fileIo', 'state': 'opened'},
+                                  {'type': 'fileIo', 'state': 'written', 'writtenBytes': 1},
+                                  {'type': 'fileIo', 'state': 'closed'}], events)
+
+                events.clear()
+                with self.assertRaises(FileNotFoundError):
+                    bridge.http_original(session, entry, Path(temp) / 'missing' / 'file.part', 'pixeldrain',
+                                         lambda *_: None, observe_file_io=True)
+                self.assertEqual([], events)
+
+    def test_payload_file_io_reports_at_byte_and_time_boundaries(self):
+        now = [0]
+        events = []
+        with patch.object(bridge, 'emit', events.append), patch.object(bridge.time, 'monotonic', side_effect=lambda: now[0]):
+            with bridge.PayloadWriteObservation() as observation:
+                observation.start()
+                observation.add(16 * 1024 * 1024)
+                observation.add(1)
+                self.assertEqual(2, len(events))
+                now[0] = 1
+                observation.add(2)
+                self.assertEqual(3, len(events))
+                observation.add(4)
+        self.assertEqual([16 * 1024 * 1024 + delta for delta in [0, 3, 7]],
+                         [event['writtenBytes'] for event in events if event['state'] == 'written'])
+
     def test_partial_without_recorded_operation_identity_cannot_be_claimed_by_a_retry(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

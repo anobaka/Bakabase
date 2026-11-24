@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using Bakabase.Infrastructures.Components.App;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
@@ -140,9 +141,11 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
             string? failure = null;
             try
             {
+                var observeFileIo = FileIoObservationScope.Active && SupportsMeasuredFileWrites(ProviderId);
+                using var fileWrites = observeFileIo ? new BridgeFileWriteObservation() : null;
                 var input = SerializeRequest(ProviderId, request, state,
                     ResolveDownloadProxy(proxy, ProviderId, new Uri(request.Source.Url)), checksumRetryKey,
-                    reuseSource: DescribeReuseSource(request, appData()));
+                    reuseSource: DescribeReuseSource(request, appData()), observeFileIo: observeFileIo);
                 await process.StandardInput.WriteAsync(input.AsMemory(), ct);
                 process.StandardInput.Close();
                 while (await process.StandardOutput.ReadLineAsync(ct) is { } line)
@@ -155,6 +158,7 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
                             await progress(new CloudDownloadProgress(Number(root, "percentage"), Integer(root, "completedBytes"),
                                 Integer(root, "totalBytes"), root.GetProperty("stage").GetString()));
                             break;
+                        case "fileIo": fileWrites?.Record(root); break;
                         case "error": failure = root.GetProperty("message").GetString(); break;
                         case "result":
                             if (files != null) throw new InvalidDataException("Cloud adapter returned duplicate final results.");
@@ -184,7 +188,7 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
 
     internal static string SerializeRequest(string providerId, CloudDownloadRequest request, string state,
         CloudToolProxy.Settings? settings, string? checksumRetryKey = null, string? mode = null,
-        BridgeReuseSource? reuseSource = null)
+        BridgeReuseSource? reuseSource = null, bool observeFileIo = false)
     {
         var input = new Dictionary<string, object?>
         {
@@ -194,7 +198,43 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
         };
         if (mode != null) input["mode"] = mode;
         if (reuseSource != null) input["reuseSource"] = reuseSource;
+        if (observeFileIo && mode == null && SupportsMeasuredFileWrites(providerId)) input["observeFileIo"] = true;
         return JsonSerializer.Serialize(input, JsonSerializerOptions.Web);
+    }
+
+    private static bool SupportsMeasuredFileWrites(string providerId) => providerId is "pixeldrain" or "gofile";
+
+    internal sealed class BridgeFileWriteObservation : IDisposable
+    {
+        private IFileIoObservation? _observation;
+        private long _lastWritten;
+
+        public void Record(JsonElement message)
+        {
+            if (!message.TryGetProperty("state", out var state) || state.ValueKind != JsonValueKind.String) return;
+            switch (state.GetString())
+            {
+                case "opened":
+                    _observation ??= FileIoObservationScope.Begin(read: false, write: true);
+                    break;
+                case "written" when _observation != null &&
+                    message.TryGetProperty("writtenBytes", out var field) && field.ValueKind == JsonValueKind.Number &&
+                    field.TryGetInt64(out var written) && written > _lastWritten:
+                    _observation.Add(0, written - _lastWritten);
+                    _lastWritten = written;
+                    break;
+                case "closed": EndFile(); break;
+            }
+        }
+
+        public void Dispose() => EndFile();
+
+        private void EndFile()
+        {
+            _observation?.Dispose();
+            _observation = null;
+            _lastWritten = 0;
+        }
     }
 
     internal sealed record BridgeReuseSource(string Output, string State, string InventoryFingerprint, bool DisableSourceRead);

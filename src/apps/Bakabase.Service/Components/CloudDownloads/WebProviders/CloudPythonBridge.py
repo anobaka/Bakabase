@@ -1035,17 +1035,55 @@ def overlay_sha256(file, patches, length):
     return digest.hexdigest()
 
 
-def http_original(session, entry, part, provider, progress, repair_record=None):
+class PayloadWriteObservation:
+    def __init__(self):
+        self.opened = False
+        self.written = 0
+        self.reported = 0
+        self.next_report = 0
+
+    def __enter__(self):
+        return self
+
+    def start(self):
+        self.opened = True
+        self.next_report = time.monotonic() + 1
+        emit({"type": "fileIo", "state": "opened"})
+
+    def add(self, size):
+        if size <= 0:
+            return
+        self.written += size
+        now = time.monotonic()
+        if self.written - self.reported >= 16 * 1024 * 1024 or now >= self.next_report:
+            self.report(now)
+
+    def report(self, now):
+        emit({"type": "fileIo", "state": "written", "writtenBytes": self.written})
+        self.reported = self.written
+        self.next_report = now + 1
+
+    def __exit__(self, *_):
+        if self.opened:
+            if self.written != self.reported:
+                self.report(time.monotonic())
+            emit({"type": "fileIo", "state": "closed"})
+
+
+def http_original(session, entry, part, provider, progress, repair_record=None, observe_file_io=False):
     # A resumed body is publishable only after the provider's checksum validates the entire file.
     # operation/URL/destination/manifest have already been matched by run().
     expected_size = entry["size"]
     if part.is_symlink():
         raise BridgeError("Symbolic links are not supported in partial files")
     flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
-    with os.fdopen(os.open(part, flags, 0o600), "r+b") as target:
+    with (PayloadWriteObservation() if observe_file_io else contextlib.nullcontext()) as writes, \
+            os.fdopen(os.open(part, flags, 0o600), "r+b") as target:
         info = os.fstat(target.fileno())
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
             raise BridgeError("The partial file is not exclusive to this download")
+        if writes is not None:
+            writes.start()
         # GoFile has no strong content digest. Its existing full-file retry remains separate.
         offset = info.st_size if provider == "pixeldrain" else 0
         checksum = entry.get("sha256")
@@ -1072,7 +1110,9 @@ def http_original(session, entry, part, provider, progress, repair_record=None):
                     if target.tell() + len(chunk) > expected_size:
                         target.truncate(offset)
                         raise BridgeError("CLOUD_RANGE_UNCONFIRMED: Original file exceeds manifest size")
-                    target.write(chunk)
+                    written = target.write(chunk)
+                    if writes is not None:
+                        writes.add(written)
                     progress(target.tell(), expected_size)
                 if target.tell() != expected_size:
                     raise BridgeError("Original file is incomplete")
@@ -1097,7 +1137,9 @@ def http_original(session, entry, part, provider, progress, repair_record=None):
             atomic_json(record, {'size': expected_size, 'sha256': checksum, 'ranges': [[p, len(data)] for p, data in patches]})
             for start, data in patches:
                 target.seek(start)
-                target.write(data)
+                written = target.write(data)
+                if writes is not None:
+                    writes.add(written)
             target.flush()
             os.fsync(target.fileno())
             if sha256(part) != actual_hash:
@@ -1236,7 +1278,8 @@ def run(request):
                 raise BridgeError("gdown did not produce the expected file")
             checksum = sha256(part)
         else:
-            checksum = http_original(session, entry, part, request["provider"], progress, repair_record)
+            checksum = http_original(session, entry, part, request["provider"], progress, repair_record,
+                                     observe_file_io=request.get("observeFileIo") is True)
         verified = part.stat()
         receipts[entry["path"]] = {"size": verified.st_size, "sha256": checksum}
         atomic_json(receipt_path, receipts)

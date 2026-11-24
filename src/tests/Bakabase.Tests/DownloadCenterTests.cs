@@ -1,12 +1,13 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
@@ -105,6 +106,7 @@ public sealed class DownloadCenterTests
         var content = "verified input"u8.ToArray();
         await File.WriteAllBytesAsync(path, content);
         var tasks = _services.GetRequiredService<DownloadTaskService>();
+        var fileIo = _services.GetRequiredService<IFileIoObservationProvider>();
         var runtime = new AcquisitionRuntimeDownloadReader(_db, tasks, _bt, _http);
         var sourceEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -116,7 +118,8 @@ public sealed class DownloadCenterTests
             sourceEntered.SetResult();
             await releaseSource.Task.WaitAsync(ct);
             if (outcome == "providerFailure") throw new InvalidOperationException("TEST_PROVIDER_REFUSED");
-            var hash = Convert.ToHexString(SHA256.HashData(content));
+            await using var input = File.OpenRead(path);
+            var hash = Convert.ToHexString(await ArtifactContentHash.ComputeAsync(input, ct));
             return new([new(path, content.Length, outcome == "localMismatch" ? new string('0', 64) : hash)]);
         }, _ => Task.CompletedTask, cancel.Token, guardRegistration: async register =>
         {
@@ -183,6 +186,13 @@ public sealed class DownloadCenterTests
                 await verification;
                 var rejected = await Assert.ThrowsAsync<InvalidOperationException>(() => duplicate!);
                 Assert.AreEqual("RECOVERY_DOWNLOAD_REVIEW_REQUIRED", rejected.Message);
+                var sample = fileIo.Drain().Single();
+                Assert.AreEqual("downloadTask", sample.OwnerKind);
+                Assert.AreEqual(source.Id.ToString(), sample.OwnerId);
+                Assert.IsTrue(sample.ReadObserved);
+                Assert.IsFalse(sample.WriteObserved);
+                Assert.AreEqual(content.LongLength * 2, sample.ReadBytes,
+                    "Both the explicit provider check and the separate local SHA read use the same native owner.");
             }
             else if (outcome == "cancel")
                 await Assert.ThrowsAsync<OperationCanceledException>(async () => await verification);

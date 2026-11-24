@@ -1,11 +1,13 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.Modules.Downloader.Cloud;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Services;
 
@@ -28,6 +30,8 @@ public partial class DownloadTaskService
             await validate(ct);
             try
             {
+                using var observation = FileIoObservationScope.Enter(ServiceProvider.GetService<IFileIoObservationProvider>(),
+                    new("downloadTask", task.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)));
                 await DownloaderManager.SetFileVerificationAsync(id, new(DownloadFileVerification.Source, workflowRunId, DateTimeOffset.UtcNow));
                 var proof = await verify(ct);
                 await DownloaderManager.SetFileVerificationAsync(id, new(DownloadFileVerification.Local, workflowRunId, DateTimeOffset.UtcNow));
