@@ -29,6 +29,9 @@ internal static class QuickTimeDeliveryProbe
     internal static Task<bool> IsMp4Async(string path, long expectedLength, CancellationToken ct) =>
         IsMovieAsync(path, true, expectedLength, ct);
 
+    internal static Task<bool> IsM4vAsync(string path, long expectedLength, CancellationToken ct) =>
+        IsMovieAsync(path, true, expectedLength, ct, requireVideoTrack: true);
+
     // A valid video can contain ZIP bytes inside mdat, free or a private box. Only recognize
     // an appended archive at a box boundary after the movie, never inside a declared payload.
     internal static async Task<bool> HasSeparateArchiveAsync(string path, long length, long offset, CancellationToken ct)
@@ -59,7 +62,8 @@ internal static class QuickTimeDeliveryProbe
         return false;
     }
 
-    private static async Task<bool> IsMovieAsync(string path, bool mp4, long? expectedLength, CancellationToken ct)
+    private static async Task<bool> IsMovieAsync(string path, bool mp4, long? expectedLength, CancellationToken ct,
+        bool requireVideoTrack = false)
     {
         var before = new FileInfo(path);
         if (!before.Exists || (before.Attributes & FileAttributes.ReparsePoint) != 0) return false;
@@ -92,7 +96,7 @@ internal static class QuickTimeDeliveryProbe
                         fileType = true;
                         break;
                     case Moov:
-                        if (movie || !await HasMovieStructureAsync(stream, atom.End, budget, mp4, ct)) return false;
+                        if (movie || !await HasMovieStructureAsync(stream, atom.End, budget, mp4, requireVideoTrack, ct)) return false;
                         movie = true;
                         break;
                     case Mdat:
@@ -132,7 +136,8 @@ internal static class QuickTimeDeliveryProbe
         return tail.AsSpan().IndexOf("PK\x05\x06"u8) >= 0;
     }
 
-    private static async Task<bool> HasMovieStructureAsync(FileStream stream, long end, Budget budget, bool mp4, CancellationToken ct)
+    private static async Task<bool> HasMovieStructureAsync(FileStream stream, long end, Budget budget, bool mp4,
+        bool requireVideoTrack, CancellationToken ct)
     {
         var header = false; var track = false;
         while (stream.Position < end)
@@ -148,13 +153,14 @@ internal static class QuickTimeDeliveryProbe
                 header = true;
             }
             else if (atom.Type == Trak)
-                track |= mp4 ? await HasMediaTrackAsync(stream, atom.End, budget, ct) : atom.End - atom.Payload >= 8;
+                track |= mp4 ? await HasMediaTrackAsync(stream, atom.End, budget, requireVideoTrack, ct) : atom.End - atom.Payload >= 8;
             stream.Position = atom.End;
         }
         return header && track;
     }
 
-    private static async Task<bool> HasMediaTrackAsync(FileStream stream, long end, Budget budget, CancellationToken ct)
+    private static async Task<bool> HasMediaTrackAsync(FileStream stream, long end, Budget budget, bool requireVideoTrack,
+        CancellationToken ct)
     {
         var trackHeader = false;
         var mediaHandler = false;
@@ -174,7 +180,8 @@ internal static class QuickTimeDeliveryProbe
                         stream.Position += 8;
                         var handler = new byte[4];
                         await stream.ReadExactlyAsync(handler, ct);
-                        mediaHandler |= handler.AsSpan().SequenceEqual("vide"u8) || handler.AsSpan().SequenceEqual("soun"u8);
+                        mediaHandler |= handler.AsSpan().SequenceEqual("vide"u8) ||
+                            !requireVideoTrack && handler.AsSpan().SequenceEqual("soun"u8);
                     }
                     stream.Position = box.End;
                 }

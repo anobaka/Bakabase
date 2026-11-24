@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.IO.Compression;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.FileProcessing;
@@ -24,6 +25,15 @@ public sealed class QuickTimeDeliveryAssessmentTests
         legacy ? [] : Atom("ftyp", "qt  \0\0\0\0qt  "u8.ToArray()),
         Atom("mdat", new byte[19], wide),
         Atom("moov", Join(Atom("mvhd", new byte[100]), Atom("trak", Atom("free", [])))));
+    private static byte[] M4v(string mediaHandler = "vide", byte[]? payload = null)
+    {
+        var handler = new byte[24];
+        System.Text.Encoding.ASCII.GetBytes(mediaHandler).CopyTo(handler, 8);
+        return Join(Atom("ftyp", "M4V \0\0\0\0M4V isomavc1mp42"u8.ToArray()),
+            Atom("moov", Join(Atom("mvhd", new byte[100]), Atom("trak",
+                Join(Atom("tkhd", new byte[84]), Atom("mdia", Atom("hdlr", handler)))))),
+            Atom("mdat", payload ?? new byte[19]));
+    }
     private async Task<string> Write(string name, byte[] bytes)
     {
         var path = Path.Combine(root, name); await File.WriteAllBytesAsync(path, bytes); return path;
@@ -58,6 +68,57 @@ public sealed class QuickTimeDeliveryAssessmentTests
         foreach (var photo in files.Where(f => f.EndsWith(".jpg"))) File.Delete(photo);
         var result = await FileArtifactDeliveryAssessment.AssessAsync(artifact, default, extractionWasReviewed: true);
         Assert.AreEqual(0, result.Files.Count); Assert.IsFalse(result.Automatic);
+    }
+
+    [TestMethod]
+    public async Task A_gallery_with_verified_M4V_is_ready_without_opening_known_photo_files()
+    {
+        var files = new List<string>();
+        for (var i = 0; i < 40; i++) files.Add(await Write(i + ".jpg", "photo"u8.ToArray()));
+        for (var i = 0; i < 73; i++) files.Add(await Write(i + ".M4V", M4v()));
+        var artifact = Artifact(files.ToArray());
+        foreach (var photo in files.Take(40)) File.Delete(photo);
+
+        var result = await FileArtifactDeliveryAssessment.AssessAsync(artifact, default, extractionWasReviewed: true);
+
+        Assert.AreEqual(0, result.Files.Count);
+        Assert.IsFalse(result.Uncertain);
+        Assert.IsFalse(result.Automatic);
+        Assert.IsFalse(await QuickTimeDeliveryProbe.IsM4vAsync(files[^1], M4v().Length + 1, default));
+    }
+
+    [DataTestMethod]
+    [DataRow("audio")]
+    [DataRow("truncated")]
+    [DataRow("appended-zip")]
+    [DataRow("embedded-zip")]
+    [DataRow("renamed-zip")]
+    public async Task A_large_delivery_still_reviews_unverified_or_archive_carrying_M4V(string content)
+    {
+        using var buffer = new MemoryStream();
+        using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, true))
+        using (var entry = archive.CreateEntry("document.txt").Open())
+            entry.Write("archive body"u8);
+        var zip = buffer.ToArray();
+        var bytes = content switch
+        {
+            "audio" => M4v("soun"),
+            "truncated" => M4v()[..^1],
+            "appended-zip" => Join(M4v(), zip),
+            "embedded-zip" => M4v(payload: zip),
+            "renamed-zip" => zip,
+            _ => throw new ArgumentOutOfRangeException(nameof(content))
+        };
+        var video = await Write("unverified.m4v", bytes);
+        var files = new List<string> {video};
+        for (var i = 0; i < FileArtifactDeliveryAssessment.MaximumFiles; i++)
+            files.Add(await Write(i + ".jpg", "photo"u8.ToArray()));
+
+        var result = await FileArtifactDeliveryAssessment.AssessAsync(Artifact(files.ToArray()), default, extractionWasReviewed: true);
+
+        CollectionAssert.AreEqual(new[] {"unverified.m4v"}, result.Files.ToArray());
+        Assert.IsTrue(result.Uncertain);
+        Assert.IsFalse(result.Automatic);
     }
 
     [TestMethod]

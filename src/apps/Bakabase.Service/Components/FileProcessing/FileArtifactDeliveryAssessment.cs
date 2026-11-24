@@ -271,7 +271,7 @@ internal static class FileArtifactDeliveryAssessment
         if (unclassified.Length == 0) return true;
         // Finder metadata may accompany a finished resource but is never a resource by itself.
         if (artifact.Manifest.Entries.All(e => FinderMetadataDeliveryProbe.IsCandidate(e.RelativePath))) return false;
-        // Common companion results include camera MOV, synchronized LRC lyrics and Finder
+        // Common companion results include camera MOV, M4V, synchronized LRC lyrics and Finder
         // directory metadata. Do not whitelist names/suffixes: check only these
         // bounded unclassified files, seeking over media payloads instead of scanning images
         // or invoking an archive tool. This never grants extraction/deletion authority.
@@ -279,15 +279,21 @@ internal static class FileArtifactDeliveryAssessment
         if (unclassified.Length > MaximumCompanionProbeFiles || unclassified.Any(e =>
                 !string.Equals(Path.GetExtension(e.RelativePath), ".mov", StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(Path.GetExtension(e.RelativePath), ".lrc", StringComparison.OrdinalIgnoreCase) &&
-                Path.GetExtension(e.RelativePath).ToLowerInvariant() is not (".flv" or ".xml") &&
+                Path.GetExtension(e.RelativePath).ToLowerInvariant() is not (".flv" or ".xml" or ".m4v") &&
                 !FinderMetadataDeliveryProbe.IsCandidate(e.RelativePath))) return false;
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
         stop.CancelAfter(TimeSpan.FromSeconds(3));
         try
         {
             var exactFiles = ArtifactManifestFiles.ResolveFiles(artifact.RootDirectory, artifact.Manifest);
-            foreach (var file in exactFiles.Where(f => string.Equals(Path.GetExtension(f), ".mov", StringComparison.OrdinalIgnoreCase)))
-                if (!await QuickTimeDeliveryProbe.IsMovieAsync(file, stop.Token)) return false;
+            foreach (var (entry, file) in artifact.Manifest.Entries.Zip(exactFiles))
+            {
+                var suffix = Path.GetExtension(file);
+                if (string.Equals(suffix, ".mov", StringComparison.OrdinalIgnoreCase) &&
+                    !await QuickTimeDeliveryProbe.IsMovieAsync(file, stop.Token)) return false;
+                if (string.Equals(suffix, ".m4v", StringComparison.OrdinalIgnoreCase) &&
+                    !await QuickTimeDeliveryProbe.IsM4vAsync(file, entry.Length, stop.Token)) return false;
+            }
             if (!await LiveRecordingDeliveryProbe.AreRecordingsAsync(exactFiles, stop.Token)) return false;
             var lyrics = exactFiles.Where(f => string.Equals(Path.GetExtension(f), ".lrc", StringComparison.OrdinalIgnoreCase)).ToArray();
             if (lyrics.Length > 0)
