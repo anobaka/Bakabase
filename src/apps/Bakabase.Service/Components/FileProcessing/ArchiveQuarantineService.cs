@@ -256,7 +256,8 @@ public sealed partial class ArchiveQuarantineService
                 await VerifyMovedEntriesAsync(receipt, source, movedEntries, ct);
                 VerifyRecordedAbsence(receipt, ct);
                 var absentBeforeDeletion = MissingDeletionEntries(receipt);
-                if (receipt.Status != "Deleting")
+                var resumingDeletion = receipt.Status == "Deleting";
+                if (!resumingDeletion)
                 {
                     await VerifyManifest(root, receipt.Manifest, ct, snapshot, absentBeforeDeletion);
                     receipt.OutputIds = outputs.Distinct(StringComparer.Ordinal).ToList();
@@ -272,7 +273,9 @@ public sealed partial class ArchiveQuarantineService
                     if (absentBeforeDeletion.Contains(entry.RelativePath)) continue;
                     var file = FileProcessingFiles.Within(Path.Combine(root, entry.RelativePath), root);
                     ArtifactManifestFiles.RejectLinks(file);
-                    var presence = ArtifactCleanupAbsence.Probe(root, file, ct);
+                    var presence = resumingDeletion
+                        ? ArtifactCleanupAbsence.Probe(root, file, ArtifactCleanupAbsence.OpenPendingDeletionFile, ct)
+                        : ArtifactCleanupAbsence.Probe(root, file, ct);
                     if (presence == ArtifactCleanupPathPresence.ConfirmedAbsent) continue;
                     if (presence == ArtifactCleanupPathPresence.Unavailable)
                         throw new IOException("The cleanup path or its containing storage could not be verified.");
@@ -285,7 +288,8 @@ public sealed partial class ArchiveQuarantineService
                 }
                 await VerifyMovedEntriesAsync(receipt, source, movedEntries, ct);
                 VerifyRecordedAbsence(receipt, ct);
-                if (files.Length > 0 && !ArtifactCleanupAbsence.AllConfirmedAbsent(root, files, ct))
+                if (files.Length > 0 && !ArtifactCleanupAbsence.AllConfirmedAbsent(root, files, ct,
+                        ArtifactCleanupAbsence.OpenPendingDeletionFile))
                     throw new IOException("A cleanup path reappeared or its storage became unavailable before retirement.");
             }
             // The source's quarantine state keeps new consumers fenced while location is committed.

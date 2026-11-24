@@ -13,10 +13,19 @@ internal enum ArtifactCleanupPathPresence { Present, ConfirmedAbsent, Unavailabl
 internal static class ArtifactCleanupAbsence
 {
     internal static ArtifactCleanupPathPresence Probe(string root, string path, CancellationToken ct = default) =>
-        Probe(root, path, File.GetAttributes, ct);
+        Probe(root, path, ReadAttributes, ct);
+
+    private static void ReadAttributes(string path) => _ = File.GetAttributes(path);
+
+    // SMB can retain successful stat results for an unlinked name. Opening the exact
+    // receipt file observes the server namespace without reading the payload.
+    internal static void OpenPendingDeletionFile(string path)
+    {
+        using var handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+    }
 
     internal static ArtifactCleanupPathPresence Probe(string root, string path,
-        Func<string, FileAttributes> attributes, CancellationToken ct = default)
+        Action<string> observe, CancellationToken ct = default)
     {
         try
         {
@@ -25,12 +34,12 @@ internal static class ArtifactCleanupAbsence
             ArtifactManifestFiles.RejectLinks(path);
             // A readable higher filesystem ancestor is not a substitute for this registered root.
             _ = Directory.EnumerateFileSystemEntries(root).Take(1).ToArray();
-            try { _ = attributes(path); return ArtifactCleanupPathPresence.Present; }
+            try { observe(path); return ArtifactCleanupPathPresence.Present; }
             catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { }
             if (!MissingWithinReadableRoot(root, path, ct)) return ArtifactCleanupPathPresence.Unavailable;
             // A path that reappeared, a changed link or a detached parent cannot complete a no-op.
             ArtifactManifestFiles.RejectLinks(path);
-            try { _ = attributes(path); return ArtifactCleanupPathPresence.Present; }
+            try { observe(path); return ArtifactCleanupPathPresence.Present; }
             catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException) { }
             return MissingWithinReadableRoot(root, path, ct)
                 ? ArtifactCleanupPathPresence.ConfirmedAbsent : ArtifactCleanupPathPresence.Unavailable;
@@ -65,7 +74,8 @@ internal static class ArtifactCleanupAbsence
         return false;
     }
 
-    internal static bool AllConfirmedAbsent(string root, IReadOnlyList<string> files, CancellationToken ct = default) =>
+    internal static bool AllConfirmedAbsent(string root, IReadOnlyList<string> files, CancellationToken ct = default,
+        Action<string>? observe = null) =>
         files.Count > 0 && files.Distinct(ArtifactManifestFiles.PathComparer).Count() == files.Count &&
-        files.All(path => Probe(root, path, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent);
+        files.All(path => Probe(root, path, observe ?? ReadAttributes, ct) == ArtifactCleanupPathPresence.ConfirmedAbsent);
 }

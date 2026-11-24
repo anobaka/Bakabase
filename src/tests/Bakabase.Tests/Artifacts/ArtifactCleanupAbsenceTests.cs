@@ -49,11 +49,34 @@ public sealed class ArtifactCleanupAbsenceTests
         Assert.AreEqual(ArtifactCleanupPathPresence.Present, ArtifactCleanupAbsence.Probe(root, path, name =>
         {
             if (++reads == 2) File.WriteAllText(name, "new file");
-            return File.GetAttributes(name);
+            _ = File.GetAttributes(name);
         }));
         Assert.AreEqual("new file", await File.ReadAllTextAsync(path));
         Directory.CreateDirectory(Path.Combine(root, "folder"));
         Assert.AreEqual(ArtifactCleanupPathPresence.Present, ArtifactCleanupAbsence.Probe(root, Path.Combine(root, "folder")));
+    }
+
+    [TestMethod]
+    public async Task Resumed_deletion_confirms_the_original_name_without_touching_an_SMB_placeholder()
+    {
+        var file = Path.Combine(root, "member.bin");
+        var held = Path.Combine(root, ".smbdeleteAAA59fc4.4");
+        await File.WriteAllTextAsync(held, "held by a client");
+        // The directory lookup is cached as present even though opening that name returns ENOENT.
+        Assert.AreEqual(ArtifactCleanupPathPresence.Present, ArtifactCleanupAbsence.Probe(root, file, _ => { }));
+        Assert.IsTrue(ArtifactCleanupAbsence.AllConfirmedAbsent(root, [file],
+            observe: ArtifactCleanupAbsence.OpenPendingDeletionFile));
+        Assert.AreEqual("held by a client", await File.ReadAllTextAsync(held));
+
+        await File.WriteAllTextAsync(file, "new content");
+        Assert.AreEqual(ArtifactCleanupPathPresence.Present,
+            ArtifactCleanupAbsence.Probe(root, file, ArtifactCleanupAbsence.OpenPendingDeletionFile));
+        // An open failure with the name still in a readable directory is inconclusive.
+        Assert.AreEqual(ArtifactCleanupPathPresence.Unavailable,
+            ArtifactCleanupAbsence.Probe(root, file, _ => throw new FileNotFoundException()));
+        Assert.IsFalse(ArtifactCleanupAbsence.AllConfirmedAbsent(root, [file],
+            observe: ArtifactCleanupAbsence.OpenPendingDeletionFile));
+        Assert.AreEqual("new content", await File.ReadAllTextAsync(file));
     }
 
     [TestMethod]

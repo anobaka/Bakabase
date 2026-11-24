@@ -46,7 +46,9 @@ public sealed partial class ArchiveQuarantineService
                     root = header.OriginalRoot;
                     held = FileProcessingFiles.Within(Path.Combine(root, entry.RelativePath), root);
                 }
-                var presence = ArtifactCleanupAbsence.Probe(root, held, ct);
+                var presence = receipt.Status == "Deleting"
+                    ? ArtifactCleanupAbsence.Probe(root, held, ArtifactCleanupAbsence.OpenPendingDeletionFile, ct)
+                    : ArtifactCleanupAbsence.Probe(root, held, ct);
                 if (presence == ArtifactCleanupPathPresence.Unavailable) return null;
                 if (presence == ArtifactCleanupPathPresence.ConfirmedAbsent) continue;
                 if (new FileInfo(held).Length != entry.Length) return null;
