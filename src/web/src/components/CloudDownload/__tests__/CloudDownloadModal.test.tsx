@@ -42,7 +42,11 @@ vi.mock("@heroui/react", () => ({
   Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   SelectItem: () => null,
 }));
-vi.mock("@/components/bakaui", () => ({
+vi.mock("@/components/bakaui", async () => ({
+  ...(await vi.importActual<typeof import("@heroui/react")>("@heroui/react").then(({ Radio, RadioGroup }) => ({
+    Radio,
+    RadioGroup,
+  }))),
   Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Modal: ({ children, footer }: { children: ReactNode; footer: ReactNode }) => (
     <div>
