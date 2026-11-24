@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.Modules.Bittorrent.Abstractions;
+using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.HttpDownloads.Abstractions;
+using Bakabase.Modules.HttpDownloads.Models;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,17 +25,30 @@ public interface IAcquisitionRuntimeDownloadReader
 {
     Task<IReadOnlyList<AcquisitionRuntimeDownload>> ReadAsync(IReadOnlyCollection<int> siteIds,
         IReadOnlyCollection<string> transportIds, IReadOnlyCollection<int> runIds, CancellationToken ct);
+    Task<IReadOnlyList<AcquisitionRuntimeDownload>> ReadThroughputAsync(IReadOnlyCollection<int> siteIds,
+        IReadOnlyCollection<string> transportIds, IReadOnlyCollection<int> runIds, CancellationToken ct) =>
+        ReadAsync(siteIds, transportIds, runIds, ct);
 }
 
 public sealed class AcquisitionRuntimeDownloadReader(BakabaseDbContext db, DownloadTaskService sites,
     IBtDownloadManager bt, IHttpDownloadManager http) : IAcquisitionRuntimeDownloadReader
 {
-    public async Task<IReadOnlyList<AcquisitionRuntimeDownload>> ReadAsync(IReadOnlyCollection<int> siteIds,
-        IReadOnlyCollection<string> transportIds, IReadOnlyCollection<int> runIds, CancellationToken ct)
+    public Task<IReadOnlyList<AcquisitionRuntimeDownload>> ReadAsync(IReadOnlyCollection<int> siteIds,
+        IReadOnlyCollection<string> transportIds, IReadOnlyCollection<int> runIds, CancellationToken ct) =>
+        ReadStatesAsync(siteIds, transportIds, runIds, false, ct);
+
+    public Task<IReadOnlyList<AcquisitionRuntimeDownload>> ReadThroughputAsync(IReadOnlyCollection<int> siteIds,
+        IReadOnlyCollection<string> transportIds, IReadOnlyCollection<int> runIds, CancellationToken ct) =>
+        ReadStatesAsync(siteIds, transportIds, runIds, true, ct);
+
+    private async Task<IReadOnlyList<AcquisitionRuntimeDownload>> ReadStatesAsync(IReadOnlyCollection<int> siteIds,
+        IReadOnlyCollection<string> transportIds, IReadOnlyCollection<int> runIds, bool throughputOnly, CancellationToken ct)
     {
         var result = new List<AcquisitionRuntimeDownload>();
-        foreach (var task in await sites.GetRuntimeDtos(siteIds, ct))
+        var activeParents = new HashSet<int>();
+        foreach (var task in await sites.GetRuntimeDtos(siteIds, ct, includeFileSizes: !throughputOnly))
         {
+            if ((int)task.Status is >= 300 and <= 500 || task.FileVerification != null) activeParents.Add(task.Id);
             if (task.FileVerification is {} verification)
             {
                 result.Add(new("site:" + task.Id, null, verification.WorkflowRunId, "running", null, null, null,
@@ -53,25 +68,36 @@ public sealed class AcquisitionRuntimeDownloadReader(BakabaseDbContext db, Downl
                 task.DownloadSpeedBytesPerSecond, SafeStage(task.Current)));
         }
 
-        // Only the latest result generation of each site work may own an inferred native child.
-        var latestResults = await db.DownloadResults.AsNoTracking().Where(r => siteIds.Contains(r.DownloadTaskId) &&
-            !db.DownloadResults.Any(n => n.DownloadTaskId == r.DownloadTaskId && n.SourceKey == r.SourceKey && n.Id > r.Id))
-            .Select(r => r.Id).ToArrayAsync(ct);
+        IReadOnlyList<BtDownloadJob> btJobs = [];
+        IReadOnlyList<HttpDownloadJob> httpJobs = [];
+        if (runIds.Count > 0 || siteIds.Count > 0 || transportIds.Any(i => i.StartsWith("bt:", StringComparison.Ordinal)))
+            btJobs = throughputOnly ? await bt.ReadActiveStatusAsync(activeParents, ct) : await bt.ReadSnapshotAsync(ct);
+        if (runIds.Count > 0 || siteIds.Count > 0 || transportIds.Any(i => i.StartsWith("http:", StringComparison.Ordinal)))
+            httpJobs = throughputOnly ? await http.ReadActiveStatusAsync(activeParents, ct) : await http.ReadSnapshotAsync(ct);
+        // Validate only candidate native children; each must belong to its site's latest result generation.
+        var candidates = btJobs.Where(j => j.DownloadTaskId is {} site && siteIds.Contains(site)).Select(j => j.DownloadResultId)
+            .Concat(httpJobs.Where(j => j.DownloadTaskId is {} site && siteIds.Contains(site)).Select(j => j.DownloadResultId))
+            .OfType<int>().ToHashSet();
+        var latestResults = candidates.Count == 0 ? [] : (await db.DownloadResults.AsNoTracking().Where(r =>
+            candidates.Contains(r.Id) && !db.DownloadResults.Any(n => n.DownloadTaskId == r.DownloadTaskId &&
+                n.SourceKey == r.SourceKey && n.Id > r.Id)).Select(r => r.Id).ToListAsync(ct)).ToHashSet();
         bool Included(string id, int? runId, int? parent, int? resultId) => transportIds.Contains(id) ||
             (parent.HasValue ? siteIds.Contains(parent.Value) && resultId.HasValue && latestResults.Contains(resultId.Value) :
                 runId.HasValue && runIds.Contains(runId.Value));
-        if (runIds.Count > 0 || siteIds.Count > 0 || transportIds.Any(i => i.StartsWith("bt:", StringComparison.Ordinal)))
-            foreach (var task in await bt.ReadSnapshotAsync(ct))
-                if (Included("bt:" + task.Id, task.WorkflowRunId, task.DownloadTaskId, task.DownloadResultId))
-                    result.Add(new("bt:" + task.Id, task.DownloadTaskId is {} p ? "site:" + p : null,
-                        task.WorkflowRunId, task.Status.ToString().ToLowerInvariant(), task.Percentage,
-                        task.CompletedBytes, task.TotalBytes, Utc(task.UpdatedAt), AcquisitionRuntimeProblems.Code(task.Error), task.SpeedBytesPerSecond, SafeStage(task.Stage)));
-        if (runIds.Count > 0 || siteIds.Count > 0 || transportIds.Any(i => i.StartsWith("http:", StringComparison.Ordinal)))
-            foreach (var task in await http.ReadSnapshotAsync(ct))
-                if (Included("http:" + task.Id, task.WorkflowRunId, task.DownloadTaskId, task.DownloadResultId))
-                    result.Add(new("http:" + task.Id, task.DownloadTaskId is {} p ? "site:" + p : null,
-                        task.WorkflowRunId, task.Status.ToString().ToLowerInvariant(), task.Percentage,
-                        task.CompletedBytes, task.TotalBytes, Utc(task.UpdatedAt), AcquisitionRuntimeProblems.Code(task.Error), task.SpeedBytesPerSecond, SafeStage(task.Stage)));
+        string? Problem(string? error) => AcquisitionRuntimeProblems.Code(error) ??
+            (throughputOnly && !string.IsNullOrEmpty(error) ? "TRANSFER_ERROR" : null);
+        foreach (var task in btJobs)
+            if (Included("bt:" + task.Id, task.WorkflowRunId, task.DownloadTaskId, task.DownloadResultId))
+                result.Add(new("bt:" + task.Id, task.DownloadTaskId is {} p ? "site:" + p : null,
+                    task.WorkflowRunId, task.Status.ToString().ToLowerInvariant(), task.Percentage,
+                    task.CompletedBytes, task.TotalBytes, Utc(task.UpdatedAt), Problem(task.Error),
+                    task.SpeedBytesPerSecond, SafeStage(task.Stage)));
+        foreach (var task in httpJobs)
+            if (Included("http:" + task.Id, task.WorkflowRunId, task.DownloadTaskId, task.DownloadResultId))
+                result.Add(new("http:" + task.Id, task.DownloadTaskId is {} p ? "site:" + p : null,
+                    task.WorkflowRunId, task.Status.ToString().ToLowerInvariant(), task.Percentage,
+                    task.CompletedBytes, task.TotalBytes, Utc(task.UpdatedAt), Problem(task.Error),
+                    task.SpeedBytesPerSecond, SafeStage(task.Stage)));
         return result;
     }
     internal static DateTimeOffset Local(DateTime value) => new(value.ToUniversalTime());

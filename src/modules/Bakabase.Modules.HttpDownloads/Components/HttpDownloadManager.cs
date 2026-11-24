@@ -87,6 +87,18 @@ public sealed partial class HttpDownloadManager(
         finally { _gate.Release(); }
     }
 
+    public async Task<IReadOnlyList<HttpDownloadJob>> ReadActiveStatusAsync(IReadOnlySet<int> activeParents, CancellationToken ct)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            return _jobs.Values.Select(s => s.Job).Where(j => j.Status is HttpDownloadStatus.Running or HttpDownloadStatus.Queued or
+                HttpDownloadStatus.Stopping || j.DownloadTaskId is { } parent && activeParents.Contains(parent))
+                .Select(j => j with {Files = []}).ToArray();
+        }
+        finally { _gate.Release(); }
+    }
+
     public async Task<HttpDownloadJob?> GetAsync(string id, CancellationToken ct = default)
     {
         await InitializeAsync(ct);

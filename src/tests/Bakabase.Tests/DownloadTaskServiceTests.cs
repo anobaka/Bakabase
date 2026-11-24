@@ -85,6 +85,10 @@ public sealed class DownloadTaskServiceTests
             Status = DownloadTaskDbModelStatus.Failed, DownloadStatusUpdateDt = old, Message = "LOCAL_STORAGE_FULL"};
         _db.DownloadTasks.AddRange(queued, completed, failed); await _db.SaveChangesAsync();
         var ids = new[] {queued.Id, completed.Id, failed.Id};
+        _db.DownloadTaskFiles.Add(new() {DownloadTaskId = completed.Id, Path = "document.zip", Size = 125});
+        await _db.SaveChangesAsync();
+        Assert.AreEqual(125, (await _service.GetRuntimeDtos(ids)).Single(t => t.Id == completed.Id).DownloadedBytes);
+        Assert.IsNull((await _service.GetRuntimeDtos(ids, includeFileSizes: false)).Single(t => t.Id == completed.Id).DownloadedBytes);
         var dtos = await _service.GetRuntimeDtos(ids);
         Assert.IsTrue(dtos.All(t => t.Options == null && t.Checkpoint == null));
         await using var bt = new Bakabase.Modules.Bittorrent.Components.BtDownloadManager(null!, () => throw new AssertFailedException("Read started BT."));

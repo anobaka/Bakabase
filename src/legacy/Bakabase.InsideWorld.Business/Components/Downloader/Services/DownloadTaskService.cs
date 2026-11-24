@@ -70,10 +70,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             return (await ToDto(new[] {task}))[0];
         }
 
-        private async Task<DownloadTask[]> ToDto(IEnumerable<DownloadTaskDbModel> tasks)
+        private async Task<DownloadTask[]> ToDto(IEnumerable<DownloadTaskDbModel> tasks, bool includeFileSizes = true)
         {
             var dtos = tasks.Select(task => task.ToDomainModel(DownloaderManager)!).ToArray();
-            if (dtos.Length == 0)
+            if (dtos.Length == 0 || !includeFileSizes)
             {
                 return dtos;
             }
@@ -812,7 +812,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             ids.Count == 0 ? [] : await ToDto(await GetByKeys(ids.Distinct().ToArray()));
 
         /// <summary>Live status/counters without credentials, options or checkpoint manifests.</summary>
-        public async Task<DownloadTask[]> GetRuntimeDtos(IReadOnlyCollection<int> ids, CancellationToken ct = default)
+        public async Task<DownloadTask[]> GetRuntimeDtos(IReadOnlyCollection<int> ids, CancellationToken ct = default, bool includeFileSizes = true)
         {
             if (ids.Count == 0) return [];
             var rows = await GetRequiredService<BakabaseDbContext>().DownloadTasks.AsNoTracking()
@@ -821,7 +821,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     DownloadPath = t.DownloadPath, DownloadStatusUpdateDt = t.DownloadStatusUpdateDt,
                     Message = t.Message, Interval = t.Interval, AutoRetry = t.AutoRetry, CompletedAt = t.CompletedAt})
                 .ToListAsync(ct);
-            return await ToDto(rows);
+            return await ToDto(rows, includeFileSizes);
         }
 
         public async Task<TaskSummary> GetSummary(ThirdPartyId? thirdPartyId = null)
