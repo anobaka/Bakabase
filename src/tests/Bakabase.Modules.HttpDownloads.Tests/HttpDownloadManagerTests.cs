@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Bakabase.Abstractions.Components.FileSystem;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Channels;
@@ -40,7 +41,7 @@ public sealed class HttpDownloadManagerTests
     }
 
     private HttpDownloadManager Create(IHttpDownloader? transport = null, string? store = null, string? appData = null,
-        Func<HttpDownloadJob, CancellationToken, Task<bool>>? resume = null)
+        Func<HttpDownloadJob, CancellationToken, Task<bool>>? resume = null, IFileIoObservationProvider? fileIo = null)
     {
         if (transport == null)
         {
@@ -49,7 +50,7 @@ public sealed class HttpDownloadManagerTests
             transport = provider.GetRequiredService<IHttpDownloader>();
         }
         var manager = new HttpDownloadManager(transport, () => store ?? Store, () => 2,
-            appData == null ? null : () => appData, resume);
+            appData == null ? null : () => appData, resume, fileIo: fileIo);
         _managers.Add(manager);
         return manager;
     }
@@ -83,6 +84,28 @@ public sealed class HttpDownloadManagerTests
         }
     }
 
+    [TestMethod, Timeout(20000)]
+    public async Task FinishedTransfersRetainOnlyNetworkPayloadUnderTheirPhysicalIds()
+    {
+        await using var server = new Server();
+        var observations = new FileIoObservationProvider();
+        var manager = Create(fileIo: observations);
+        var first = await manager.EnsureQueuedAsync(NewRequest(server.Url) with
+            { WorkflowRunId = 71, FileName = "first.bin", ParallelConnections = 3 });
+        var second = await manager.EnsureQueuedAsync(NewRequest(server.Url) with
+            { WorkflowRunId = 71, FileName = "second.bin" });
+        await Task.WhenAll(manager.WaitForCompletionAsync(first.Id), manager.WaitForCompletionAsync(second.Id));
+        var samples = observations.Drain().Where(s => s.NetworkObserved).ToArray();
+        CollectionAssert.AreEquivalent(new[] {"http:" + first.Id, "http:" + second.Id},
+            samples.Select(s => s.NetworkDownloadId).ToArray());
+        Assert.IsTrue(samples.All(s => s.OwnerKind == "workflow" && s.OwnerId == "71" &&
+            s.NetworkReceivedBytes == server.Body.Length && !s.ReadObserved && !s.WriteObserved));
+        Assert.IsFalse(observations.Drain().Any(s => s.NetworkObserved));
+        await manager.RecheckAsync(first.Id);
+        await manager.WaitForCompletionAsync(first.Id);
+        Assert.IsFalse(observations.Drain().Any(s => s.NetworkObserved), "Verifying the published artifact received no response payload.");
+    }
+
     [DataTestMethod, Timeout(30000)]
     [DataRow(false)]
     [DataRow(true)]
@@ -100,7 +123,8 @@ public sealed class HttpDownloadManagerTests
         server.Requests.Clear();
         server.Slow = false;
         server.IgnoreRanges = ignoreRanges;
-        var restarted = Create();
+        var observations = new FileIoObservationProvider();
+        var restarted = Create(fileIo: observations);
         await restarted.InitializeAsync();
         Assert.AreEqual(HttpDownloadStatus.Stopped, (await restarted.GetAsync(job.Id))!.Status);
         Assert.AreEqual(0, server.Requests.Count);
@@ -109,6 +133,10 @@ public sealed class HttpDownloadManagerTests
         CollectionAssert.AreEqual(server.Body, await File.ReadAllBytesAsync(completed.Files.Single()));
         if (!ignoreRanges) Assert.IsTrue(server.Requests.All(request => request.Start > 0), "Verified partial bytes should be reused after a new manager starts.");
         else Assert.IsTrue(server.Requests.Any(request => request.Start == 0));
+        var received = observations.Drain().Single(s => s.NetworkObserved);
+        var resumedAt = ignoreRanges ? 0 : server.Requests.Min(request => request.Start);
+        Assert.AreEqual((long)server.Body.Length - resumedAt, received.NetworkReceivedBytes);
+        Assert.AreEqual("http:" + job.Id, received.NetworkDownloadId);
     }
 
     [TestMethod, Timeout(30000)]

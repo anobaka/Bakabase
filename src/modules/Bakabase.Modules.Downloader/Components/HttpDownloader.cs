@@ -158,6 +158,11 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
         // The library logs its normal writer-disposal cancellation as Error. Keep its internal
         // diagnostics out of host error reporting; actual failures propagate via status/events below.
         await using var downloader = new DownloadService(config);
+        using var network = FileIoObservationScope.BeginNetworkReceive(request.NetworkDownloadId);
+        // Downloader reports ProgressedByteSize for each newly read response chunk. Its
+        // cumulative ReceivedBytesSize also includes previously persisted checkpoint offsets.
+        if (network != null)
+            downloader.ChunkDownloadProgressChanged += (_, chunk) => network.AddReceivedBytes(chunk.ProgressedByteSize);
         Exception? completedError = null;
         HttpTransferProgress snapshot = new() { TotalBytes = identity.Length, Percentage = identity.Length > 0 ? 0 : null };
         downloader.DownloadStarted += (_, _) => guard.TransferStarted = true;

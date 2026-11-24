@@ -5,6 +5,9 @@ public sealed record HttpDownloadRequest(string Url, string Directory)
 {
     /// <summary>Runtime caller safety policy; excluded from content and idempotency identity.</summary>
     public StorageWriteContext? WriteContext { get; init; }
+    /// <summary>Physical download-center task used only for runtime throughput attribution.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? NetworkDownloadId { get; init; }
     /// <summary>A single file name; when omitted, use the server name or the URL's last segment.</summary>
     public string? FileName { get; init; }
     /// <summary>Optional host-configured client for authentication, proxies or request headers.</summary>

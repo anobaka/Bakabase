@@ -33,7 +33,7 @@ public sealed partial class HttpDownloadManager
             FileName = stored.RequestedFileName, HttpClientName = stored.HttpClientName,
             ParallelConnections = stored.ParallelConnections, MaxRetries = stored.MaxRetries,
             MaximumBytesPerSecond = stored.MaximumBytesPerSecond, Timeout = stored.Timeout,
-            AllowOverwrite = false, WriteContext = WriteContext(stored)
+            AllowOverwrite = false, WriteContext = WriteContext(stored), NetworkDownloadId = "http:" + stored.Job.Id
         }, async progress =>
         {
             await _gate.WaitAsync(ct);
