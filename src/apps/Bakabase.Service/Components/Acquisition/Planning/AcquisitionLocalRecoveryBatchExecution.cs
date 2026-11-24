@@ -317,10 +317,12 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
                 var (before, beforeRun) = await CurrentAsync(id, ct);
                 if (before == null || AcquisitionLocalRecoveryQueueEntry.Read(before)?.BatchId != dispatch.BatchId ||
                     AcquisitionLocalRecoveryQueueEntry.ContentVersion(before, beforeRun) != dispatch.AttemptVersion ||
-                    workflowRow is not {CanContinue: true, Action: "resume" or "retry"})
+                    workflowRow is not {CanContinue: true, Action: "resume" or "retry" or "start"} ||
+                    (workflowRow.Action == "start") != (beforeRun == null))
                 {await FinishDispatchAsync(id, dispatch, "attention", "ACQUISITION_TASK_CHANGED", ct); return;}
                 result = await recovery.ApplyBatchAdmissionAsync(dispatch.RecoveryScope, workflowRow,
-                    AcquisitionRecoveryService.Version(before, beforeRun), dispatch.Signal, processingPlacementStamp, dispatch.TransferRetryConfirmed, ct);
+                    AcquisitionRecoveryService.Version(before, beforeRun), dispatch.Signal, processingPlacementStamp, dispatch.TransferRetryConfirmed, ct,
+                    startingBatchId: workflowRow.Action == "start" ? dispatch.BatchId : null);
             }
             var accepted = result.ContinuedTaskIds.Contains(id);
             var local = result.LocalFiles?.SingleOrDefault();

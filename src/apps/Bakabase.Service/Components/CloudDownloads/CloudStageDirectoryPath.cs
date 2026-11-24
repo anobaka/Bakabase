@@ -24,6 +24,12 @@ internal static class CloudStageDirectoryPath
         return path;
     }
 
+    internal static string PlannedDownload(CloudDownloadTarget target, string outputRoot, string intent) =>
+        Download(target) ?? target.DownloadDirectoryScope?.Directory ?? Path.Combine(outputRoot,
+            target.StoragePolicy == null ? "cloud-" + intent[..16] :
+                Bakabase.Modules.Workflow.Artifacts.ArtifactStoragePolicies.RenderDownload(target.StoragePolicy,
+                    target.Title, intent, target.SelectedSource!.ProviderId));
+
     internal static async Task<string> PrepareDownloadAsync(CloudDownloadTarget target, IUserStoragePolicy storage,
         FileProcessingWorkspaceResolver? workspaces, CancellationToken ct)
     {

@@ -157,13 +157,14 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
     // signal. Pin that exact read to the newly persisted starting state. Apply still checks
     // the version and diagnoses the provider again inside the task and workflow gates.
     internal Task<AcquisitionRecoveryResult> ApplyBatchAdmissionAsync(string scope, AcquisitionRecoveryRow row,
-        string version, string signal, string? placementStamp, bool transferRetryConfirmed, CancellationToken ct)
+        string version, string signal, string? placementStamp, bool transferRetryConfirmed, CancellationToken ct, string? startingBatchId = null)
     {
         var token = Guid.NewGuid().ToString("N");
         var preview = new AcquisitionRecoveryPreview(token, DateTimeOffset.UtcNow.AddMinutes(10), 1, 1, 0, [row], scope);
         previews.Add(new(preview, new Dictionary<int, string> {{row.TaskId, version}},
             new Dictionary<int, string> {{row.TaskId, signal}}));
-        return ApplyBatchAsync(new(token, [row.TaskId]), placementStamp, ct, transferRetryConfirmed, signal);
+        return ApplyCoreAsync(new(token, [row.TaskId]), ct, null, processingPlacementStamp: placementStamp, preserveReserve: true,
+            transferRetryConfirmed: transferRetryConfirmed, expectedSignal: signal, startingBatchId: startingBatchId);
     }
 
     internal Task<AcquisitionRecoveryResult> ApplyBatchAsync(AcquisitionRecoveryApplyInput input,
@@ -244,7 +245,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
 
     private async Task<AcquisitionRecoveryResult> ApplyCoreAsync(AcquisitionRecoveryApplyInput input, CancellationToken ct,
         Func<string?, Task>? guardDirectory, int? heldTask = null, AcquisitionRecoveryDiagnosis? verified = null,
-        string? processingPlacementStamp = null, bool preserveReserve = false, bool transferRetryConfirmed = false, string? expectedSignal = null)
+        string? processingPlacementStamp = null, bool preserveReserve = false, bool transferRetryConfirmed = false, string? expectedSignal = null, string? startingBatchId = null)
     {
         var ids = Ids(input.TaskIds).Order().ToArray();
         var entry = previews.Claim(input.PreviewToken, ids, input.UseEmergencySpaceReserve, input.AnalyzeFilesFirst == true,
@@ -324,7 +325,7 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                     if (!current.Row.CanContinue || current.Row.Action != "start")
                         throw new RecoveryBlockedException(current.Row.ReasonCode);
                     if (current.SignalJson != entry.Signals[id]) throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
-                    var started = await plans.RunWhileLockedAsync(id, task.PlanRevision, entry.Signals[id], ct);
+                    var started = await plans.RunWhileLockedAsync(id, task.PlanRevision, entry.Signals[id], ct, startingBatchId: startingBatchId);
                     if (started.Task.WorkflowRunId != null) continued.Add(id);
                     else skipped.Add(new(id, "RECOVERY_PREPARED_PLAN_BLOCKED"));
                     continue;

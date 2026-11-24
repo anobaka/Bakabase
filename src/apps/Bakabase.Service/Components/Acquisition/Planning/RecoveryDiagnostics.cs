@@ -28,6 +28,7 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 
 public sealed record AcquisitionRecoveryDiagnosis(AcquisitionRecoveryRow Row, string SignalJson = "{}")
 {
+    internal DownloadWorkset? PreparedWorkset { get; init; }
     // A suspended attempt can have pinned writes even without a workspace policy on its old plan.
     internal IReadOnlyDictionary<int, CompletedDownloadPlacement> CompletedDownloads { get; init; } = new Dictionary<int, CompletedDownloadPlacement>();
     internal string? ProcessingPartId { get; init; }
@@ -86,7 +87,7 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
                 var check = await plans.CheckUnstartedRecoveryAsync(task, ct);
                 problem = check.Problem;
                 return problem == null
-                    ? new(new(task.Id, task.Title, null, true, "start", "RECOVERY_PREPARED_PLAN_READY"), check.Inputs!)
+                    ? new(new(task.Id, task.Title, null, true, "start", "RECOVERY_PREPARED_PLAN_READY"), check.Inputs!) {PreparedWorkset = check.Workset}
                     : Result("RECOVERY_PREPARED_PLAN_BLOCKED");
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or IOException)

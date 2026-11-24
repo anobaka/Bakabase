@@ -169,7 +169,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             if (task == null)
                 return new([new(id, null, null, false, "ACQUISITION_TASK_NOT_FOUND", null, true, null, null, null)],
                     new Dictionary<int, AcquisitionLocalRecoveryBatchPreviewStore.Evidence>());
-            if (mode == "automatic" && IsTransferCursor(run)) item.CancelAfter(TimeSpan.FromSeconds(10));
+            if (mode == "automatic" && (IsPreparedStart(task, run) || IsTransferCursor(run))) item.CancelAfter(TimeSpan.FromSeconds(10));
             var queue = queueStatuses == null ? null : await QueueReference(task, run, queueStatuses, item.Token);
             if (queue != null && (mode != "automatic" || !queue.CanRequeue))
                 return new([new(id, task.Title, run?.Id, false, "LOCAL_BATCH_ALREADY_QUEUED", estimate.Bytes,
@@ -462,6 +462,13 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                 if (!diagnosis.Row.CanContinue) return Block(diagnosis.Row.ReasonCode);
                 scope = offeredScope!; category = "workflow";
             }
+            else if (mode == "automatic" && IsPreparedStart(task, run))
+            {
+                diagnosis = await diagnostics.DiagnoseAsync(task, null, ct);
+                if (!diagnosis.Row.CanContinue || diagnosis.Row.Action != "start" || diagnosis.PreparedWorkset == null)
+                    return Block(diagnosis.Row.CurrentProblemCode ?? diagnosis.Row.ReasonCode);
+                scope = "workflow"; category = "workflow";
+            }
             else if (originalDownloadDiagnosis != null)
             {
                 diagnosis = originalDownloadDiagnosis;
@@ -503,7 +510,13 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             string storageStamp;
             var completedPlacement = false;
             var firstDownload = diagnosis.InitialDownloadTargets.Count > 0;
-            if (firstDownload)
+            if (diagnosis.PreparedWorkset is {} prepared)
+            {
+                (working, delivery) = plans.PreparedStartDirectories(plan, prepared);
+                storageStamp = Hash(new {Working = working, Delivery = delivery});
+                if (continuations != null) await continuations.Guard(working.Concat(delivery), restricted, ct);
+            }
+            else if (firstDownload)
             {
                 // A completed transfer can allocate its first download under today's settings.
                 // Charge only the new destinations. The original workset still identifies its transfer.
@@ -578,22 +591,27 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                 checkpointWrite = AcquisitionLocalRecoveryBatchCapacity.Bind(write, capacity, storage);
             }
             var incomplete = estimate.Partial || estimate.Bytes == null || working.Length > 0;
+            var canOverrideStorage = offered == null && (category == "localProcessing" || diagnosis.PreparedWorkset != null || AcquisitionContinuationReserve.IsDownload(run));
             var readyReason = diagnosis.Row.ReasonCode is AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired or
-                "RECOVERY_TRANSFER_RECOVERY_READY" or "RECOVERY_COMPLETED_DOWNLOAD_READY" ? diagnosis.Row.ReasonCode : "LOCAL_BATCH_READY";
+                "RECOVERY_TRANSFER_RECOVERY_READY" or "RECOVERY_COMPLETED_DOWNLOAD_READY" or "RECOVERY_PREPARED_PLAN_READY" ? diagnosis.Row.ReasonCode : "LOCAL_BATCH_READY";
             return new(new(task.Id, task.Title, run?.Id, true, readyReason, estimate.Bytes, incomplete, scope,
-                working.FirstOrDefault(), delivery.FirstOrDefault(), category, CanOverrideStorage: offered == null && (category == "localProcessing" || AcquisitionContinuationReserve.IsDownload(run)),
+                working.FirstOrDefault(), delivery.FirstOrDefault(), category, CanOverrideStorage: canOverrideStorage,
                 CurrentStepKind: diagnosis.Row.CurrentStepKind, RecoveryAction: diagnosis.TransferRetryTargets.Count > 0
                     ? "retryTransfer" : diagnosis.Row.Action ?? "verifyAndResume"),
                 new(AcquisitionLocalRecoveryQueueEntry.ContentVersion(task, run), diagnosis.SignalJson, scope,
                     storageStamp, working, delivery, incomplete, mode, category, VerificationPending: !diagnosis.Row.CanContinue,
                     AuthorizationStamp: authorizationStamp, Restricted: restricted,
-                    CanOverrideStorage: offered == null && (category == "localProcessing" || AcquisitionContinuationReserve.IsDownload(run)),
+                    CanOverrideStorage: canOverrideStorage,
                     RecheckCompletedPlacement: completedPlacement, CheckpointWrite: checkpointWrite), diagnosis.ProcessingPlacementStamp, diagnosis.Row);
         }
         catch (UnauthorizedAccessException) {return Block("LOCAL_BATCH_PATH_FORBIDDEN");}
         catch (Exception e) when (e is JsonException or ArgumentException or IOException or InvalidOperationException)
         {return Block("RECOVERY_LOCAL_FILES_UNAVAILABLE");}
     }
+
+    private static bool IsPreparedStart(AcquisitionTaskDbModel task, WorkflowRunDbModel? run) =>
+        task is {Phase: "ready", Status: AcquisitionStatus.Waiting, WorkflowRunId: null} && run == null &&
+        AcquisitionLocalFilesRecoveryReceipt.Read(task)?.ResultingRevision == null;
 
     private bool IsTransferCursor(WorkflowRunDbModel? run) => run?.CurrentStepIndex is {} index &&
         diagnostics.IsTransferStep(WorkflowRunPlans.Read(run.PlanSnapshotJson)?.Nodes.ElementAtOrDefault(index)?.Kind);

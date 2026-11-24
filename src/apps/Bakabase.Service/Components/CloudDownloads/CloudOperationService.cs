@@ -131,8 +131,7 @@ public sealed partial class CloudOperationService(BakabaseDbContext db, IEnumera
                 : target.DownloadDirectoryScope is { } scope
                 ? await (services?.GetService<FileProcessingWorkspaceResolver>() ??
                     throw new InvalidOperationException("Task directory allocation is unavailable.")).EnsureScopedDirectoryAsync(scope, ct)
-                : Path.Combine(outputRoot, target.StoragePolicy == null ? "cloud-" + id[..16] :
-                    Bakabase.Modules.Workflow.Artifacts.ArtifactStoragePolicies.RenderDownload(target.StoragePolicy, target.Title, id, source.ProviderId));
+                : CloudStageDirectoryPath.PlannedDownload(target, outputRoot, id);
             storage.EnsurePathAllowed(directory);
             var processingDirectory = target.ProcessingDirectoryScope is { } processingScope
                 ? await (services?.GetService<FileProcessingWorkspaceResolver>() ??

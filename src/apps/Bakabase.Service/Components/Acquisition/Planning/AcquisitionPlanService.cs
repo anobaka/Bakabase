@@ -697,26 +697,44 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
     // Recovery already owns the acquisition gate. Keep the same execution/preflight path
     // without recursively taking the semaphore or manufacturing a replacement workflow.
     internal Task<AcquisitionPlanTaskDetail> RunWhileLockedAsync(int id, int expectedRevision, string? expectedInputs, CancellationToken ct,
-        bool? useEmergencySpaceReserve = null)
-        => RunGuardedAsync(id, expectedRevision, ct, true, expectedInputs, useEmergencySpaceReserve);
+        bool? useEmergencySpaceReserve = null, string? startingBatchId = null)
+        => RunGuardedAsync(id, expectedRevision, ct, true, expectedInputs, useEmergencySpaceReserve, startingBatchId);
 
-    internal async Task<(string? Problem, string? Inputs)> CheckUnstartedRecoveryAsync(AcquisitionTaskDbModel row, CancellationToken ct)
+    internal async Task<(string? Problem, string? Inputs, DownloadWorkset? Workset)> CheckUnstartedRecoveryAsync(AcquisitionTaskDbModel row, CancellationToken ct)
     {
         if (row.DeletedAt != null || row.Status != AcquisitionStatus.Waiting || row.PlanJson == null || row.BuilderId == null || !await HasNeverExecutedAsync(row, ct))
-            return ("RECOVERY_CHECKPOINT_UNSUPPORTED", null);
+            return ("RECOVERY_CHECKPOINT_UNSUPPORTED", null, null);
         var plan = Plan(row);
         AcquisitionPlanCompiler.Validate(plan);
         await ValidateContinuationInputsAsync(row, plan, ct);
         var dependencyIssues = await FileProcessingDependencyPreflight.InspectAsync(plan.Parts.Select(AcquisitionPlanCompiler.Processing),
             processingDependencies ?? [], ct);
-        if (dependencyIssues.Count > 0) return (dependencyIssues[0].Code, null);
+        if (dependencyIssues.Count > 0) return (dependencyIssues[0].Code, null, null);
         // Inspect the already-selected inputs. Do not choose another mirror, install a tool,
         // start an account flow or alter the retained plan during the recovery preview.
         var request = Request(plan, $"acquisition:{row.Id}") with {CheckSourceAvailability = true};
         var check = await PreflightDownloadsAsync(request, plan.OutputDirectory, ct);
-        return check.CanSubmit ? (null, RecoveryInputs(plan, check)) :
+        return check.CanSubmit ? (null, RecoveryInputs(plan, check), ResolvedWorkset(row, plan, Sources(row), check)) :
             (check.Requirements.Concat(check.Candidates.SelectMany(c => c.Requirements))
-                .Select(r => r.Code).FirstOrDefault() ?? "RECOVERY_PREPARED_PLAN_BLOCKED", null);
+                .Select(r => r.Code).FirstOrDefault() ?? "RECOVERY_PREPARED_PLAN_BLOCKED", null, null);
+    }
+
+    internal (string[] Working, string[] Delivery) PreparedStartDirectories(AcquisitionPlan plan, DownloadWorkset workset)
+    {
+        var frozen = AcquisitionPlanCompiler.Compile(plan, workset.Targets.Select(t => t.SelectedSource!).ToArray());
+        var publication = JsonSerializer.Deserialize<FileArtifactPublicationConfig>(
+            frozen.Nodes.Single(n => n.Kind == "fs.publishArtifacts").ConfigJson, Json)!;
+        var working = new HashSet<string>(ArtifactManifestFiles.PathComparer);
+        var delivery = new HashSet<string>(ArtifactManifestFiles.PathComparer);
+        foreach (var target in workset.Targets)
+        {
+            var intent = DownloadArtifactCoordinator.DownloadIntent(target, workset.OutputDirectory, workspaces);
+            working.Add(CloudStageDirectoryPath.PlannedDownload(target, workset.OutputDirectory, intent));
+            var processing = target.ProcessingDirectoryScope?.Directory ?? target.StoragePolicy?.ProcessingWorkspaceDirectory;
+            if (!string.IsNullOrWhiteSpace(processing)) working.Add(processing);
+            delivery.Add(PublishFileArtifactsActivity.CloudTargetDirectory(workset, target, publication));
+        }
+        return (working.ToArray(), delivery.ToArray());
     }
 
     private static string RecoveryInputs(AcquisitionPlan plan, DownloadIntentPreflight check) => CloudOperationService.Key(
@@ -724,7 +742,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             .OrderBy(c => c.Candidate.Id).Select(c => c.ResolvedSource).ToArray()));
 
     private async Task<AcquisitionPlanTaskDetail> RunGuardedAsync(int id, int expectedRevision, CancellationToken ct, bool gateHeld,
-        string? expectedInputs = null, bool? useEmergencySpaceReserve = null)
+        string? expectedInputs = null, bool? useEmergencySpaceReserve = null, string? startingBatchId = null)
     {
         var gate = AcquisitionTaskGate.For(id); if (!gateHeld) await gate.WaitAsync(ct);
         try
@@ -747,6 +765,10 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             }
             var ownerId = row.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
             var revision = row.PlanRevision.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var queue = startingBatchId == null ? null : AcquisitionLocalRecoveryQueueEntry.Read(row);
+            if (startingBatchId != null && (queue is not {Status: "starting", WorkflowRunId: null} ||
+                queue.BatchId != startingBatchId || queue.PlanRevision != expectedRevision || queue.Signal != expectedInputs))
+                throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
             var existingRunId = await (from link in db.Set<WorkflowRunSourceDbModel>()
                 join existingRun in db.Set<WorkflowRunDbModel>() on link.WorkflowRunId equals existingRun.Id
                 where link.Module == "acquisition" && link.EntityKind == "task" && link.EntityId == ownerId && link.Revision == revision
@@ -754,6 +776,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                 select (int?)existingRun.Id).FirstOrDefaultAsync(ct);
             if (existingRunId != null)
             {
+                if (startingBatchId != null) throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
                 row.WorkflowRunId = existingRunId; row.Status = AcquisitionStatus.Running; row.Phase = "executing";
                 BindRunReserve(row, useEmergencySpaceReserve);
                 await db.SaveChangesAsync(ct);
@@ -812,9 +835,20 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
             // The new association and its explicit reserve are published atomically. Before
             // this save, writers cannot find a current owner and use the configured reserve.
             // In particular, false must override a globally enabled emergency reserve.
-            BindRunReserve(row, useEmergencySpaceReserve);
+            if (queue != null)
+            {
+                // Publish the exact queue-to-run association with the task. A restart after this
+                // save can observe the accepted run without reclaiming an unrelated execution.
+                row.BuilderStateJson = AcquisitionLocalRecoveryQueueEntry.Write(row.BuilderStateJson,
+                    queue with {WorkflowRunId = run.Id, Status = "running", UpdatedAt = DateTimeOffset.UtcNow});
+                if (queue.UsesConfiguredReserve || queue.OverrideValid(DateTimeOffset.UtcNow))
+                    row.BuilderStateJson = AcquisitionStorageOverrideGrant.WithState(row.BuilderStateJson,
+                        new(run.Id, row.PlanRevision, "batch:" + queue.BatchId, DateTimeOffset.UtcNow,
+                            queue.OverrideExpiresAt!.Value, ReserveMode: queue.ReserveMode ?? AcquisitionSpaceReserve.Emergency));
+            }
+            else BindRunReserve(row, useEmergencySpaceReserve);
             await db.SaveChangesAsync(ct);
-            if (useEmergencySpaceReserve != null) AcquisitionStorageWritePolicyProvider.Invalidate();
+            if (useEmergencySpaceReserve != null || startingBatchId != null) AcquisitionStorageWritePolicyProvider.Invalidate();
             return await DetailAsync(row, ct);
         }
         finally {if (!gateHeld) gate.Release();}

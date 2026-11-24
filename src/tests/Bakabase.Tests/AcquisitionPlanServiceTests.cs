@@ -15,7 +15,7 @@ namespace Bakabase.Tests;
 
 [TestClass]
 [DoNotParallelize] // Independent test databases reuse IDs; task execution gates are process-wide.
-public sealed class AcquisitionPlanServiceTests
+public sealed partial class AcquisitionPlanServiceTests
 {
     private IServiceProvider _services = null!;
     private BakabaseDbContext _db = null!;

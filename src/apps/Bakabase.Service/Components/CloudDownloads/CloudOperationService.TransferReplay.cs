@@ -55,9 +55,7 @@ public sealed partial class CloudOperationService
             o.WorkflowRunId == runId && o.TargetId == target.Id, ct) ||
             await db.ArtifactOperationBindings.AsNoTracking().AnyAsync(b => b.OwnerKind == "workflow" && b.OwnerId == owner &&
                 b.Slot.StartsWith(target.Id + ":") && b.Slot != transferSlot && (b.Slot != replaySlot || b.OperationId != replayId), ct)) return null;
-        var path = CloudStageDirectoryPath.Download(target) ?? target.DownloadDirectoryScope?.Directory ??
-            Path.Combine(outputDirectory, target.StoragePolicy == null ? "cloud-" + intent[..16] :
-                Bakabase.Modules.Workflow.Artifacts.ArtifactStoragePolicies.RenderDownload(target.StoragePolicy, target.Title, intent, source.ProviderId));
+        var path = CloudStageDirectoryPath.PlannedDownload(target, outputDirectory, intent);
         var root = target.DownloadDirectoryScope?.StorageRoot ?? outputDirectory;
         storage.EnsurePathAllowed(root);
         storage.EnsurePathAllowed(path);
