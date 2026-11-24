@@ -307,6 +307,10 @@ public sealed class AuthorizedOriginalHttpTests
         Assert.AreEqual(2, count);
         File.Move(payload, Path.Combine(_root, "empty-final"));
         Assert.IsTrue((await downloader.InspectHandedOffAsync(empty, DirectoryPath, default)).IsComplete);
+        await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () => downloader.InspectAsync(empty, DirectoryPath, default));
+        await Expect("ORIGINAL_HTTP_CHECKPOINT_INVALID", () =>
+            downloader.DownloadAsync(empty, DirectoryPath, ClientName, Resolve, null, default));
+        Assert.IsFalse(File.Exists(payload));
     }
 
     [TestMethod]

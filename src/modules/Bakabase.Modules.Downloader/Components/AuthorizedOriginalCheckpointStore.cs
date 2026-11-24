@@ -102,6 +102,7 @@ internal sealed class AuthorizedOriginalCheckpointStore
             if (published || File.Exists(Partial) || !sealedForHandoff) throw Invalid();
             return new State(data[4..(4 + DigestSize)], data[HeaderSize..journalEnd], verifiedBytes, false);
         }
+        if (sealedForHandoff && !published && !File.Exists(Partial)) throw Invalid();
         var path = published ? Payload : Partial;
         var actual = File.Exists(path) ? new FileInfo(path).Length : 0;
         if (actual < verifiedBytes || actual > _length || actual - verifiedBytes > SegmentBytes ||
