@@ -151,8 +151,10 @@ public sealed class DownloadSourceResolver(IEnumerable<IDownloadSourceResolver> 
     // A registered short-link resolver can discover a method even when the original
     // address has no descriptor. Projections can ask without making a network request.
     internal bool MayHaveDownloadMethod(CloudSource source) =>
-        DownloadMethodCatalog.FindAll(source).Count > 0 ||
-        Uri.TryCreate(source.Url, UriKind.Absolute, out var uri) && FindResolver(uri) != null;
+        DownloadMethodCatalog.FindAll(source).Count > 0 || CanResolveUrl(source.Url);
+
+    internal bool CanResolveUrl(string url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && FindResolver(uri) != null;
 
     private IDownloadSourceResolver? FindResolver(Uri source) => _resolvers.FirstOrDefault(r => r.CanResolve(source));
 

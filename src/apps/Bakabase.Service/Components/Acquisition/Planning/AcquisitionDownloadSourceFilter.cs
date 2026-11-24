@@ -12,15 +12,16 @@ using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.Service.Components.DownloadIntents;
+using Bakabase.Service.Components.Workflow;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
 /// <summary>Download Center source keys, projected from saved choices without resolving links,
 /// reading files, initializing downloaders or materializing full execution checkpoints.</summary>
-internal sealed class AcquisitionDownloadSourceFilter(BakabaseDbContext db)
+internal sealed class AcquisitionDownloadSourceFilter(BakabaseDbContext db, DownloadSourceResolver resolver)
 {
-    internal static bool IsValid(string? source) => source == null || source is "http" or "bt" ||
+    internal static bool IsValid(string? source) => source == null || source is "http" or "bt" or "unsupported" ||
         source.StartsWith("site:", StringComparison.Ordinal) && int.TryParse(source[5..], NumberStyles.None,
             CultureInfo.InvariantCulture, out var id) && Enum.IsDefined((ThirdPartyId)id) &&
         source == "site:" + id.ToString(CultureInfo.InvariantCulture);
@@ -36,14 +37,31 @@ internal sealed class AcquisitionDownloadSourceFilter(BakabaseDbContext db)
                 // The saved execution choice wins over a plan, which wins over unselected
                 // draft alternatives. A malformed fixed selection never revives its mirrors.
                 var tier = task.Min(r => r.Tier);
-                sources.Add(task.Key, task.Where(r => r.Tier == tier).Select(Key).OfType<string>().ToHashSet(StringComparer.Ordinal));
+                var keys = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var fact in task.Where(r => r.Tier == tier))
+                {
+                    var key = Key(fact, out var normalized);
+                    if (key != null) keys.Add(key);
+                    if (normalized != null && IsUnsupported(normalized)) keys.Add("unsupported");
+                }
+                sources.Add(task.Key, keys);
             }
         }
         return sources;
     }
 
-    private static string? Key(SourceFact source)
+    private bool IsUnsupported(CloudSource source)
     {
+        var method = DownloadMethodCatalog.Select(source);
+        var code = DownloadMethodRegistry.SourceSupportIssue(source, method)?.Code ??
+            (method?.Availability != null ? DownloadMethodAvailabilityConstraint.ReasonCode : null);
+        // A registered short-link resolver may discover an adapter. A list read must never follow it.
+        return ExecutionProblemClassifier.IsUnsupportedDownloadSource(code) && !resolver.CanResolveUrl(source.Url);
+    }
+
+    private static string? Key(SourceFact source, out CloudSource? normalized)
+    {
+        normalized = null;
         if (source.LeadKind == (int)AcquisitionLeadKind.PlatformHolding)
         {
             var prefix = source.Url?.Split(':', 2)[0];
@@ -60,11 +78,14 @@ internal sealed class AcquisitionDownloadSourceFilter(BakabaseDbContext db)
         string? provider;
         try
         {
-            provider = DownloadSourceResolver.Normalize(new()
+            // Re-evaluate adapter support for the locator. A retired or incorrectly pinned method
+            // in a historical plan does not make the source family unsupported.
+            normalized = DownloadSourceResolver.Normalize(new()
             {
                 Id = "filter", Url = source.Url, Kind = kind,
                 ProviderId = kind == "remote" ? source.ProviderId : null
-            }).ProviderId;
+            });
+            provider = normalized.ProviderId;
         }
         catch (ArgumentException)
         {
@@ -87,7 +108,6 @@ internal sealed class AcquisitionDownloadSourceFilter(BakabaseDbContext db)
         public string? Url { get; set; }
         public string? Kind { get; set; }
         public string? ProviderId { get; set; }
-        public string? MethodId { get; set; }
         public int? DriveKind { get; set; }
         public int? LeadKind { get; set; }
     }
@@ -155,15 +175,14 @@ internal sealed class AcquisitionDownloadSourceFilter(BakabaseDbContext db)
             CASE WHEN json_type(Source,'$.url')='text' AND length(json_extract(Source,'$.url'))<=8192 THEN json_extract(Source,'$.url') END Url,
             CASE WHEN json_type(Source,'$.kind')='text' AND length(json_extract(Source,'$.kind'))<=32 THEN json_extract(Source,'$.kind') END Kind,
             CASE WHEN json_type(Source,'$.providerId')='text' AND length(json_extract(Source,'$.providerId'))<=128 THEN json_extract(Source,'$.providerId') END ProviderId,
-            CASE WHEN json_type(Source,'$.methodId')='text' AND length(json_extract(Source,'$.methodId'))<=128 THEN json_extract(Source,'$.methodId') END MethodId,
             CASE WHEN json_type(Source,'$.driveKind')='integer' THEN json_extract(Source,'$.driveKind') END DriveKind,
             NULL LeadKind
         FROM documents
         UNION ALL
-        SELECT TaskId,7,NULL,NULL,'exHentai',NULL,NULL,NULL FROM candidates
+        SELECT TaskId,7,NULL,NULL,'exHentai',NULL,NULL FROM candidates
         WHERE NOT HasPlan AND BuilderId='exhentai.search'
         UNION ALL
-        SELECT TaskId,8,LeadValue,NULL,NULL,NULL,NULL,LeadKind FROM candidates
+        SELECT TaskId,8,LeadValue,NULL,NULL,NULL,LeadKind FROM candidates
         WHERE NOT HasPlan AND BuilderId IS NULL AND LeadKind IN (1,4,5,7)
         """;
 }

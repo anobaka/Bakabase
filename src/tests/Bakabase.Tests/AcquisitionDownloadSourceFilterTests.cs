@@ -5,6 +5,7 @@ using Bakabase.Modules.Acquisition.Abstractions.Services;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
+using Bakabase.Service.Components.DownloadIntents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -149,6 +150,86 @@ public sealed partial class AcquisitionAttentionSearchTests
         var cancelled = await _search.SearchAsync(new(Keyword: "Batch", Stage: "cancelled"));
         Assert.AreEqual(1, cancelled.DownloadSourceCounts["all"]);
         Assert.AreEqual(1, cancelled.DownloadSourceCounts["http"]);
+    }
+
+    [TestMethod]
+    public async Task UnsupportedSourceCountsSavedCandidatesOncePerTaskAndPreservesOtherRoutes()
+    {
+        const string unsupported = "https://transfer.it/example";
+        const string image = "https://image.example.test/download-code.png";
+        const string baidu = "https://pan.baidu.com/s/1example";
+        object Source(string id, string url) => new {id, url, kind = "share", providerId = "unknown"};
+        object Part(string url) => new {selectedSourceId = "a", sources = new[] {Source("a", url)}};
+        AcquisitionTaskDbModel Plan(string name, params object[] parts) => new()
+        {
+            Title = name, BuilderId = "post", PlanJson = JsonSerializer.Serialize(new {parts, coverCandidates = new[] {new {url = image}}}, Json)
+        };
+        var weiyun = Plan("Legacy unsupported share", Part("https://share.weiyun.com/example"));
+        var multipart = Plan("Three unsupported groups", Part(unsupported), Part(unsupported), Part(unsupported));
+        var barcode = Plan("Explicit image download candidate", Part("https://image.example.test/qr-code.png"));
+        var selected = Plan("Selected Baidu with unrelated mirror", new {selectedSourceId = "b",
+            sources = new[] {Source("b", baidu), Source("m", unsupported)}});
+        var draft = new AcquisitionTaskDbModel {Title = "Mixed alternatives", BuilderId = "post", BuilderStateJson =
+            JsonSerializer.Serialize(new {draftSources = new[] {Source("u", unsupported), Source("b", baidu), Source("v", unsupported)}}, Json)};
+        var missing = Plan("Missing selected source", new {selectedSourceId = "absent", sources = new[] {Source("u", unsupported)}});
+        var cover = Plan("Only a cover");
+        var invalid = Plan("Unusable input", Part(""), Part("not a URL"), Part("file:///local"));
+        var origin = new AcquisitionTaskDbModel {Title = "Only original post", LeadKind = AcquisitionLeadKind.SharedPage, LeadValue = unsupported};
+        var (expired, _) = await Seed("Expired supported source", ["SOURCE_SHARE_EXPIRED"]);
+        expired.PlanJson = selected.PlanJson;
+        _db.AcquisitionTasks.AddRange(weiyun, multipart, barcode, selected, draft, missing, cover, invalid, origin);
+        await _db.SaveChangesAsync();
+
+        var filtered = await _search.SearchAsync(new(DownloadSource: "unsupported", Page: 2, PageSize: 1));
+        CollectionAssert.AreEquivalent(new[] {weiyun.Id, multipart.Id, barcode.Id, draft.Id}, filtered.FilteredTaskIds.ToArray());
+        Assert.AreEqual(1, filtered.Items.Count);
+        Assert.AreEqual(4, filtered.TotalCount);
+        Assert.AreEqual(filtered.TotalCount, filtered.DownloadSourceCounts["unsupported"]);
+        Assert.AreEqual(10, filtered.DownloadSourceCounts["all"]);
+        var known = await _search.SearchAsync(new(DownloadSource: "site:14"));
+        CollectionAssert.AreEquivalent(new[] {draft.Id, selected.Id, expired.Id}, known.FilteredTaskIds.ToArray());
+        Assert.AreEqual(known.TotalCount, filtered.DownloadSourceCounts["site:14"]);
+        Assert.AreEqual(4, known.DownloadSourceCounts["unsupported"]);
+        var narrowed = await _search.SearchAsync(new(DownloadSource: "unsupported", Keyword: "Missing selected source"));
+        Assert.AreEqual(0, narrowed.TotalCount);
+        Assert.IsFalse(narrowed.DownloadSourceCounts.ContainsKey("unsupported"));
+    }
+
+    [TestMethod]
+    public async Task UnsupportedSourceUsesMethodLimitationsAndResolversWithoutCallingThemOrProbingHealth()
+    {
+        var search = new AcquisitionTaskSearchService(_db, _services.GetRequiredService<IAcquisitionService>(),
+            sourceResolver: new DownloadSourceResolver([new ListingResolver()]));
+        async Task<int> Candidate(string title, string url)
+        {
+            var (task, _) = await Seed(title, []);
+            task.BuilderStateJson = JsonSerializer.Serialize(new {draftSources = new[] {new {url}}}, Json);
+            task.PlanJson = null;
+            return task.Id;
+        }
+        var document = await Candidate("Unsupported export", "https://docs.google.com/document/d/example/edit");
+        var limited = await Candidate("Registered integration unavailable", "https://terabox.com/s/1ExampleId");
+        var known = await Candidate("Normal supported file", "https://drive.google.com/file/d/example/view");
+        var (retiredMethod, currentRun) = await Seed("Obsolete pinned method on a supported source", []);
+        retiredMethod.PlanJson = """{"parts":[{"selectedSourceId":"old","sources":[{"id":"old","url":"https://transfer.it/example"}]}]}""";
+        currentRun.CurrentItemJson = """{"item":{"targets":[{"selectedSourceId":"new","sources":[{"id":"new","url":"https://drive.google.com/file/d/example/view","methodId":"obsolete.method"}]}]}}""";
+        await Candidate("Needs a decryption key", "https://mega.nz/file/abc");
+        await Candidate("Registered resolver", "https://short.example.test/share/abc");
+        await Candidate("Resolver before validating provider shape", "https://1drv.ms/x/example");
+        await _db.SaveChangesAsync();
+
+        var filtered = await search.SearchAsync(new(DownloadSource: "unsupported"));
+        CollectionAssert.AreEquivalent(new[] {document, limited}, filtered.FilteredTaskIds.ToArray());
+        Assert.AreEqual(2, filtered.DownloadSourceCounts["unsupported"]);
+        var drive = await search.SearchAsync(new(DownloadSource: "site:15"));
+        CollectionAssert.AreEquivalent(new[] {document, known, retiredMethod.Id}, drive.FilteredTaskIds.ToArray());
+    }
+
+    private sealed class ListingResolver : IDownloadSourceResolver
+    {
+        public bool CanResolve(Uri source) => source.Host is "short.example.test" or "1drv.ms";
+        public Task<DownloadSourceResolution> ResolveAsync(Uri source, CancellationToken ct) =>
+            throw new AssertFailedException("Filtering must not follow a download link.");
     }
 
     private sealed class SearchRuntime(Dictionary<int, WorkflowCapabilityRuntime> states) : IWorkflowActivityRuntimeProvider

@@ -13,6 +13,8 @@ public static class ExecutionProblemClassifier
     private sealed record Rule(string Status, string Tag, string? NormalizedReason = null);
     private static readonly Dictionary<string, Rule> Rules = CreateRules();
     public static bool IsKnown(string code) => Rules.ContainsKey(code);
+    internal static bool IsUnsupportedDownloadSource(string? code) =>
+        code != null && Rules.TryGetValue(code, out var rule) && rule.Tag == "downloadSourceUnsupported";
     // A successful public listing cannot supersede a missing original-download URL.
     // That requires the provider's download recovery check, not a source-health probe.
     public static bool IsRefreshableSourceCode(string code) => code != "PIKPAK_ORIGINAL_FILE_UNAVAILABLE" && Rules.TryGetValue(code, out var rule) &&

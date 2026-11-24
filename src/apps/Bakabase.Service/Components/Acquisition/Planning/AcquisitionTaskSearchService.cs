@@ -16,6 +16,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Modules.Workflow.Components;
+using Bakabase.Service.Components.DownloadIntents;
 using Bakabase.Service.Components.Workflow;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,7 +28,7 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisitionService acquisitions,
     AcquisitionSourceAttentionProjection? sourceAttention = null, AcquisitionDownloadActivityProjection? downloadActivity = null,
     IArtifactOperationStore? artifacts = null, WorkflowActivityRuntimeRegistry? runtimeProviders = null,
-    BTaskManager? backgroundTasks = null)
+    BTaskManager? backgroundTasks = null, DownloadSourceResolver? sourceResolver = null)
 {
     private static readonly string[] Stages = ["preparing", "ready", "running", "attention", "completed"];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -109,7 +110,7 @@ public sealed class AcquisitionTaskSearchService(BakabaseDbContext db, IAcquisit
             task.Id.ToString() == keyword || (task.Title ?? (task.ResourceId is {} resourceId ? names.GetValueOrDefault(resourceId) : null))?
                 .Contains(keyword, StringComparison.OrdinalIgnoreCase) == true;
         var scoped = rows.Where(t => (input.Stage == "all" ? t.Stage != "cancelled" : t.Stage == input.Stage) && Matches(t)).ToArray();
-        var sourceFilter = new AcquisitionDownloadSourceFilter(db);
+        var sourceFilter = new AcquisitionDownloadSourceFilter(db, sourceResolver ?? new DownloadSourceResolver([]));
         var sources = input.DownloadSource == null ? new Dictionary<int, HashSet<string>>() :
             await sourceFilter.ReadAsync(scoped.Select(t => t.Id).ToArray(), ct);
         bool MatchesSource(AcquisitionTask task) => input.DownloadSource == null ||

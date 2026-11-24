@@ -94,21 +94,26 @@ public sealed class DownloadMethodRegistry(IEnumerable<ICloudDownloadProvider> p
         catch (RcloneRemoteException error) { throw new InvalidOperationException(error.Code, error); }
     }
 
+    // Static routing evidence only. Account state and installed tools affect readiness separately.
+    internal static DownloadRequirement? SourceSupportIssue(CloudSource source, DownloadMethodDescriptor? descriptor)
+    {
+        if (descriptor != null) return descriptor.ValidateSource?.Invoke(source);
+        return source.ProviderId == "weiyun"
+            ? new("WEIYUN_PUBLIC_SHARE_UNSUPPORTED", "source",
+                "The official Weiyun MCP download interface only supports files in your own drive and cannot import external shares. Choose or add another source.",
+                Actions: ["chooseSource"])
+            : new("SOURCE_UNSUPPORTED", "source", "No automatic adapter supports this source. Keep it as an acquisition lead or download it manually.", Actions: ["manualDownload"]);
+    }
+
     public async Task<DownloadMethodView> DescribeAsync(CloudSource source, string? accountId, CancellationToken ct)
     {
         var requirements = new List<DownloadRequirement>();
         var descriptor = DownloadMethodCatalog.Select(source);
         accountId = source.AccountId ?? accountId;
         var dependencyIds = descriptor?.DependencyIds ?? [];
-        var sourceIssue = descriptor?.ValidateSource?.Invoke(source);
-        var supported = descriptor != null && sourceIssue == null;
+        var sourceIssue = SourceSupportIssue(source, descriptor);
+        var supported = sourceIssue == null;
         if (sourceIssue != null) requirements.Add(sourceIssue);
-        if (!supported && requirements.Count == 0)
-            requirements.Add(source.ProviderId == "weiyun"
-                ? new("WEIYUN_PUBLIC_SHARE_UNSUPPORTED", "source",
-                    "The official Weiyun MCP download interface only supports files in your own drive and cannot import external shares. Choose or add another source.",
-                    Actions: ["chooseSource"])
-                : new("SOURCE_UNSUPPORTED", "source", "No automatic adapter supports this source. Keep it as an acquisition lead or download it manually.", Actions: ["manualDownload"]));
         if (descriptor?.Availability is { } limitation)
         {
             requirements.Add(limitation.Requirement());
