@@ -14,7 +14,7 @@ namespace Bakabase.Service.Components.CloudDownloads.PikPakCli;
 
 /// <summary>Official share restore and original-file download. Every remote write has a durable
 /// intent and a private destination; an unknown result is reconciled, never blindly repeated.</summary>
-public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownloadRecoveryProvider, ICloudDownloadAbandonmentProvider
+public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownloadRecoveryProvider, ICloudDownloadAbandonmentProvider
 {
     private readonly PikPakCliAccountService accounts;
     private readonly IUserStoragePolicy? storage;
@@ -43,12 +43,14 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
             // already means that abandoning the source could orphan a remote side effect.
             if (journal == null) return new(true);
             if (journal.SourceIdentity != SourceIdentity(request.Source)) return new(false, "PIKPAK_OPERATION_CHANGED");
-            return journal.State == "planned" && journal.FolderId == null && journal.Files is {Count: 0} &&
-                   journal.Attempts is {Count: 0} && journal.RestoreTaskId == null && journal.RestoreStatus == null
-                ? new(true) : new(false, "PIKPAK_RESTORE_REVIEW_REQUIRED");
+            return BeforeRemoteWrite(journal) ? new(true) : new(false, "PIKPAK_RESTORE_REVIEW_REQUIRED");
         }
         catch (PikPakCliException error) { return new(false, error.Code); }
     }
+
+    private static bool BeforeRemoteWrite(Journal journal) =>
+        journal is {State: "planned", FolderId: null, CreatedOwnedFolderId: null, OwnedEntries: null,
+            Files.Count: 0, Attempts.Count: 0, RestoreTaskId: null, RestoreStatus: null};
 
     public async Task<CloudReadiness> CheckReadyAsync(string? accountId, CancellationToken ct)
     {
@@ -132,8 +134,7 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
     {
         var state = OperationPath(request.OperationId);
         var copies = await PikPakCliStorage.ReadAsync<DownloadJournal>(Path.Combine(state, "download.json"), ct);
-        var identity = PikPakCliStorage.Hash(JsonSerializer.Serialize(new {request.OperationId, output,
-            journal.AccountId, journal.AccountVersion, journal.SourceIdentity, journal.Files}, PikPakCliStorage.Json));
+        var identity = DownloadIdentity(request, output, journal);
         if (copies != null && copies.Identity != identity) throw new PikPakCliException("PIKPAK_OPERATION_CHANGED");
         copies ??= new() {Identity = identity};
         await PikPakCliStorage.WriteAsync(Path.Combine(state, "download.json"), copies, ct);
@@ -193,7 +194,8 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
         return new(result);
     }
 
-    private async Task<Journal> EnsureRestored(string operationId, CloudSource source, PikPakCliAccountLease account, CancellationToken ct)
+    private async Task<Journal> EnsureRestored(string operationId, CloudSource source, PikPakCliAccountLease account,
+        CancellationToken ct, bool enrollOwnedCopy = false)
     {
         if (string.IsNullOrWhiteSpace(operationId)) throw new PikPakCliException("PIKPAK_OPERATION_CHANGED");
         var journal = await ReadJournal(operationId, ct);
@@ -201,7 +203,8 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
         {
             var selection = await ReadShare(account, source, ct);
             journal = new() {AccountId = account.Id, AccountVersion = account.Version, SourceIdentity = SourceIdentity(source),
-                Selection = selection, FolderName = "Bakabase-" + PikPakCliStorage.Hash(operationId), State = "planned"};
+                Selection = selection, FolderName = "Bakabase-" + PikPakCliStorage.Hash(operationId), State = "planned",
+                EnrolledOwnedCopy = enrollOwnedCopy};
             await SaveJournal(operationId, journal, ct);
         }
         CheckIdentity(journal, source, account);
@@ -225,6 +228,8 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
                 var folder = await account.Run(["mkdir", journal.FolderName], ct);
                 journal.FolderId = PikPakCliJson.Required(folder, "id");
                 ValidateId(journal.FolderId);
+                if (journal.EnrolledOwnedCopy && account.TrashTemporaryCopiesAfterDownload && account.CanManageFiles)
+                    journal.CreatedOwnedFolderId = journal.FolderId;
             }
             journal.State = "folderReady"; await SaveJournal(operationId, journal, CancellationToken.None);
         }
@@ -263,9 +268,11 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
             }
         }
         IReadOnlyList<RemoteFile> remote = [];
+        List<OwnedCopyEntry>? ownedEntries = null;
         for (var attempt = 0; attempt < 8; attempt++)
         {
-            try { remote = await ReadRemote(account, journal.FolderId, ct); }
+            ownedEntries = journal.CreatedOwnedFolderId != null ? [] : null;
+            try { remote = await ReadRemote(account, journal.FolderId, ct, ownedEntries); }
             catch (PikPakCliException error) when (error.Code == "PIKPAK_RESTORE_PENDING") { remote = []; }
             if (MatchesSelection(journal.Selection, remote)) break;
             if (UnresolvedRestoreProblem(journal) == "PIKPAK_RESTORE_REVIEW_REQUIRED")
@@ -274,6 +281,9 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
             await _restoreDelay(ct);
         }
         journal.Files = remote; journal.State = "restored";
+        if (ownedEntries != null && PikPakShareLocator.TryParse(source.Url, out var share) &&
+            ProvesOwnedEntries(ownedEntries, journal.Selection, share!.ShareId))
+            journal.OwnedEntries = ownedEntries.OrderBy(entry => entry.Path, StringComparer.Ordinal).ToArray();
         await SaveJournal(operationId, journal, CancellationToken.None);
         return journal;
     }
@@ -362,9 +372,11 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
                 var kind = PikPakCliJson.Required(item, "kind");
                 if (kind is not ("drive#file" or "drive#folder")) throw new PikPakCliException("PIKPAK_REMOTE_MANIFEST_INVALID");
                 if (PikPakCliJson.Text(item, "phase") is { } phase && phase != "PHASE_TYPE_COMPLETE") throw new PikPakCliException("PIKPAK_RESTORE_PENDING");
+                var originalShareId = item.TryGetProperty("params", out var metadata)
+                    ? PikPakCliJson.Text(metadata, "original_share_id") : null;
                 result.Add(new(id, PikPakCliStorage.Segment(PikPakCliJson.Required(item, "name")), kind == "drive#folder",
                     kind == "drive#folder" ? 0 : PikPakCliJson.Number(item, "size") ?? throw new PikPakCliException("PIKPAK_REMOTE_MANIFEST_INVALID"),
-                    PikPakCliJson.Text(item, "hash") ?? "", PikPakCliJson.Text(item, "modified_time") ?? ""));
+                    PikPakCliJson.Text(item, "hash") ?? "", PikPakCliJson.Text(item, "modified_time") ?? "", originalShareId));
             }
             token = PikPakCliJson.Text(page, "next_page_token") ?? "";
             if (token.Length > 8192 || token.Length != 0 && items.GetArrayLength() == 0) throw new PikPakCliException("PIKPAK_REMOTE_MANIFEST_INVALID");
@@ -374,7 +386,8 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
         return result;
     }
 
-    private static async Task<IReadOnlyList<RemoteFile>> ReadRemote(PikPakCliAccountLease account, string folder, CancellationToken ct)
+    private static async Task<IReadOnlyList<RemoteFile>> ReadRemote(PikPakCliAccountLease account, string folder,
+        CancellationToken ct, List<OwnedCopyEntry>? entries = null)
     {
         var files = new List<RemoteFile>(); var seen = new HashSet<string>(); var visited = 0;
         async Task Read(string parent, string prefix, int depth)
@@ -384,6 +397,7 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
             {
                 if (++visited > 100000) throw new PikPakCliException("PIKPAK_REMOTE_MANIFEST_INVALID");
                 var path = prefix + item.Name;
+                entries?.Add(new(item.Id, parent, path, item.IsFolder, item.Size, item.Hash, item.Version, item.OriginalShareId));
                 if (item.IsFolder) await Read(item.Id, path + "/", depth + 1);
                 else files.Add(new(item.Id, path, item.Size, item.Hash, item.Version));
             }
@@ -455,11 +469,15 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
             (journal.State is "planned" or "folderReady") && journal.Attempts.Count != 0)
             throw new PikPakCliException("PIKPAK_STATE_INVALID");
     }
+    private static string DownloadIdentity(CloudDownloadRequest request, string output, Journal journal) =>
+        PikPakCliStorage.Hash(JsonSerializer.Serialize(new {request.OperationId, output,
+            journal.AccountId, journal.AccountVersion, journal.SourceIdentity, journal.Files}, PikPakCliStorage.Json));
+
     private static async Task<bool> MatchesFile(string path, RemoteFile file, FileReceipt receipt, CancellationToken ct) =>
         new FileInfo(path).Length == file.Size && receipt.Size == file.Size && receipt.Sha256 == await PikPakCliStorage.FileHash(path, ct);
     internal sealed record ShareNode(string Id, string Name, bool IsFolder, string? DisplaySize, IReadOnlyList<ShareNode> Children);
     internal sealed record RemoteFile(string Id, string Path, long Size, string Hash, string Version);
-    private sealed record AccountNode(string Id, string Name, bool IsFolder, long Size, string Hash, string Version);
+    private sealed record AccountNode(string Id, string Name, bool IsFolder, long Size, string Hash, string Version, string? OriginalShareId);
     private sealed record FileReceipt(long Size, string Sha256);
     private sealed class Journal
     {
@@ -469,6 +487,9 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
         public string SourceIdentity { get; set; } = "";
         public string FolderName { get; set; } = "";
         public string? FolderId { get; set; }
+        public bool EnrolledOwnedCopy { get; set; }
+        public string? CreatedOwnedFolderId { get; set; }
+        public IReadOnlyList<OwnedCopyEntry>? OwnedEntries { get; set; }
         public string State { get; set; } = "planned";
         public string? RestoreTaskId { get; set; }
         public string? RestoreStatus { get; set; }
