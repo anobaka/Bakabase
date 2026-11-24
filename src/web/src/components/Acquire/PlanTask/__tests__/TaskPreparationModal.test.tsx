@@ -21,19 +21,35 @@ vi.mock("@/components/ProcessingPlanRevisions/SourceProcessingPlanPanel", () => 
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({ useBakabaseContext: () => ({ createPortal: mocks.createPortal }) }));
 vi.mock("@/components/PasswordSelector/ArchivePasswordInput", () => ({ default: ({ label, value, onValueChange }: any) =>
   <input aria-label={label} value={value} onChange={event => onValueChange(event.target.value)} /> }));
-vi.mock("@/components/bakaui", () => ({
-  Modal: ({ children, footer, title }: any) => <div role="dialog" aria-label={title}>{children}{footer}</div>,
-  Spinner: () => <span>loading</span>,
-  Chip: ({ children }: any) => <span>{children}</span>,
-  Button: ({ children, onPress, isDisabled, isLoading, "aria-label": label }: any) =>
-    <button aria-label={label} disabled={isDisabled || isLoading} onClick={onPress}>{children}</button>,
-  Checkbox: ({ children, isSelected, isDisabled, onValueChange }: any) => <label>
-    <input type="checkbox" checked={isSelected} disabled={isDisabled} onChange={event => onValueChange(event.target.checked)} />{children}</label>,
-  Input: ({ label, value, onValueChange }: any) => <input aria-label={label} value={value} onChange={event => onValueChange(event.target.value)} />,
-  Select: ({ label, selectedKeys, dataSource, onSelectionChange, isDisabled }: any) => <select aria-label={label} value={selectedKeys[0]} disabled={isDisabled}
-    onChange={event => onSelectionChange(new Set([event.target.value]))}>
-    {dataSource.map((item: any) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>,
-}));
+vi.mock("@/components/bakaui", async () => {
+  const { createContext, useContext } = await import("react");
+  const radio = createContext<{ value?: string; isDisabled?: boolean; onValueChange?: (value: string) => void }>({});
+  return {
+    Modal: ({ children, footer, title }: any) => <div role="dialog" aria-label={title}>{children}{footer}</div>,
+    Spinner: () => <span>loading</span>,
+    Chip: ({ children }: any) => <span>{children}</span>,
+    Button: ({ children, onPress, isDisabled, isLoading, "aria-label": label }: any) =>
+      <button aria-label={label} disabled={isDisabled || isLoading} onClick={onPress}>{children}</button>,
+    Checkbox: ({ children, isSelected, isDisabled, onValueChange }: any) => <label>
+      <input type="checkbox" checked={isSelected} disabled={isDisabled} onChange={event => onValueChange(event.target.checked)} />{children}</label>,
+    RadioGroup: ({ children, label, value, isDisabled, onValueChange }: any) => (
+      <div role="radiogroup" aria-label={label}>
+        <radio.Provider value={{ value, isDisabled, onValueChange }}>{children}</radio.Provider>
+      </div>
+    ),
+    Radio: ({ children, value }: any) => {
+      const group = useContext(radio);
+      return <label>
+        <input type="radio" checked={group.value === value} disabled={group.isDisabled} onChange={() => group.onValueChange?.(value)} />
+        {children}
+      </label>;
+    },
+    Input: ({ label, value, onValueChange }: any) => <input aria-label={label} value={value} onChange={event => onValueChange(event.target.value)} />,
+    Select: ({ label, selectedKeys, dataSource, onSelectionChange, isDisabled }: any) => <select aria-label={label} value={selectedKeys[0]} disabled={isDisabled}
+      onChange={event => onSelectionChange(new Set([event.target.value]))}>
+      {dataSource.map((item: any) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>,
+  };
+});
 const sources = [
   { id: "a", kind: "auto", url: "https://gofile.io/d/example", archivePassword: "  exact password  ",
     processing: { requirement: "required", steps: [], evidence: [{ origin: "post" }] } },
@@ -59,6 +75,111 @@ function mockPreview(_id: number, request: any) {
 }
 beforeEach(() => { vi.clearAllMocks(); mocks.previewPreparation.mockImplementation(mockPreview); mocks.confirmPreparation.mockResolvedValue(detail); });
 afterEach(() => vi.unstubAllGlobals());
+
+const sharedDownload = {
+  groups: [
+    { partId: "alpha", title: "Alpha release", deliveryDirectory: "/library/acquired/alpha" },
+    { partId: "beta", title: "Beta release", deliveryDirectory: "/library/acquired/beta" },
+    { partId: "gamma", title: "Gamma release", deliveryDirectory: "/library/acquired/gamma" },
+  ],
+  canUseArchiveDirectories: true,
+  alreadyUsesArchiveDirectories: false,
+  fingerprint: "a".repeat(64),
+};
+const sharedAction = { name: "acquisition.preparation.sharedDownload.open" };
+const sharedDialog = { name: "acquisition.preparation.sharedDownload.title" };
+const sharedConfirm = { name: "acquisition.preparation.sharedDownload.confirm" };
+
+function previewSharedDownload(preview = sharedDownload) {
+  mocks.previewPreparation.mockImplementation(async (id, request) => ({
+    ...await mockPreview(id, request), requiresRelationshipChoice: false, sharedDownload: preview,
+  }));
+}
+
+async function openSharedDownload() {
+  const open = await screen.findByRole("button", sharedAction);
+  await waitFor(() => expect(open).toBeEnabled());
+  fireEvent.click(open);
+  return within(screen.getByRole("dialog", sharedDialog));
+}
+
+it("requires a deliberate group choice and saves only the reviewed shared download decision", async () => {
+  previewSharedDownload();
+  render(<TaskPreparationModal detail={detail} busy={false} onAction={action} onClose={onClose} />);
+  const review = await openSharedDownload();
+  expect(review.getByText("acquisition.preparation.sharedDownload.scope")).toBeVisible();
+  expect(review.getByText("acquisition.preparation.sharedDownload.next")).toBeVisible();
+  for (const { title, deliveryDirectory } of sharedDownload.groups) {
+    expect(review.getByText(title)).toBeVisible();
+    expect(review.getByText(deliveryDirectory)).toBeVisible();
+  }
+  expect(review.getAllByRole("radio")).toHaveLength(3);
+  expect(review.getByRole("button", sharedConfirm)).toBeDisabled();
+  expect(mocks.confirmPreparation).not.toHaveBeenCalled();
+
+  const selected = review.getByRole("radio", { name: /Beta release/ });
+  fireEvent.click(selected);
+  expect(selected).toBeChecked();
+  fireEvent.click(review.getByRole("checkbox", { name: "acquisition.preparation.sharedDownload.archiveDirectories" }));
+  fireEvent.click(review.getByRole("button", sharedConfirm));
+
+  await waitFor(() => expect(mocks.confirmPreparation).toHaveBeenCalledExactlyOnceWith(600, {
+    expectedRevision: 7, sharedDownload: { keepPartId: "beta", useArchiveDirectories: true, expectedFingerprint: sharedDownload.fingerprint },
+  }));
+  expect(onClose).toHaveBeenCalledOnce();
+});
+
+it("cancels the review without saving its decision or closing preparation", async () => {
+  previewSharedDownload({ ...sharedDownload, alreadyUsesArchiveDirectories: true });
+  render(<TaskPreparationModal detail={detail} busy={false} onAction={action} onClose={onClose} />);
+  const review = await openSharedDownload();
+  expect(review.queryByRole("checkbox")).toBeNull();
+  expect(review.getByText("acquisition.preparation.sharedDownload.archiveDirectoriesAlreadyEnabled")).toBeVisible();
+  fireEvent.click(review.getByRole("radio", { name: /Alpha release/ }));
+  fireEvent.click(review.getByRole("button", { name: "common.action.cancel" }));
+  expect(screen.queryByRole("dialog", sharedDialog)).toBeNull();
+  expect(screen.getByRole("button", { name: "acquisition.preparation.confirm" })).toBeEnabled();
+  expect(mocks.confirmPreparation).not.toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+it("blocks an open shared download confirmation after a task revision changes", async () => {
+  previewSharedDownload();
+  const props = { detail, busy: false, onAction: action, onClose };
+  const view = render(<TaskPreparationModal {...props} />);
+  const review = await openSharedDownload();
+  fireEvent.click(review.getByRole("radio", { name: /Beta release/ }));
+  expect(review.getByRole("button", sharedConfirm)).toBeEnabled();
+
+  view.rerender(<TaskPreparationModal {...props} detail={{ ...detail, task: { ...detail.task, planRevision: 8 } }} />);
+  expect(review.getByRole("alert")).toHaveTextContent("PLAN_VERSION_CONFLICT");
+  expect(review.getByRole("button", sharedConfirm)).toBeDisabled();
+  fireEvent.click(review.getByRole("button", sharedConfirm));
+  expect(mocks.confirmPreparation).not.toHaveBeenCalled();
+});
+
+it("keeps an unavailable shared download decision open for review after refusal", async () => {
+  previewSharedDownload();
+  mocks.confirmPreparation.mockRejectedValueOnce(new Error("SHARED_DOWNLOAD_UNAVAILABLE: Folder changed"));
+  render(<TaskPreparationModal detail={detail} busy={false} onAction={action} onClose={onClose} />);
+  const review = await openSharedDownload();
+  fireEvent.click(review.getByRole("radio", { name: /Beta release/ }));
+  fireEvent.click(review.getByRole("button", sharedConfirm));
+  expect(await review.findByRole("alert")).toHaveTextContent("acquisition.plan.replan.error.SHARED_DOWNLOAD_UNAVAILABLE");
+  expect(review.getByRole("button", sharedConfirm)).toBeDisabled();
+  fireEvent.click(review.getByRole("button", sharedConfirm));
+  expect(mocks.confirmPreparation).toHaveBeenCalledOnce();
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+it("hides combining sources after an unsaved source change", async () => {
+  previewSharedDownload();
+  render(<TaskPreparationModal detail={detail} busy={false} onAction={action} onClose={onClose} />);
+  await waitFor(() => expect(screen.getByRole("button", sharedAction)).toBeEnabled());
+  fireEvent.click(screen.getByRole("checkbox", { name: "gofile.io" }));
+  expect(screen.queryByRole("button", sharedAction)).toBeNull();
+  expect(mocks.confirmPreparation).not.toHaveBeenCalled();
+});
 
 it("shows explicit default mirror mode and priority recommendation, and confirms preparation without a run", async () => {
   render(<TaskPreparationModal detail={detail} busy={false} onAction={action} onClose={onClose} />);

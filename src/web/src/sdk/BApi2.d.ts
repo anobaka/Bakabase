@@ -20081,6 +20081,7 @@ export interface components {
             selectedSourceIds?: string[];
             checkAvailability?: boolean;
             allowUnavailableSourceIds?: string[];
+            sharedDownload?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionSharedDownloadChoice"];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionPreparationPreview": {
             /** Format: int32 */
@@ -20093,6 +20094,7 @@ export interface components {
             requirements: components["schemas"]["Bakabase.Service.Components.DownloadIntents.DownloadRequirement"][];
             canConfirm: boolean;
             allowUnavailableSourceIds: string[];
+            sharedDownload?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionSharedDownloadPreview"];
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionProcessedCheckpointCleanup": {
             verifiedResultArtifactIds: string[];
@@ -20262,6 +20264,22 @@ export interface components {
             expiresAt?: string;
             isHistorical: boolean;
             downloadTaskId?: string;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionSharedDownloadChoice": {
+            keepPartId: string;
+            useArchiveDirectories: boolean;
+            expectedFingerprint?: string;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionSharedDownloadGroup": {
+            partId: string;
+            title?: string;
+            deliveryDirectory: string;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionSharedDownloadPreview": {
+            groups: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionSharedDownloadGroup"][];
+            canUseArchiveDirectories: boolean;
+            alreadyUsesArchiveDirectories: boolean;
+            fingerprint: string;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionSizeEstimate": {
             /** Format: int64 */

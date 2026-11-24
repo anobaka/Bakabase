@@ -18,7 +18,7 @@ namespace Bakabase.Tests;
 
 [TestClass]
 [DoNotParallelize]
-public sealed class AcquisitionPreparationTests
+public sealed partial class AcquisitionPreparationTests
 {
     private IServiceProvider _services = null!;
     private string _root = null!;

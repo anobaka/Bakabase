@@ -143,11 +143,16 @@ public sealed record AcquisitionDraftPreparationInput(int ExpectedRevision, Acqu
 public sealed record AcquisitionPreparationInput(int ExpectedRevision,
     IReadOnlyList<AcquisitionDraftSource>? Sources = null, string? Relationship = null,
     IReadOnlyList<string>? SelectedSourceIds = null, bool? CheckAvailability = null,
-    IReadOnlyList<string>? AllowUnavailableSourceIds = null);
+    IReadOnlyList<string>? AllowUnavailableSourceIds = null,
+    AcquisitionSharedDownloadChoice? SharedDownload = null);
 public sealed record AcquisitionPreparationPreview(int ExpectedRevision, string Title,
     IReadOnlyList<string> ProviderPriority, bool RequiresRelationshipChoice, string? Relationship,
     IReadOnlyList<AcquisitionPreparationGroup> Groups, IReadOnlyList<DownloadRequirement> Requirements, bool CanConfirm,
-    IReadOnlyList<string> AllowUnavailableSourceIds);
+    IReadOnlyList<string> AllowUnavailableSourceIds, AcquisitionSharedDownloadPreview? SharedDownload = null);
+public sealed record AcquisitionSharedDownloadChoice(string KeepPartId, bool UseArchiveDirectories = false, string? ExpectedFingerprint = null);
+public sealed record AcquisitionSharedDownloadPreview(IReadOnlyList<AcquisitionSharedDownloadGroup> Groups,
+    bool CanUseArchiveDirectories, bool AlreadyUsesArchiveDirectories, string Fingerprint);
+public sealed record AcquisitionSharedDownloadGroup(string PartId, string? Title, string DeliveryDirectory);
 public sealed record AcquisitionPreparationGroup(string Id, string? Title, bool Required, string SelectionMode,
     IReadOnlyList<string> SelectedSourceIds, IReadOnlyList<string> RecommendedSourceIds,
     IReadOnlyList<DownloadCandidateView> Sources);

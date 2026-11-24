@@ -55,7 +55,7 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
         try
         {
             await GuardSavedDirectory(id);
-            return new(await service.PreviewPreparationAsync(id, input, HttpContext.RequestAborted));
+            return new(await service.PreviewPreparationAsync(id, input, HttpContext.RequestAborted, GuardDirectory));
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or UnauthorizedAccessException)
         {return SingletonResponseBuilder<AcquisitionPreparationPreview>.BuildBadRequest(error.Message);}
@@ -70,7 +70,7 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
             await GuardSavedDirectory(id);
             foreach (var source in input.Sources ?? [])
                 foreach (var step in source.Processing?.Steps ?? []) await GuardDirectory(step.StoragePolicy?.ProcessingWorkspaceDirectory);
-            return await service.ConfirmPreparationAsync(id, input, HttpContext.RequestAborted);
+            return await service.ConfirmPreparationAsync(id, input, HttpContext.RequestAborted, GuardDirectory);
         });
 
     /// <summary>Explicitly preserves selected legacy overview entries. Never called by a list read.</summary>

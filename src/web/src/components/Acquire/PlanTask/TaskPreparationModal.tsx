@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useTranslation } from "react-i18next";
 import { EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button, Checkbox, Chip, Input, Modal, Select, Spinner } from "@/components/bakaui";
+import { Button, Checkbox, Chip, Input, Modal, Radio, RadioGroup, Select, Spinner } from "@/components/bakaui";
 import ArchivePasswordInput from "@/components/PasswordSelector/ArchivePasswordInput";
 import SourceHealthBadge from "@/components/SourceAvailability/SourceHealthBadge";
 import SourcePriorityModal from "@/components/SourceAvailability/SourcePriorityModal";
@@ -18,6 +18,8 @@ import { planTaskApi } from "./api";
 import type { DraftSource, PlanTaskDetail } from "./models";
 
 type Preview = Awaited<ReturnType<typeof planTaskApi.previewPreparation>>;
+type SharedDownloadPreview = NonNullable<Preview["sharedDownload"]>;
+type PreparationInput = Parameters<typeof planTaskApi.confirmPreparation>[1];
 type PreparationSource = DraftSource & { groupId?: string };
 type Relationship = "mirrors" | "independent";
 
@@ -38,6 +40,61 @@ function browserSourceUrl(source: DownloadCandidate) {
     const url = new URL(source.url);
     return ["http:", "https:"].includes(url.protocol) ? source.url : undefined;
   } catch { return undefined; }
+}
+
+function SharedDownloadReview({ preview, saving, busy, stale, error, onClose, onConfirm }: {
+  preview: SharedDownloadPreview;
+  saving: boolean;
+  busy: boolean;
+  stale: boolean;
+  error?: string;
+  onClose: () => void;
+  onConfirm: (keepPartId: string, useArchiveDirectories: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const [keepPartId, setKeepPartId] = useState("");
+  const [useArchiveDirectories, setUseArchiveDirectories] = useState(false);
+  const disabled = busy || saving || stale;
+  const requiresRefresh = error === "SHARED_DOWNLOAD_UNAVAILABLE" || error === "PLAN_VERSION_CONFLICT";
+  return (
+    <Modal visible size="2xl" scrollBehavior="inside" title={t("acquisition.preparation.sharedDownload.title")}
+      isDismissable={!saving} isKeyboardDismissDisabled={saving} onClose={() => { if (!saving) onClose(); }}
+      footer={<>
+        <Button variant="light" isDisabled={saving} onPress={onClose}>{t("common.action.cancel")}</Button>
+        <Button color="primary" isLoading={saving} isDisabled={disabled || requiresRefresh || !keepPartId}
+          onPress={() => {
+            if (!disabled && !requiresRefresh && keepPartId) onConfirm(keepPartId, useArchiveDirectories);
+          }}>
+          {t("acquisition.preparation.sharedDownload.confirm")}
+        </Button>
+      </>}>
+      <div className="space-y-4">
+        <p className="text-sm text-default-600">{t("acquisition.preparation.sharedDownload.scope")}</p>
+        <RadioGroup label={t("acquisition.preparation.sharedDownload.keepGroup")} value={keepPartId}
+          isDisabled={disabled || requiresRefresh} onValueChange={setKeepPartId}>
+          {preview.groups.map(group => (
+            <Radio key={group.partId} value={group.partId} className="max-w-full items-start">
+              <span className="block break-words font-medium">{group.title || t("acquisition.preparation.sourceGroup")}</span>
+              <span className="block break-all text-xs text-default-500">{group.deliveryDirectory}</span>
+            </Radio>
+          ))}
+        </RadioGroup>
+        {preview.alreadyUsesArchiveDirectories ? (
+          <p className="text-sm text-default-600">{t("acquisition.preparation.sharedDownload.archiveDirectoriesAlreadyEnabled")}</p>
+        ) : preview.canUseArchiveDirectories && (
+          <Checkbox isSelected={useArchiveDirectories} isDisabled={disabled || requiresRefresh} onValueChange={setUseArchiveDirectories}>
+            {t("acquisition.preparation.sharedDownload.archiveDirectories")}
+          </Checkbox>
+        )}
+        <p className="text-sm text-default-500">{t("acquisition.preparation.sharedDownload.next")}</p>
+        {(stale || error) && <p role="alert" className="text-sm text-danger">
+          {t(`acquisition.plan.replan.error.${stale ? "PLAN_VERSION_CONFLICT" : error}`, {
+            defaultValue: t("acquisition.plan.actionFailed"),
+          })}
+        </p>}
+      </div>
+    </Modal>
+  );
 }
 
 export default function TaskPreparationModal({ detail, busy, onAction, onClose }: {
@@ -61,6 +118,8 @@ export default function TaskPreparationModal({ detail, busy, onAction, onClose }
   const [saving, setSaving] = useState(false);
   const [editedRevision, setEditedRevision] = useState<number>();
   const [previewRevision, setPreviewRevision] = useState<number>();
+  const [sharedReview, setSharedReview] = useState<{ taskId: number; revision: number; preview: SharedDownloadPreview }>();
+  const [sharedError, setSharedError] = useState<string>();
   const sourceRevision = editedRevision ?? previewRevision;
   const stale = sourceRevision !== undefined && sourceRevision !== detail.task.planRevision;
   const sequence = useRef(0);
@@ -125,27 +184,39 @@ export default function TaskPreparationModal({ detail, busy, onAction, onClose }
     if (checked && item.canSelectManually && item.availability?.status === "confirmedUnavailable") grants.push(item.candidate.id);
     setAllowUnavailableSourceIds([...new Set(grants)]);
   };
-  const disabled = busy || saving || stale;
+  const disabled = busy || saving || stale || !!sharedReview;
+  const sharedReviewStale = sharedReview != null && (stale || sharedReview.taskId !== detail.task.id ||
+    sharedReview.revision !== detail.task.planRevision || detail.task.workflowRunId != null ||
+    sharedReview.preview.fingerprint !== preview?.sharedDownload?.fingerprint);
+  const submitPreparation = (input: PreparationInput, reportError: (message?: string) => void) => {
+    if (submitLock.current) return;
+    submitLock.current = true;
+    setSaving(true);
+    reportError(undefined);
+    const recordFailure = (cause: unknown) =>
+      reportError(cause instanceof Error ? cause.message.split(":")[0].trim() : "ACQUISITION_PLAN_REQUEST_FAILED");
+    void onAction(async () => {
+      try {
+        const next = await planTaskApi.confirmPreparation(detail.task.id, input);
+        onClose();
+        return next;
+      } catch (cause) {
+        recordFailure(cause);
+        throw cause;
+      }
+    }).catch(recordFailure).finally(() => { submitLock.current = false; setSaving(false); });
+  };
   const requirements = Array.from(new Map((preview?.requirements ?? []).map(requirement => [requirement.code, requirement])).values());
   return <>
-    <Modal visible size="4xl" scrollBehavior="inside" title={t("acquisition.timeline.stage.preparation")} onClose={onClose}
+    <Modal visible size="4xl" scrollBehavior="inside" title={t("acquisition.timeline.stage.preparation")}
+      isDismissable={!sharedReview} isKeyboardDismissDisabled={!!sharedReview}
+      onClose={() => { if (!sharedReview) onClose(); }}
       footer={<>
-        <Button variant="light" isDisabled={saving} onPress={onClose}>{t("common.action.cancel")}</Button>
+        <Button variant="light" isDisabled={saving || !!sharedReview} onPress={onClose}>{t("common.action.cancel")}</Button>
         {hasSources && <Button color="primary" isLoading={saving} isDisabled={disabled || refreshing || !preview?.canConfirm || !!error}
           onPress={() => {
-            if (submitLock.current) return;
-            submitLock.current = true;
-            setSaving(true);
-            void onAction(async () => {
-              try {
-                const next = await planTaskApi.confirmPreparation(detail.task.id, { ...request, checkAvailability: false });
-                onClose();
-                return next;
-              } catch (cause) {
-                setError(cause instanceof Error ? cause.message : "ACQUISITION_PLAN_REQUEST_FAILED");
-                throw cause;
-              }
-            }).finally(() => { submitLock.current = false; setSaving(false); });
+            if (!disabled && !refreshing && preview?.canConfirm && !error)
+              submitPreparation({ ...request, checkAvailability: false }, setError);
           }}>{t("acquisition.preparation.confirm")}</Button>}
       </>}>
       <div className="space-y-4">
@@ -173,6 +244,16 @@ export default function TaskPreparationModal({ detail, busy, onAction, onClose }
           <Button size="sm" variant="light" isDisabled={disabled || refreshing}
             onPress={() => setRetry(value => value + 1)}>{t("sourceAvailability.review.refresh")}</Button>
         </div>}
+        {preview?.sharedDownload && editedRevision === undefined && !editing && (
+          <Button size="sm" variant="flat" aria-haspopup="dialog" isDisabled={disabled || refreshing || !!error}
+            onPress={() => {
+              if (disabled || refreshing || error || !preview.sharedDownload) return;
+              setSharedError(undefined);
+              setSharedReview({ taskId: detail.task.id, revision: preview.expectedRevision, preview: preview.sharedDownload });
+            }}>
+            {t("acquisition.preparation.sharedDownload.open")}
+          </Button>
+        )}
         {hasSources && preview?.groups.map(group => <section key={group.id} className="space-y-2" aria-label={group.title ?? group.id}>
           {preview.groups.length > 1 && <h3 className="text-sm font-medium">{group.title || t("acquisition.preparation.sourceGroup")}</h3>}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -246,6 +327,15 @@ export default function TaskPreparationModal({ detail, busy, onAction, onClose }
         </p>)}
       </div>
     </Modal>
+    {sharedReview && <SharedDownloadReview preview={sharedReview.preview} busy={busy} saving={saving}
+      stale={sharedReviewStale} error={sharedError} onClose={() => setSharedReview(undefined)}
+      onConfirm={(keepPartId, useArchiveDirectories) => {
+        if (sharedReviewStale) return;
+        submitPreparation({
+          expectedRevision: sharedReview.revision,
+          sharedDownload: { keepPartId, useArchiveDirectories, expectedFingerprint: sharedReview.preview.fingerprint },
+        }, setSharedError);
+      }} />}
     {editing && <Modal visible size="2xl" title={t("acquisition.preparation.sourceDetails")} onClose={() => setEditing(undefined)}
       footer={<>
         <Button variant="light" onPress={() => setEditing(undefined)}>{t("common.action.cancel")}</Button>

@@ -22,25 +22,32 @@ namespace Bakabase.Service.Components.Acquisition.Planning;
 public sealed partial class AcquisitionPlanService
 {
     /// <summary>Inspects preparation without changing the task, parser, execution or source selection.</summary>
-    public async Task<AcquisitionPreparationPreview> PreviewPreparationAsync(int id, AcquisitionPreparationInput input, CancellationToken ct)
+    public async Task<AcquisitionPreparationPreview> PreviewPreparationAsync(int id, AcquisitionPreparationInput input, CancellationToken ct,
+        Func<string, Task>? guardSharedDownloadDirectory = null)
     {
         var gate = AcquisitionTaskGate.For(id); await gate.WaitAsync(ct);
         try
         {
             var row = await PreparationEditableAsync(id, input.ExpectedRevision, ct);
+            if (input.SharedDownload != null) throw new ArgumentException("SHARED_DOWNLOAD_SELECTION_INVALID");
             var snapshot = await ReadPreparationAsync(row, input, ct);
-            return await CheckPreparationAsync(row, input, snapshot, input.CheckAvailability != false, ct);
+            var preview = await CheckPreparationAsync(row, input, snapshot, input.CheckAvailability != false, ct);
+            return input.Sources == null
+                ? preview with {SharedDownload = await ReviewSharedDownloadAsync(row, snapshot.Plan, preview, ct, guardSharedDownloadDirectory)}
+                : preview;
         }
         finally {gate.Release();}
     }
 
     /// <summary>Freezes the reviewed sources and instructions. Starting a download is a separate action.</summary>
-    public async Task<AcquisitionPlanTaskDetail> ConfirmPreparationAsync(int id, AcquisitionPreparationInput input, CancellationToken ct)
+    public async Task<AcquisitionPlanTaskDetail> ConfirmPreparationAsync(int id, AcquisitionPreparationInput input, CancellationToken ct,
+        Func<string, Task>? guardSharedDownloadDirectory = null)
     {
         var gate = AcquisitionTaskGate.For(id); await gate.WaitAsync(ct);
         try
         {
             var row = await PreparationEditableAsync(id, input.ExpectedRevision, ct);
+            if (input.SharedDownload != null) return await ConfirmSharedDownloadAsync(row, input, ct, guardSharedDownloadDirectory);
             var snapshot = await ReadPreparationAsync(row, input, ct);
             var preview = await CheckPreparationAsync(row, input, snapshot, false, ct);
             if (!preview.CanConfirm)

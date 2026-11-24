@@ -8654,6 +8654,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPreparat
   selectedSourceIds?: string[];
   checkAvailability?: boolean;
   allowUnavailableSourceIds?: string[];
+  sharedDownload?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSharedDownloadChoice;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPreparationPreview {
@@ -8667,6 +8668,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPreparat
   requirements: BakabaseServiceComponentsDownloadIntentsDownloadRequirement[];
   canConfirm: boolean;
   allowUnavailableSourceIds: string[];
+  sharedDownload?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSharedDownloadPreview;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionProcessedCheckpointCleanup {
@@ -8852,6 +8854,25 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionRuntimeS
   expiresAt?: string;
   isHistorical: boolean;
   downloadTaskId?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSharedDownloadChoice {
+  keepPartId: string;
+  useArchiveDirectories: boolean;
+  expectedFingerprint?: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSharedDownloadGroup {
+  partId: string;
+  title?: string;
+  deliveryDirectory: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSharedDownloadPreview {
+  groups: BakabaseServiceComponentsAcquisitionPlanningAcquisitionSharedDownloadGroup[];
+  canUseArchiveDirectories: boolean;
+  alreadyUsesArchiveDirectories: boolean;
+  fingerprint: string;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionSizeEstimate {
