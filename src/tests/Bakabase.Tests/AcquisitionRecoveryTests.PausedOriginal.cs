@@ -5,7 +5,6 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
-using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Models.Domain;
@@ -209,9 +208,12 @@ public sealed partial class AcquisitionRecoveryTests
 
         if (hasCheckpoint && stoppedByDownloader)
         {
-            var other = new AcquisitionTaskDbModel
-                {Title = "An unrelated task", Status = AcquisitionStatus.Cancelled};
-            _db.AcquisitionTasks.Add(other);
+            var (other, otherRun, otherWorkset) = await Seed("download.awaitCompletion", WorkflowRunStatus.Waiting, error: null);
+            other.PlanJson = task.PlanJson;
+            other.BuilderStateJson = AcquisitionDownloadContinuationService.WithState(other.BuilderStateJson,
+                new(otherRun.Id, AcquisitionDownloadContinuationService.Paused, DateTimeOffset.UtcNow));
+            otherRun.CurrentItemJson = WorkflowItemSnapshot.Capture(otherWorkset with
+                {Id = $"acquisition:{other.Id}:{other.PlanRevision}", Targets = null!});
             await _db.SaveChangesAsync();
             provider.DuringPausedProof = ct => Task.Delay(TimeSpan.FromSeconds(5), ct);
 
@@ -220,7 +222,8 @@ public sealed partial class AcquisitionRecoveryTests
             Assert.AreEqual("download.awaitCompletion", slow.CurrentStepKind);
             Assert.AreEqual(AcquisitionRecoveryDiagnostics.PausedOriginalCheckTimedOut, slow.ReasonCode);
             Assert.IsFalse(slow.CanQueue);
-            Assert.AreEqual("RECOVERY_ALREADY_COMPLETED", multiple.Rows.Single(previewRow => previewRow.TaskId == other.Id).ReasonCode);
+            Assert.AreEqual("RECOVERY_LOCAL_FILES_UNAVAILABLE",
+                multiple.Rows.Single(previewRow => previewRow.TaskId == other.Id).ReasonCode);
         }
         var preview = await batchRecovery.PreviewAsync(new([task.Id], "automatic"));
         provider.DuringPausedProof = null;

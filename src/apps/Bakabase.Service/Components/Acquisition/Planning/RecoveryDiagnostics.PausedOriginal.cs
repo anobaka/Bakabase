@@ -27,7 +27,8 @@ public sealed partial class AcquisitionRecoveryDiagnostics
                 AcquisitionContinuationReserve.Kind(run) == "download.awaitCompletion" &&
                 ReadWorkset(run.CurrentItemJson) is {} workset &&
                 workset.Id == FormattableString.Invariant($"acquisition:{task.Id}:{task.PlanRevision}") &&
-                workset.Targets.Any(target => target is {Excluded: false, DownloadTaskId: not null, DownloadArtifactId: null, SelectedSource: {} source} &&
+                workset.Targets is {Count: > 0 and <= 100} targets &&
+                targets.Any(target => target is {Excluded: false, DownloadTaskId: not null, DownloadArtifactId: null, SelectedSource: {} source} &&
                     downloads.SupportsPausedPreparedDownload(source));
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException) {return false;}
