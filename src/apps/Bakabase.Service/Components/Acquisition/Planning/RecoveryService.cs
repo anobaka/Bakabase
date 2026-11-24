@@ -350,7 +350,12 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                         catch (OperationCanceledException) when (!token.IsCancellationRequested)
                         { throw new RecoveryBlockedException("RECOVERY_CHECK_INCOMPLETE"); }
                         if (!current.Row.CanContinue) throw new RecoveryBlockedException(current.Row.ReasonCode);
-                        if (current.SignalJson != entry.Signals[id]) throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
+                        var approvedSignal = entry.Signals[id];
+                        var pausedOriginal = current.Row.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady;
+                        if (current.SignalJson != approvedSignal &&
+                            !(pausedOriginal && expected.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady &&
+                              CloudSelectionSignal.IsPausedPreparedRetrySubset(approvedSignal, current.SignalJson)))
+                            throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
                         if (processingPlacementStamp != null && current.ProcessingPlacementStamp != processingPlacementStamp)
                             throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
                         if (current.TransferRetryTargets.Count > 0)
@@ -382,14 +387,13 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                                     throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
                             await preparation.CommitAsync(token);
                         }
-                        var pausedOriginal = current.Row.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady;
                         task = await AcquisitionContinuationReserve.SaveWhileLockedAsync(db, task, run, input.UseEmergencySpaceReserve,
                             "recovery:" + input.PreviewToken, token, preserveReserve, pausedOriginal);
                         // Enqueue may be consumed immediately. Commit the confirmed follow-up
                         // mode under the same task/run gates, before handing over the signal.
                         await new AcquisitionDownloadContinuationService(db).SaveWhileLockedAsync(task, run.Id,
                             pausedOriginal ? AcquisitionDownloadContinuationService.Paused : AcquisitionDownloadContinuationService.Automatic,
-                            token, approvePausedSignal: pausedOriginal ? current.SignalJson : null);
+                            token, approvePausedSignal: pausedOriginal ? approvedSignal : null);
                     }, ct);
                 continued.Add(id);
             }

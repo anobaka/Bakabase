@@ -525,6 +525,8 @@ public abstract class CloudActivity(string kind, string name, string description
             }
             selected = selected.Concat(equivalentOwners.Keys).ToHashSet(StringComparer.Ordinal);
         }
+        var unselectedPending = workset.Targets.Any(t => !t.Excluded && !selected.Contains(t.Id) &&
+            t.DownloadArtifactId == null && t.ProcessedArtifactId == null && t.PublishedArtifactId == null);
         var admissionProblems = new Dictionary<string, string>(StringComparer.Ordinal);
         var selectedTargets = workset.Targets.Where(t => selected.Contains(t.Id)).ToArray();
         var updated = new List<CloudDownloadTarget>();
@@ -561,7 +563,8 @@ public abstract class CloudActivity(string kind, string name, string description
                     { admissionProblems.Add(target.Id, TargetProblem(error)); }
                 }
             }
-            if (pauseAdmission is {} admitted && admissionProblems.Count == 0)
+            // Another stopped group may require its own confirmation when its source becomes available.
+            if (pauseAdmission is {} admitted && admissionProblems.Count == 0 && !unselectedPending)
                 await ctx.Services.GetRequiredService<AcquisitionDownloadContinuationService>().ActivatePausedAdmissionAsync(
                     checked((int)ctx.RunId), admitted, ct);
 
@@ -610,8 +613,7 @@ public abstract class CloudActivity(string kind, string name, string description
         }
         workset = workset with {Targets = updated};
         // A partial resume does not certify other unfinished targets or advance past their wait.
-        return updated.Any(t => t.Problem != null || !t.Excluded && !selected.Contains(t.Id) &&
-            t.DownloadArtifactId == null && t.ProcessedArtifactId == null && t.PublishedArtifactId == null)
+        return unselectedPending || updated.Any(t => t.Problem != null)
             ? Wait(workset, "cloudAttention") : WorkflowItemOutcome.ReplaceWith(workset);
     }
 

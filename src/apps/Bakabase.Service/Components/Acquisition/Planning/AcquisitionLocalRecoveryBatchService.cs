@@ -598,7 +598,9 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             // A fast preview can already identify a saved cloud copy from local receipts.
             // Bind that exact selection before the worker's remote check so loss of the
             // copy can never turn this confirmation into a fresh transfer.
-            if (diagnosis.PreparedDownloadReason != null)
+            if (diagnosis.PreparedDownloadReason == AcquisitionRecoveryDiagnostics.PausedOriginalReady)
+                storageStamp = Hash(new {Storage = storageStamp, PausedOriginal = true});
+            else if (diagnosis.PreparedDownloadReason != null)
                 storageStamp = Hash(new {Storage = storageStamp, PreparedDownload = diagnosis.SignalJson});
             var readyReason = diagnosis.PreparedDownloadReason ?? (diagnosis.Row.ReasonCode is AcquisitionRecoveryDiagnostics.TransferRetryConfirmationRequired or
                 "RECOVERY_TRANSFER_RECOVERY_READY" or "RECOVERY_COMPLETED_DOWNLOAD_READY" or "RECOVERY_PREPARED_PLAN_READY" ? diagnosis.Row.ReasonCode : "LOCAL_BATCH_READY");

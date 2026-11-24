@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain;
@@ -168,6 +169,20 @@ public sealed record CloudSelectionSignal
         PreparedDownloadRetries.All(p => ResumeTargetIds.Contains(p.Key) && p.Value != null && !string.IsNullOrWhiteSpace(p.Value.OperationId)) &&
         (!PreparedDownloadRetries.Values.Any(p => p.WasPaused) ||
          PreparedDownloadRetries.Count == ResumeTargetIds.Count && PreparedDownloadRetries.Values.All(p => p.WasPaused));
+
+    internal static bool IsPausedPreparedRetrySubset(string subset, string superset)
+    {
+        try
+        {
+            var selected = JsonSerializer.Deserialize<CloudSelectionSignal>(subset, WorkflowJson.Options);
+            var approved = JsonSerializer.Deserialize<CloudSelectionSignal>(superset, WorkflowJson.Options);
+            return selected?.HasValidPreparedRetrySelection() == true && approved?.HasValidPreparedRetrySelection() == true &&
+                selected.PreparedDownloadRetries is {Count: > 0} requested &&
+                approved.PreparedDownloadRetries is {Count: > 0} allowed &&
+                requested.All(entry => entry.Value.WasPaused && allowed.GetValueOrDefault(entry.Key) == entry.Value);
+        }
+        catch (JsonException) {return false;}
+    }
 
     /// <summary>Only verify and register original existing files. Never restart a downloader or transfer.</summary>
     public bool? VerifyExistingFilesOnly { get; init; }

@@ -15,6 +15,7 @@ using Bakabase.Modules.Workflow.Abstractions.Models.Db;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Modules.Workflow.Artifacts;
+using Bakabase.Service.Components.CloudDownloads;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -271,6 +272,8 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
             }
             if (check.Evidence is not { } e || e.Scope != entry.RecoveryScope || entry.CheckpointWrite != null && entry.CheckpointWrite != e.CheckpointWrite ||
                 (localAdoption || !entry.VerificationPending) && e.Signal != entry.Signal || e.StorageStamp != entry.StorageStamp ||
+                check.WorkflowRow?.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady && e.Signal != entry.Signal &&
+                    !CloudSelectionSignal.IsPausedPreparedRetrySubset(e.Signal, entry.Signal) ||
                 e.ActionCategory != entry.ActionCategory || e.ActionCategory != "localProcessing" && e.CanOverrideStorage != entry.CanOverrideStorage || e.AuthorizationStamp != entry.AuthorizationStamp ||
                 !e.WorkingDirectories.SequenceEqual(entry.WorkingDirectories) || !e.DeliveryDirectories.SequenceEqual(entry.DeliveryDirectories))
             {await SaveAsync(task, entry with {Status = "attention", ReasonCode = check.Evidence == null ? check.Row.ReasonCode : "ACQUISITION_TASK_CHANGED"}, ct); return;}

@@ -1,7 +1,10 @@
 using System.Globalization;
 using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Models.Domain;
@@ -14,8 +17,12 @@ using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.CloudDownloads;
 using Bakabase.TestKit.Implementations;
+using Bakabase.TestKit.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bakabase.Tests;
 
@@ -194,15 +201,145 @@ public sealed partial class AcquisitionRecoveryTests
         Assert.AreEqual("configured", AcquisitionStorageOverrideGrant.Read(await _db.AcquisitionTasks.AsNoTracking().SingleAsync())?.ReserveMode);
     }
 
-    private sealed class PausedOriginalProvider : RecoverableProvider, ICloudPreparedDownloadRetryProvider
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Automatic_list_continuation_preserves_other_paused_groups_until_their_own_confirmation(
+        bool sourceRecoversDuringAdmission)
+    {
+        var provider = new PausedOriginalProvider {HasCheckpoint = true, UnavailableSourceId = "second",
+            UnavailableProbesRemaining = sourceRecoversDuringAdmission ? 1 : int.MaxValue};
+        (_services as IDisposable)?.Dispose();
+        _services = await TestServiceBuilder.BuildServiceProvider(services =>
+        {
+            services.RemoveAll<ICloudDownloadProvider>();
+            services.AddSingleton<ICloudDownloadProvider>(provider);
+            services.AddTransient(sp => new BakabaseLocalizer(sp.GetRequiredService<IStringLocalizer<SharedResource>>()));
+            services.RemoveAll<IStorageWriteGuard>();
+            services.AddSingleton<IStorageWriteGuard>(sp => new StorageWriteGuard(
+                sp.GetRequiredService<IStorageWritePolicyProvider>(), _ => (_root, 1L << 40), TimeSpan.FromMilliseconds(500)));
+        });
+        _db = _services.GetRequiredService<BakabaseDbContext>();
+        var (task, run, workset, firstDownload, firstOperation, _, _) = await SeedRecoverableProvider();
+        var firstTarget = workset.Targets.Single();
+        var secondSource = firstTarget.SelectedSource! with {Id = "second", Url = "https://mypikpak.com/s/second-fixture"};
+        var secondTarget = firstTarget with {Id = "second", Sources = [secondSource], SelectedSourceId = secondSource.Id, DownloadTaskId = null};
+        var secondIntent = DownloadArtifactCoordinator.DownloadIntent(secondTarget, _root);
+        var secondRequest = new CloudDownloadRequest(secondIntent, secondSource, null, null, Path.Combine(_root, "second-original"));
+        var secondDownload = new DownloadTaskDbModel {Key = "second", Type = 1, Status = DownloadTaskDbModelStatus.Disabled,
+            ThirdPartyId = firstDownload.ThirdPartyId, DownloadPath = secondRequest.OutputDirectory,
+            Options = JsonSerializer.Serialize(secondRequest, WorkflowJson.Options)};
+        firstDownload.Key = "first";
+        firstDownload.Type = 1;
+        firstDownload.Status = DownloadTaskDbModelStatus.Disabled;
+        firstDownload.Message = null;
+        _db.DownloadTasks.Add(secondDownload);
+        await _db.SaveChangesAsync();
+        _db.CloudDownloadOperations.Add(new() {Id = secondIntent, TargetId = secondTarget.Id, WorkflowRunId = run.Id,
+            Kind = "download", State = "started", DownloadTaskId = secondDownload.Id, RequestJson = secondDownload.Options});
+        _db.ArtifactOperationBindings.Add(new() {Id = "second-download", OwnerKind = "workflow", OwnerId = run.Id.ToString(),
+            Slot = secondTarget.Id + ":download", OperationId = secondIntent});
+        workset = workset with {Id = $"acquisition:{task.Id}:{task.PlanRevision}",
+            Targets = [firstTarget, secondTarget with {DownloadTaskId = secondDownload.Id}]};
+        task.PlanJson = JsonSerializer.Serialize(new AcquisitionPlan {Title = task.Title!, OutputDirectory = _root,
+            Parts = workset.Targets.Select(t => new AcquisitionPlanPart {Id = t.Id}).ToList()}, WorkflowJson.Options);
+        task.BuilderStateJson = AcquisitionDownloadContinuationService.WithState(task.BuilderStateJson,
+            new(run.Id, AcquisitionDownloadContinuationService.Paused, DateTimeOffset.UtcNow));
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(workset);
+        run.WaitReason = "cloud.cloudAttention";
+        _db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = run.Id, Module = "acquisition", EntityKind = "task",
+            EntityId = task.Id.ToString(CultureInfo.InvariantCulture), Revision = task.PlanRevision.ToString(CultureInfo.InvariantCulture)});
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var storage = new UserStoragePolicy(false);
+        var artifacts = _services.GetRequiredService<IArtifactOperationStore>();
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, storage, artifacts,
+            downloads: _services.GetRequiredService<CloudDownloadRecoveryService>());
+        var host = new RecordingHost();
+        var recovery = new AcquisitionRecoveryService(_db, diagnostics, new(), host);
+        var continuation = new AcquisitionContinuationService(_db, recovery, new(), null!, null!, artifacts);
+        var queue = new AcquisitionLocalRecoveryBatchService(_db, recovery, diagnostics, null!, null!,
+            new TestBOptionsManager<AcquisitionOptions>(new()), storage, new PinnedBatchCapacity(), new(), continuations: continuation);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        async Task<WorkflowItemOutcome> QueueAndRun(string expectedTarget)
+        {
+            var preview = await queue.PreviewAsync(new([task.Id], "automatic"), timeout.Token);
+            var row = preview.Rows.Single();
+            Assert.IsTrue(row.CanQueue, row.ReasonCode);
+            Assert.AreEqual(AcquisitionRecoveryDiagnostics.PausedOriginalReady, row.ReasonCode);
+            var batch = await queue.ApplyAsync(new(preview.PreviewToken, [task.Id]), timeout.Token);
+            var previousCalls = host.Calls;
+            await queue.TickAsync(timeout.Token);
+            Assert.AreEqual(previousCalls + 1, host.Calls, (await queue.GetAsync(batch.BatchId)).Rows.Single().ReasonCode);
+            var answer = JsonSerializer.Deserialize<CloudSelectionSignal>(host.Signal!, WorkflowJson.Options)!;
+            CollectionAssert.AreEqual(new[] {expectedTarget}, answer.ResumeTargetIds);
+            await _db.WorkflowRuns.Where(r => r.Id == run.Id).ExecuteUpdateAsync(s =>
+                s.SetProperty(r => r.Status, WorkflowRunStatus.Running), timeout.Token);
+            using var scope = _services.CreateScope();
+            var finished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            provider.AllowPayloadToFinish = finished.Task;
+            var context = new WorkflowExecutionContext {RunId = run.Id, WorkflowDefinitionId = 0,
+                TriggerKind = CloudWorkflow.Trigger, Payload = workset, ActivityConfigJson = "{}",
+                Services = scope.ServiceProvider, Logger = NullLogger.Instance,
+                ReportStage = _ => {finished.TrySetResult(); return Task.CompletedTask;}};
+            return await new AwaitCloudDownloadsActivity().ResumeAsync(context, workset, host.Signal, timeout.Token);
+        }
+
+        var first = await QueueAndRun(firstTarget.Id);
+        Assert.AreEqual("cloud.cloudAttention", first.Suspension?.Reason);
+        workset = (DownloadWorkset)first.Suspension!.Item!;
+        Assert.IsNotNull(workset.Targets[0].DownloadArtifactId);
+        Assert.IsNull(workset.Targets[1].DownloadArtifactId);
+        Assert.AreEqual(DownloadTaskDbModelStatus.Disabled,
+            (await _db.DownloadTasks.AsNoTracking().SingleAsync(d => d.Id == secondDownload.Id)).Status);
+        Assert.AreEqual(AcquisitionDownloadContinuationService.Paused,
+            AcquisitionDownloadContinuationService.Read(await _db.AcquisitionTasks.AsNoTracking().SingleAsync())?.Mode);
+        CollectionAssert.AreEqual(new[] {firstOperation.Id}, provider.PreparedStarts.ToArray());
+
+        var snapshot = WorkflowItemSnapshot.Capture(workset);
+        await _db.WorkflowRuns.Where(r => r.Id == run.Id).ExecuteUpdateAsync(s => s.SetProperty(r => r.Status, WorkflowRunStatus.Waiting)
+            .SetProperty(r => r.CurrentItemJson, snapshot).SetProperty(r => r.WaitingSince, DateTime.Now), timeout.Token);
+        await queue.TickAsync(timeout.Token);
+        provider.UnavailableSourceId = null;
+        var second = await QueueAndRun(secondTarget.Id);
+        Assert.IsNull(second.Suspension);
+        Assert.AreEqual(AcquisitionDownloadContinuationService.Automatic,
+            AcquisitionDownloadContinuationService.Read(await _db.AcquisitionTasks.AsNoTracking().SingleAsync())?.Mode);
+        CollectionAssert.AreEqual(new[] {firstOperation.Id, secondIntent}, provider.PreparedStarts.ToArray());
+        Assert.AreEqual(2, await _db.DownloadTasks.CountAsync());
+        Assert.AreEqual(2, await _db.DownloadResults.CountAsync());
+        Assert.AreEqual(2, await _db.CloudDownloadOperations.CountAsync());
+    }
+
+    private sealed class PausedOriginalProvider : RecoverableProvider, ICloudDownloadRecoveryProvider, ICloudPreparedDownloadRetryProvider
     {
         public bool HasCheckpoint { get; init; }
+        public string? UnavailableSourceId { get; set; }
+        public int UnavailableProbesRemaining { get; set; }
+        public Task? AllowPayloadToFinish { get; set; }
+        public List<string> PreparedStarts { get; } = [];
+        Task<CloudReadiness> ICloudDownloadRecoveryProvider.RevalidateDownloadAsync(CloudDownloadRequest request, CancellationToken ct)
+        {
+            Available = request.Source.Id != UnavailableSourceId || UnavailableProbesRemaining <= 0;
+            if (!Available) UnavailableProbesRemaining--;
+            return base.RevalidateDownloadAsync(request, ct);
+        }
         public Task<CloudReadiness> CheckPreparedDownloadRetryAsync(CloudDownloadRequest request, CancellationToken ct) =>
             Task.FromResult(new CloudReadiness(true));
         public Task<CloudReadiness> CheckPausedPreparedDownloadAsync(CloudDownloadRequest request, CancellationToken ct) =>
             Task.FromResult(new CloudReadiness(HasCheckpoint));
-        public Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request,
-            Func<CloudDownloadProgress, Task> progress, CancellationToken ct) =>
-            throw new AssertFailedException("Preview and guarded submission cannot read a payload.");
+        public async Task<CloudDownloadResult> RetryPreparedDownloadAsync(CloudDownloadRequest request,
+            Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
+        {
+            Assert.IsNotNull(AllowPayloadToFinish, "Preview and guarded submission cannot read a payload.");
+            PreparedStarts.Add(request.OperationId);
+            await AllowPayloadToFinish.WaitAsync(ct);
+            Directory.CreateDirectory(request.OutputDirectory);
+            var file = Path.Combine(request.OutputDirectory, "downloaded.bin");
+            await File.WriteAllTextAsync(file, request.Source.Id, ct);
+            return new([file]);
+        }
     }
 }
