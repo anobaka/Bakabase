@@ -68,6 +68,23 @@ public sealed partial class PikPakCliTests
         Assert.IsFalse((await File.ReadAllTextAsync(journal)).Contains("signature", StringComparison.Ordinal));
     }
 
+    [TestMethod]
+    public async Task OriginalLocationRejectionRetainsItsProviderReasonWithoutLeakingALink()
+    {
+        await Login();
+        _native.FailPayload = true;
+        _native.RemoveFailedNativePartial = true;
+        await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.DownloadAsync(Request, _ => Task.CompletedTask, default));
+        _native.OriginalUrl = "https://untrusted.invalid/file?signature=keep-private";
+        var failure = await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
+            _provider.RetryPreparedDownloadAsync(Request, _ => Task.CompletedTask, default));
+        Assert.AreEqual("PIKPAK_ORIGINAL_FILE_UNAVAILABLE", failure.Message);
+        Assert.IsNull(failure.InnerException);
+        Assert.AreEqual(0, _restored.Transfers.Count);
+        Assert.AreEqual(1, _native.Downloads);
+    }
+
     private sealed class RestoredOriginal : IAuthorizedOriginalHttpDownloader
     {
         internal bool Fail;

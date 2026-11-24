@@ -47,14 +47,36 @@ public sealed partial class PikPakCliCloudProvider
         copies.Started.Add(file.Id);
         await PikPakCliStorage.WriteAsync(Path.Combine(OperationPath(request.OperationId), "download.json"), copies, ct);
         await progress(new(null, completed, total, "Downloading PikPak original files"));
-        var downloaded = await _restoredOriginals.DownloadAsync(identity, directory,
-            PublicShareDownloadClients.PikPakOfficialOriginal,
-            token => ResolveRestoredOriginalUrlAsync(journal, file, account, token), update =>
+        string? resolverProblem = null;
+        async Task<Uri> Resolve(CancellationToken token)
+        {
+            resolverProblem = null;
+            try { return await ResolveRestoredOriginalUrlAsync(journal, file, account, token); }
+            catch (PikPakCliException error)
             {
-                var received = completed + Math.Clamp(update.CompletedBytes, 0, file.Size);
-                return progress(new(total == 0 ? null : 100d * received / total,
-                    received, total, update.Stage ?? "Downloading PikPak original files"));
-            }, ct);
+                resolverProblem = error.Code;
+                throw new AuthorizedOriginalDownloadException(error.Code == "PIKPAK_REMOTE_CHANGED"
+                    ? "ORIGINAL_HTTP_SOURCE_CHANGED" : "ORIGINAL_HTTP_LOCATION_UNAVAILABLE");
+            }
+        }
+        string downloaded;
+        try
+        {
+            downloaded = await _restoredOriginals.DownloadAsync(identity, directory,
+                PublicShareDownloadClients.PikPakOfficialOriginal, Resolve, update =>
+                {
+                    var received = completed + Math.Clamp(update.CompletedBytes, 0, file.Size);
+                    return progress(new(total == 0 ? null : 100d * received / total,
+                        received, total, update.Stage ?? "Downloading PikPak original files"));
+                }, ct);
+        }
+        catch (AuthorizedOriginalDownloadException error) when (resolverProblem != null &&
+            (error.Code is "ORIGINAL_HTTP_SOURCE_CHANGED" or "ORIGINAL_HTTP_LOCATION_UNAVAILABLE"))
+        {
+            // Only the provider's own machine code crosses this boundary. Never expose
+            // the resolver exception, CLI response, or an address containing a signature.
+            throw new PikPakCliException(resolverProblem);
+        }
         if (!ArtifactManifestFiles.PathComparer.Equals(Path.GetFullPath(downloaded), part))
             throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
     }
