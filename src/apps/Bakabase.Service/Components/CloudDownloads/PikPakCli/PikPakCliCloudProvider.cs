@@ -26,6 +26,7 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _operations = new(StringComparer.Ordinal);
     public string ProviderId => "pikpak";
     public string MethodId => "pikpak.share";
+    bool ICloudDownloadRecoveryProvider.RevalidationChecksReadiness => true;
     public bool CanCorrectAccessCodeAfterFailure(string code) => code == "PIKPAK_ACCESS_CODE_REQUIRED";
     public bool CanRevalidateDownloadFailure(string code) => code is "PIKPAK_ORIGINAL_FILE_UNAVAILABLE" or
         "PIKPAK_PUBLIC_ACCESS_REQUIRED" or "PIKPAK_VERIFICATION_REQUIRED" or "PIKPAK_ACCOUNT_REQUIRED" or
@@ -67,7 +68,7 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
             return await WithOperation(request.OperationId, () => accounts.WithAccountAsync(request.AccountId ?? request.Source.AccountId, request.Source.AccountVersion, account =>
                 accounts.WithTransferAsync(account, async () =>
             {
-                await account.RequireOnline(ct);
+                var status = await account.ReadStatusAsync(ct);
                 var journal = await ReadJournal(request.OperationId, ct);
                 if (journal != null) CheckIdentity(journal, request.Source, account);
                 if (journal is {State: "restoreSubmitted" or "restored"})
@@ -86,8 +87,8 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
                 if (journal is {State: "folderCreating"}) return new(false, "PIKPAK_RESTORE_REVIEW_REQUIRED");
                 var selection = await ReadShare(account, request.Source, ct);
                 if (journal != null && !Same(journal.Selection, selection)) return new(false, "PIKPAK_SHARE_CHANGED");
-                var capacity = await CheckCapacity(account, selection, ct);
-                if (capacity.IsInsufficient) return new(false, "PIKPAK_STORAGE_QUOTA_EXCEEDED");
+                if (CheckCapacity(status, selection).IsInsufficient)
+                    return new(false, "PIKPAK_STORAGE_QUOTA_EXCEEDED");
                 // A metadata check never saves shares or opens payload URLs. Even an old
                 // anonymous failed task can therefore use this without changing its history.
                 return new CloudReadiness(true);
@@ -283,13 +284,12 @@ public sealed class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownl
         journal.RestoreStatus is "OK" or "COMPLETE" or "PENDING" or "RUNNING"
             ? "PIKPAK_RESTORE_PENDING" : "PIKPAK_RESTORE_REVIEW_REQUIRED";
 
-    private static async Task<PikPakCliCapacity.Check> CheckCapacity(PikPakCliAccountLease account,
-        IReadOnlyList<ShareNode> selection, CancellationToken ct) =>
-        PikPakCliCapacity.Evaluate(await account.ReadStatusAsync(ct), Flatten(selection).Select(file => file.Size));
+    private static PikPakCliCapacity.Check CheckCapacity(JsonElement status, IReadOnlyList<ShareNode> selection) =>
+        PikPakCliCapacity.Evaluate(status, Flatten(selection).Select(file => file.Size));
 
     private async Task RequireCapacity(string operationId, Journal journal, PikPakCliAccountLease account, CancellationToken ct)
     {
-        var check = await CheckCapacity(account, journal.Selection, ct);
+        var check = CheckCapacity(await account.ReadStatusAsync(ct), journal.Selection);
         journal.CapacityChecks.Add(check);
         await SaveJournal(operationId, journal, ct);
         if (check.IsInsufficient) throw new PikPakCliException("PIKPAK_STORAGE_QUOTA_EXCEEDED");

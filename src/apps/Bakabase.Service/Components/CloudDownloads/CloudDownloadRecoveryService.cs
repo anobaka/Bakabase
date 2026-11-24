@@ -185,13 +185,16 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 if (!local.Available) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             }
             if (!revalidate) return Block("RECOVERY_RECHECK_SOURCE", candidate: true);
-            var ready = await provider.CheckReadyAsync(request.AccountId, ct);
-            if (!ready.Available)
+            if (!capability!.RevalidationChecksReadiness)
             {
-                failure = WorkflowSourceRunProblems.Extract(ready.Problem).FirstOrDefault() ?? failure;
-                return Block("RECOVERY_SOURCE_STILL_BLOCKED");
+                var ready = await provider.CheckReadyAsync(request.AccountId, ct);
+                if (!ready.Available)
+                {
+                    failure = WorkflowSourceRunProblems.Extract(ready.Problem).FirstOrDefault() ?? failure;
+                    return Block("RECOVERY_SOURCE_STILL_BLOCKED");
+                }
             }
-            var current = await capability!.RevalidateDownloadAsync(executionRequest, ct);
+            var current = await capability.RevalidateDownloadAsync(executionRequest, ct);
             if (!current.Available)
             {
                 failure = WorkflowSourceRunProblems.Extract(current.Problem).FirstOrDefault() ?? failure;

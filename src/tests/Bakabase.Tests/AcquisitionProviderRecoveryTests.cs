@@ -13,6 +13,8 @@ using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.Service.Components.CloudDownloads.PikPakCli;
+using Bakabase.Tests.CloudDownloads;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -25,13 +27,18 @@ public sealed partial class AcquisitionRecoveryTests
     {
         public string ProviderId => "pikpak";
         public int Checks;
+        public int ReadinessChecks;
         public bool Available = true;
         public bool CanAbandon = true;
         public Task<CloudReadiness> CheckCanAbandonAsync(CloudDownloadRequest request, CancellationToken ct) =>
             Task.FromResult(new CloudReadiness(CanAbandon, CanAbandon ? null : "REMOTE_WRITE_UNCERTAIN"));
         public Func<Task>? DuringProbe;
         public bool CanRevalidateDownloadFailure(string code) => code == "PIKPAK_ORIGINAL_FILE_UNAVAILABLE";
-        public Task<CloudReadiness> CheckReadyAsync(string? accountId, CancellationToken ct) => Task.FromResult(new CloudReadiness(true));
+        public Task<CloudReadiness> CheckReadyAsync(string? accountId, CancellationToken ct)
+        {
+            ReadinessChecks++;
+            return Task.FromResult(new CloudReadiness(true));
+        }
         public async Task<CloudReadiness> RevalidateDownloadAsync(CloudDownloadRequest request, CancellationToken ct)
         {Checks++; if (DuringProbe != null) await DuringProbe(); return new CloudReadiness(Available, Available ? null : "PIKPAK_ORIGINAL_FILE_UNAVAILABLE");}
         public Task<CloudDownloadResult> DownloadAsync(CloudDownloadRequest request, Func<CloudDownloadProgress, Task> progress, CancellationToken ct)
@@ -46,7 +53,7 @@ public sealed partial class AcquisitionRecoveryTests
         var source = testSource ?? new CloudSource {Id = "source", ProviderId = "pikpak", Url = "https://mypikpak.com/s/fixture", Kind = "share"};
         var target = workset.Targets.Single() with {Sources = [source], AccountId = null, Problem = failure};
         var intent = DownloadArtifactCoordinator.DownloadIntent(target, _root);
-        var request = new CloudDownloadRequest(intent, source, null, null, Path.Combine(_root, "cloud-original"));
+        var request = new CloudDownloadRequest(intent, source, source.AccountId, null, Path.Combine(_root, "cloud-original"));
         var download = new DownloadTaskDbModel {Status = DownloadTaskDbModelStatus.Failed, Message = failure,
             ThirdPartyId = CloudSites.Site(source.ProviderId), DownloadPath = request.OutputDirectory,
             Options = JsonSerializer.Serialize(request, JsonSerializerOptions.Web)};
@@ -75,6 +82,7 @@ public sealed partial class AcquisitionRecoveryTests
         Assert.AreEqual("RECOVERY_RECHECK_SOURCE", cheap.Row.ReasonCode); Assert.AreEqual(0, provider.Checks);
         var result = await _diagnostics.DiagnoseAsync(task, run, default);
         Assert.IsTrue(result.Row.CanContinue); Assert.AreEqual(1, provider.Checks);
+        Assert.AreEqual(1, provider.ReadinessChecks);
         var signal = JsonSerializer.Deserialize<CloudSelectionSignal>(result.SignalJson, JsonSerializerOptions.Web)!;
         CollectionAssert.AreEqual(new[] {workset.Targets.Single().Id}, signal.ResumeTargetIds!);
         Assert.IsTrue(signal.ObserveExistingOnly == true); Assert.IsTrue(signal.RevalidateExistingDownloads == true);
@@ -82,6 +90,74 @@ public sealed partial class AcquisitionRecoveryTests
         Assert.AreEqual(beforeTask, JsonSerializer.Serialize(task)); Assert.AreEqual(beforeRun, JsonSerializer.Serialize(run));
         Assert.AreEqual(beforeOperation, JsonSerializer.Serialize(operation)); Assert.AreEqual(beforeDownload, JsonSerializer.Serialize(download));
         Assert.IsFalse(Directory.Exists(download.DownloadPath)); Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task PikPak_original_download_preview_reads_fresh_account_status_once_and_reports_cloud_capacity()
+    {
+        var native = new PikPakCliTests.Native();
+        var cliRoot = Path.Combine(_root, "pikpak");
+        var accounts = new PikPakCliAccountService(cliRoot, native);
+        async Task<PikPakCliAccountViewModel> AuthorizeAccount()
+        {
+            var session = await accounts.StartAsync(default);
+            native.Approved = true;
+            Assert.AreEqual("authorized", (await accounts.PollAsync(session.Id, default)).Status);
+            return await accounts.GetAsync(default);
+        }
+
+        var account = await AuthorizeAccount();
+        var source = new CloudSource {Id = "source", ProviderId = "pikpak", MethodId = "pikpak.share",
+            Url = "https://mypikpak.com/s/fixture", Kind = "share",
+            AccountId = account.AccountId, AccountVersion = account.AccountVersion};
+        var (task, run, _, download, operation, _, _) = await SeedRecoverableProvider(source);
+        var storage = new UserStoragePolicy(false);
+        var provider = new PikPakCliCloudProvider(accounts, storage);
+        var downloadRecovery = new CloudDownloadRecoveryService(_db, [provider], storage);
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, storage,
+            _services.GetRequiredService<IArtifactOperationStore>(), downloads: downloadRecovery);
+        var service = new AcquisitionRecoveryService(_db, diagnostics, new(), new RecordingHost());
+        var before = JsonSerializer.Serialize(new {task, run, download, operation});
+        async Task<AcquisitionRecoveryRow> Preview() =>
+            (await service.PreviewAsync(new([task.Id], "downloads"))).Rows.Single();
+
+        native.Storage = """{"used":"3 B","total":"4 B"}""";
+        native.Calls.Clear();
+        var blocked = await Preview();
+        Assert.IsFalse(blocked.CanContinue);
+        Assert.AreEqual("RECOVERY_SOURCE_STILL_BLOCKED", blocked.ReasonCode);
+        Assert.AreEqual("PIKPAK_STORAGE_QUOTA_EXCEEDED", blocked.CurrentProblemCode);
+        CollectionAssert.AreEqual(new[] {"auth status", "share get", "share get"},
+            native.Calls.Select(command => string.Join(' ', command.Take(2))).ToArray());
+
+        native.Storage = """{"used":"0 B","total":"4 B"}""";
+        native.Calls.Clear();
+        var ready = await Preview();
+        Assert.IsTrue(ready.CanContinue, ready.ReasonCode);
+        Assert.AreEqual("downloads", ready.Action);
+        Assert.AreEqual(1, native.Calls.Count(command => command.SequenceEqual(new[] {"auth", "status"})));
+
+        native.Approved = false;
+        native.Calls.Clear();
+        var offline = await Preview();
+        Assert.IsFalse(offline.CanContinue);
+        Assert.AreEqual("PIKPAK_ACCOUNT_REQUIRED", offline.CurrentProblemCode);
+        CollectionAssert.AreEqual(new[] {"auth status"},
+            native.Calls.Select(command => string.Join(' ', command.Take(2))).ToArray());
+
+        var replacement = await AuthorizeAccount();
+        Assert.AreNotEqual(account.AccountVersion, replacement.AccountVersion);
+        native.Calls.Clear();
+        var replaced = await Preview();
+        Assert.IsFalse(replaced.CanContinue);
+        Assert.AreEqual("PIKPAK_ACCOUNT_CHANGED", replaced.CurrentProblemCode);
+        Assert.AreEqual(0, native.Calls.Count);
+
+        Assert.AreEqual(0, native.Mkdirs);
+        Assert.AreEqual(0, native.Restores);
+        Assert.AreEqual(0, native.Downloads);
+        Assert.IsFalse(Directory.Exists(Path.Combine(cliRoot, "operations")));
+        Assert.AreEqual(before, JsonSerializer.Serialize(new {task, run, download, operation}));
     }
 
     [TestMethod]

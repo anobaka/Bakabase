@@ -694,7 +694,7 @@ public sealed class PikPakCliTests
     public void OfficialCliShareLabelsAreNormalizedWithoutGuessing(string status, string? expected) =>
         Assert.AreEqual(expected, PikPakCliCloudProvider.ShareStatusProblem(status));
 
-    private sealed class Native : IPikPakCliProcess
+    internal sealed class Native : IPikPakCliProcess
     {
         internal List<string[]> Calls { get; } = [];
         internal bool Approved, FailAfterRestore, FailBeforeRestoreCommit, FailPayload, WrongRestoredName, RepeatToken, RejectRestorePermission, RejectRestoreQuota, ExtraRestoredFile, OriginalExpired;
