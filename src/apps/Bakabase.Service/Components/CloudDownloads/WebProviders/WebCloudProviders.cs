@@ -142,10 +142,12 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
             try
             {
                 var observeFileIo = FileIoObservationScope.Active && SupportsMeasuredFileWrites(ProviderId);
-                using var fileWrites = observeFileIo ? new BridgeFileWriteObservation() : null;
+                using var fileWrites = observeFileIo ? ObserveFileWrites() : null;
+                using var network = observeFileIo && FileIoObservationScope.NetworkDownloadId is {} downloadId
+                    ? ObserveNetworkReceives(downloadId) : null;
                 var input = SerializeRequest(ProviderId, request, state,
                     ResolveDownloadProxy(proxy, ProviderId, new Uri(request.Source.Url)), checksumRetryKey,
-                    reuseSource: DescribeReuseSource(request, appData()), observeFileIo: observeFileIo);
+                    reuseSource: DescribeReuseSource(request, appData()), observeFileIo: observeFileIo, observeNetwork: network != null);
                 await process.StandardInput.WriteAsync(input.AsMemory(), ct);
                 process.StandardInput.Close();
                 while (await process.StandardOutput.ReadLineAsync(ct) is { } line)
@@ -159,6 +161,7 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
                                 Integer(root, "totalBytes"), root.GetProperty("stage").GetString()));
                             break;
                         case "fileIo": fileWrites?.Record(root); break;
+                        case "networkReceive": network?.Record(root); break;
                         case "error": failure = root.GetProperty("message").GetString(); break;
                         case "result":
                             if (files != null) throw new InvalidDataException("Cloud adapter returned duplicate final results.");
@@ -188,7 +191,7 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
 
     internal static string SerializeRequest(string providerId, CloudDownloadRequest request, string state,
         CloudToolProxy.Settings? settings, string? checksumRetryKey = null, string? mode = null,
-        BridgeReuseSource? reuseSource = null, bool observeFileIo = false)
+        BridgeReuseSource? reuseSource = null, bool observeFileIo = false, bool observeNetwork = false)
     {
         var input = new Dictionary<string, object?>
         {
@@ -198,42 +201,50 @@ public abstract partial class WebCloudProvider(CloudPythonToolService tool, Func
         };
         if (mode != null) input["mode"] = mode;
         if (reuseSource != null) input["reuseSource"] = reuseSource;
-        if (observeFileIo && mode == null && SupportsMeasuredFileWrites(providerId)) input["observeFileIo"] = true;
+        if (mode == null && SupportsMeasuredFileWrites(providerId))
+        {
+            if (observeFileIo) input["observeFileIo"] = true;
+            if (observeNetwork) input["observeNetwork"] = true;
+        }
         return JsonSerializer.Serialize(input, JsonSerializerOptions.Web);
     }
 
     private static bool SupportsMeasuredFileWrites(string providerId) => providerId is "pixeldrain" or "gofile";
 
-    internal sealed class BridgeFileWriteObservation : IDisposable
+    internal static BridgeByteObservation<IFileIoObservation> ObserveFileWrites() =>
+        new(() => FileIoObservationScope.Begin(read: false, write: true), (scope, bytes) => scope.Add(0, bytes),
+            "written", "writtenBytes");
+
+    internal static BridgeByteObservation<INetworkReceiveObservation> ObserveNetworkReceives(string downloadId) =>
+        new(() => FileIoObservationScope.BeginNetworkReceive(downloadId), (scope, bytes) => scope.AddReceivedBytes(bytes),
+            "received", "receivedBytes");
+
+    internal sealed class BridgeByteObservation<T>(Func<T?> begin, Action<T, long> add, string reportState, string counterField)
+        : IDisposable where T : class, IDisposable
     {
-        private IFileIoObservation? _observation;
-        private long _lastWritten;
+        private T? _observation;
+        private long _last;
 
         public void Record(JsonElement message)
         {
             if (!message.TryGetProperty("state", out var state) || state.ValueKind != JsonValueKind.String) return;
-            switch (state.GetString())
+            var name = state.GetString();
+            if (name == "opened") _observation ??= begin();
+            else if (name == "closed") Dispose();
+            else if (name == reportState && _observation != null &&
+                message.TryGetProperty(counterField, out var field) && field.ValueKind == JsonValueKind.Number &&
+                field.TryGetInt64(out var total) && total > _last)
             {
-                case "opened":
-                    _observation ??= FileIoObservationScope.Begin(read: false, write: true);
-                    break;
-                case "written" when _observation != null &&
-                    message.TryGetProperty("writtenBytes", out var field) && field.ValueKind == JsonValueKind.Number &&
-                    field.TryGetInt64(out var written) && written > _lastWritten:
-                    _observation.Add(0, written - _lastWritten);
-                    _lastWritten = written;
-                    break;
-                case "closed": EndFile(); break;
+                add(_observation, total - _last);
+                _last = total;
             }
         }
 
-        public void Dispose() => EndFile();
-
-        private void EndFile()
+        public void Dispose()
         {
             _observation?.Dispose();
             _observation = null;
-            _lastWritten = 0;
+            _last = 0;
         }
     }
 

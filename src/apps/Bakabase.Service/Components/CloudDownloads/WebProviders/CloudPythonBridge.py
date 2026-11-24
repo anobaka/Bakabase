@@ -998,12 +998,13 @@ def repair_ranges(file, prefix, entry, record):
     return ranges, True
 
 
-def read_repair_patches(session, entry, file, ranges, continuing_commit):
+def read_repair_patches(session, entry, file, ranges, continuing_commit, observe_network=False):
     patches = []
     for start, length in ranges:
-        with original_response(session, entry, 'pixeldrain', start, start + length - 1, True) as response:
+        with original_response(session, entry, 'pixeldrain', start, start + length - 1, True) as response, \
+                payload_chunks(response, observe_network) as chunks:
             remote = bytearray()
-            for block in response.iter_content(512 * 1024):
+            for block in chunks:
                 if len(remote) + len(block) > length:
                     raise BridgeError('CLOUD_RANGE_UNCONFIRMED: Repair response exceeded the requested byte range')
                 remote.extend(block)
@@ -1035,10 +1036,13 @@ def overlay_sha256(file, patches, length):
     return digest.hexdigest()
 
 
-class PayloadWriteObservation:
-    def __init__(self):
+class PayloadByteObservation:
+    def __init__(self, kind, state, field):
+        self.kind = kind
+        self.state = state
+        self.field = field
         self.opened = False
-        self.written = 0
+        self.total = 0
         self.reported = 0
         self.next_report = 0
 
@@ -1048,36 +1052,53 @@ class PayloadWriteObservation:
     def start(self):
         self.opened = True
         self.next_report = time.monotonic() + 1
-        emit({"type": "fileIo", "state": "opened"})
+        emit({"type": self.kind, "state": "opened"})
 
     def add(self, size):
         if size <= 0:
             return
-        self.written += size
+        self.total += size
         now = time.monotonic()
-        if self.written - self.reported >= 16 * 1024 * 1024 or now >= self.next_report:
+        if self.total - self.reported >= 16 * 1024 * 1024 or now >= self.next_report:
             self.report(now)
 
     def report(self, now):
-        emit({"type": "fileIo", "state": "written", "writtenBytes": self.written})
-        self.reported = self.written
+        emit({"type": self.kind, "state": self.state, self.field: self.total})
+        self.reported = self.total
         self.next_report = now + 1
 
     def __exit__(self, *_):
         if self.opened:
-            if self.written != self.reported:
+            if self.total != self.reported:
                 self.report(time.monotonic())
-            emit({"type": "fileIo", "state": "closed"})
+            emit({"type": self.kind, "state": "closed"})
 
 
-def http_original(session, entry, part, provider, progress, repair_record=None, observe_file_io=False):
+@contextlib.contextmanager
+def payload_chunks(response, observe_network):
+    chunks = response.iter_content(512 * 1024)
+    if not observe_network:
+        yield chunks
+        return
+    with PayloadByteObservation("networkReceive", "received", "receivedBytes") as network:
+        network.start()
+
+        def measured():
+            for chunk in chunks:
+                network.add(len(chunk))
+                yield chunk
+
+        yield measured()
+
+
+def http_original(session, entry, part, provider, progress, repair_record=None, observe_file_io=False, observe_network=False):
     # A resumed body is publishable only after the provider's checksum validates the entire file.
     # operation/URL/destination/manifest have already been matched by run().
     expected_size = entry["size"]
     if part.is_symlink():
         raise BridgeError("Symbolic links are not supported in partial files")
     flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
-    with (PayloadWriteObservation() if observe_file_io else contextlib.nullcontext()) as writes, \
+    with (PayloadByteObservation("fileIo", "written", "writtenBytes") if observe_file_io else contextlib.nullcontext()) as writes, \
             os.fdopen(os.open(part, flags, 0o600), "r+b") as target:
         info = os.fstat(target.fileno())
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
@@ -1098,15 +1119,16 @@ def http_original(session, entry, part, provider, progress, repair_record=None, 
         if offset and (not already_valid or journal_present):
             ranges, continuing_commit = repair_ranges(target, offset, entry, record)
             if not already_valid:
-                patches = read_repair_patches(session, entry, target, ranges, continuing_commit)
+                patches = read_repair_patches(session, entry, target, ranges, continuing_commit, observe_network)
         if not offset or offset < expected_size:
-            with original_response(session, entry, provider, offset, expected_size - 1, bool(offset), open_ended=True) as response:
+            with original_response(session, entry, provider, offset, expected_size - 1, bool(offset), open_ended=True) as response, \
+                    payload_chunks(response, observe_network) as chunks:
                 target.seek(offset)
                 if not offset:
                     target.truncate(0)
                 if offset:
                     progress(offset, expected_size)
-                for chunk in response.iter_content(512 * 1024):
+                for chunk in chunks:
                     if target.tell() + len(chunk) > expected_size:
                         target.truncate(offset)
                         raise BridgeError("CLOUD_RANGE_UNCONFIRMED: Original file exceeds manifest size")
@@ -1279,7 +1301,8 @@ def run(request):
             checksum = sha256(part)
         else:
             checksum = http_original(session, entry, part, request["provider"], progress, repair_record,
-                                     observe_file_io=request.get("observeFileIo") is True)
+                                     observe_file_io=request.get("observeFileIo") is True,
+                                     observe_network=request.get("observeNetwork") is True)
         verified = part.stat()
         receipts[entry["path"]] = {"size": verified.st_size, "sha256": checksum}
         atomic_json(receipt_path, receipts)

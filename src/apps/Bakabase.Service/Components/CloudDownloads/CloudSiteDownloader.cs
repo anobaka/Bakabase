@@ -113,8 +113,9 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
 
     protected override async Task StartCore(DownloadTask task, CancellationToken ct)
     {
+        var siteId = task.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
         using var fileIo = FileIoObservationScope.Enter(services.GetService<IFileIoObservationProvider>(),
-            new("downloadTask", task.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            new("downloadTask", siteId), "site:" + siteId);
         Volatile.Write(ref _transferProgress, null);
         Action<long, long?>? reportSpeed = null;
         var request = JsonSerializer.Deserialize<CloudDownloadRequest>(task.Options ?? "", JsonSerializerOptions.Web)

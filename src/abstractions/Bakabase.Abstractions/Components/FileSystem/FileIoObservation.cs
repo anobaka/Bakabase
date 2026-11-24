@@ -151,13 +151,17 @@ public static class FileIoObservationScope
 {
     private static readonly AsyncLocal<Context?> Current = new();
 
-    public static IDisposable? Enter(IFileIoObservationProvider? provider, StorageWriteContext? owner)
+    public static IDisposable? Enter(IFileIoObservationProvider? provider, StorageWriteContext? owner, string? networkDownloadId = null)
     {
         var previous = Current.Value;
         if (owner is null || provider is null && previous is null) return null;
         provider ??= previous!.Provider;
-        if (previous is not null && ReferenceEquals(previous.Provider, provider) && previous.Owner == owner) return null;
-        Current.Value = new(provider, owner);
+        if (previous is not null && ReferenceEquals(previous.Provider, provider) && previous.Owner == owner)
+        {
+            networkDownloadId ??= previous.NetworkDownloadId;
+            if (networkDownloadId == previous.NetworkDownloadId) return null;
+        }
+        Current.Value = new(provider, owner, networkDownloadId);
         return new Scope(previous);
     }
 
@@ -180,8 +184,9 @@ public static class FileIoObservationScope
         Current.Value is null ? Enter(provider, owner) : null;
 
     public static bool Active => Current.Value is not null;
+    public static string? NetworkDownloadId => Current.Value?.NetworkDownloadId;
 
-    private sealed record Context(IFileIoObservationProvider Provider, StorageWriteContext Owner);
+    private sealed record Context(IFileIoObservationProvider Provider, StorageWriteContext Owner, string? NetworkDownloadId);
 
     private sealed class Scope(Context? previous) : IDisposable
     {

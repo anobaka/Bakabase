@@ -808,15 +808,16 @@ class BridgeTests(unittest.TestCase):
             session = OriginalRanges(original)
             events = []
             with patch.object(bridge, 'emit', events.append), patch.object(bridge.time, 'monotonic', return_value=0):
-                bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None, observe_file_io=True)
+                bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None, observe_file_io=True, observe_network=True)
             self.assertEqual(original, part.read_bytes())
             self.assertEqual([{'type': 'fileIo', 'state': 'opened'},
                               {'type': 'fileIo', 'state': 'written', 'writtenBytes': 70007},
-                              {'type': 'fileIo', 'state': 'closed'}], events)
+                              {'type': 'fileIo', 'state': 'closed'}], [e for e in events if e['type'] == 'fileIo'])
 
+            self.assertEqual([70000, 7], [event['receivedBytes'] for event in events if event['state'] == 'received'])
             events.clear()
             with patch.object(bridge, 'emit', events.append):
-                bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None)
+                bridge.http_original(session, session.entry, part, 'pixeldrain', lambda *_: None, observe_network=True)
             self.assertEqual([], events)
 
     def test_payload_file_io_flushes_before_a_transfer_error_and_skips_unopened_files(self):
@@ -829,23 +830,37 @@ class BridgeTests(unittest.TestCase):
             events = []
             with patch.object(bridge, 'emit', events.append), patch.object(bridge.time, 'monotonic', return_value=0):
                 with self.assertRaises(ConnectionError):
-                    bridge.http_original(session, entry, part, 'pixeldrain', lambda *_: None, observe_file_io=True)
+                    bridge.http_original(session, entry, part, 'pixeldrain', lambda *_: None, observe_file_io=True, observe_network=True)
                 self.assertEqual(b'abc', part.read_bytes())
                 self.assertEqual([{'type': 'fileIo', 'state': 'opened'},
                                   {'type': 'fileIo', 'state': 'written', 'writtenBytes': 1},
-                                  {'type': 'fileIo', 'state': 'closed'}], events)
+                                  {'type': 'fileIo', 'state': 'closed'}], [e for e in events if e['type'] == 'fileIo'])
+                self.assertEqual([1], [event['receivedBytes'] for event in events if event['state'] == 'received'])
 
                 events.clear()
                 with self.assertRaises(FileNotFoundError):
                     bridge.http_original(session, entry, Path(temp) / 'missing' / 'file.part', 'pixeldrain',
-                                         lambda *_: None, observe_file_io=True)
+                                         lambda *_: None, observe_file_io=True, observe_network=True)
                 self.assertEqual([], events)
+
+    def test_network_observation_counts_retried_remote_ranges_that_require_no_local_write(self):
+        import io
+        body = b'already-matching-local-content'
+        session = OriginalRanges(body)
+        events = []
+        with patch.object(bridge, 'emit', events.append):
+            for attempt in range(2):
+                patches = bridge.read_repair_patches(session, session.entry, io.BytesIO(body), [(2, 5)], True,
+                                                    observe_network=True)
+                self.assertEqual([], patches)
+        self.assertEqual([5, 5], [event['receivedBytes'] for event in events if event['state'] == 'received'])
+        self.assertTrue(all(event['type'] == 'networkReceive' for event in events))
 
     def test_payload_file_io_reports_at_byte_and_time_boundaries(self):
         now = [0]
         events = []
         with patch.object(bridge, 'emit', events.append), patch.object(bridge.time, 'monotonic', side_effect=lambda: now[0]):
-            with bridge.PayloadWriteObservation() as observation:
+            with bridge.PayloadByteObservation("fileIo", "written", "writtenBytes") as observation:
                 observation.start()
                 observation.add(16 * 1024 * 1024)
                 observation.add(1)

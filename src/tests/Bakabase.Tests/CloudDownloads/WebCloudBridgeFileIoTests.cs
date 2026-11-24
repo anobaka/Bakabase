@@ -13,7 +13,7 @@ public sealed class WebCloudBridgeFileIoTests
     {
         var provider = new FileIoObservationProvider();
         using var scope = FileIoObservationScope.Enter(provider, new("downloadTask", "test-task"));
-        using var writes = new WebCloudProvider.BridgeFileWriteObservation();
+        using var writes = WebCloudProvider.ObserveFileWrites();
 
         Record(writes, """{"state":"written","writtenBytes":28}""");
         Assert.AreEqual(0, provider.Drain().Count);
@@ -47,6 +47,25 @@ public sealed class WebCloudBridgeFileIoTests
     }
 
     [TestMethod]
+    public void Network_payload_is_attributed_to_its_site_once_across_retries()
+    {
+        var provider = new FileIoObservationProvider();
+        using var scope = FileIoObservationScope.Enter(provider, new("downloadTask", "71"), "site:71");
+        using var receives = WebCloudProvider.ObserveNetworkReceives(FileIoObservationScope.NetworkDownloadId!);
+        Record(receives, """{"state":"opened"}""");
+        Record(receives, """{"state":"received","receivedBytes":14}""");
+        Record(receives, """{"state":"received","receivedBytes":14}""");
+        Record(receives, """{"state":"closed"}""");
+        Record(receives, """{"state":"opened"}""");
+        Record(receives, """{"state":"received","receivedBytes":4}""");
+        Record(receives, """{"state":"closed"}""");
+        var sample = provider.Drain().Single();
+        Assert.AreEqual(new FileIoObservationSample("downloadTask", "71", 0, 0, false, false,
+            NetworkReceivedBytes: 18, NetworkObserved: true, NetworkDownloadId: "site:71"), sample);
+        Assert.AreEqual(0, provider.Drain().Count);
+    }
+
+    [TestMethod]
     [DataRow("pixeldrain", null, true, true)]
     [DataRow("gofile", null, true, true)]
     [DataRow("googleDrive", null, true, false)]
@@ -57,13 +76,14 @@ public sealed class WebCloudBridgeFileIoTests
         var source = new CloudSource {Id = "source", ProviderId = type, Url = "https://example.invalid/share"};
         var request = new CloudDownloadRequest("operation", source, null, null, Path.GetTempPath());
         using var json = JsonDocument.Parse(WebCloudProvider.SerializeRequest(type, request, Path.GetTempPath(), null,
-            mode: mode, observeFileIo: enabled));
+            mode: mode, observeFileIo: enabled, observeNetwork: enabled));
 
         Assert.AreEqual(expected, json.RootElement.TryGetProperty("observeFileIo", out var observe));
-        if (expected) Assert.IsTrue(observe.GetBoolean());
+        Assert.AreEqual(expected, json.RootElement.TryGetProperty("observeNetwork", out var network));
+        if (expected) Assert.IsTrue(observe.GetBoolean() && network.GetBoolean());
     }
 
-    private static void Record(WebCloudProvider.BridgeFileWriteObservation writes, string json)
+    private static void Record<T>(WebCloudProvider.BridgeByteObservation<T> writes, string json) where T : class, IDisposable
     {
         using var document = JsonDocument.Parse(json);
         writes.Record(document.RootElement);

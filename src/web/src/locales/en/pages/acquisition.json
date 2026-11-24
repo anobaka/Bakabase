@@ -6,7 +6,7 @@
   "acquisition.throughput.taskChart": "Download and file I/O rates for task #{{id}}",
   "acquisition.throughput.window": "All acquisition tasks · Last {{count}} minutes",
   "acquisition.throughput.sampledAt": "Last sample {{time}}",
-  "acquisition.throughput.logicalIo": "File rates measure task I/O, including cached reads and writes. I/O from external archive tools may be estimated.",
+  "acquisition.throughput.logicalIo": "Measured downloads use bytes received over the last 5 seconds. Other downloads use the provider’s rate. Task I/O includes cache access and may be estimated for external download and extraction tools.",
   "acquisition.throughput.legend": "≥ marks downloads with partial coverage. * marks partial or estimated file I/O. Triangles identify these samples. Gaps indicate missing data.",
   "acquisition.throughput.partialDownload": "Some download sources are measured",
   "acquisition.throughput.partialIo": "Partially measured or estimated file I/O",

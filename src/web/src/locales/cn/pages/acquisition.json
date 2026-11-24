@@ -6,7 +6,7 @@
   "acquisition.throughput.taskChart": "任务 #{{id}} 的下载和文件读写速度趋势",
   "acquisition.throughput.window": "所有获取任务 · 最近 {{count}} 分钟",
   "acquisition.throughput.sampledAt": "上次采样 {{time}}",
-  "acquisition.throughput.logicalIo": "文件读写速度按任务统计，包含缓存读写。外部解压工具的读写量可能采用估算。",
+  "acquisition.throughput.logicalIo": "能测到的下载按最近 5 秒实收字节计算，其余取渠道上报值。任务文件读写含缓存，外部下载和解压工具的读写量可能采用估算。",
   "acquisition.throughput.legend": "≥ 表示下载只统计到部分来源，* 表示文件读写仅部分可测或含估算。曲线上的三角标记表示这些采样，空缺表示未采到数据。",
   "acquisition.throughput.partialDownload": "部分下载来源已计入",
   "acquisition.throughput.partialIo": "文件读写部分可测或含估算",
