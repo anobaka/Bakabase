@@ -74,6 +74,31 @@ public sealed class AcquisitionThroughputDownloadSourceTests
     }
 
     [TestMethod]
+    public async Task Metered_payload_replaces_only_its_physical_speed_and_preserves_short_finished_downloads()
+    {
+        var active = await Owner(WorkflowRunStatus.Running, "download.awaitCompletion");
+        var finished = await Owner(WorkflowRunStatus.Success, "files.publish");
+        _reader.Rows = [
+            Transfer("http:metered", null, active.Run, "running", 1000),
+            Transfer("bt:other", null, active.Run, "running", 70)
+        ];
+        FileIoObservationSample Receipt(string download, string kind, string owner, int bytes) =>
+            new(kind, owner, 0, 0, false, false, NetworkReceivedBytes: bytes, NetworkObserved: true,
+                NetworkDownloadId: download);
+        FileIoObservationSample[] io = [
+            Receipt("http:metered", "workflow", active.Run.ToString(), 150),
+            Receipt("http:short", "workflow", finished.Run.ToString(), 100),
+            Receipt("http:independent", "independentDownload", "unowned", 5000)
+        ];
+        var source = new AcquisitionThroughputDownloadSource(_db, _reader, new Clock(_at));
+        var measured = AcquisitionThroughputSampler.Measure(await source.ReadAsync(io, default), io, 5);
+        Assert.AreEqual(2, measured.Count);
+        Assert.AreEqual(100d, measured.Single(t => t.TaskId == active.Task).Rates.DownloadBytesPerSecond);
+        Assert.AreEqual(20d, measured.Single(t => t.TaskId == finished.Task).Rates.DownloadBytesPerSecond);
+        Assert.AreEqual(120d, AcquisitionThroughputSampler.Total(measured).DownloadBytesPerSecond);
+    }
+
+    [TestMethod]
     public async Task Last_window_resolves_real_owners_without_attaching_independent_or_ambiguous_native_jobs()
     {
         var first = await Owner(WorkflowRunStatus.Success, "files.publish");

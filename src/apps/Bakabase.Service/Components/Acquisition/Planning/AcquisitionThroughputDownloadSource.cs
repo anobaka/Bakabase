@@ -91,7 +91,7 @@ public sealed class AcquisitionThroughputDownloadSource(BakabaseDbContext db, IA
         var busy = runs.Where(r => r.Status == WorkflowRunStatus.Running && r.NodeKind != "download.awaitCompletion")
             .Select(r => r.TaskId).ToHashSet();
         var queued = runs.Where(r => r.Status == WorkflowRunStatus.Pending).Select(r => r.TaskId).ToHashSet();
-        var rates = new Dictionary<int, List<double?>>();
+        var rates = new Dictionary<string, (int TaskId, double? Speed)>(StringComparer.Ordinal);
         var now = (time ?? TimeProvider.System).GetUtcNow();
         foreach (var leaf in physical)
         {
@@ -109,9 +109,8 @@ public sealed class AcquisitionThroughputDownloadSource(BakabaseDbContext db, IA
             busy.Add(origin.TaskId);
             if (leaf.Status == "stopping" || leaf.Stage is "Verifying" or "VerifyingSource" or "VerifyingLocalFiles" or "Checking" or "Saving")
                 continue;
-            if (!rates.TryGetValue(origin.TaskId, out var taskRates)) rates[origin.TaskId] = taskRates = [];
             var age = now - leaf.ObservedAt;
-            taskRates.Add(leaf.ProblemCode == null && age >= TimeSpan.Zero && age <= TimeSpan.FromSeconds(15) &&
+            rates[leaf.Id] = (origin.TaskId, leaf.ProblemCode == null && age >= TimeSpan.Zero && age <= TimeSpan.FromSeconds(15) &&
                 leaf.SpeedBytesPerSecond is {} speed && double.IsFinite(speed) && speed >= 0 ? speed : null);
         }
 
@@ -145,12 +144,33 @@ public sealed class AcquisitionThroughputDownloadSource(BakabaseDbContext db, IA
             };
             if (task.HasValue) fileOwners[key] = task.Value;
         }
-        var visible = busy.Concat(queued).Concat(fileOwners.Values).ToHashSet();
+        // Each physical transfer has one measurement. A byte receipt survives completion, unlike
+        // a provider speed, and takes precedence over the speed of that same transfer only.
+        var received = new Dictionary<string, (int TaskId, long Bytes)>(StringComparer.Ordinal);
+        foreach (var stream in io.Where(s => s.NetworkObserved && s.NetworkDownloadId != null)
+                     .GroupBy(s => s.NetworkDownloadId!))
+        {
+            int taskId;
+            if (origins.TryGetValue(stream.Key, out var primary)) taskId = primary.TaskId;
+            else
+            {
+                var mapped = stream.Select(s => (s.OwnerKind, s.OwnerId)).Where(fileOwners.ContainsKey)
+                    .Select(key => fileOwners[key]).Distinct().ToArray();
+                if (mapped.Length != 1) continue;
+                taskId = mapped[0];
+            }
+            received[stream.Key] = (taskId, stream.Sum(s => s.NetworkReceivedBytes));
+        }
+        var speedsByTask = rates.Where(r => !received.ContainsKey(r.Key))
+            .ToLookup(r => r.Value.TaskId, r => r.Value.Speed);
+        var bytesByTask = received.Values.GroupBy(r => r.TaskId).ToDictionary(g => g.Key, g => g.Sum(r => r.Bytes));
+        var visible = busy.Concat(queued).Concat(fileOwners.Values).Concat(bytesByTask.Keys).ToHashSet();
         var tasks = await db.AcquisitionTasks.AsNoTracking().Where(t => t.DeletedAt == null && visible.Contains(t.Id))
             .OrderBy(t => t.Id).Select(t => new {t.Id, t.Title}).ToListAsync(ct);
         visible = tasks.Select(t => t.Id).ToHashSet();
         return new(tasks.Select(t => new AcquisitionThroughputOwner(t.Id, t.Title, busy.Contains(t.Id),
-            rates.GetValueOrDefault(t.Id) ?? [])).ToArray(), fileOwners.Where(o => visible.Contains(o.Value)).ToDictionary());
+            speedsByTask[t.Id].ToArray(), bytesByTask.TryGetValue(t.Id, out var bytes) ? bytes : null)).ToArray(),
+            fileOwners.Where(o => visible.Contains(o.Value)).ToDictionary());
     }
 
     private static int? PositiveId(string value) => int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var id) && id > 0 ? id : null;
