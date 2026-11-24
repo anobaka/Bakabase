@@ -202,6 +202,10 @@ internal static class AuthorizedArchiveDetection
                Regex.IsMatch(file, @"\.[rz]\d{2,}$", RegexOptions.IgnoreCase);
     }
 
+    internal static bool IsDeliveryFileName(string fileName) => Deliveries.Contains(Path.GetExtension(fileName));
+
+    internal static bool IsArchiveFileName(string fileName) => Containers.Contains(Path.GetExtension(fileName));
+
     internal static async Task<string?> SignatureAsync(string file, CancellationToken ct)
     {
         var header = new byte[8]; var count = 0;

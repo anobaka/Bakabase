@@ -123,8 +123,16 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         return false;
     }
 
+    internal static bool InspectUnprocessedArchives(FileProcessingPlan plan, AcquisitionPlanArtifactInput? input,
+        bool explicitlyKeepFiles) =>
+        !explicitlyKeepFiles && plan is {Requirement: "notRequired", Steps.Count: 0} &&
+        (input == null || input.ManualDownload == true);
+
     private static FileArtifactDeliveryAssessmentConfig InlineReviewConfig(AcquisitionPlanProcessingConfig config) =>
-        new(config.TargetId, AutoContinueOuterPackaging: false, ExtractionLayout: config.ExtractionLayout);
+        new(config.TargetId, AutoContinueOuterPackaging: false, ExtractionLayout: config.ExtractionLayout)
+        {
+            InspectUnprocessedArchives = InspectUnprocessedArchives(config.Plan, config.ContinueFrom, config.ExplicitlyKeepFiles)
+        };
 
     private static async Task<WorkflowItemOutcome> CompleteProcessing(WorkflowExecutionContext ctx, DownloadWorkset workset,
         CloudDownloadTarget target, AcquisitionPlanProcessingConfig config, FileProcessingPlan plan, ArtifactRecord? artifact, CancellationToken ct)
@@ -152,16 +160,21 @@ public sealed class AcquisitionPlanProcessingActivity : IResumableWorkflowActivi
         var result = Replace(workset, target);
         if (target.PublishedArtifactId != null || !NeedsInlineReview(ctx, result, config))
             return WorkflowItemOutcome.ReplaceWith(result);
-        var checkUnprocessedMedia = config.ContinueFrom == null && plan.Requirement == "notRequired" &&
-            target.DeliveryReview?.Accepted != true && artifact != null &&
-            (await FileArtifactDeliveryAssessment.DisguisedVideoArchivesAsync(artifact, ct)).Count > 0;
-        if (!checkUnprocessedMedia && !plan.Steps.Any(s => s.Op == "extractArchive"))
-            return WorkflowItemOutcome.ReplaceWith(result);
+        var reviewConfig = InlineReviewConfig(config);
+        if (!plan.Steps.Any(s => s.Op == "extractArchive"))
+        {
+            if (!reviewConfig.InspectUnprocessedArchives || plan.Requirement != "notRequired" ||
+                target.DeliveryReview?.Accepted == true || artifact == null)
+                return WorkflowItemOutcome.ReplaceWith(result);
+            var assessment = await FileArtifactDeliveryAssessment.AssessAsync(artifact, ct, inspectUnprocessedArchives: true);
+            return assessment.Files.Count == 0 ? WorkflowItemOutcome.ReplaceWith(result) :
+                await AssessFileArtifactDeliveryActivity.ReviewAsync(ctx, result, reviewConfig, null, ct, (artifact, assessment));
+        }
         // The shared assessor handles mixed/large unknown results and finished applications
         // as well as a single signed archive. Narrowing this gate to a confirmed single group
         // would silently publish other unfinished outputs. Legacy review grants no new AI or
         // recursive extraction authority; uncertainty waits for the normal user response.
-        return await AssessFileArtifactDeliveryActivity.ReviewAsync(ctx, result, InlineReviewConfig(config), null, ct);
+        return await AssessFileArtifactDeliveryActivity.ReviewAsync(ctx, result, reviewConfig, null, ct);
     }
 
     // A published artifact selected for delivery as-is is already the finished input.

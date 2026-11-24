@@ -36,7 +36,11 @@ public sealed record FileArtifactDeliveryAssessmentConfig(string TargetId, bool 
     int MaxAdaptiveIterations = 3,
     string? AdaptiveContext = null,
     [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
-    bool RequiresAdaptiveDecision = false);
+    bool RequiresAdaptiveDecision = false)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool InspectUnprocessedArchives { get; init; }
+}
 
 /// <summary>Explicit final check: never transparent to upstream artifact demand planning.</summary>
 public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActivity
@@ -190,7 +194,8 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
     }
 
     internal static async Task<WorkflowItemOutcome> ReviewAsync(WorkflowExecutionContext ctx, DownloadWorkset workset,
-        FileArtifactDeliveryAssessmentConfig config, FileArtifactDeliverySignal? answer, CancellationToken ct)
+        FileArtifactDeliveryAssessmentConfig config, FileArtifactDeliverySignal? answer, CancellationToken ct,
+        (ArtifactRecord Input, FileArtifactDeliveryAssessment.Assessment Result)? observed = null)
     {
         using var writeScope = StorageWriteScope.Enter(new("workflow", ctx.RunId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         var target = workset.Targets.Single(t => t.Id == config.TargetId);
@@ -237,7 +242,10 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
 
         if (review == null)
         {
-            var assessment = await FileArtifactDeliveryAssessment.AssessAsync(input, ct, extractionWasReviewed: wasExtracted);
+            var assessment = !wasExtracted && observed is { } same && same.Input.Id == input.Id &&
+                same.Input.Fingerprint == input.Fingerprint ? same.Result :
+                await FileArtifactDeliveryAssessment.AssessAsync(input, ct, extractionWasReviewed: wasExtracted,
+                    inspectUnprocessedArchives: config.InspectUnprocessedArchives);
             if (assessment.Files.Count == 0) return WorkflowItemOutcome.ReplaceWith(workset);
             var inherited = input.Kind == "processedFiles" && input.MetadataJson != null
                 ? JsonSerializer.Deserialize<FileArtifactProcessingMetadata>(input.MetadataJson, WorkflowJson.Options)?.InheritedExtractionLayout : null;
@@ -274,7 +282,8 @@ public sealed class AssessFileArtifactDeliveryActivity : IResumableWorkflowActiv
         if (review.PlanJson == null || review.Intent == null)
         {
             var reassessment = await FileArtifactDeliveryAssessment.AssessAsync(input, ct,
-                extractionWasReviewed: true);
+                extractionWasReviewed: wasExtracted || !config.InspectUnprocessedArchives,
+                inspectUnprocessedArchives: config.InspectUnprocessedArchives);
             if (reassessment.Files.Count == 0)
             {
                 return WorkflowItemOutcome.ReplaceWith(Replace(workset, target with

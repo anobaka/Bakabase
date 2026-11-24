@@ -158,6 +158,8 @@ public static class AcquisitionPlanCompiler
         foreach (var part in plan.Parts.Where(p => !plan.PublishRetainedFiles &&
                      (Processing(p).Steps.Any(s => s.Op == "extractArchive") ||
                       Processing(p).Requirement == "unknown" || p.ContinueFrom != null && Adaptive(plan, p))))
+        {
+            var processing = Processing(part);
             nodes.Add(new() {NodeId = part.Id + ".assessDelivery", Kind = AssessFileArtifactDeliveryActivity.ActivityKind,
                 ConfigJson = JsonSerializer.Serialize(new FileArtifactDeliveryAssessmentConfig(part.Id,
                     ExtractionLayout: plan.ExtractionLayout,
@@ -165,7 +167,12 @@ public static class AcquisitionPlanCompiler
                     RequiresAdaptiveDecision: part.UseAdaptiveAssessment == true,
                     MaxAdaptiveIterations: Math.Clamp(plan.AdaptiveFileProcessingMaxIterations, 1,
                         AdaptiveFileProcessingAssessmentService.MaxCallsPerTask),
-                    AdaptiveContext: plan.AdaptiveFileProcessingContext), WorkflowJson.Options)});
+                    AdaptiveContext: plan.AdaptiveFileProcessingContext)
+                    {
+                        InspectUnprocessedArchives = AcquisitionPlanProcessingActivity.InspectUnprocessedArchives(
+                            processing, part.ContinueFrom, ExplicitlyKeepsFiles(part, processing))
+                    }, WorkflowJson.Options)});
+        }
         var targetDirectories = plan.Parts.ToDictionary(p => p.Id, p =>
             plan.StageDirectories?.Parts.GetValueOrDefault(p.Id)?.Delivery is {BindingId: not null} binding
                 ? binding.Directory : plan.DeliveryLayout?.PartDirectories.GetValueOrDefault(p.Id));
@@ -221,6 +228,9 @@ public static class AcquisitionPlanCompiler
     private static bool Adaptive(AcquisitionPlan plan, AcquisitionPlanPart part) =>
         part.UseAdaptiveAssessment ?? plan.AdaptiveFileProcessing;
 
+    private static bool ExplicitlyKeepsFiles(AcquisitionPlanPart part, FileProcessingPlan processing) =>
+        processing.Requirement == "notRequired" && (part.UseAdaptiveAssessment == false || part.AppliedProcessingRevisionId != null);
+
     private static WorkflowRunPlanNode Node(AcquisitionPlan plan, AcquisitionPlanPart part, string? stepId, FileProcessingPlan processing) => new()
     {
         NodeId = part.Id + ".process." + (stepId == null ? "confirm" : CloudOperationService.Key(stepId)[..16]),
@@ -230,8 +240,7 @@ public static class AcquisitionPlanCompiler
         ConfigJson = JsonSerializer.Serialize(new AcquisitionPlanProcessingConfig(part.Id, processing, stepId, part.ContinueFrom, Policy(plan, part), plan.ExtractionLayout,
             UseVerifiedInput: part.ContinueFrom != null && (part.UseAdaptiveAssessment == true ||
                 part.UseAdaptiveAssessment == false && processing.Requirement == "notRequired"),
-            ExplicitlyKeepFiles: processing.Requirement == "notRequired" &&
-                (part.UseAdaptiveAssessment == false || part.AppliedProcessingRevisionId != null)), WorkflowJson.Options),
+            ExplicitlyKeepFiles: ExplicitlyKeepsFiles(part, processing)), WorkflowJson.Options),
         ParameterBindings = plan.StoragePolicy == null ? [] : ArtifactWorkflowParameters.Bindings(part.StoragePolicy)
     };
 

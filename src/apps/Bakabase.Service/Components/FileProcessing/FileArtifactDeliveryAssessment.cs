@@ -72,9 +72,9 @@ internal static class FileArtifactDeliveryAssessment
         (await AssessAsync(artifact, ct, extractionWasReviewed)).Files;
 
     internal static async Task<Assessment> AssessAsync(ArtifactRecord artifact,
-        CancellationToken ct, bool extractionWasReviewed = false)
+        CancellationToken ct, bool extractionWasReviewed = false, bool inspectUnprocessedArchives = false)
     {
-        var result = await AssessPackagingAsync(artifact, ct, extractionWasReviewed);
+        var result = await AssessPackagingAsync(artifact, ct, extractionWasReviewed, inspectUnprocessedArchives);
         var retained = RetainedArchiveFiles(artifact);
         if (retained.Count == 0) return result;
         // Keep actionable packaging candidates visible alongside the retained original.
@@ -94,12 +94,13 @@ internal static class FileArtifactDeliveryAssessment
     }
 
     private static async Task<Assessment> AssessPackagingAsync(ArtifactRecord artifact,
-        CancellationToken ct, bool extractionWasReviewed)
+        CancellationToken ct, bool extractionWasReviewed, bool inspectUnprocessedArchives)
     {
         // Structure proves packaging, not whether it should be extracted or with which password.
         var wrappers = await DisguisedVideoArchivesAsync(artifact, ct);
         if (wrappers.Count > 0) return new(wrappers);
-        if (artifact.Kind is not ("processedFiles" or "publishedFiles") || artifact.Manifest.Entries.Count == 0)
+        if (artifact.Manifest.Entries.Count == 0 || artifact.Kind is not ("processedFiles" or "publishedFiles") &&
+            (!inspectUnprocessedArchives || artifact.Kind != AcquisitionCurrentDirectoryFiles.Kind))
             return new([]);
         var metadata = artifact.MetadataJson;
         if (artifact.Kind == "publishedFiles")
@@ -107,15 +108,16 @@ internal static class FileArtifactDeliveryAssessment
             try { metadata = JsonSerializer.Deserialize<FileArtifactPublicationMetadata>(metadata ?? "{}", WorkflowJson.Options)?.SourceMetadataJson; }
             catch (JsonException) { return new(artifact.Manifest.Entries.Select(e => e.RelativePath).Take(MaximumFiles).ToArray(), Uncertain: true); }
         }
-        if (!extractionWasReviewed && !HasExecutedExtraction(metadata)) return new([]);
+        if (artifact.Manifest.Entries.Any(e => ApplicationFormats.Contains(Path.GetExtension(e.RelativePath)))) return new([]);
+        if (!extractionWasReviewed && !HasExecutedExtraction(metadata))
+            return new(inspectUnprocessedArchives ? await ReviewArchiveHeadersAsync(artifact, ct, unprocessed: true) : []);
         var relativeFiles = artifact.Manifest.Entries.Select(e => e.RelativePath).ToArray();
-        if (relativeFiles.Any(f => ApplicationFormats.Contains(Path.GetExtension(f)))) return new([]);
         var unclassifiedFiles = relativeFiles.Where(f => !FinishedFormats.Contains(Path.GetExtension(f))).ToArray();
         // No external probes or directory discovery. Large/unknown sets never acquire automatic
         // extraction authority simply because their names resemble compressed files.
         if (relativeFiles.Length > MaximumFiles)
         {
-            var wrappersToReview = await ReviewNamedArchiveCarriersAsync(artifact, ct);
+            var wrappersToReview = await ReviewArchiveHeadersAsync(artifact, ct);
             if (wrappersToReview.Count > 0)
                 return new(wrappersToReview.Concat(unclassifiedFiles).Take(MaximumFiles).ToArray(), Uncertain: true);
             return await IsFinishedResultAsync(artifact, ct) ? new([]) :
@@ -165,10 +167,15 @@ internal static class FileArtifactDeliveryAssessment
         return Path.GetExtension(Path.GetFileNameWithoutExtension(name)).ToLowerInvariant() is ".zip" or ".rar" or ".7z";
     }
 
-    private static async Task<IReadOnlyList<string>> ReviewNamedArchiveCarriersAsync(ArtifactRecord artifact, CancellationToken ct)
+    private static async Task<IReadOnlyList<string>> ReviewArchiveHeadersAsync(ArtifactRecord artifact, CancellationToken ct,
+        bool unprocessed = false)
     {
         var entries = artifact.Manifest.Entries;
-        var candidates = Enumerable.Range(0, entries.Count).Where(i => IsNamedArchiveCarrier(entries[i].RelativePath))
+        bool MayContainArchive(ArtifactManifestEntry entry) => unprocessed
+            ? !AuthorizedArchiveDetection.IsDeliveryFileName(entry.RelativePath) && (entries.Count <= MaximumFiles ||
+                AuthorizedArchiveDetection.IsArchiveFileName(entry.RelativePath) || IsNamedArchiveCarrier(entry.RelativePath))
+            : IsNamedArchiveCarrier(entry.RelativePath);
+        var candidates = Enumerable.Range(0, entries.Count).Where(i => MayContainArchive(entries[i]))
             .Take(MaximumCompanionProbeFiles + MaximumFiles).ToList();
         if (candidates.Count == 0) return [];
         var paths = ArtifactManifestFiles.ResolveFiles(artifact.RootDirectory, artifact.Manifest);
@@ -200,7 +207,7 @@ internal static class FileArtifactDeliveryAssessment
         }
         // Missing or uninspected candidates can require a generic review, but only an observed
         // header is labelled with a format by the prompt. Neither case authorizes extraction.
-        return confirmed.Concat(unresolved).Take(MaximumFiles).ToArray();
+        return unprocessed ? confirmed : confirmed.Concat(unresolved).Take(MaximumFiles).ToArray();
     }
 
     private static async Task<(bool Checked, string? Signature)> ReadRegisteredHeaderAsync(

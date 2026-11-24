@@ -41,6 +41,7 @@ public class PostDownloadInfoExtractor(ILlmService llmService, ILogger<PostDownl
         组id不超过80字符，title不超过160字符，summary不超过500字符，最多128组，每组最多8条不超过300字符的evidence。
         每个资源下载后的文件处理指令(resource.extraction，字段名为兼容保留)：{ "requirement":"required|notRequired|unknown", "steps":[], "evidence":[] }。
         仅在明确下载后无需任何文件处理时使用notRequired，未提及或无法判断使用unknown。需要改后缀、重命名、移动、解压中任一操作时使用required。纯文件改名或移动可以没有解压；下载物为压缩包时不能省略取得包内文件所需的解压步骤。
+        原帖说明的内容格式可能是包内文件的格式。仅列出最终格式、后缀或播放方式，不能据此判断下载链接直接提供成品；下载外层和处理要求不明时使用unknown。
         steps是有序操作数组，每步结构为{id,op,input,selector,extension,password,targetName,targetDirectory,findText,replaceText}。
         op仅允许renameExtension、renameFile、renameLiteral、moveFile或extractArchive；input为download或任意先前步骤的id；id唯一。
         若重命名或移动的目标在下载压缩包内部，先extractArchive，再让后续步骤input引用解压步骤的产物。input=download只指下载到的文件，不能直接选中尚未解包的内部文件。
