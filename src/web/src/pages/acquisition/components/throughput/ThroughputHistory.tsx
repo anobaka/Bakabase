@@ -167,12 +167,19 @@ export default function ThroughputHistory({
   const last = trend.ticks[trend.ticks.length - 1];
   if (!latest || !last) return <p>{t("acquisition.throughput.noSamples")}</p>;
   const ids = [...trend.titles.keys()].sort((a, b) => a - b);
-  if (!ids.length)
+  if (!ids.length) {
+    const emptyState =
+      trend.idleSamples === 0
+        ? "unobservedWindow"
+        : trend.idleSamples < trend.ticks.length
+          ? "incompleteWindow"
+          : "empty";
     return (
       <p className="py-4 text-center text-sm text-default-500">
-        {t("acquisition.throughput.empty")}
+        {t(`acquisition.throughput.${emptyState}`)}
       </p>
     );
+  }
   const end = sampleTime(latest);
 
   return (

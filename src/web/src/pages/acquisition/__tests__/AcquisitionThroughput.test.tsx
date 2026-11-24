@@ -11,6 +11,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import AcquisitionThroughput from "../components/throughput";
+import ThroughputHistory from "../components/throughput/ThroughputHistory";
 import useAcquisitionThroughput from "../components/throughput/useAcquisitionThroughput";
 import {
   formatRate,
@@ -182,4 +183,33 @@ it("keeps the last measured window through disconnect and retries without overla
   expect(getThroughput.mock.calls[getThroughput.mock.calls.length - 1][1].signal.aborted).toBe(
     true,
   );
+});
+
+it("distinguishes missing telemetry from idle and covers mixed and skipped sampling intervals", () => {
+  const missing = { ...sample(0), totals: { downloadPartial: true, fileIoPartial: true } };
+  const idle = {
+    ...sample(-5),
+    totals: {
+      downloadBytesPerSecond: 0,
+      readBytesPerSecond: 0,
+      writeBytesPerSecond: 0,
+      downloadPartial: false,
+      fileIoPartial: false,
+    },
+  };
+  const snapshot = { latest: missing, history: [missing], intervalSeconds: 5, windowSeconds: 300 };
+  const page = render(<ThroughputHistory snapshot={snapshot} current />);
+  expect(screen.getByText("acquisition.throughput.unobservedWindow")).toBeTruthy();
+  expect(screen.queryByText("acquisition.throughput.empty")).toBeNull();
+  page.rerender(<ThroughputHistory snapshot={{ ...snapshot, history: [idle, missing] }} current />);
+  expect(screen.getByText("acquisition.throughput.incompleteWindow")).toBeTruthy();
+  const later = { ...idle, sampledAt: sample(10).sampledAt };
+  page.rerender(
+    <ThroughputHistory snapshot={{ ...snapshot, latest: later, history: [idle, later] }} current />,
+  );
+  expect(screen.getByText("acquisition.throughput.incompleteWindow")).toBeTruthy();
+  page.rerender(
+    <ThroughputHistory snapshot={{ ...snapshot, latest: idle, history: [idle] }} current />,
+  );
+  expect(screen.getByText("acquisition.throughput.empty")).toBeTruthy();
 });

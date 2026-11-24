@@ -56,6 +56,7 @@ export function taskTrends(samples: Sample[], intervalSeconds: number) {
   const ticks: { time: number; tasks: Map<number, Rates | undefined> }[] = [];
   const titles = new Map<number, string>();
   let previous: number | undefined;
+  let idleSamples = 0;
 
   for (const [time, sample] of byTime) {
     // An absent bucket means a gap in observation, even if both adjacent buckets have data.
@@ -67,9 +68,16 @@ export function taskTrends(samples: Sample[], intervalSeconds: number) {
       tasks.set(task.taskId, task.rates ?? undefined);
       titles.set(task.taskId, task.title?.trim() || titles.get(task.taskId) || "");
     }
+    // An unobserved bucket also has no task rows. Only a fully measured zero
+    // sample is evidence that nothing was active during that interval.
+    if (
+      !tasks.size &&
+      metrics.every(({ key }) => rate(sample.totals, key) === 0 && !partial(sample.totals, key))
+    )
+      idleSamples++;
     ticks.push({ time, tasks });
     previous = time;
   }
 
-  return { ticks, titles };
+  return { ticks, titles, idleSamples };
 }
