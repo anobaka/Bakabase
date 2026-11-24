@@ -424,24 +424,11 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                 foreach (var directory in directories) if (guardDirectory != null) await guardDirectory(directory);
                 authorizationStamp = Hash(directories);
             }
-            var preferCurrentStorage = false;
-            // Adoption starts a new revision from the original download. A later local cursor
-            // must retain the current attempt, including the user's confirmed processing plan.
-            if (plans != null && run != null && AcquisitionLocalFilesRecoveryReceipt.Awaiting(run))
-            {
-                var currentStorage = plans.CaptureLocalFilesStorage(task);
-                preferCurrentStorage = plan.DeliveryLayout == null ||
-                    !ArtifactManifestFiles.PathComparer.Equals(plan.DeliveryLayout.RootDirectory, currentStorage.Delivery.RootDirectory) ||
-                    plan.Parts.Any(p => !ArtifactManifestFiles.PathComparer.Equals(
-                        ArtifactStoragePolicies.Resolve(plan.StoragePolicy ?? new(), p.StoragePolicy).ProcessingWorkspaceDirectory,
-                        currentStorage.Policy.ProcessingWorkspaceDirectory));
-            }
-            // A download cursor is a local remainder only when its existing files are complete.
-            // Changed workspace defaults must not turn an original download retry into adoption
-            // of files that do not exist yet. Metadata previews defer the provider recheck to dispatch.
+            var awaitingDownloads = run != null && AcquisitionLocalFilesRecoveryReceipt.Awaiting(run);
+            // An original download already owns its destination. Check that operation before
+            // considering different directories for a possible revision adopting local files.
             AcquisitionRecoveryDiagnosis? originalDownloadDiagnosis = null;
-            if (offered == null && mode == "automatic" && continuations != null && preferCurrentStorage &&
-                run != null && AcquisitionLocalFilesRecoveryReceipt.Awaiting(run))
+            if (offered == null && mode == "automatic" && continuations != null && awaitingDownloads)
             {
                 var candidate = await diagnostics.DiagnoseAsync(task, run, ct, verifyFiles,
                     deferCompletedDownloadVerification: true);
@@ -454,6 +441,16 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                     AcquisitionDownloadOnlyRecoveryService.Targets(run, candidate.SignalJson,
                         verificationOnly: candidate.Row.ReasonCode == "RECOVERY_EXISTING_FILES_VERIFY_REQUIRED") != null)
                     originalDownloadDiagnosis = candidate;
+            }
+            var preferCurrentStorage = false;
+            if (offered == null && originalDownloadDiagnosis == null && plans != null && awaitingDownloads)
+            {
+                var currentStorage = plans.CaptureLocalFilesStorage(task);
+                preferCurrentStorage = plan.DeliveryLayout == null ||
+                    !ArtifactManifestFiles.PathComparer.Equals(plan.DeliveryLayout.RootDirectory, currentStorage.Delivery.RootDirectory) ||
+                    plan.Parts.Any(p => !ArtifactManifestFiles.PathComparer.Equals(
+                        ArtifactStoragePolicies.Resolve(plan.StoragePolicy ?? new(), p.StoragePolicy).ProcessingWorkspaceDirectory,
+                        currentStorage.Policy.ProcessingWorkspaceDirectory));
             }
             if (offered != null)
             {

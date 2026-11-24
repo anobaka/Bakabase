@@ -1,6 +1,11 @@
 using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.Modules.Downloader.Cloud;
+using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Acquisition.Models.Domain;
 using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Db;
@@ -8,6 +13,7 @@ using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Modules.Workflow.Components;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.CloudDownloads;
+using Bakabase.Service.Components.DownloadIntents;
 using Bakabase.TestKit.Implementations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +22,78 @@ namespace Bakabase.Tests;
 
 public sealed partial class AcquisitionRecoveryTests
 {
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Prepared_plan_compiled_from_a_draft_retries_its_original_download_with_its_own_directories(bool configured)
+    {
+        var downloads = Directory.CreateDirectory(Path.Combine(_root, "downloads")).FullName;
+        var workspace = Directory.CreateDirectory(Path.Combine(_root, "work")).FullName;
+        var delivery = Directory.CreateDirectory(Path.Combine(_root, "delivery")).FullName;
+        var storage = new UserStoragePolicy(false);
+        var options = new TestBOptionsManager<AcquisitionOptions>(new()
+            {ProcessingWorkspaceDirectory = configured ? workspace : null, DeliveryRootDirectory = configured ? delivery : null});
+        var store = _services.GetRequiredService<IArtifactOperationStore>();
+        var intents = new DownloadIntentService(new([], [], null!, null!), null!, storage, _db, null!, null!, null!, null!, null!);
+        var plans = new AcquisitionPlanService(_db, [], _services.GetRequiredService<Bakabase.Modules.Acquisition.Abstractions.Services.IAcquisitionService>(),
+            null!, intents, storage, artifacts: store,
+            deliveryDirectories: new(storage, options), storageDefaults: new(options, storage));
+        var source = new AcquisitionPlanSource {Id = "source", ProviderId = "pikpak", Kind = "share", MethodId = "pikpak.share",
+            Url = "https://mypikpak.com/s/fixture"};
+        var draft = await plans.CreateDraftAsync(new("Saved copy", OutputDirectory: downloads,
+            DeliverySettings: new() {RootDirectory = delivery}, StoragePolicy: new() {ProcessingWorkspaceDirectory = workspace}), default);
+        var prepared = await plans.PrepareDraftAsync(draft.Id, new(draft.Task.PlanRevision, new()
+        {
+            Title = "Saved copy", OutputDirectory = downloads, Parts = [new() {Id = "part", SelectedSourceId = source.Id,
+                Processing = new() {Requirement = "notRequired"}, Sources = [source]}]
+        }), default);
+        var task = await _db.AcquisitionTasks.SingleAsync(t => t.Id == prepared.Id);
+        var plan = prepared.Plan!;
+        var workset = AcquisitionPlanCompiler.Workset(task.Id, task.PlanRevision, plan, []);
+        var target = workset.Targets.Single(); var selected = target.SelectedSource!;
+        var workflow = AcquisitionPlanCompiler.Compile(plan, [selected]);
+        CollectionAssert.AreEqual(new[] {"download.selectSources", "download.enqueueSupported", "download.awaitCompletion",
+            "acquisition.plan.process", "fs.publishArtifacts", "download.cleanupArtifacts"}, workflow.Nodes.Select(n => n.Kind).ToArray());
+        var run = new WorkflowRunDbModel {Status = WorkflowRunStatus.Waiting, StartedAt = DateTime.Now, CurrentStepIndex = 2,
+            WaitReason = "cloud.cloudAttention", PlanSnapshotJson = WorkflowRunPlans.Serialize(workflow)};
+        _db.WorkflowRuns.Add(run); await _db.SaveChangesAsync();
+        var operation = DownloadArtifactCoordinator.DownloadIntent(target, downloads);
+        var directory = CloudStageDirectoryPath.PlannedDownload(target, downloads, operation);
+        Directory.CreateDirectory(directory);
+        var request = new CloudDownloadRequest(operation, selected, selected.AccountId, null, directory);
+        var native = new DownloadTaskDbModel {Type = 1, Status = DownloadTaskDbModelStatus.Failed, Message = "PIKPAK_ORIGINAL_FILE_UNAVAILABLE",
+            ThirdPartyId = CloudSites.Site(selected.ProviderId), DownloadPath = directory, Options = JsonSerializer.Serialize(request, JsonSerializerOptions.Web)};
+        _db.DownloadTasks.Add(native); await _db.SaveChangesAsync();
+        _db.CloudDownloadOperations.Add(new() {Id = operation, TargetId = target.Id, WorkflowRunId = run.Id, Kind = "download",
+            State = "started", DownloadTaskId = native.Id, RequestJson = native.Options});
+        _db.ArtifactOperationBindings.Add(new() {Id = "bound-original", OwnerKind = "workflow", OwnerId = run.Id.ToString(),
+            Slot = CloudOperationService.OperationSlot(target, "download"), OperationId = operation});
+        _db.Set<WorkflowRunSourceDbModel>().Add(new() {WorkflowRunId = run.Id, Module = "acquisition", EntityKind = "task",
+            EntityId = task.Id.ToString(), Revision = task.PlanRevision.ToString()});
+        task.WorkflowRunId = run.Id; task.Phase = "attention";
+        var stopped = workset with {Targets = [target with {DownloadTaskId = native.Id, DownloadOperationId = operation, Problem = native.Message}]};
+        run.CurrentItemJson = WorkflowItemSnapshot.Capture(stopped); await _db.SaveChangesAsync();
+        var provider = new PreparedRecoveryProvider {MethodId = "pikpak.share"};
+        var recovery = new CloudDownloadRecoveryService(_db, [provider], storage);
+        var diagnostics = new AcquisitionRecoveryDiagnostics(_db, storage, store, downloads: recovery);
+        var local = new AcquisitionLocalFilesRecoveryService(_db, plans, storage, store, null!, _services);
+        var host = new ProcessingRecoveryHost();
+        var service = new AcquisitionRecoveryService(_db, diagnostics, new(), host, plans, localFiles: local);
+        var continuation = new AcquisitionContinuationService(_db, service, new(), null!, null!, null!);
+        var batch = new AcquisitionLocalRecoveryBatchService(_db, service, diagnostics, local, plans, options, storage,
+            new PinnedBatchCapacity(), new(), continuations: continuation);
+        var preview = await batch.PreviewAsync(new([task.Id], "automatic"));
+        var row = preview.Rows.Single(); Assert.IsTrue(row.CanQueue, row.ReasonCode);
+        Assert.AreEqual("RECOVERY_PREPARED_DOWNLOAD_REVALIDATED", row.ReasonCode);
+        Assert.AreEqual(0, provider.Checks, "The ordinary list preview is local-only.");
+        CollectionAssert.AreEqual(new[] {directory}, preview.Volumes.SelectMany(v => v.Paths).ToArray());
+        var applied = await batch.ApplyAsync(new(preview.PreviewToken, [task.Id]));
+        await batch.TickAsync();
+        Assert.AreEqual(1, host.Calls, (await batch.GetAsync(applied.BatchId)).Rows.Single().ReasonCode);
+        Assert.AreEqual(operation, JsonSerializer.Deserialize<CloudSelectionSignal>(host.Signal!, WorkflowJson.Options)!
+            .PreparedDownloadRetries![target.Id].OperationId);
+    }
+
     [DataTestMethod]
     [DataRow("automatic", true, false, false, false)]
     [DataRow("automatic", false, false, false, false)]

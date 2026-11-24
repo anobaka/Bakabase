@@ -26,6 +26,7 @@ public sealed partial class AcquisitionRecoveryTests
     private class RecoverableProvider : ICloudDownloadProvider, ICloudDownloadRecoveryProvider, ICloudDownloadAbandonmentProvider
     {
         public string ProviderId => "pikpak";
+        public string? MethodId { get; init; }
         public int Checks;
         public int ReadinessChecks;
         public bool Available = true;
