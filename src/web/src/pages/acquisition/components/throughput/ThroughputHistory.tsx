@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import RateValue from "./RateValue";
 import {
+  contributes,
   formatRate,
   formatReportedRate,
   metrics,
@@ -166,12 +167,17 @@ export default function ThroughputHistory({
   const latest = snapshot.latest;
   const last = trend.ticks[trend.ticks.length - 1];
   if (!latest || !last) return <p>{t("acquisition.throughput.noSamples")}</p>;
-  const ids = [...trend.titles.keys()].sort((a, b) => a - b);
+  const end = sampleTime(latest);
+  const latestRates = current && last.time === end ? last.tasks : undefined;
+  const ids = [...trend.contributors].sort(
+    (a, b) =>
+      Number(contributes(latestRates?.get(b))) - Number(contributes(latestRates?.get(a))) || a - b,
+  );
   if (!ids.length) {
     const emptyState =
-      trend.idleSamples === 0
+      trend.observedSamples === 0
         ? "unobservedWindow"
-        : trend.idleSamples < trend.ticks.length
+        : trend.zeroSamples < trend.ticks.length
           ? "incompleteWindow"
           : "empty";
     return (
@@ -180,7 +186,6 @@ export default function ThroughputHistory({
       </p>
     );
   }
-  const end = sampleTime(latest);
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
@@ -189,7 +194,7 @@ export default function ThroughputHistory({
           <h3 className="break-words text-sm font-semibold">
             #{id} {trend.titles.get(id)}
           </h3>
-          <RateValues rates={current && last.time === end ? last.tasks.get(id) : undefined} />
+          <RateValues rates={latestRates?.get(id)} />
           <TaskChart
             id={id}
             ticks={trend.ticks}

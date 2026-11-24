@@ -47,6 +47,14 @@ export function sampleTime(sample: Sample) {
   return Date.parse(utc);
 }
 
+export function contributes(rates?: Rates | null) {
+  return metrics.some(({ key }) => (rate(rates, key) ?? 0) > 0);
+}
+
+function fullyMeasuredZero(rates?: Rates | null) {
+  return metrics.every(({ key }) => rate(rates, key) === 0 && !partial(rates, key));
+}
+
 export function taskTrends(samples: Sample[], intervalSeconds: number) {
   const sorted = samples
     .map((sample) => ({ sample, time: sampleTime(sample) }))
@@ -56,7 +64,9 @@ export function taskTrends(samples: Sample[], intervalSeconds: number) {
   const ticks: { time: number; tasks: Map<number, Rates | undefined> }[] = [];
   const titles = new Map<number, string>();
   let previous: number | undefined;
-  let idleSamples = 0;
+  const contributors = new Set<number>();
+  let observedSamples = 0;
+  let zeroSamples = 0;
 
   for (const [time, sample] of byTime) {
     // An absent bucket means a gap in observation, even if both adjacent buckets have data.
@@ -66,18 +76,20 @@ export function taskTrends(samples: Sample[], intervalSeconds: number) {
     for (const task of sample.tasks ?? []) {
       if (task.taskId == null) continue;
       tasks.set(task.taskId, task.rates ?? undefined);
+      if (contributes(task.rates)) contributors.add(task.taskId);
       titles.set(task.taskId, task.title?.trim() || titles.get(task.taskId) || "");
     }
-    // An unobserved bucket also has no task rows. Only a fully measured zero
-    // sample is evidence that nothing was active during that interval.
+    const taskRates = [...tasks.values()];
     if (
-      !tasks.size &&
-      metrics.every(({ key }) => rate(sample.totals, key) === 0 && !partial(sample.totals, key))
+      [sample.totals, ...taskRates].some((row) =>
+        metrics.some(({ key }) => rate(row, key) !== null),
+      )
     )
-      idleSamples++;
+      observedSamples++;
+    if (fullyMeasuredZero(sample.totals) && taskRates.every(fullyMeasuredZero)) zeroSamples++;
     ticks.push({ time, tasks });
     previous = time;
   }
 
-  return { ticks, titles, idleSamples };
+  return { ticks, titles, contributors, observedSamples, zeroSamples };
 }

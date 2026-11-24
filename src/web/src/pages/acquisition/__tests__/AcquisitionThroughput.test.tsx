@@ -213,3 +213,65 @@ it("distinguishes missing telemetry from idle and covers mixed and skipped sampl
   );
   expect(screen.getByText("acquisition.throughput.empty")).toBeTruthy();
 });
+
+it("only charts tasks with positive throughput in the window and puts current contributors first", () => {
+  const zero = {
+    downloadBytesPerSecond: 0,
+    readBytesPerSecond: 0,
+    writeBytesPerSecond: 0,
+    downloadPartial: false,
+    fileIoPartial: false,
+  };
+  const unknown = { downloadPartial: true, fileIoPartial: true };
+  const earlier = {
+    ...sample(-10),
+    totals: { ...zero, readBytesPerSecond: 20 },
+    tasks: [
+      { taskId: 1, title: "AI", rates: unknown },
+      { taskId: 2, title: "Queued", rates: zero },
+      { taskId: 3, title: "Verified", rates: { ...zero, readBytesPerSecond: 20 } },
+    ],
+  };
+  const latest = {
+    ...sample(0),
+    totals: { ...zero, writeBytesPerSecond: 40 },
+    tasks: [
+      { taskId: 1, title: "AI", rates: unknown },
+      { taskId: 2, title: "Queued", rates: zero },
+      { taskId: 3, title: "Verified", rates: zero },
+      { taskId: 10, title: "Delivering", rates: { ...zero, writeBytesPerSecond: 40 } },
+    ],
+  };
+  const snapshot = { latest, history: [earlier, latest], intervalSeconds: 5, windowSeconds: 300 };
+  const page = render(<ThroughputHistory snapshot={snapshot} current />);
+  expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual([
+    "#10 Delivering",
+    "#3 Verified",
+  ]);
+  const chart = screen.getByRole("img", { name: /taskChart3/ });
+  expect(JSON.parse(chart.getAttribute("data-values")!)[1]).toEqual([20, null, 0]);
+  page.rerender(<ThroughputHistory snapshot={snapshot} current={false} />);
+  expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual([
+    "#3 Verified",
+    "#10 Delivering",
+  ]);
+
+  const noContribution = {
+    ...latest,
+    tasks: latest.tasks.slice(0, 3),
+    totals: { ...zero, fileIoPartial: true },
+  };
+  page.rerender(
+    <ThroughputHistory
+      snapshot={{ ...snapshot, latest: noContribution, history: [noContribution] }}
+      current
+    />,
+  );
+  expect(screen.queryByRole("img")).toBeNull();
+  expect(screen.getByText("acquisition.throughput.incompleteWindow")).toBeTruthy();
+  const allZero = { ...noContribution, tasks: noContribution.tasks.slice(1), totals: zero };
+  page.rerender(
+    <ThroughputHistory snapshot={{ ...snapshot, latest: allZero, history: [allZero] }} current />,
+  );
+  expect(screen.getByText("acquisition.throughput.empty")).toBeTruthy();
+});
