@@ -31,6 +31,9 @@ public static class AcquisitionPlanRegistration
             provider.GetRequiredService<Bakabase.InsideWorld.Business.BakabaseDbContext>(),
             () => provider.GetRequiredService<IAcquisitionRuntimeDownloadReader>()));
         services.AddScoped<AcquisitionRuntimeOverviewService>();
+        services.AddSingleton<AcquisitionThroughputHistory>();
+        services.AddScoped<IAcquisitionThroughputDownloadSource, AcquisitionThroughputDownloadSource>();
+        services.AddHostedService<AcquisitionThroughputSampler>();
         services.AddSingleton<AcquisitionConfirmationRuntime>();
         services.AddScoped<AcquisitionSourceAttentionProjection>();
         services.AddScoped<AcquisitionTaskSearchService>();

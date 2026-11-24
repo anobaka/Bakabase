@@ -36,6 +36,12 @@ public class AcquisitionController(
     AcquisitionDownloadContinuationService? continuation = null)
     : ControllerBase
 {
+    [HttpGet("throughput"), RemoteAccessible]
+    [SwaggerOperation(OperationId = "GetAcquisitionThroughput")]
+    public SingletonResponse<AcquisitionThroughputView> GetThroughput(
+        [FromServices] AcquisitionThroughputHistory history, [FromQuery] bool includeHistory = false) =>
+        new(history.Get(includeHistory));
+
     /// <summary>
     /// Known routes for resources without local files. Availability and ownership are not probed.
     /// Filters: all, withSources, withoutSources, unsupported. This only reads server data; it

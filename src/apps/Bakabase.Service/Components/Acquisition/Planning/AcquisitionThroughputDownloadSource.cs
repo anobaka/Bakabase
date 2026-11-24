@@ -12,7 +12,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Service.Components.Acquisition.Planning;
 
-public sealed record AcquisitionThroughputOwner(int TaskId, string? Title, bool MayHaveFileIo, IReadOnlyList<double?> Downloads);
+public sealed record AcquisitionThroughputOwner(int TaskId, string? Title, bool MayHaveFileIo,
+    IReadOnlyList<double?> Downloads, long? ReceivedBytes = null);
 public sealed record AcquisitionThroughputOwners(IReadOnlyList<AcquisitionThroughputOwner> Tasks,
     IReadOnlyDictionary<(string OwnerKind, string OwnerId), int> FileOwners);
 

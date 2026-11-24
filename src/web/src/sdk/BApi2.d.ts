@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/acquisition/throughput": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAcquisitionThroughput"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/acquisition/candidates": {
         parameters: {
             query?: never;
@@ -20803,6 +20819,35 @@ export interface components {
             capabilityId?: string;
             executionState?: string;
         };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskThroughput": {
+            /** Format: int32 */
+            taskId: number;
+            title?: string;
+            rates: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputRates"];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputRates": {
+            /** Format: double */
+            downloadBytesPerSecond?: number;
+            /** Format: double */
+            readBytesPerSecond?: number;
+            /** Format: double */
+            writeBytesPerSecond?: number;
+            downloadPartial: boolean;
+            fileIoPartial: boolean;
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputSample": {
+            sampledAt: string;
+            totals: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputRates"];
+            tasks: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskThroughput"][];
+        };
+        "Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputView": {
+            /** Format: int32 */
+            intervalSeconds: number;
+            /** Format: int32 */
+            windowSeconds: number;
+            latest?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputSample"];
+            history: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputSample"][];
+        };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionWorkspaceCleanupPreview": {
             previewId: string;
             /** Format: date-time */
@@ -25091,6 +25136,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskPage"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputView]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputView"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionWorkspaceCleanupPreview]": {
             /** Format: int32 */
             code: number;
@@ -26220,6 +26271,30 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    GetAcquisitionThroughput: {
+        parameters: {
+            query?: {
+                includeHistory?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputView]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputView]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.Acquisition.Planning.AcquisitionThroughputView]"];
+                };
+            };
+        };
+    };
     SearchAcquisitionCandidates: {
         parameters: {
             query?: {

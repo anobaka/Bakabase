@@ -9435,6 +9435,39 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskSear
   executionState?: string;
 }
 
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskThroughput {
+  /** @format int32 */
+  taskId: number;
+  title?: string;
+  rates: BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputRates;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputRates {
+  /** @format double */
+  downloadBytesPerSecond?: number;
+  /** @format double */
+  readBytesPerSecond?: number;
+  /** @format double */
+  writeBytesPerSecond?: number;
+  downloadPartial: boolean;
+  fileIoPartial: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputSample {
+  sampledAt: string;
+  totals: BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputRates;
+  tasks: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskThroughput[];
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputView {
+  /** @format int32 */
+  intervalSeconds: number;
+  /** @format int32 */
+  windowSeconds: number;
+  latest?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputSample;
+  history: BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputSample[];
+}
+
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupPreview {
   previewId: string;
   /** @format date-time */
@@ -14434,6 +14467,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskPage;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputView {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputView;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionWorkspaceCleanupPreview {
   /** @format int32 */
   code: number;
@@ -16068,6 +16108,57 @@ export class HttpClient<SecurityDataType = unknown> {
  */
 export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
   acquisition = {
+    /**
+     * No description
+     *
+     * @tags Acquisition
+     * @name GetAcquisitionThroughput
+     * @request GET:/acquisition/throughput
+     */
+    getAcquisitionThroughput: (
+      query?: {
+        /** @default false */
+        includeHistory?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionThroughputView,
+        any
+      >({
+        path: `/acquisition/throughput`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAcquisitionThroughput
+     * @name getAcquisitionThroughputUrl
+     */
+    getAcquisitionThroughputUrl: (query?: {
+        /** @default false */
+        includeHistory?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/acquisition/throughput`;
+
+      // Build query string
+      if (query) {
+        // Object.entries rather than indexing by key: the query object is a typed
+        // literal, so `query[key]` is an implicit-any error under noImplicitAny.
+        const queryString = Object.entries(query)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
     /**
      * No description
      *
