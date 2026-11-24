@@ -227,7 +227,8 @@ namespace Bakabase.Service.Extensions
                     () => sp.GetRequiredService<Bakabase.Abstractions.Components.Tasks.BTaskManager>().IsShuttingDown,
                     () => sp.GetRequiredService<AppService>().AppDataDirectory,
                     (job, ct) => sp.GetRequiredService<Components.Downloader.BtDownloadStartupPolicy>().CanResumeAsync(job, ct),
-                    storageWrites: sp.GetRequiredService<Bakabase.Abstractions.Components.FileSystem.IStorageWriteGuard>()));
+                    storageWrites: sp.GetRequiredService<Bakabase.Abstractions.Components.FileSystem.IStorageWriteGuard>(),
+                    fileIo: sp.GetRequiredService<Bakabase.Abstractions.Components.FileSystem.IFileIoObservationProvider>()));
             services.AddHostedService<Components.Downloader.BtDownloadLifetime>();
             services.AddSingleton<Components.Downloader.HttpDownloadStartupPolicy>();
             services.AddSingleton<Bakabase.Modules.HttpDownloads.Abstractions.IHttpDownloadManager>(sp =>
@@ -237,7 +238,8 @@ namespace Bakabase.Service.Extensions
                     appDataDirectory: () => sp.GetRequiredService<AppService>().AppDataDirectory,
                     canResumeOnStartup: (job, ct) => sp.GetRequiredService<Components.Downloader.HttpDownloadStartupPolicy>()
                         .CanResumeAsync(job, ct),
-                    storageWrites: sp.GetRequiredService<Bakabase.Abstractions.Components.FileSystem.IStorageWriteGuard>()));
+                    storageWrites: sp.GetRequiredService<Bakabase.Abstractions.Components.FileSystem.IStorageWriteGuard>(),
+                    fileIo: sp.GetRequiredService<Bakabase.Abstractions.Components.FileSystem.IFileIoObservationProvider>()));
             services.AddHostedService<Components.Downloader.HttpDownloadLifetime>();
             services.AddScoped<Components.Downloader.DownloadTaskRegistry>();
             services.AddScoped<Bakabase.Modules.Downloader.Abstractions.IDownloadTaskRegistry>(sp =>

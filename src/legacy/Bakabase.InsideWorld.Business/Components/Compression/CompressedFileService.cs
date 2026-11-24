@@ -468,7 +468,8 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 .WithStandardOutputPipe(PipeTarget.Merge(stdoutTargets.ToArray()))
                 .WithStandardErrorPipe(PipeTarget.Merge(stderrTargets.ToArray()));
 
-            var result = await command.ExecuteAsync(ct);
+            var running = command.ExecuteAsync(ct);
+            var result = await ArchiveProcessIo.AwaitAsync(running.ProcessId, running.Task, write: false);
 
             return new TestResult
             {
@@ -608,7 +609,8 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 .WithStandardOutputPipe(PipeTarget.Merge(stdoutTargets.ToArray()))
                 .WithStandardErrorPipe(PipeTarget.Merge(stderrTargets.ToArray()));
 
-            var result = await command.ExecuteAsync(ct);
+            var running = command.ExecuteAsync(ct);
+            var result = await ArchiveProcessIo.AwaitAsync(running.ProcessId, running.Task, write: true);
             var diagnostic = new TestResult
             {
                 ExitCode = result.ExitCode,

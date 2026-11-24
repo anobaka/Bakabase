@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net.Http;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.Downloader.Abstractions;
 using Bakabase.Modules.Downloader.Components;
 using Bakabase.Modules.Downloader.Models;
@@ -178,6 +179,8 @@ public sealed class BuiltInTorrentDownloaderTests
         Assert.IsNotNull(sourceTorrent.InfoHashes.V2);
         Assert.AreEqual(finalPadding, sourceTorrent.Files.Last().Padding > 0);
         var progress = new List<TorrentTransferProgress>();
+        var fileIo = new FileIoObservationProvider();
+        using var observation = FileIoObservationScope.Enter(fileIo, new("downloadTask", "10"));
         var result = await Downloader().DownloadAsync(new TorrentDownloadRequest
         {
             Metadata = seed.Metadata, WorkingDirectory = Path.Combine(_root, "hybrid-result"),
@@ -192,6 +195,12 @@ public sealed class BuiltInTorrentDownloaderTests
         Assert.AreEqual(100, progress.Last().Percentage);
         Assert.AreEqual("Completed", progress.Last().Stage);
         Assert.IsTrue(seed.StoppedAnnounces > 0);
+        var sample = fileIo.Drain().Single();
+        Assert.AreEqual("downloadTask", sample.OwnerKind);
+        Assert.AreEqual("10", sample.OwnerId);
+        Assert.IsTrue(sample.WriteObserved);
+        Assert.AreEqual(seed.Files.Values.Sum(file => (long)file.Length), sample.WrittenBytes,
+            "The disk writer counts each payload byte and excludes synthetic torrent padding.");
     }
 
     [TestMethod]

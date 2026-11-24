@@ -111,7 +111,7 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
             await using (var source = File.OpenRead(payload))
             await using (var destination = new FileStream(staged, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 if (storageWrites == null) await source.CopyToAsync(destination, ct);
-                else await storageWrites.CopyAsync(source, destination, staged, request.WriteContext ?? StorageWriteScope.Current, ct);
+                else await storageWrites.CopyFileAsync(source, destination, staged, request.WriteContext ?? StorageWriteScope.Current, ct);
             File.Move(staged, target, request.AllowOverwrite);
         }
         finally { if (File.Exists(staged)) File.Delete(staged); }

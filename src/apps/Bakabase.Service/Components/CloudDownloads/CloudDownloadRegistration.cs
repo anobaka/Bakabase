@@ -27,6 +27,7 @@ public static class CloudDownloadRegistration
 
     public static IServiceCollection AddCloudDownloads(this IServiceCollection services)
     {
+        services.AddSingleton<IFileIoObservationProvider, FileIoObservationProvider>();
         services.AddSingleton<IStorageWritePolicyProvider,
             Bakabase.Service.Components.Acquisition.Planning.AcquisitionStorageWritePolicyProvider>();
         services.AddSingleton<IStorageWriteGuard, StorageWriteGuard>();

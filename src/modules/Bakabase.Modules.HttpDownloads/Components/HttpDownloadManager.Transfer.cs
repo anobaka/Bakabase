@@ -94,7 +94,7 @@ public sealed partial class HttpDownloadManager
             await using (var destination = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 if (storageWrites == null) await source.CopyToAsync(destination, ct);
-                else await storageWrites.CopyAsync(source, destination, temporary, WriteContext(stored), ct);
+                else await storageWrites.CopyFileAsync(source, destination, temporary, WriteContext(stored), ct);
                 await destination.FlushAsync(ct);
                 destination.Flush(true);
             }

@@ -335,6 +335,8 @@ public class WorkflowRunner<TDbContext> where TDbContext : DbContext
                     WorkflowItemOutcome outcome;
                     try
                     {
+                        using var fileIo = FileIoObservationScope.Enter(scope.ServiceProvider.GetService<IFileIoObservationProvider>(),
+                            new("workflow", run.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)));
                         if (signalJson != null)
                         {
                             // The signal belongs to the step that suspended, and only to its first

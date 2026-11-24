@@ -117,7 +117,7 @@ public sealed class FileArtifactMaterializer : IFileArtifactMaterializer
             // reject a known-too-large copy before its first byte; chunk checks still protect
             // against concurrent writes and changes in the live reserve during the transfer.
             await writeGuard.CheckAllocationAsync(target, input.Length, StorageWriteScope.Current, ct);
-            await writeGuard.CopyAsync(input, output, target, StorageWriteScope.Current, ct);
+            await writeGuard.CopyFileAsync(input, output, target, StorageWriteScope.Current, ct);
         }
         await output.FlushAsync(ct);
         return new("copy", output.Length);

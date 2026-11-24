@@ -260,7 +260,7 @@ public sealed class RcloneRemoteEngine
                 await using (var input = File.OpenRead(source))
                 await using (var output = new FileStream(temporary, FileMode.CreateNew))
                     if (_writes == null) await input.CopyToAsync(output, ct);
-                    else await _writes.CopyAsync(input, output, temporary, StorageWriteScope.Current, ct);
+                    else await _writes.CopyFileAsync(input, output, temporary, StorageWriteScope.Current, ct);
                 if (!await Matches(temporary, file, ct)) throw new RcloneRemoteException("RCLONE_LOCAL_CHANGED");
                 RejectLinks(target); File.Move(temporary, target, false);
             }

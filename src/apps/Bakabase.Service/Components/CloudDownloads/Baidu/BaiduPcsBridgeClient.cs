@@ -30,6 +30,7 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
         ConfigureProxy(info, proxy);
         using var process = Process.Start(info) ?? throw new CloudProviderException("BAIDU_BRIDGE_START_FAILED");
         using var cancel = ct.Register(() => { try { process.Kill(true); } catch { } });
+        using var verificationReads = FileIoObservationScope.Active ? new VerificationReadObservation() : null;
         var stderr = process.StandardError.BaseStream.CopyToAsync(Stream.Null, CancellationToken.None);
         try
         {
@@ -47,7 +48,10 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
                 var value = parsed.RootElement;
                 switch (value.GetProperty("type").GetString())
                 {
-                    case "progress" when progress != null: await progress(value); break;
+                    case "progress":
+                        verificationReads?.Record(value);
+                        if (progress != null) await progress(value);
+                        break;
                     case "result": result = value.Clone(); break;
                     case "error":
                         error = value.GetProperty("code").GetString();
@@ -79,6 +83,62 @@ public sealed class BaiduPcsBridgeClient(BaiduPcsGoService dependency, BakabaseW
         {
             if (!process.HasExited) { try { process.Kill(true); } catch { } }
             await process.WaitForExitAsync(CancellationToken.None); await stderr;
+        }
+    }
+
+    internal sealed class VerificationReadObservation : IDisposable
+    {
+        private IFileIoObservation? _observation;
+        private long? _total;
+        private long _reported;
+
+        public void Record(JsonElement progress)
+        {
+            if (!progress.TryGetProperty("stage", out var stage) || stage.ValueKind != JsonValueKind.String ||
+                !stage.ValueEquals("verifying") ||
+                !TryGetBytes(progress, "verifiedBytes", out var read) ||
+                !TryGetBytes(progress, "verificationTotalBytes", out var total) || read < 0 || total < read)
+            {
+                EndVerification();
+                return;
+            }
+
+            // An explicit zero starts each verification reader. Other progress values alone
+            // cannot distinguish a new read from a resumed or partially observed operation.
+            if (read == 0)
+            {
+                _reported = 0;
+                _total = total;
+                _observation ??= FileIoObservationScope.Begin(read: true, write: false);
+                if (total == 0) EndVerification();
+                return;
+            }
+
+            if (_total != total || read < _reported)
+            {
+                EndVerification();
+                return;
+            }
+
+            if (read > _reported) _observation?.Add(read - _reported, 0);
+            _reported = read;
+            if (read == total) EndVerification();
+        }
+
+        private static bool TryGetBytes(JsonElement progress, string name, out long bytes)
+        {
+            bytes = 0;
+            return progress.TryGetProperty(name, out var field) && field.ValueKind == JsonValueKind.Number &&
+                field.TryGetInt64(out bytes);
+        }
+
+        public void Dispose() => EndVerification();
+
+        private void EndVerification()
+        {
+            _observation?.Dispose();
+            _observation = null;
+            _total = null;
         }
     }
 

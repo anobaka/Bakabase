@@ -17,7 +17,7 @@ public sealed partial class HttpDownloadManager(
     Func<int>? concurrencyLimit = null,
     Func<string>? appDataDirectory = null,
     Func<HttpDownloadJob, CancellationToken, Task<bool>>? canResumeOnStartup = null,
-    IStorageWriteGuard? storageWrites = null) : IHttpDownloadManager, IAsyncDisposable
+    IStorageWriteGuard? storageWrites = null, IFileIoObservationProvider? fileIo = null) : IHttpDownloadManager, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, StoredJob> _jobs = new(StringComparer.Ordinal);
@@ -336,11 +336,13 @@ public sealed partial class HttpDownloadManager(
         Exception? failure = null;
         try
         {
+            var ownership = WriteContext(stored);
+            using var observation = FileIoObservationScope.Enter(fileIo, ownership);
             // A committed publication can be verified without allocating payload bytes.
             // Keep incomplete/corrupt files behind the normal write admission check.
             file = await ReusePublishedAsync(stored, active.Cancellation.Token);
             file ??= storageWrites == null ? await TransferAsync(stored, active.Cancellation.Token) :
-                await storageWrites.RunAsync([stored.Job.OutputDirectory, StagingDirectory(stored)], WriteContext(stored),
+                await storageWrites.RunAsync([stored.Job.OutputDirectory, StagingDirectory(stored)], ownership,
                     token => TransferAsync(stored, token), active.Cancellation.Token);
         }
         catch (Exception ex) { failure = ex; }

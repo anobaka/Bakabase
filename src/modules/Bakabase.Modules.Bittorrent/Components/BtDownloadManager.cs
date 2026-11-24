@@ -21,7 +21,7 @@ public sealed class BtDownloadManager(
     Func<bool>? isShuttingDown = null,
     Func<string>? appDataDirectory = null,
     Func<BtDownloadJob, CancellationToken, Task<bool>>? canResumeOnStartup = null,
-    IStorageWriteGuard? storageWrites = null) : IBtDownloadManager, IAsyncDisposable
+    IStorageWriteGuard? storageWrites = null, IFileIoObservationProvider? fileIo = null) : IBtDownloadManager, IAsyncDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly Dictionary<string, StoredJob> _jobs = new(StringComparer.Ordinal);
@@ -385,6 +385,8 @@ public sealed class BtDownloadManager(
         Exception? failure = null;
         try
         {
+            var ownership = WriteContext(stored);
+            using var observation = FileIoObservationScope.Enter(fileIo, ownership);
             var request = new TorrentDownloadRequest
             {
                 MagnetUri = stored.MagnetUri, TorrentUrl = stored.TorrentUrl,
@@ -408,7 +410,7 @@ public sealed class BtDownloadManager(
                 finally { _gate.Release(); }
             }, token);
             result = storageWrites == null ? await Download(active.Cancellation.Token) :
-                await storageWrites.RunAsync([stored.Job.OutputDirectory], WriteContext(stored), Download, active.Cancellation.Token);
+                await storageWrites.RunAsync([stored.Job.OutputDirectory], ownership, Download, active.Cancellation.Token);
         }
         catch (Exception ex) { failure = ex; }
 

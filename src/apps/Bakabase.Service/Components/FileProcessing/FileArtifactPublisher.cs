@@ -63,7 +63,7 @@ public sealed class FileArtifactPublisher
             if (_copy != null) await _copy(source, destination, ct);
             else await source.CopyToAsync(destination, ct);
         }
-        else if (_copy == null) await _writeGuard.CopyAsync(source, destination, path, StorageWriteScope.Current, ct);
+        else if (_copy == null) await _writeGuard.CopyFileAsync(source, destination, path, StorageWriteScope.Current, ct);
         else await _writeGuard.RunAsync([path], StorageWriteScope.Current, async token =>
         { await _copy(source, destination, token); return true; }, ct);
     }

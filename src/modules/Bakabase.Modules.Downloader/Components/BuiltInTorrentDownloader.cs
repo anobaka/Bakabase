@@ -157,7 +157,11 @@ public sealed class BuiltInTorrentDownloader : ITorrentDownloader
         Directory.CreateDirectory(payloadDirectory);
         var settings = SettingsFor(workingDirectory, network.UsesProxy);
         Directory.CreateDirectory(settings.CacheDirectory);
-        using var engine = new ClientEngine(settings, network.CreateFactories());
+        using var observation = FileIoObservationScope.Begin(read: true, write: true);
+        var networkFactories = network.CreateFactories();
+        var factories = observation is null ? networkFactories : networkFactories.WithPieceWriterCreator(maxOpenFiles =>
+            new ObservedTorrentPieceWriter(networkFactories.CreatePieceWriter(maxOpenFiles), observation));
+        using var engine = new ClientEngine(settings, factories);
         TorrentManager? manager = null;
         try
         {

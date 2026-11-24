@@ -39,15 +39,17 @@ internal static class ZipPasswordCompatibility
                 entryCount = proof.EntryCount, archiveEnd = proof.ArchiveEnd, zip64 = proof.Zip64,
                 tailSha256 = proof.TailSha256, centralSha256 = proof.CentralSha256},
             fileNameCodePage = options.ZipFileNameCodePage is { } nameCodePage ? (int?)nameCodePage : null});
-        return await RunProcessAsync(start, request, progress, ct);
+        return await RunProcessAsync(start, request, progress, ct, observeWrites: operation == "extract");
     }
 
     internal static async Task<Result> RunProcessAsync(ProcessStartInfo start, string request,
-        Action<string>? progress, CancellationToken ct)
+        Action<string>? progress, CancellationToken ct, bool? observeWrites = null)
     {
         ct.ThrowIfCancellationRequested();
         using var process = new Process {StartInfo = start};
         process.Start();
+        var exited = process.WaitForExitAsync(CancellationToken.None);
+        var observe = observeWrites.HasValue ? ArchiveProcessIo.ObserveAsync(process.Id, exited, observeWrites.Value) : Task.CompletedTask;
         using var registration = ct.Register(() => Kill(process));
         var output = ReadOutput(process.StandardOutput, progress, ct);
         var errors = Drain(process.StandardError);
@@ -68,7 +70,8 @@ internal static class ZipPasswordCompatibility
         finally
         {
             if (!process.HasExited) Kill(process);
-            await process.WaitForExitAsync(CancellationToken.None);
+            await exited;
+            await observe;
             await errors;
             try { await output; } catch when (ct.IsCancellationRequested) { }
         }

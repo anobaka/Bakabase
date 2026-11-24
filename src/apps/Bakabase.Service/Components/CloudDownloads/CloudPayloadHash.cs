@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 
 namespace Bakabase.Service.Components.CloudDownloads;
 
@@ -35,6 +36,7 @@ internal static class CloudPayloadHash
     {
         ct.ThrowIfCancellationRequested();
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        using var observed = source is FileStream ? FileIoObservationScope.Begin(read: true, write: false) : null;
         var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
         try
         {
@@ -43,6 +45,7 @@ internal static class CloudPayloadHash
                 ct.ThrowIfCancellationRequested();
                 var read = await source.ReadAsync(buffer.AsMemory(0, BufferSize), ct).ConfigureAwait(false);
                 if (read == 0) break;
+                observed?.Add(read, 0);
                 hash.AppendData(buffer, 0, read);
             }
             ct.ThrowIfCancellationRequested();

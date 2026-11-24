@@ -25,6 +25,8 @@ public interface IStorageWriteGuard
         Func<CancellationToken, Task<T>> writer, CancellationToken ct = default);
     Task CopyAsync(Stream source, Stream destination, string destinationPath, StorageWriteContext? context,
         CancellationToken ct = default);
+    Task CopyFileAsync(Stream source, Stream destination, string destinationPath, StorageWriteContext? context,
+        CancellationToken ct = default) => CopyAsync(source, destination, destinationPath, context, ct);
 }
 
 /// <summary>Flow an explicit caller through nested capabilities without putting it in frozen plans.</summary>
@@ -55,16 +57,18 @@ public sealed partial class StorageWriteGuard : IStorageWriteGuard, IStorageWrit
     private readonly IStorageWritePolicyProvider _policy;
     private readonly Func<string, (string Volume, long Available)> _measure;
     private readonly TimeSpan _interval;
+    private readonly IFileIoObservationProvider? _fileIo;
     private static readonly StringComparer Paths = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
         ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
-    public StorageWriteGuard(IStorageWritePolicyProvider policy) : this(policy, NativeMeasure, TimeSpan.FromMilliseconds(500)) { }
+    public StorageWriteGuard(IStorageWritePolicyProvider policy, IFileIoObservationProvider? fileIo = null)
+        : this(policy, NativeMeasure, TimeSpan.FromMilliseconds(500), fileIo) { }
 
     public StorageWriteGuard(IStorageWritePolicyProvider policy,
-        Func<string, (string Volume, long Available)> measure, TimeSpan interval)
+        Func<string, (string Volume, long Available)> measure, TimeSpan interval, IFileIoObservationProvider? fileIo = null)
     {
         if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval));
-        _policy = policy; _measure = measure; _interval = interval;
+        _policy = policy; _measure = measure; _interval = interval; _fileIo = fileIo;
     }
 
     public Task CheckAsync(string destination, StorageWriteContext? context, CancellationToken ct = default) =>
@@ -104,6 +108,7 @@ public sealed partial class StorageWriteGuard : IStorageWriteGuard, IStorageWrit
     {
         context ??= StorageWriteScope.Current;
         using var scope = StorageWriteScope.Enter(context);
+        using var ioScope = FileIoObservationScope.EnterIfUnowned(_fileIo, context);
         var paths = destinations.Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath).Distinct(Paths).ToArray();
         var volumes = pinnedVolumes ?? new Dictionary<string, string>(Paths);
         foreach (var path in paths) await CheckCoreAsync(path, context, 0, volumes, ct, pinnedVolumes != null);
@@ -151,19 +156,28 @@ public sealed partial class StorageWriteGuard : IStorageWriteGuard, IStorageWrit
         }
     }
 
-    public async Task CopyAsync(Stream source, Stream destination, string destinationPath, StorageWriteContext? context,
-        CancellationToken ct = default)
+    public Task CopyAsync(Stream source, Stream destination, string destinationPath, StorageWriteContext? context,
+        CancellationToken ct = default) => CopyCoreAsync(source, destination, destinationPath, context, false, ct);
+
+    public Task CopyFileAsync(Stream source, Stream destination, string destinationPath, StorageWriteContext? context,
+        CancellationToken ct = default) => CopyCoreAsync(source, destination, destinationPath, context, true, ct);
+
+    private async Task CopyCoreAsync(Stream source, Stream destination, string destinationPath,
+        StorageWriteContext? context, bool readFile, CancellationToken ct)
     {
         context ??= StorageWriteScope.Current;
         await RunAsync([destinationPath], context, async token =>
         {
+            using var observed = FileIoObservationScope.Begin(readFile, write: true);
             var buffer = new byte[1024 * 1024];
             var volumes = new Dictionary<string, string>(Paths);
             int read;
             while ((read = await source.ReadAsync(buffer, token)) > 0)
             {
+                if (readFile) observed?.Add(read, 0);
                 await CheckCoreAsync(destinationPath, context, read, volumes, token);
                 await destination.WriteAsync(buffer.AsMemory(0, read), token);
+                observed?.Add(0, read);
             }
             return true;
         }, ct);

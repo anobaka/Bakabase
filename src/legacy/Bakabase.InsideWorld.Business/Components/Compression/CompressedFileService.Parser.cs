@@ -154,7 +154,11 @@ public partial class CompressedFileService
             .WithStandardInputPipe(PipeSource.FromStream(Stream.Null))
             .WithStandardOutputPipe(Capture(output, true)).WithStandardErrorPipe(Capture(error, false));
         int exit;
-        try { exit = (await command.ExecuteAsync(stop.Token)).ExitCode; }
+        try
+        {
+            var running = command.ExecuteAsync(stop.Token);
+            exit = (await ArchiveProcessIo.AwaitAsync(running.ProcessId, running.Task, write: operation == "x")).ExitCode;
+        }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             throw new ArchiveFormatProbeIncompleteException(limited ? "The parser output exceeded its limit." : "The parser did not complete within its time limit.",

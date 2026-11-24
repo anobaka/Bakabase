@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using SharpCompress.Common;
 using SharpCompress.Compressors.Deflate;
 using SharpCompress.Readers;
@@ -96,6 +97,7 @@ internal sealed class ExplicitZipNameReader : IDisposable
 
     internal async Task ReadAsync(string? destination, Action<string>? progress, CancellationToken ct)
     {
+        using var observed = destination is null ? null : FileIoObservationScope.Begin(read: false, write: true);
         if (destination != null)
         {
             var root = new DirectoryInfo(destination);
@@ -134,6 +136,7 @@ internal sealed class ExplicitZipNameReader : IDisposable
                 if (written > member.Size) throw new InvalidDataException("ZIP entry exceeds its declared uncompressed size.");
                 crc.SlurpBlock(buffer, 0, count);
                 await output.WriteAsync(buffer.AsMemory(0, count), ct);
+                if (outputPath != null) observed?.Add(0, count);
                 progress?.Invoke($"{(total == 0 ? 100 : (int)((completed + written) * 100.0 / total))}%");
             }
             if (written != member.Size || (uint)crc.Crc32Result != member.Crc)
