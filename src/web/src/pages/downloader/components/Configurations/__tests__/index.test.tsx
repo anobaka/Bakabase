@@ -16,6 +16,9 @@ const { getDefinitions, patchOptions, successToast, globalOptions } = vi.hoisted
   globalOptions: { data: {} as { autoStartAfterCreation?: boolean; defaultDownloadPath?: string } },
 }));
 
+vi.mock("@/components/CloudDownload/PikPakCliAccountsPanel", () => ({
+  default: () => <div>PikPak account settings</div>,
+}));
 vi.mock("@/pages/bt-downloads/BtSettingsPanel", () => ({
   default: () => <div>BT transport settings</div>,
 }));
@@ -259,6 +262,13 @@ describe("downloader settings navigation", () => {
     expect(container.querySelector("[data-exhentai-fields]")).toBeInTheDocument();
     await choose("downloader.config.tab.general");
     expect(container.querySelector("input[type=checkbox]")).toBeInTheDocument();
+  });
+
+  it("opens the shared account settings from the PikPak source", async () => {
+    getDefinitions.mockResolvedValue({ data: [{ thirdPartyId: ThirdPartyId.PikPak }] });
+    await act(async () => root.render(<ConfigurationsModal />));
+    await act(async () => button("PikPak")!.click());
+    expect(container).toHaveTextContent("PikPak account settings");
   });
 
   it("confirms the global auto-start setting after a successful save", async () => {

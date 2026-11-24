@@ -6,6 +6,8 @@ const api = vi.hoisted(() => ({
   getPikPakCliAccount: vi.fn(),
   getActivePikPakCliAuthorization: vi.fn(),
   startPikPakCliAuthorization: vi.fn(),
+  startPikPakCliManageFilesAuthorization: vi.fn(),
+  setPikPakCliCleanupSettings: vi.fn(),
   pollPikPakCliAuthorization: vi.fn(),
   cancelPikPakCliAuthorization: vi.fn(),
   logoutPikPakCliAccount: vi.fn(),
@@ -22,6 +24,10 @@ vi.mock("@/components/bakaui", () => ({
     <button disabled={isDisabled || isLoading} onClick={onPress}>
       {children}
     </button>
+  ),
+  Switch: ({ children, isSelected, isDisabled, onValueChange }: any) => (
+    <label><input role="switch" type="checkbox" checked={isSelected} disabled={isDisabled}
+      onChange={(event) => onValueChange(event.currentTarget.checked)} />{children}</label>
   ),
   Chip: ({ children }: any) => <span>{children}</span>,
   Spinner: () => <span>loading</span>,
@@ -298,4 +304,71 @@ it("confirms disconnect and preserves the connected state if it fails", async ()
   await waitFor(() => expect(api.logoutPikPakCliAccount).toHaveBeenCalledWith(quiet));
   expect(screen.getByText("pikpakCli.account.connected")).toBeTruthy();
   expect(screen.getByRole("dialog")).toBeTruthy();
+});
+
+const bound = {
+  isConfigured: true,
+  accountId: "example-account",
+  accountVersion: "generation-1",
+  trashTemporaryCopiesAfterDownload: false,
+};
+
+it("keeps the account policy off until granted and explicitly enabled", async () => {
+  api.getPikPakCliAccount.mockResolvedValue({ code: 0, data: { ...bound, canManageFiles: false } });
+  api.startPikPakCliManageFilesAuthorization.mockResolvedValue({ code: 0, data: pending });
+  render(<PikPakCliAccountsPanel />);
+  const toggle = await screen.findByRole("switch");
+  expect(toggle).toBeDisabled();
+  expect(toggle).not.toBeChecked();
+  fireEvent.click(screen.getByText("pikpakCli.cleanup.authorize"));
+  await screen.findByText(pending.userCode);
+  expect(api.startPikPakCliManageFilesAuthorization).toHaveBeenCalledWith(quiet);
+  expect(api.startPikPakCliAuthorization).not.toHaveBeenCalled();
+  api.getPikPakCliAccount.mockResolvedValue({ code: 0, data: { ...bound, canManageFiles: true } });
+  api.pollPikPakCliAuthorization.mockResolvedValue({
+    code: 0,
+    data: { ...pending, status: "authorized" },
+  });
+  fireEvent.click(screen.getByText("pikpakCli.authorization.refresh"));
+  expect(await screen.findByRole("switch")).toBeEnabled();
+  expect(screen.getByRole("switch")).not.toBeChecked();
+  expect(api.setPikPakCliCleanupSettings).not.toHaveBeenCalled();
+  expect(screen.getByText("pikpakCli.cleanup.permissionGranted")).toBeTruthy();
+});
+
+it("writes the setting for the displayed account generation and keeps the previous value on error", async () => {
+  const account = { ...bound, canManageFiles: true };
+  api.getPikPakCliAccount.mockResolvedValue({ code: 0, data: account });
+  api.setPikPakCliCleanupSettings
+    .mockResolvedValueOnce({ code: 400, message: "PIKPAK_ACCOUNT_IDENTITY_UNVERIFIED" })
+    .mockResolvedValueOnce({
+      code: 0,
+      data: { ...account, trashTemporaryCopiesAfterDownload: true },
+    })
+    .mockResolvedValueOnce({ code: 0, data: account });
+  render(<PikPakCliAccountsPanel />);
+  const toggle = await screen.findByRole("switch");
+  fireEvent.click(toggle);
+  await screen.findByRole("alert");
+  expect(toggle).not.toBeChecked();
+  fireEvent.click(toggle);
+  await waitFor(() => expect(toggle).toBeChecked());
+  expect(api.setPikPakCliCleanupSettings).toHaveBeenLastCalledWith(
+    {
+      expectedAccountId: bound.accountId,
+      expectedAccountVersion: bound.accountVersion,
+      trashTemporaryCopiesAfterDownload: true,
+    },
+    quiet,
+  );
+  fireEvent.click(toggle);
+  await waitFor(() => expect(toggle).not.toBeChecked());
+  expect(api.setPikPakCliCleanupSettings).toHaveBeenLastCalledWith(
+    {
+      expectedAccountId: bound.accountId,
+      expectedAccountVersion: bound.accountVersion,
+      trashTemporaryCopiesAfterDownload: false,
+    },
+    quiet,
+  );
 });

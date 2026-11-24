@@ -15,6 +15,7 @@ import { downloadProblemSummary } from "@/components/CloudDownload/problemLabels
 import { formatBtBytes } from "@/pages/bt-downloads/format";
 import { centerStatusColor, isFileVerificationStage, type CenterTask, type TaskAction } from "../downloadCenter";
 import { DOWNLOAD_TASK_ROW_HEIGHT } from "./TaskRow";
+import { OwnedCloudCopyButton } from "./OwnedCloudCopy";
 import { VerifyExistingFilesButton } from "./VerifyExistingDownloadFiles";
 
 type Props = {
@@ -88,6 +89,9 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
             {t(`downloadCenter.provider.${task.provider}`)} · {task.outputDirectory}
           </div>
         </div>
+        {task.ownedCopy && task.ownedCopy.status !== "notApplicable" && (
+          <OwnedCloudCopyButton copy={task.ownedCopy} />
+        )}
         <Chip size="sm" variant="flat" color={color}>
           {t(`downloadCenter.status.${task.status}`)}
         </Chip>

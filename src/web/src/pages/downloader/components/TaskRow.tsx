@@ -27,6 +27,7 @@ import { TbMagnet, TbMagnetOff } from "react-icons/tb";
 import { DownloadTaskTypeIconMap } from "./TaskDetailModal/models";
 import { useEstimatedRemainingLabel } from "./EstimatedRemainingTime";
 import TaskLinkCopyButton from "./TaskLinkCopyButton";
+import { OwnedCloudCopyButton } from "./OwnedCloudCopy";
 import { VerifyExistingFilesButton } from "./VerifyExistingDownloadFiles";
 
 import { humanFileSize } from "@/components/utils";
@@ -250,6 +251,9 @@ const TaskRow = memo(function TaskRow({
             <TaskLinkCopyButton value={task.key} />
           </div>
         </div>
+        {centerTask?.ownedCopy && centerTask.ownedCopy.status !== "notApplicable" && (
+          <OwnedCloudCopyButton copy={centerTask.ownedCopy} />
+        )}
         <Chip className="h-6 shrink-0" color={verificationStage ? "primary" : statusColor} size="sm" variant="flat">
           {verificationStage
             ? t("downloadCenter.status.running")

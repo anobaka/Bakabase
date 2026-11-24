@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Modal, Spinner } from "@/components/bakaui";
+import { Button, Chip, Modal, Spinner, Switch } from "@/components/bakaui";
 import ExternalLink from "@/components/ExternalLink";
 import { openExternalUrl } from "@/utils/openExternalUrl";
 import { extractErrorMessage, humanFileSize } from "@/components/utils";
@@ -173,6 +173,70 @@ export default function PikPakCliAccountsPanel({ onChanged }: { onChanged?: () =
       <p className="text-xs leading-relaxed text-default-500">
         {t("pikpakCli.account.permissions")}
       </p>
+      {account?.isConfigured && !pending && (
+        <section className="space-y-2" aria-label={t("pikpakCli.cleanup.title")}>
+          <Switch
+            size="sm"
+            isSelected={account.trashTemporaryCopiesAfterDownload === true}
+            isDisabled={
+              busy ||
+              !ready ||
+              !account.accountId ||
+              !account.accountVersion ||
+              (!account.canManageFiles && !account.trashTemporaryCopiesAfterDownload)
+            }
+            onValueChange={(enabled) => {
+              const { accountId, accountVersion } = account;
+              if (!accountId || !accountVersion) return;
+              void perform(async (current) => {
+                const updated = checked(
+                  await BApi.pikpakCli.setPikPakCliCleanupSettings(
+                    {
+                      expectedAccountId: accountId,
+                      expectedAccountVersion: accountVersion,
+                      trashTemporaryCopiesAfterDownload: enabled,
+                    },
+                    privateRequest,
+                  ),
+                ).data;
+                if (!updated) throw new Error("PIKPAK_CLI_REQUEST_FAILED");
+                if (mounted.current && generation.current === current) {
+                  setAccount(updated);
+                  changed.current?.();
+                }
+              });
+            }}
+          >
+            {t("pikpakCli.cleanup.toggle")}
+          </Switch>
+          <p className="text-xs leading-relaxed text-default-500">{t("pikpakCli.cleanup.hint")}</p>
+          {account.canManageFiles ? (
+            <p className="text-xs text-default-500">{t("pikpakCli.cleanup.permissionGranted")}</p>
+          ) : account.accountId && account.accountVersion ? (
+            <Button
+              size="sm"
+              variant="flat"
+              isDisabled={busy || !ready}
+              onPress={() =>
+                void perform(async (current) => {
+                  await updateSession(
+                    checked(
+                      await BApi.pikpakCli.startPikPakCliManageFilesAuthorization(privateRequest),
+                    ).data ?? undefined,
+                    current,
+                  );
+                })
+              }
+            >
+              {t("pikpakCli.cleanup.authorize")}
+            </Button>
+          ) : (
+            <p className="text-xs text-warning-600">
+              {t("cloudDownload.problemCode.PIKPAK_ACCOUNT_IDENTITY_UNVERIFIED")}
+            </p>
+          )}
+        </section>
+      )}
       {problem && (
         <p role="alert" className="break-words text-sm text-warning-600">
           {downloadProblemLabel(problem, t)}

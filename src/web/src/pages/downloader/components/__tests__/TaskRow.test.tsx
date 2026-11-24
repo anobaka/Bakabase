@@ -132,6 +132,23 @@ beforeEach(() => {
   root = createRoot(container);
 });
 
+it("opens the registered cloud copy without selecting or retrying its download", async () => {
+  const center: NonNullable<TaskRowProps["centerTask"]> = {
+    id: "site:17", siteTaskId: 17, category: "site", provider: "site", providerTaskId: "17",
+    name: "Example", status: "completed", createdAt: "2026-11-24", updatedAt: "2026-11-24",
+    outputDirectory: "/files", originKind: "workflow", files: [], availableActions: [],
+  };
+  const label = "downloadCenter.ownedCopy.show";
+  await show({}, undefined, undefined, undefined, undefined, center);
+  expect(element(label)).toBeNull();
+  const ownedCopy = { downloadTaskId: 17, status: "trashed", canRetry: false };
+  const controls = await show({}, undefined, undefined, undefined, undefined, { ...center, ownedCopy });
+  await click(element(label));
+  expect(portal).toHaveBeenCalledWith(expect.any(Function), { taskId: 17 });
+  expect(controls.onClick).not.toHaveBeenCalled();
+  expect(controls.onStart).not.toHaveBeenCalled();
+});
+
 it("opens a review only when the download center advertises existing-file verification", async () => {
   const center: NonNullable<TaskRowProps["centerTask"]> = {
     id: "site:17", siteTaskId: 17, category: "site", provider: "baidu", providerTaskId: "17", name: "Saved files",
