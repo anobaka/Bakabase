@@ -45,7 +45,7 @@ public sealed partial class AcquisitionReplanTests
     }
 
     [TestMethod]
-    public async Task Local_download_reception_preserves_the_original_plan_and_publishes_on_normal_run()
+    public async Task Local_download_reception_publishes_and_replans_from_the_original_received_files()
     {
         var task = await LegacyManualSource("Manual transfer");
         Assert.IsTrue(task.CanReceiveLocalDownloads);
@@ -85,8 +85,35 @@ public sealed partial class AcquisitionReplanTests
         Assert.AreEqual(1, await Db.Artifacts.CountAsync());
         Assert.IsFalse((await Artifacts.GetArtifactAsync(part.ContinueFrom.ArtifactId))!.Managed);
 
-        var (_, output) = await PublishReceivedFilesAsync(received);
+        var (completedRun, output) = await PublishReceivedFilesAsync(received);
         Assert.AreEqual(await File.ReadAllTextAsync(input), await File.ReadAllTextAsync(output.PublishedFiles.Single()));
+        Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
+
+        await Db.WorkflowRuns.Where(r => r.Id == completedRun).ExecuteUpdateAsync(s =>
+            s.SetProperty(r => r.Status, WorkflowRunStatus.Success).SetProperty(r => r.CompletedAt, DateTime.UtcNow));
+        await Db.AcquisitionTasks.Where(t => t.Id == task.Id).ExecuteUpdateAsync(s =>
+            s.SetProperty(t => t.Status, AcquisitionStatus.Completed).SetProperty(t => t.Phase, "completed"));
+        var completed = (await Plans.GetAsync(task.Id, default))!;
+        var original = completed.ReplanArtifacts.Single(a => a.Kind == "currentFiles");
+        Assert.AreEqual(part.ContinueFrom.ArtifactId, original.ArtifactId);
+        var replan = new AcquisitionPlanReplanInput(completed.Task.PlanRevision, completedRun, "Rename the received file.",
+            [new(part.Id, new() {Requirement = "required", Steps =
+                [new() {Id = "rename", Op = "renameFile", Selector = "file.txt", TargetName = "renamed.txt"}]},
+                [original.ArtifactId], original.ArtifactId)]);
+        var revised = await Plans.ReplanAsync(task.Id, replan, default);
+        Assert.AreEqual(part.ContinueFrom, revised.Plan!.Parts.Single().ContinueFrom);
+        Assert.AreEqual(completedRun, revised.PlanHistory.Last().PreviousRunId);
+        Assert.AreEqual(completed.Task.PlanRevision + 1, revised.Task.PlanRevision);
+        var stale = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => Plans.ReplanAsync(task.Id, replan, default));
+        StringAssert.StartsWith(stale.Message, "PLAN_VERSION_CONFLICT");
+
+        var (secondRun, renamed) = await PublishReceivedFilesAsync(revised);
+        Assert.AreNotEqual(completedRun, secondRun);
+        Assert.IsTrue(await AcquisitionPlanArtifactInputGuard.HasContinuationBindingAsync(Db, secondRun,
+            part.Id, part.ContinueFrom.OperationId, default));
+        Assert.AreEqual("renamed.txt", Path.GetFileName(renamed.PublishedFiles.Single()));
+        Assert.AreEqual("bytes from a manual download", await File.ReadAllTextAsync(renamed.PublishedFiles.Single()));
+        Assert.AreEqual("bytes from a manual download", await File.ReadAllTextAsync(output.PublishedFiles.Single()));
         Assert.AreEqual(0, await Db.DownloadTasks.CountAsync());
     }
 
@@ -220,6 +247,12 @@ public sealed partial class AcquisitionReplanTests
         Assert.IsNotNull(await Artifacts.ResolveByIdAsync(publication.Id));
         Assert.AreEqual(ArtifactLocationState.Retired, (await Artifacts.GetArtifactAsync(originalId))!.State);
         Assert.IsFalse((await Preview(true)).Rows.Single().ArtifactIds.Contains(originalId));
+        var stopped = (await Plans.GetAsync(task.Id, default))!;
+        Assert.IsFalse(stopped.ReplanArtifacts.Any(a => a.ArtifactId == originalId));
+        var replan = new AcquisitionPlanReplanInput(stopped.Task.PlanRevision, runId, "Inspect the retired input.",
+            [new("a", new() {Requirement = "unknown"}, [originalId], originalId)]);
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => Plans.ReplanAsync(task.Id, replan, default));
+
         var after = await Db.AcquisitionTasks.AsNoTracking().SingleAsync(row => row.Id == task.Id);
         Assert.AreEqual(AcquisitionStatus.Completed, after.Status);
         Assert.IsNull(after.DeletedAt);
@@ -273,6 +306,32 @@ public sealed partial class AcquisitionReplanTests
     }
 
     [TestMethod]
+    public async Task Replanning_before_the_first_binding_uses_the_frozen_receipt()
+    {
+        var task = await LegacyManualSource("Stopped before reading received files");
+        var dirs = await Plans.PrepareLocalDownloadsAsync(task.Id, new(task.Task.PlanRevision), null, default);
+        var folder = dirs.Parts.Single().Directory!;
+        await File.WriteAllTextAsync(Path.Combine(folder, "file.txt"), "received file");
+        var intake = await Plans.PreviewLocalDownloadsAsync(task.Id, new(dirs.Revision), null, default);
+        var received = await Plans.ApplyLocalDownloadsAsync(task.Id, new(intake.Revision, intake.Token!), null, default);
+        var input = received.Plan!.Parts.Single().ContinueFrom!;
+        var run = new WorkflowRunDbModel {Status = WorkflowRunStatus.Failed, StartedAt = DateTime.UtcNow,
+            Sources = [new() {Module = "acquisition", EntityKind = "task", EntityId = task.Id.ToString()}]};
+        Db.WorkflowRuns.Add(run);
+        await Db.SaveChangesAsync();
+        await Db.AcquisitionTasks.Where(t => t.Id == task.Id).ExecuteUpdateAsync(s =>
+            s.SetProperty(t => t.WorkflowRunId, run.Id).SetProperty(t => t.Status, AcquisitionStatus.Failed));
+        Assert.IsFalse(await AcquisitionPlanArtifactInputGuard.HasContinuationBindingAsync(Db, run.Id, "a", input.OperationId, default));
+        var detail = (await Plans.GetAsync(task.Id, default))!;
+        Assert.IsTrue(detail.ReplanArtifacts.Any(a => a.ArtifactId == input.ArtifactId));
+        var request = new AcquisitionPlanReplanInput(detail.Task.PlanRevision, run.Id, "Inspect the received file.",
+            [new("a", new() {Requirement = "unknown"}, [input.ArtifactId], input.ArtifactId)]);
+        var revised = await Plans.ReplanAsync(task.Id, request, default);
+        Assert.AreEqual(input, revised.Plan!.Parts.Single().ContinueFrom);
+        Assert.IsFalse(await AcquisitionPlanArtifactInputGuard.HasContinuationBindingAsync(Db, run.Id, "a", input.OperationId, default));
+    }
+
+    [TestMethod]
     public async Task Local_download_reception_needs_every_group_and_rejects_changed_bytes_at_confirmation()
     {
         var task = await LegacyManualSource("Several groups", twoGroups: true, unknown: true);
@@ -304,6 +363,14 @@ public sealed partial class AcquisitionReplanTests
         Assert.IsTrue(received.Steps.Any(s => s.Kind == AcquisitionPlanProcessingActivity.ActivityKind));
         Assert.AreEqual("same length b", await File.ReadAllTextAsync(first));
         Assert.AreEqual("incomplete", await File.ReadAllTextAsync(second));
+
+        var firstPart = received.Plan.Parts.Single(p => p.Id == "a");
+        var otherPart = received.Plan.Parts.Single(p => p.Id == "b");
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => AcquisitionPlanArtifactInputGuard.RequireAsync(
+            Db, Artifacts, task.Id, firstPart.Id, otherPart.ContinueFrom!, default));
+        var sibling = await LegacyManualSource("Independent task");
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => AcquisitionPlanArtifactInputGuard.RequireAsync(
+            Db, Artifacts, sibling.Id, firstPart.Id, firstPart.ContinueFrom! with {TaskId = sibling.Id}, default));
     }
 
     [TestMethod]

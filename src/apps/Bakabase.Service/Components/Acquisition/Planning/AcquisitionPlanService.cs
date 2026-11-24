@@ -394,7 +394,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                     ? plan.StoragePolicy.ProcessingWorkspaceDirectory : plan.OutputDirectory), allowEmpty: false);
             var evidence = new List<AcquisitionPlanArtifactEvidence>();
             var referenceOnlyDeliveryEvidence = new HashSet<(string PartId, string ArtifactId)>();
-            var evidenceRuns = new Dictionary<(string PartId, string ArtifactId), int>();
+            var evidenceRuns = new Dictionary<(string PartId, string ArtifactId), int?>();
             var continuations = new List<(string PartId, AcquisitionPlanArtifactInput Input)>();
             var layoutChanged = false;
             foreach (var item in input.Items)
@@ -408,6 +408,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                 var retainedInput = part.ContinueFrom is { } existing &&
                     (item.ContinueFromArtifactId == null || item.ContinueFromArtifactId == existing.ArtifactId)
                         ? existing : null;
+                // Manual reception has a task/part receipt predating every workflow. A run may
+                // provide additional evidence that it consumed it, but cannot become its origin.
+                int? retainedEvidenceRun = retainedInput is {ManualDownload: true} ? null : retainedInput?.PreviousRunId;
                 if (retainedInput != null)
                 {
                     await AcquisitionPlanArtifactInputGuard.RequireAsync(db, artifacts, row.Id, item.PartId, retainedInput, ct);
@@ -416,8 +419,12 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                     // such binding and must keep the earlier verified provenance.
                     if (await HasArtifactBindingAsync(input.ExpectedRunId, item.PartId, retainedInput.OperationId, ct))
                     {
-                        retainedInput = retainedInput with {PreviousRunId = input.ExpectedRunId};
-                        await AcquisitionPlanArtifactInputGuard.RequireAsync(db, artifacts, row.Id, item.PartId, retainedInput, ct);
+                        retainedEvidenceRun = input.ExpectedRunId;
+                        if (retainedInput.ManualDownload != true)
+                        {
+                            retainedInput = retainedInput with {PreviousRunId = input.ExpectedRunId};
+                            await AcquisitionPlanArtifactInputGuard.RequireAsync(db, artifacts, row.Id, item.PartId, retainedInput, ct);
+                        }
                     }
                 }
                 try { FileProcessingPlanValidator.Validate(item.Plan); }
@@ -426,9 +433,9 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                     item.ArtifactEvidenceIds.Append(retainedInput.ArtifactId).Distinct().ToArray();
                 foreach (var artifactId in artifactIds)
                 {
-                    var evidenceRun = retainedInput?.ArtifactId == artifactId ? retainedInput.PreviousRunId : input.ExpectedRunId;
+                    var evidenceRun = retainedInput?.ArtifactId == artifactId ? retainedEvidenceRun : input.ExpectedRunId;
                     var artifact = await artifacts.GetArtifactAsync(artifactId, ct);
-                    if (artifact == null || !await HasArtifactBindingAsync(evidenceRun, item.PartId, artifact.OperationId, ct))
+                    if (artifact == null || evidenceRun is { } boundRun && !await HasArtifactBindingAsync(boundRun, item.PartId, artifact.OperationId, ct))
                         throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
                     if (completedRevision && artifact.Kind is not ("processedFiles" or "publishedFiles" or AcquisitionCompositeFiles.Kind or AcquisitionCurrentDirectoryFiles.Kind))
                         throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
@@ -507,7 +514,7 @@ public sealed partial class AcquisitionPlanService(BakabaseDbContext db, IEnumer
                     currentArtifact.Manifest.Fingerprint != item.Manifest.Fingerprint ||
                     !currentArtifact.Manifest.Entries.SequenceEqual(item.Manifest.Entries) ||
                     !(currentArtifact.Manifest.Directories ?? []).SequenceEqual(item.Manifest.Directories ?? []) ||
-                    !await HasArtifactBindingAsync(evidenceRuns[(item.PartId, item.ArtifactId)], item.PartId, item.OperationId, ct))
+                    evidenceRuns[(item.PartId, item.ArtifactId)] is { } boundRun && !await HasArtifactBindingAsync(boundRun, item.PartId, item.OperationId, ct))
                     throw new InvalidOperationException("PLAN_REPLAN_EVIDENCE_UNAVAILABLE");
                 if (input.DeliveryContentLayout != null && FileArtifactDeliveryLayout.Preview(currentArtifact!, input.DeliveryContentLayout)
                     .ProjectionFingerprint != input.Items.Single(i => i.PartId == item.PartId).ExpectedDeliveryProjectionFingerprint)
