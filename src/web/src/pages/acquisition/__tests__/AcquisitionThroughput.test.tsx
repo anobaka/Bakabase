@@ -12,7 +12,14 @@ import {
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import AcquisitionThroughput from "../components/throughput";
 import useAcquisitionThroughput from "../components/throughput/useAcquisitionThroughput";
-import { formatRate, partial, rate, sampleTime, taskTrends } from "../components/throughput/model";
+import {
+  formatRate,
+  formatReportedRate,
+  partial,
+  rate,
+  sampleTime,
+  taskTrends,
+} from "../components/throughput/model";
 
 const getThroughput = vi.hoisted(() => vi.fn());
 vi.mock("@/sdk/BApi", () => ({
@@ -25,6 +32,9 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 vi.mock("@/components/bakaui", () => ({
+  Button: ({ children, onPress }: { children: ReactNode; onPress: () => void }) => (
+    <button onClick={onPress}>{children}</button>
+  ),
   Modal: ({
     title,
     children,
@@ -94,6 +104,8 @@ it("distinguishes unavailable, partial and measured zero rates", () => {
   expect(formatRate(rate(rates, "write"))).toBe("0 B/s");
   expect(formatRate(rate(rates, "download"))).toBe("1.0 KiB/s");
   expect(formatRate(0.2)).toBe("0.2 B/s");
+  expect(formatReportedRate("read", 1024, true)).toBe("1.0 KiB/s*");
+  expect(formatReportedRate("write", null, true)).toBe("—");
   expect(rate(undefined, "write")).toBeNull();
   expect(partial(rates, "download")).toBe(true);
   expect(partial(rates, "read")).toBe(false);

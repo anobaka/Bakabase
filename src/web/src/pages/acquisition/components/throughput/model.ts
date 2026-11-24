@@ -31,6 +31,12 @@ export function formatRate(value: number | null) {
   return `${formatBtBytes(value)}/s`;
 }
 
+export function formatReportedRate(metric: Metric, value: number | null, qualified: boolean) {
+  const formatted = formatRate(value);
+  if (value === null || !qualified) return formatted;
+  return metric === "download" ? `≥ ${formatted}` : `${formatted}*`;
+}
+
 export function sampleTime(sample: Sample) {
   const value = sample.sampledAt ?? "";
   // Bakabase's shared serializer can return UTC without an offset.

@@ -4,7 +4,16 @@ import { Line } from "react-chartjs-2";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-import { formatRate, metrics, partial, rate, sampleTime, taskTrends } from "./model";
+import RateValue from "./RateValue";
+import {
+  formatRate,
+  formatReportedRate,
+  metrics,
+  partial,
+  rate,
+  sampleTime,
+  taskTrends,
+} from "./model";
 import type { Rates, Throughput } from "./model";
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip);
@@ -87,7 +96,7 @@ function TaskChart({
             title: (items) => (items.length ? time.format((items[0].raw as Point).x) : ""),
             label: (item) => {
               const point = item.raw as Point;
-              return `${item.dataset.label}  ${point.partial && point.y !== null ? "≥ " : ""}${formatRate(point.y)}`;
+              return `${item.dataset.label}  ${formatReportedRate(metrics[item.datasetIndex].key, point.y, point.partial)}`;
             },
           },
         },
@@ -113,7 +122,6 @@ export function RateValues({ rates }: { rates?: Rates | null }) {
   return (
     <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
       {metrics.map((metric) => {
-        const value = rate(rates, metric.key);
         return (
           <div key={metric.key} className="flex items-center gap-1.5">
             <dt className="flex items-center gap-1 text-default-500">
@@ -133,8 +141,7 @@ export function RateValues({ rates }: { rates?: Rates | null }) {
               {t(`acquisition.throughput.${metric.key}`)}
             </dt>
             <dd className="tabular-nums">
-              {value !== null && partial(rates, metric.key) ? "≥ " : ""}
-              {formatRate(value)}
+              <RateValue rates={rates} metric={metric.key} />
             </dd>
           </div>
         );
