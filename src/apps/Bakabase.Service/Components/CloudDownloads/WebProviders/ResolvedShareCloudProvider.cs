@@ -22,7 +22,8 @@ internal sealed record PublicShareFile(string Id, string Path, long Size, string
     string? Sha256 = null, string? Md5 = null);
 
 internal sealed record PublicShareResolution(IReadOnlyList<PublicShareFile> Files,
-    Func<PublicShareFile, bool, CancellationToken, Task<Uri>> OriginalUrl);
+    Func<PublicShareFile, bool, CancellationToken, Task<Uri>> OriginalUrl,
+    Action<PublicShareFile, HttpResponseMessage>? ValidateDownloadResponse = null);
 
 /// <summary>Resolves public shares without remote writes, then delegates transfers to the existing
 /// HTTP engine. The durable manifest contains original file identity, never temporary URLs/tokens.
@@ -36,6 +37,7 @@ public abstract class ResolvedShareCloudProvider : ICloudDownloadProvider, IClou
     private static readonly JsonSerializerOptions Json = JsonSerializerOptions.Web;
     public abstract string ProviderId { get; }
     protected abstract string ClientName { get; }
+    protected virtual string ClientFor(CloudSource source) => ClientName;
 
     protected ResolvedShareCloudProvider(AppService app, IHttpDownloader downloader, IHttpClientFactory clients)
         : this(() => app.AppDataDirectory, downloader, clients) { }
@@ -117,7 +119,7 @@ public abstract class ResolvedShareCloudProvider : ICloudDownloadProvider, IClou
             ValidateSource(request.Source);
             var output = Path.GetFullPath(request.OutputDirectory);
             NoLinks(output);
-            using var client = _clients.CreateClient(ClientName);
+            using var client = _clients.CreateClient(ClientFor(request.Source));
             var resolution = await ResolveAsync(request.Source, client, ct);
             var files = ValidateManifest(resolution.Files);
             var manifestPath = Path.Combine([_appData(), .. StateDirectorySegments(Hash(request.OperationId)), "manifest.json"]);
@@ -167,7 +169,7 @@ public abstract class ResolvedShareCloudProvider : ICloudDownloadProvider, IClou
             var output = Path.GetFullPath(request.OutputDirectory);
             NoLinks(output);
             Directory.CreateDirectory(output);
-            using var client = _clients.CreateClient(ClientName);
+            using var client = _clients.CreateClient(ClientFor(request.Source));
             await progress(new(null, Stage: "Discovering original files"));
             var resolution = await ResolveAsync(request.Source, client, ct);
             var files = ValidateManifest(resolution.Files);
@@ -226,7 +228,9 @@ public abstract class ResolvedShareCloudProvider : ICloudDownloadProvider, IClou
                                     throw new CloudProviderException("The original file uses an unsupported download host. Download it manually.");
                                 var downloaded = await _downloader.DownloadWithProgressAsync(new(uri.AbsoluteUri, staging)
                                 {
-                                    FileName = name, HttpClientName = ClientName, AllowOverwrite = false,
+                                    FileName = name, HttpClientName = ClientFor(request.Source), AllowOverwrite = false,
+                                    ValidateSourceResponse = resolution.ValidateDownloadResponse == null ? null :
+                                        response => resolution.ValidateDownloadResponse(file, response),
                                     ParallelConnections = 4, MaxRetries = 2
                                 }, update => progress(new(total == 0 ? 0 : Math.Min(100, 100d *
                                         (completedBytes + Math.Min(file.Size, update.CompletedBytes)) / total),

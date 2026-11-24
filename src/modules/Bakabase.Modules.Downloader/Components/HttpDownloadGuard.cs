@@ -24,7 +24,8 @@ internal sealed class HttpDownloadProtocolException(HttpGuardFailure failure, st
 /// Validates a response before the download library can write it at a persisted chunk offset.
 /// The supplied identity stays fixed for the whole attempt, including all parallel requests.
 /// </summary>
-internal sealed class HttpDownloadGuard(HttpClient hostClient, HttpRemoteIdentity identity, bool allowRanges)
+internal sealed class HttpDownloadGuard(HttpClient hostClient, HttpRemoteIdentity identity, bool allowRanges,
+    Action<HttpResponseMessage>? validateSourceResponse = null)
     : HttpMessageHandler
 {
     private volatile bool _transferStarted;
@@ -79,6 +80,7 @@ internal sealed class HttpDownloadGuard(HttpClient hostClient, HttpRemoteIdentit
                     "The remote file no longer matches the download's original version.");
             if (!response.IsSuccessStatusCode) return response;
 
+            validateSourceResponse?.Invoke(response);
             ValidateIdentity(response);
             ValidateRange(forwarded.Headers.Range, response);
 
@@ -90,7 +92,9 @@ internal sealed class HttpDownloadGuard(HttpClient hostClient, HttpRemoteIdentit
                 response.Headers.AcceptRanges.Add("none");
             }
 
-            // Keep the host's final RequestMessage/URI intact after redirects.
+            // For a provider-verified original, every subsequent range and retry must start
+            // from its stable locator. The HTTP library otherwise adopts the redirected URL.
+            if (validateSourceResponse != null) response.RequestMessage = request;
             return response;
         }
         catch (HttpDownloadProtocolException ex)

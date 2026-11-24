@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Bakabase.Modules.Downloader.Cloud;
+using Bakabase.Service.Components.CloudDownloads.WebProviders;
 using Bakabase.Service.Components.CloudDownloads.Rclone;
 
 namespace Bakabase.Service.Components.DownloadIntents;
@@ -62,13 +63,11 @@ public static class DownloadMethodCatalog
             EngineId: "megacmd", Scope: "publicShare", ArtifactScope: "mega.megacmd:v1"),
         new("pikpak.rclone", "pikpak", "rclone", "site", ["rclone-component-service"], "pikpak",
             SupportsRemote: true, EngineId: "rclone", Scope: "accountRemote", RemoteOnly: true, ArtifactScope: "pikpak.rclone:v1"),
-        new("oneDrive.sharePoint", "oneDrive", "SharePoint public folder", "site", [],
+        new("oneDrive.sharePoint", "oneDrive", "SharePoint public share", "site", [],
             ValidateSource: source => RequireHttps(source) ??
-                (!Uri.TryCreate(source.Url, UriKind.Absolute, out var uri) ||
-                 !uri.IdnHost.EndsWith(".sharepoint.com", StringComparison.OrdinalIgnoreCase) ||
-                 !Regex.IsMatch(uri.AbsolutePath, @"^/:f:/[gs]/.+")
+                (!SharePointCloudProvider.SupportsPublicLink(source.Url)
                     ? new("SHAREPOINT_FOLDER_REQUIRED", "source",
-                        "This method supports public SharePoint folder links. Other OneDrive links need manual handling.", Actions: ["manualDownload"])
+                        "Choose a public SharePoint folder link or a shared attachment from a SharePoint personal site.", Actions: ["manualDownload"])
                     : null)),
         new("oneDrive.rclone", "oneDrive", "rclone", "site", ["rclone-component-service"], "oneDrive",
             SupportsRemote: true, EngineId: "rclone", Scope: "accountRemote", RemoteOnly: true, ArtifactScope: "oneDrive.rclone:v1"),

@@ -122,7 +122,7 @@
   "acquire.methodName.bt.native": "Built-in BitTorrent downloader",
   "acquire.methodName.manual": "Manual download",
   "acquire.requirement.SOURCE_NETWORK_REQUIRES_PROXY": "DNS cannot provide a verifiable public target address. Configure an explicit proxy in network settings, then check again.",
-  "acquire.requirement.SHAREPOINT_FOLDER_REQUIRED": "This method supports public SharePoint folder links. Handle other OneDrive link types manually.",
+  "acquire.requirement.SHAREPOINT_FOLDER_REQUIRED": "Choose a public SharePoint folder link or a shared attachment from a SharePoint personal site.",
   "acquire.source.feemoo": "Feemoo",
   "acquire.download.remoteHint": "The path is relative to the selected account or drive; use / for its root. Do not enter a share URL, remote-name prefix or ...",
   "acquire.method.engine": "Download engine: {{engine}}",

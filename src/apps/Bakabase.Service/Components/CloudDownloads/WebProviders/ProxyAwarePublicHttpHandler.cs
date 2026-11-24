@@ -26,17 +26,18 @@ public sealed class ProxyAwarePublicHttpHandler : HttpMessageHandler
     private readonly ConcurrentDictionary<string, HttpMessageInvoker> _proxied = new();
     private readonly Func<Uri, ICredentials?, HttpMessageHandler> _proxyFactory;
     private readonly bool _followRedirects;
+    private readonly Action<Uri, Uri>? _validateRoute;
     private readonly Func<Uri, CancellationToken, Task>? _checkProxyTarget;
 
     public ProxyAwarePublicHttpHandler(IWebProxy proxy, Func<Uri, bool>? allowed = null, bool followRedirects = true,
-        Func<Uri, CancellationToken, Task>? checkProxyTarget = null)
+        Func<Uri, CancellationToken, Task>? checkProxyTarget = null, Action<Uri, Uri>? validateRoute = null)
         : this(proxy, allowed ?? (_ => true), PublicCloudHttp.EnsurePublicHostAsync,
             PublicCloudHttp.CreateHandler(), (uri, credentials) => new SocketsHttpHandler
             {
                 Proxy = new WebProxy(uri) {Credentials = credentials}, UseProxy = true,
                 UseCookies = false, AllowAutoRedirect = false, ConnectTimeout = TimeSpan.FromSeconds(15),
                 AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            }, followRedirects, checkProxyTarget) { }
+            }, followRedirects, checkProxyTarget, validateRoute) { }
 
     // Fixed provider metadata endpoints may use the host's TUN/fake-IP DNS. Authenticate the
     // allowlisted hostname with TLS and never follow a redirect or forward ambient credentials.
@@ -55,11 +56,11 @@ public sealed class ProxyAwarePublicHttpHandler : HttpMessageHandler
     internal ProxyAwarePublicHttpHandler(IWebProxy proxy, Func<Uri, bool> allowed,
         Func<Uri, CancellationToken, Task> check, HttpMessageHandler direct,
         Func<Uri, ICredentials?, HttpMessageHandler> proxyFactory, bool followRedirects = true,
-        Func<Uri, CancellationToken, Task>? checkProxyTarget = null)
+        Func<Uri, CancellationToken, Task>? checkProxyTarget = null, Action<Uri, Uri>? validateRoute = null)
     {
         _proxy = proxy; _allowed = allowed; _check = check;
         _direct = new HttpMessageInvoker(direct); _proxyFactory = proxyFactory;
-        _followRedirects = followRedirects; _checkProxyTarget = checkProxyTarget;
+        _followRedirects = followRedirects; _checkProxyTarget = checkProxyTarget; _validateRoute = validateRoute;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
@@ -72,6 +73,7 @@ public sealed class ProxyAwarePublicHttpHandler : HttpMessageHandler
             {
                 var uri = current.RequestUri ?? throw new HttpRequestException("The public request URL is missing.");
                 PublicCloudHttp.EnsureSafeUri(uri);
+                _validateRoute?.Invoke(request.RequestUri!, uri);
                 if (!_allowed(uri)) throw new HttpRequestException("This address or redirect is not supported by the public-share adapter; a login or manual download may be required.");
                 var endpoint = _proxy.IsBypassed(uri) ? null : _proxy.GetProxy(uri);
                 HttpResponseMessage response;
@@ -139,19 +141,21 @@ public sealed class ProxyAwarePublicHttpHandler : HttpMessageHandler
 public static class PublicShareDownloadClients
 {
     public const string PikPak = "Bakabase.PublicShare.PikPak";
+    public const string SharePointAttachment = "Bakabase.PublicShare.SharePointAttachment";
     public const string SharePoint = "Bakabase.PublicShare.SharePoint";
 
     public static IServiceCollection AddPublicShareDownloadClients(this IServiceCollection services)
     {
         Add(PikPak, "pikpak"); Add(SharePoint, "oneDrive");
+        Add(SharePointAttachment, "oneDrive", SharePointCloudProvider.RequireAttachmentRoute);
         return services;
-        void Add(string name, string provider) => services.AddHttpClient(name, client =>
+        void Add(string name, string provider, Action<Uri, Uri>? route = null) => services.AddHttpClient(name, client =>
         {
             client.Timeout = Timeout.InfiniteTimeSpan;
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 Bakabase-PublicShare/1.0");
         }).RemoveAllLoggers().ConfigurePrimaryHttpMessageHandler(sp => new ProxyAwarePublicHttpHandler(
             sp.GetRequiredService<BakabaseWebProxy>().ForThirdParty(CloudSites.Site(provider)),
-            uri => IsProviderHost(provider, uri)));
+            uri => IsProviderHost(provider, uri), validateRoute: route));
     }
 
     internal static bool IsProviderHost(string provider, Uri uri)

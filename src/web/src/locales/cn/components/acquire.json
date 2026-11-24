@@ -122,7 +122,7 @@
   "acquire.methodName.bt.native": "内置 BitTorrent 下载器",
   "acquire.methodName.manual": "人工下载",
   "acquire.requirement.SOURCE_NETWORK_REQUIRES_PROXY": "当前 DNS 无法提供可校验的公网目标地址，请在网络设置中配置明确的代理，然后重新检查。",
-  "acquire.requirement.SHAREPOINT_FOLDER_REQUIRED": "当前支持 SharePoint 公开文件夹链接，其他 OneDrive 链接请先人工处理。",
+  "acquire.requirement.SHAREPOINT_FOLDER_REQUIRED": "请选择 SharePoint 公开文件夹链接，或个人站点分享的附件下载链接。",
   "acquire.source.feemoo": "飞猫（Feemoo）",
   "acquire.download.remoteHint": "路径相对于所选账号或磁盘；根目录填 /。不要填写分享链接、远程名称前缀或 ..。",
   "acquire.method.engine": "执行引擎：{{engine}}",

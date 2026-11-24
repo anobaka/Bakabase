@@ -18,12 +18,14 @@ namespace Bakabase.Service.Components.CloudDownloads.WebProviders;
 /// <summary>Anonymous public SharePoint folder resolver. It never mirrors, syncs, deletes, or
 /// signs in. The public page's scoped drive token stays in memory and is not forwarded to CDN hosts.
 /// </summary>
-public sealed class SharePointCloudProvider : ResolvedShareCloudProvider, ICloudDownloadAbandonmentProvider
+public sealed partial class SharePointCloudProvider : ResolvedShareCloudProvider, ICloudDownloadAbandonmentProvider
 {
     public SharePointCloudProvider(AppService app, IHttpDownloader downloader, IHttpClientFactory clients) : base(app, downloader, clients) { }
     internal SharePointCloudProvider(string appData, IHttpDownloader downloader, IHttpClientFactory clients) : base(() => appData, downloader, clients) { }
     public override string ProviderId => "oneDrive";
     protected override string ClientName => PublicShareDownloadClients.SharePoint;
+    protected override string ClientFor(CloudSource source) => IsAttachment(source.Url)
+        ? PublicShareDownloadClients.SharePointAttachment : ClientName;
     // Only transport failures before any output are eligible. The common recovery guard pins
     // the original operation and the resolver rechecks every original without downloading it.
     public override bool CanRevalidateDownloadFailure(string exactCode) => exactCode == "PUBLIC_SHARE_NETWORK_ERROR";
@@ -49,10 +51,8 @@ public sealed class SharePointCloudProvider : ResolvedShareCloudProvider, ICloud
 
     internal override void ValidateSource(CloudSource source)
     {
-        if (!Uri.TryCreate(source.Url, UriKind.Absolute, out var uri) || uri.Scheme != "https" ||
-            !uri.IsDefaultPort || uri.UserInfo.Length != 0 || !uri.IdnHost.EndsWith(".sharepoint.com", StringComparison.OrdinalIgnoreCase) ||
-            !Regex.IsMatch(uri.AbsolutePath, @"^/:f:/[gs]/[^?#]+$"))
-            throw new ArgumentException("Choose a public SharePoint folder sharing URL. Personal OneDrive and login-only links require another method.");
+        if (!SupportsPublicLink(source.Url))
+            throw new ArgumentException("Choose a public SharePoint folder link or a personal site’s shared attachment link.");
         // A parsed access code is not proof that the page requires one. Attempt anonymous public
         // access first; only the actual public-token response decides whether login/manual access
         // is required. No code is submitted and no password or authentication flow is executed.
@@ -61,6 +61,8 @@ public sealed class SharePointCloudProvider : ResolvedShareCloudProvider, ICloud
     internal override async Task<PublicShareResolution> ResolveAsync(CloudSource source, HttpClient client, CancellationToken ct)
     {
         ValidateSource(source);
+        if (IsAttachment(source.Url))
+            return await ResolveAttachmentAsync(new Uri(source.Url), client, ct);
         var context = await ReadPublicContext(source.Url, client, ct);
         using var rootResponse = await GetJson(client, context.RootMetadata(), ct);
         var root = rootResponse.RootElement;

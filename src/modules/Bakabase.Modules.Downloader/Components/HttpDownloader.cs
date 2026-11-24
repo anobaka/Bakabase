@@ -36,7 +36,7 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
         _logger.LogDebug("Starting HTTP download into {Directory} with up to {Connections} connections", directory, request.ParallelConnections);
         try
         {
-            var probe = await ProbeAsync(host, request.Url, deadline.Token);
+            var probe = await ProbeAsync(host, request, deadline.Token);
             var target = Path.Combine(directory, request.FileName ?? probe.FileName);
             if (!request.AllowOverwrite && File.Exists(target))
                 throw new IOException("The output file already exists. Choose another name or directory.");
@@ -88,7 +88,7 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
             catch (HttpDownloadProtocolException ex) when (attempt == 0 && ex.Failure is HttpGuardFailure.RangeIgnored or HttpGuardFailure.RemoteChanged)
             {
                 HttpDownloadCheckpoint.Clear(cache);
-                probe = await ProbeAsync(host, request.Url, ct);
+                probe = await ProbeAsync(host, request, ct);
                 allowRanges = ex.Failure != HttpGuardFailure.RangeIgnored && probe.Identity.CanResume;
             }
             catch (HttpDownloadProtocolException ex)
@@ -126,7 +126,7 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
     {
         var package = allowRanges ? await HttpDownloadCheckpoint.ReadAsync(cache, identity, ct) : null;
         if (package == null) HttpDownloadCheckpoint.Clear(cache);
-        using var guard = new HttpDownloadGuard(host, identity, allowRanges);
+        using var guard = new HttpDownloadGuard(host, identity, allowRanges, request.ValidateSourceResponse);
         using var client = new HttpClient(guard, disposeHandler: false) {Timeout = Timeout.InfiniteTimeSpan};
         var config = new DownloadConfiguration
         {
@@ -229,8 +229,9 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
 
     private sealed record Probe(HttpRemoteIdentity Identity, string FileName);
 
-    private static async Task<Probe> ProbeAsync(HttpClient client, string url, CancellationToken ct)
+    private static async Task<Probe> ProbeAsync(HttpClient client, HttpDownloadRequest request, CancellationToken ct)
     {
+        var url = request.Url;
         using var head = new HttpRequestMessage(HttpMethod.Head, url);
         head.Headers.AcceptEncoding.Add(new StringWithQualityHeaderValue("identity"));
         HttpResponseMessage response;
@@ -253,6 +254,7 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
         using (response)
         {
             response.EnsureSuccessStatusCode();
+            request.ValidateSourceResponse?.Invoke(response);
             var range = response.Content.Headers.ContentRange;
             if (response.StatusCode == HttpStatusCode.PartialContent &&
                 (range?.Unit != "bytes" || range.From != 0 || range.To != 0 || !range.HasLength))
@@ -263,7 +265,7 @@ public sealed class HttpDownloader(Func<string> cacheDirectory, IHttpClientFacto
             var modified = encoded ? null : response.Content.Headers.LastModified;
             var checksum = !encoded && response.StatusCode != HttpStatusCode.PartialContent ? response.Content.Headers.ContentMD5 : null;
             var finalUrl = response.RequestMessage?.RequestUri?.ToString() ?? url;
-            var identity = new HttpRemoteIdentity(finalUrl, length, encoded ? null : etag, modified,
+            var identity = new HttpRemoteIdentity(request.ValidateSourceResponse == null ? finalUrl : url, length, encoded ? null : etag, modified,
                 checksum == null ? null : Convert.ToBase64String(checksum));
             var name = response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName;
             name = name?.Trim('"', '\'', ' ');

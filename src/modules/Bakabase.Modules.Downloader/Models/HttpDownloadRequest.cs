@@ -12,6 +12,9 @@ public sealed record HttpDownloadRequest(string Url, string Directory)
     /// <summary>Maximum simultaneous HTTP range connections for one file.</summary>
     public int ParallelConnections { get; init; } = 4;
     public int MaxRetries { get; init; } = 3;
+    /// <summary>Optional provider contract verifying that every successful probe and payload represents the original URL’s registered file. Its original URL remains the checkpoint identity across temporary redirects.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Action<HttpResponseMessage>? ValidateSourceResponse { get; init; }
     /// <summary>Per-transfer speed limit in bytes per second; zero means unlimited.</summary>
     public long MaximumBytesPerSecond { get; init; }
     /// <summary>Whether an existing destination may be replaced after verification.</summary>
