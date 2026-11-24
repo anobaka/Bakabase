@@ -252,7 +252,7 @@ const TaskRow = memo(function TaskRow({
           </div>
         </div>
         {centerTask?.ownedCopy && centerTask.ownedCopy.status !== "notApplicable" && (
-          <OwnedCloudCopyButton copy={centerTask.ownedCopy} />
+          <OwnedCloudCopyButton copy={centerTask.ownedCopy} thirdPartyId={centerTask.thirdPartyId} />
         )}
         <Chip className="h-6 shrink-0" color={verificationStage ? "primary" : statusColor} size="sm" variant="flat">
           {verificationStage

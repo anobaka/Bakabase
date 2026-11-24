@@ -5,12 +5,21 @@ import { Button, Modal } from "@/components/bakaui";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { downloadProblemSummary } from "@/components/CloudDownload/problemLabels";
+import ExternalLink from "@/components/ExternalLink";
+import urls from "@/cons/Urls";
+import { ThirdPartyId } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import type { CenterTask } from "../downloadCenter";
 
 type OwnedCopy = NonNullable<CenterTask["ownedCopy"]>;
 
-export function OwnedCloudCopyButton({ copy }: { copy: OwnedCopy }) {
+export function OwnedCloudCopyButton({
+  copy,
+  thirdPartyId,
+}: {
+  copy: OwnedCopy;
+  thirdPartyId?: number | null;
+}) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const state = t<string>(`downloadCenter.ownedCopy.state.${copy.status}`, {
@@ -27,7 +36,9 @@ export function OwnedCloudCopyButton({ copy }: { copy: OwnedCopy }) {
       }
       aria-label={t("downloadCenter.ownedCopy.show", { state })}
       title={t("downloadCenter.ownedCopy.show", { state })}
-      onPress={() => createPortal(OwnedCloudCopyModal, { taskId: copy.downloadTaskId })}
+      onPress={() =>
+        createPortal(OwnedCloudCopyModal, { taskId: copy.downloadTaskId, thirdPartyId })
+      }
     >
       <FiCloud aria-hidden />
       {state}
@@ -37,8 +48,9 @@ export function OwnedCloudCopyButton({ copy }: { copy: OwnedCopy }) {
 
 export function OwnedCloudCopyModal({
   taskId,
+  thirdPartyId,
   onDestroyed,
-}: DestroyableProps & { taskId: number }) {
+}: DestroyableProps & { taskId: number; thirdPartyId?: number | null }) {
   const { t } = useTranslation();
   const [copy, setCopy] = useState<OwnedCopy>();
   const [problem, setProblem] = useState<string>();
@@ -97,6 +109,7 @@ export function OwnedCloudCopyModal({
     return () => clearInterval(timer);
   }, [taskId, copy?.status]);
 
+  const recheckTrash = copy?.reasonCode === "PIKPAK_OWNED_COPY_TRASH_UNCONFIRMED";
   const reason = copy?.reasonCode && downloadProblemSummary(copy.reasonCode, t);
   return (
     <Modal
@@ -110,7 +123,11 @@ export function OwnedCloudCopyModal({
           </Button>
           {copy?.canRetry && (
             <Button size="sm" color="primary" isLoading={busy} onPress={() => void request(true)}>
-              {t("downloadCenter.ownedCopy.retry")}
+              {t(
+                recheckTrash
+                  ? "downloadCenter.ownedCopy.recheckTrash"
+                  : "downloadCenter.ownedCopy.retry",
+              )}
             </Button>
           )}
         </>
@@ -135,6 +152,11 @@ export function OwnedCloudCopyModal({
             })}
           </p>
           {reason && <p className="text-default-600">{reason}</p>}
+          {thirdPartyId === ThirdPartyId.PikPak && (copy.status === "trashed" || recheckTrash) && (
+            <ExternalLink href={urls.PikPakDrive} size="sm">
+              {t("pikpakCli.capacity.openDrive")}
+            </ExternalLink>
+          )}
         </div>
       )}
     </Modal>

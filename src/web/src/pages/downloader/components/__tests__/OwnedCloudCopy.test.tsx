@@ -1,11 +1,15 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { ThirdPartyId } from "@/sdk/constants";
 import { OwnedCloudCopyButton, OwnedCloudCopyModal } from "../OwnedCloudCopy";
 
 const { get, retry, portal } = vi.hoisted(() => ({
   get: vi.fn(),
   retry: vi.fn(),
   portal: vi.fn(),
+}));
+vi.mock("@/components/ExternalLink", () => ({
+  default: ({ href, children }: any) => <a href={href}>{children}</a>,
 }));
 vi.mock("@/sdk/BApi", () => ({
   default: {
@@ -107,4 +111,21 @@ it("follows a pending cleanup to its recorded outcome while the dialog is open",
   });
   expect(get).toHaveBeenCalledTimes(2);
   expect(retry).not.toHaveBeenCalled();
+});
+
+it("offers a trash recheck for an unconfirmed PikPak command and a link to the official drive", async () => {
+  get.mockResolvedValue({
+    code: 0,
+    data: { ...copy("retryable", true), reasonCode: "PIKPAK_OWNED_COPY_TRASH_UNCONFIRMED" },
+  });
+  retry.mockResolvedValue({ code: 0, data: copy("trashed") });
+  render(<OwnedCloudCopyModal taskId={14} thirdPartyId={ThirdPartyId.PikPak} />);
+  fireEvent.click(await screen.findByText("downloadCenter.ownedCopy.recheckTrash"));
+  expect(await screen.findByText("downloadCenter.ownedCopy.hint.trashed")).toBeTruthy();
+  expect(screen.getByRole("link", { name: "pikpakCli.capacity.openDrive" })).toHaveAttribute(
+    "href",
+    "https://mypikpak.com/drive/",
+  );
+  expect(screen.queryByText("downloadCenter.ownedCopy.retry")).toBeNull();
+  expect(retry).toHaveBeenCalledOnce();
 });

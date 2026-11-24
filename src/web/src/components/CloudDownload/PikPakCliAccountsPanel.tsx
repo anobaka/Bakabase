@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Chip, Modal, Spinner, Switch } from "@/components/bakaui";
+import PikPakAccountCapacity from "./PikPakAccountCapacity";
 import ExternalLink from "@/components/ExternalLink";
 import { openExternalUrl } from "@/utils/openExternalUrl";
 import { extractErrorMessage, humanFileSize } from "@/components/utils";
@@ -151,24 +152,20 @@ export default function PikPakCliAccountsPanel({ onChanged }: { onChanged?: () =
       </p>
       {!account && !error && <Spinner size="sm" />}
       {account?.displayName && <p className="text-sm">{account.displayName}</p>}
-      {account?.quota && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-default-500">
-          {account.quota.usedBytes != null && account.quota.limitBytes != null && (
-            <span>
-              {t("pikpakCli.account.storage", {
-                used: humanFileSize(account.quota.usedBytes),
-                total: humanFileSize(account.quota.limitBytes),
-              })}
-            </span>
-          )}
-          {account.quota.remainingTransferBytes != null && (
-            <span>
-              {t("pikpakCli.account.transferRemaining", {
-                size: humanFileSize(account.quota.remainingTransferBytes),
-              })}
-            </span>
-          )}
-        </div>
+      {account?.isConfigured && account.accountId && account.accountVersion && (
+        <PikPakAccountCapacity
+          key={JSON.stringify([account.accountId, account.accountVersion])}
+          accountId={account.accountId}
+          accountVersion={account.accountVersion}
+          savedQuota={account.quota}
+        />
+      )}
+      {account?.quota?.remainingTransferBytes != null && (
+        <p className="text-xs text-default-500">
+          {t("pikpakCli.account.transferRemaining", {
+            size: humanFileSize(account.quota.remainingTransferBytes),
+          })}
+        </p>
       )}
       <p className="text-xs leading-relaxed text-default-500">
         {t("pikpakCli.account.permissions")}

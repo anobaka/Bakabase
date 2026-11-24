@@ -90,7 +90,7 @@ const GeneralTaskRow = memo(function GeneralTaskRow({
           </div>
         </div>
         {task.ownedCopy && task.ownedCopy.status !== "notApplicable" && (
-          <OwnedCloudCopyButton copy={task.ownedCopy} />
+          <OwnedCloudCopyButton copy={task.ownedCopy} thirdPartyId={task.thirdPartyId} />
         )}
         <Chip size="sm" variant="flat" color={color}>
           {t(`downloadCenter.status.${task.status}`)}
