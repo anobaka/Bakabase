@@ -866,7 +866,7 @@
   "workflow.waitReason.LOCAL_STORAGE_RESERVE_LOW": "等待恢复存储空间余量",
   "workflow.activity.fsAssessDelivery.name": "确认最终文件",
   "workflow.activity.fsAssessDelivery.description": "仅对确认的单一外层归档在有限层数、文件数与空间预算内继续；未知文件或多组归档保留并等待确认，不重新下载。",
-  "workflow.waitReason.FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED": "仍为压缩包，等待确认最终处理方式",
+  "workflow.waitReason.FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED": "待交付文件包含压缩包，等待确认",
   "workflow.waitReason.FILE_DELIVERY_RESULT_UNCERTAIN": "最终文件尚不确定，已保留并等待确认",
   "workflow.processing.preview.operation.rebaseDirectory": "将目录 {{sourceDirectory}} 内的内容移到 {{directory}}，保留内部层级和其他文件",
   "workflow.processing.preview.outputRoot": "本步骤输出根目录",

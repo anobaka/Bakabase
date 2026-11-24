@@ -867,7 +867,7 @@
   "workflow.waitReason.LOCAL_STORAGE_RESERVE_LOW": "Waiting for the storage free-space reserve",
   "workflow.activity.fsAssessDelivery.name": "Review final files",
   "workflow.activity.fsAssessDelivery.description": "Continues only a confirmed single outer archive within depth, file and storage limits. Unknown files or multiple archives are retained for review without another download.",
-  "workflow.waitReason.FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED": "Archive-only result awaiting delivery review",
+  "workflow.waitReason.FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED": "Archives awaiting delivery review",
   "workflow.waitReason.FILE_DELIVERY_RESULT_UNCERTAIN": "Final files are uncertain; retained for review",
   "workflow.processing.preview.operation.rebaseDirectory": "Move contents from {{sourceDirectory}} to {{directory}}, preserving their directory structure and other files",
   "workflow.processing.preview.outputRoot": "this step’s output root",

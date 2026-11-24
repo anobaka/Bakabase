@@ -751,7 +751,7 @@
   "cloudDownload.resumeGuide.storageReserve.why": "当前写入卷的可用空间不足以满足预留要求，已有文件和进度已保留。",
   "cloudDownload.resumeGuide.storageReserve.action": "检查实际下载、处理或交付目录所在的存储卷，释放空间后使用“诊断并继续”或继续当前步骤。也可在获取资源设置中调整余量；修改目录不会迁移已有文件。",
   "cloudDownload.resumeGuide.storageReserve.next": "重新检查空间并复用原文件和断点，不会因此重新购买、转存或创建另一份下载。",
-  "cloudDownload.problemCode.FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED": "已执行解压，但当前全部结果仍为压缩包。请确认保留这些归档作为最终文件，或补充处理步骤；已有文件已保留。",
+  "cloudDownload.problemCode.FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED": "待交付文件包含压缩包。可以把压缩包作为最终文件保留，也可以添加处理步骤以交付包内文件。",
   "cloudDownload.problemCode.FILE_DELIVERY_INPUT_CHANGED": "待确认的文件发生变化或所在存储不可用。请核对原目录和文件后继续；不会自动重新下载。",
   "cloudDownload.problemCode.FILE_DELIVERY_REVIEW_CHANGED": "本次确认对应的文件或等待状态已变化。请刷新后重新核对。",
   "cloudDownload.deliveryReview.keepArchives": "保留这些压缩包作为最终结果",

@@ -751,7 +751,7 @@
   "cloudDownload.resumeGuide.storageReserve.why": "The current destination volume does not meet the free-space reserve. Existing files and progress are retained.",
   "cloudDownload.resumeGuide.storageReserve.action": "Check the volume used by the actual download, processing or delivery directory. Free space, then use Diagnose and continue or resume the current step. You can also adjust the reserve in acquisition settings; changing a directory does not move existing files.",
   "cloudDownload.resumeGuide.storageReserve.next": "Checks space again and reuses existing files and checkpoints without another purchase, transfer or new download task.",
-  "cloudDownload.problemCode.FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED": "Extraction completed, but all current outputs are still archives. Confirm them as the final files or add processing steps. Existing files are retained.",
+  "cloudDownload.problemCode.FILE_DELIVERY_ARCHIVE_REVIEW_REQUIRED": "The files ready for delivery include archives. Keep the archives as final files or add processing steps to deliver their contents.",
   "cloudDownload.problemCode.FILE_DELIVERY_INPUT_CHANGED": "The reviewed files changed or their storage is unavailable. Check the original directory and files before continuing; no new download is started automatically.",
   "cloudDownload.problemCode.FILE_DELIVERY_REVIEW_CHANGED": "The reviewed files or waiting state changed. Refresh and review the current files again.",
   "cloudDownload.deliveryReview.keepArchives": "Keep these archives as the final result",
