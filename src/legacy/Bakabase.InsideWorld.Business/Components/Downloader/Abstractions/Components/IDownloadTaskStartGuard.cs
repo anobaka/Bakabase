@@ -10,6 +10,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Compo
 public interface IDownloadTaskStartGuard
 {
     Task<IAsyncDisposable> AcquireAsync(int downloadTaskId, CancellationToken ct = default);
+
+    /// <summary>Read-only projection of definite start refusals. Transient conditions and execution locking stay in AcquireAsync.</summary>
+    Task<IReadOnlySet<int>> ReadBlockedTaskIdsAsync(IReadOnlyCollection<int> downloadTaskIds, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlySet<int>>(new HashSet<int>());
 }
 
 public static class DownloadTaskStartGuards

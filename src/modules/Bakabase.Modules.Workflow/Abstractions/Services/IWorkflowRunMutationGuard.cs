@@ -11,5 +11,10 @@ public interface IWorkflowRunMutationGuard
     /// Runs under the same mutation gate; a rejected answer leaves the wait intact.</summary>
     void ValidateAnswer(Models.Domain.WorkflowActivity? activity, string? waitReason, string? prompt, string signalJson) { }
 
+    /// <summary>Read-only snapshot of definite ownership refusals for presenting actions. Execution still takes the run gate.</summary>
+    Task<IReadOnlyDictionary<int, string>> ReadMutationRefusalsAsync(IReadOnlyCollection<int> runIds,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyDictionary<int, string>>(new Dictionary<int, string>());
+
     Task EnsureCanMutateAsync(int runId, CancellationToken ct = default);
 }

@@ -8,6 +8,7 @@ using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
@@ -15,6 +16,8 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Db;
+using Bakabase.Modules.Acquisition.Abstractions.Models.Domain;
 using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.Bittorrent.Models;
 using Bakabase.Modules.Downloader.Abstractions;
@@ -84,6 +87,56 @@ public sealed class DownloadCenterTests
         Assert.AreEqual(698, await _db.DownloadTasks.CountAsync(t => t.Status == DownloadTaskDbModelStatus.Disabled));
         Assert.AreEqual(0, (await _bt.ListAsync()).Count);
         Assert.AreEqual(0, (await _http.ListAsync()).Count);
+    }
+
+    [DataTestMethod]
+    [DataRow(false, false)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task SiteControlsAgreeWithDeletedOwnerGuardWithoutHidingIndependentDownloads(bool failed, bool historicalOwner)
+    {
+        var nativeState = failed ? DownloadTaskDbModelStatus.Failed : DownloadTaskDbModelStatus.Disabled;
+        var action = failed ? "retry" : "start";
+        var retired = NewSource("deleted-owner", nativeState);
+        var post = NewSource("post-download", nativeState);
+        var independent = NewSource("independent-site-task", nativeState);
+        foreach (var source in new[] {retired, post, independent})
+        {
+            source.CompletedAt = null;
+            source.ThirdPartyId = ThirdPartyId.BaiduNetdisk;
+            _db.DownloadTasks.Add(source);
+        }
+        var retiredRun = new WorkflowRunDbModel {Status = WorkflowRunStatus.Cancelled};
+        var postRun = new WorkflowRunDbModel {Status = WorkflowRunStatus.Cancelled};
+        _db.WorkflowRuns.AddRange(retiredRun, postRun);
+        await _db.SaveChangesAsync();
+        _db.AcquisitionTasks.Add(new AcquisitionTaskDbModel
+        {
+            WorkflowRunId = historicalOwner ? null : retiredRun.Id, DeletedAt = DateTime.UtcNow,
+            PlanHistoryJson = historicalOwner ? JsonSerializer.Serialize(new[]
+            {
+                new AcquisitionPlanRevision(1, new AcquisitionPlan(), [], DateTime.UtcNow, PreviousRunId: retiredRun.Id)
+            }) : null
+        });
+        _db.CloudDownloadOperations.AddRange(
+            new() {Id = "retired", WorkflowRunId = retiredRun.Id, DownloadTaskId = retired.Id, Kind = "download", State = "started"},
+            new() {Id = "post-parser", WorkflowRunId = postRun.Id, DownloadTaskId = post.Id, Kind = "download", State = "started"});
+        await _db.SaveChangesAsync();
+
+        var startGuard = _services.GetServices<IDownloadTaskStartGuard>().OfType<WorkflowOwnedDownloadStartGuard>().Single();
+        var refusal = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => startGuard.AcquireAsync(retired.Id));
+        StringAssert.StartsWith(refusal.Message, "ACQUISITION_TASK_DELETED");
+        await using var allowedPost = await startGuard.AcquireAsync(post.Id);
+        await using var allowedIndependent = await startGuard.AcquireAsync(independent.Id);
+        var rows = (await _center.ListAsync()).ToDictionary(row => row.SiteTaskId!.Value);
+
+        Assert.IsFalse(rows[retired.Id].AvailableActions.Contains(action));
+        Assert.IsTrue(rows[retired.Id].AvailableActions.Contains("delete"));
+        Assert.AreEqual(retiredRun.Id, rows[retired.Id].WorkflowRunId);
+        Assert.IsTrue(rows[post.Id].AvailableActions.Contains(action));
+        Assert.IsTrue(rows[independent.Id].AvailableActions.Contains(action));
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => _center.ExecuteAsync(rows[retired.Id].Id, action));
+        Assert.AreEqual(nativeState, (await _db.DownloadTasks.AsNoTracking().SingleAsync(row => row.Id == retired.Id)).Status);
     }
 
     [DataTestMethod]

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
@@ -32,7 +33,8 @@ namespace Bakabase.Service.Components.Downloader;
 /// <summary>One task identity and command surface; providers retain their queues, configuration and recovery.</summary>
 public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskService sites,
     IBtDownloadManager bt, IHttpDownloadManager http, DownloadTaskExecutionService executions,
-    DownloadTaskRegistry registry, BTaskManager backgroundTasks, IEnumerable<CloudExistingFileVerificationCapability>? verificationCapabilities = null)
+    DownloadTaskRegistry registry, BTaskManager backgroundTasks, IEnumerable<CloudExistingFileVerificationCapability>? verificationCapabilities = null,
+    IEnumerable<IDownloadTaskStartGuard>? startGuards = null)
 {
     public async Task<IReadOnlyList<CommonTask>> ListAsync(CancellationToken ct = default)
     {
@@ -150,6 +152,23 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
             });
         }
         await registry.EnsureBindingsAsync(snapshots.Select(ToBinding).ToArray(), ct);
+        if (startGuards?.Any() == true)
+        {
+            // Start consumes the reconciled registry. Project the same ownership snapshot
+            // after reconciliation, and only for site rows that would otherwise offer it.
+            var candidates = snapshots.Where(t => t.Provider == "site" && t.AvailableActions.Any(IsStartAction))
+                .Select(t => t.SiteTaskId!.Value).ToArray();
+            if (candidates.Length > 0)
+            {
+                var blocked = new HashSet<int>();
+                foreach (var guard in startGuards)
+                    blocked.UnionWith(await guard.ReadBlockedTaskIdsAsync(candidates, ct));
+                for (var i = 0; i < snapshots.Count; i++)
+                    if (snapshots[i] is {Provider: "site", SiteTaskId: { } id} && blocked.Contains(id))
+                        snapshots[i] = snapshots[i] with
+                        {AvailableActions = snapshots[i].AvailableActions.Where(action => !IsStartAction(action)).ToArray()};
+            }
+        }
         return snapshots.OrderByDescending(t => t.CreatedAt).ThenBy(t => t.Id, StringComparer.Ordinal).ToArray();
     }
 
@@ -374,6 +393,8 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
 
     private static string TransferStatus(int status) => status switch
     { 1 => "queued", 2 => "running", 3 => "stopping", 4 => "stopped", 5 => "completed", 6 => "failed", _ => "queued" };
+
+    private static bool IsStartAction(string action) => action is "start" or "retry";
 
     private static IReadOnlyList<string> SiteActions(SiteTask task, string status)
     {

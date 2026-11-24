@@ -41,36 +41,92 @@ public sealed class AcquisitionWorkflowRunMutationGuard(BakabaseDbContext db) : 
 
     public async Task EnsureCanMutateAsync(int runId, CancellationToken ct = default)
     {
-        var ownerIds = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking().Where(s => s.WorkflowRunId == runId &&
-            s.Module == "acquisition" && s.EntityKind == "task").Select(s => s.EntityId).ToArrayAsync(ct);
-        var ids = ownerIds.Select(id => int.TryParse(id, out var value) ? value : 0).Where(id => id > 0).ToArray();
-        var deletedHistory = await db.AcquisitionTasks.AsNoTracking().Where(t => t.DeletedAt != null && t.PlanHistoryJson != null)
-            .Select(t => t.PlanHistoryJson).ToArrayAsync(ct);
-        var ownerTasks = await db.DownloadResultOwners.AsNoTracking().Where(o => o.WorkflowRunId == runId).Select(o => o.AcquisitionTaskId).ToArrayAsync(ct);
-        if (deletedHistory.Any(json => AcquisitionDeletionActivityReader.HistoryRuns(json).Contains(runId)) ||
-            await db.AcquisitionTasks.AsNoTracking().AnyAsync(t => t.DeletedAt != null &&
-            (t.WorkflowRunId == runId || ids.Contains(t.Id) || ownerTasks.Contains(t.Id)), ct))
-            throw new InvalidOperationException("ACQUISITION_TASK_DELETED: The acquisition task was deleted; its execution history is retained.");
-        var plans = await db.AcquisitionTasks.AsNoTracking().Where(t => (ids.Contains(t.Id) || ownerTasks.Contains(t.Id)) &&
-                t.WorkflowRunId != runId && (t.PlanJson != null || t.PlanHistoryJson != null))
-            .Select(t => new {t.Id, t.PlanJson, t.PlanHistoryJson}).ToArrayAsync(ct);
-        var revisedHistory = await db.AcquisitionTasks.AsNoTracking().Where(t => t.WorkflowRunId != runId && t.PlanHistoryJson != null &&
-                t.PlanHistoryJson.Contains(AcquisitionSourceRevisionService.RevisionReason))
-            .Select(t => t.PlanHistoryJson).ToArrayAsync(ct);
-        if (revisedHistory.Any(json => JsonSerializer.Deserialize<List<AcquisitionPlanRevision>>(json!, JsonSerializerOptions.Web)?
-                .Any(r => r.PreviousRunId == runId && r.Reason == AcquisitionSourceRevisionService.RevisionReason && r.SourceRevision != null) == true))
-            throw new InvalidOperationException("ACQUISITION_PLAN_SUPERSEDED: A newer plan selected another source. Continue the acquisition task; this historical run remains read-only.");
+        if ((await ReadMutationRefusalsAsync([runId], ct)).TryGetValue(runId, out var reason))
+            throw new InvalidOperationException(reason);
+    }
+
+    public async Task<IReadOnlyDictionary<int, string>> ReadMutationRefusalsAsync(IReadOnlyCollection<int> runIds,
+        CancellationToken ct = default)
+    {
+        const string deleted = "ACQUISITION_TASK_DELETED: The acquisition task was deleted; its execution history is retained.";
+        const string sourceChanged = "ACQUISITION_PLAN_SUPERSEDED: A newer plan selected another source. Continue the acquisition task; this historical run remains read-only.";
+        const string continued = "ACQUISITION_PLAN_SUPERSEDED: A newer plan continues from this run's verified files. Continue the acquisition task; this historical run remains read-only.";
+        var refused = new Dictionary<int, string>();
+        if (runIds.Count == 0) return refused;
+
+        var scope = runIds.ToHashSet();
+        var sourceOwners = await db.Set<WorkflowRunSourceDbModel>().AsNoTracking()
+            .Where(s => scope.Contains(s.WorkflowRunId) && s.Module == "acquisition" && s.EntityKind == "task")
+            .Select(s => new {s.WorkflowRunId, s.EntityId}).ToArrayAsync(ct);
+        var resultOwners = await db.DownloadResultOwners.AsNoTracking().Where(o => scope.Contains(o.WorkflowRunId))
+            .Select(o => new {o.WorkflowRunId, o.AcquisitionTaskId}).ToArrayAsync(ct);
+        var owners = sourceOwners.Select(s => (s.WorkflowRunId, Id: int.TryParse(s.EntityId, out var id) ? id : 0))
+            .Where(s => s.Id > 0).Concat(resultOwners.Select(o => (o.WorkflowRunId, Id: o.AcquisitionTaskId)))
+            .ToLookup(o => o.Id, o => o.WorkflowRunId);
+        var ownerIds = owners.Select(o => o.Key).ToArray();
+        var acquisition = db.AcquisitionTasks.AsNoTracking();
+        var deletedOwners = await acquisition.Where(t => t.DeletedAt != null &&
+                (t.WorkflowRunId.HasValue && scope.Contains(t.WorkflowRunId.Value) || ownerIds.Contains(t.Id)))
+            .Select(t => new {t.Id, t.WorkflowRunId}).ToArrayAsync(ct);
+        foreach (var task in deletedOwners)
+        {
+            if (task.WorkflowRunId is { } current && scope.Contains(current)) refused.TryAdd(current, deleted);
+            foreach (var run in owners[task.Id]) refused.TryAdd(run, deleted);
+        }
+
+        // Legacy plans have no indexed previous-run link. Select only candidate JSON in
+        // SQLite so polling does not hydrate every discarded acquisition plan.
+        if (refused.Count == scope.Count) return refused;
+        var historyScope = JsonSerializer.Serialize(scope.Where(run => !refused.ContainsKey(run)));
+        var historyCandidates = await db.Database.SqlQuery<HistoryCandidate>($$"""
+            SELECT a.WorkflowRunId, a.PlanHistoryJson, a.DeletedAt IS NOT NULL AS IsDeleted
+            FROM AcquisitionTasks a
+            WHERE (a.DeletedAt IS NOT NULL OR instr(a.PlanHistoryJson, {{AcquisitionSourceRevisionService.RevisionReason}}) > 0)
+              AND EXISTS (
+                SELECT 1
+                FROM json_each(CASE WHEN json_valid(a.PlanHistoryJson) THEN a.PlanHistoryJson ELSE '[]' END) r
+                JOIN json_each(CASE WHEN r.type = 'object' THEN r.value ELSE '{}' END) p
+                WHERE lower(p.key) = 'previousrunid' AND p.type IN ('integer', 'text')
+                  AND CAST(p.value AS INTEGER) IN (SELECT value FROM json_each({{historyScope}}))
+              )
+            """).ToArrayAsync(ct);
+        foreach (var prior in historyCandidates.Where(t => t.IsDeleted)
+                     .SelectMany(t => AcquisitionDeletionActivityReader.HistoryRuns(t.PlanHistoryJson)))
+            if (scope.Contains(prior)) refused.TryAdd(prior, deleted);
+        if (refused.Count == scope.Count) return refused;
+
+        foreach (var task in historyCandidates.Where(t => t.PlanHistoryJson.Contains(AcquisitionSourceRevisionService.RevisionReason)))
+            foreach (var revision in ReadHistory(task.PlanHistoryJson))
+                if (revision.PreviousRunId is { } prior && prior != task.WorkflowRunId && scope.Contains(prior) &&
+                    revision.Reason == AcquisitionSourceRevisionService.RevisionReason && revision.SourceRevision != null)
+                    refused.TryAdd(prior, sourceChanged);
+        if (refused.Count == scope.Count) return refused;
+
         // Later local revisions can rebind their verified input to a newer run. The original
         // run must not become runnable again merely because it is no longer the direct parent.
         // Restrict this history lookup to the run's actual acquisition owner.
         static bool ContinuesFrom(AcquisitionPlan? plan, int ownerId, int previousRunId) =>
             plan?.Parts.Any(p => p.ContinueFrom is { } input && input.TaskId == ownerId &&
                 input.PreviousRunId == previousRunId) == true;
-        if (plans.Any(owner => !string.IsNullOrWhiteSpace(owner.PlanJson) &&
-                ContinuesFrom(JsonSerializer.Deserialize<AcquisitionPlan>(owner.PlanJson, JsonSerializerOptions.Web), owner.Id, runId) ||
-                !string.IsNullOrWhiteSpace(owner.PlanHistoryJson) &&
-                JsonSerializer.Deserialize<List<AcquisitionPlanRevision>>(owner.PlanHistoryJson, JsonSerializerOptions.Web)?
-                    .Any(revision => ContinuesFrom(revision.Plan, owner.Id, runId)) == true))
-            throw new InvalidOperationException("ACQUISITION_PLAN_SUPERSEDED: A newer plan continues from this run's verified files. Continue the acquisition task; this historical run remains read-only.");
+        var plans = await acquisition.Where(t => ownerIds.Contains(t.Id) && (t.PlanJson != null || t.PlanHistoryJson != null))
+            .Select(t => new {t.Id, t.WorkflowRunId, t.PlanJson, t.PlanHistoryJson}).ToArrayAsync(ct);
+        foreach (var task in plans)
+        {
+            var older = owners[task.Id].Where(run => run != task.WorkflowRunId && !refused.ContainsKey(run)).Distinct().ToArray();
+            if (older.Length == 0) continue;
+            var plan = string.IsNullOrWhiteSpace(task.PlanJson) ? null :
+                JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson, JsonSerializerOptions.Web);
+            var history = ReadHistory(task.PlanHistoryJson);
+            foreach (var prior in older)
+                if (ContinuesFrom(plan, task.Id, prior) || history.Any(revision => ContinuesFrom(revision.Plan, task.Id, prior)))
+                    refused.TryAdd(prior, continued);
+        }
+        return refused;
     }
+
+    private static IReadOnlyList<AcquisitionPlanRevision> ReadHistory(string? json) =>
+        string.IsNullOrWhiteSpace(json) ? [] :
+            JsonSerializer.Deserialize<List<AcquisitionPlanRevision>>(json, JsonSerializerOptions.Web) ?? [];
+
+    private sealed record HistoryCandidate(int? WorkflowRunId, string PlanHistoryJson, bool IsDeleted);
 }
