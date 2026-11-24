@@ -68,6 +68,7 @@ public sealed partial class FileProcessingPlanExecutor
         // An input path in the journal can refer to a borrowed volume or an earlier move. Only an
         // unchanged, privately materialized input set from this completed checkpoint is eligible.
         if (state.LineageVersion != 1 || !state.Completed || state.PendingOperation != null ||
+            state.SnapshotSourceArtifactId != null && state.SnapshotSourceArtifactId != input.Id ||
             state.ReadOnlyVolumeArtifactId != null || state.ReadOnlyVolumeMembers != null ||
             state.StoragePolicy is not {CleanupIntermediates: true} || state.StoragePolicy.SourceCleanup != sourceCleanup ||
             state.StepPolicies.Values.Any(p => !p.CleanupIntermediates || (sourceCleanup == "keep" ? p.SourceCleanup != "keep" : p.SourceCleanup == "keep")) ||

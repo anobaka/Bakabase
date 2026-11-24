@@ -90,7 +90,7 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
     private static async Task AddDeliveredCheckpointCopiesAsync(BakabaseDbContext db, IArtifactOperationStore store,
         FileProcessingWorkspaceResolver workspaces, AcquisitionStageDirectory stage, string owner, string partId,
         ArtifactRecord input, IReadOnlyList<ArtifactRecord> publications, Dictionary<string, ArtifactManifestEntry> files,
-        CancellationToken ct)
+        CancellationToken ct, int? checkpointTaskId, HashSet<string> proofIds)
     {
         foreach (var publication in publications)
         {
@@ -98,6 +98,8 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
                 !await db.ArtifactOperationBindings.AsNoTracking().AnyAsync(b => b.OperationId == publication.OperationId &&
                     b.OwnerKind == "workflow" && b.OwnerId == owner && b.Slot == partId + ":artifact.publish", ct)) continue;
             var output = await store.GetArtifactAsync(id, ct);
+            if (checkpointTaskId is {} taskId && output != null && Read(output)?.StageCommit is {} handoff)
+                output = await RetiredCheckpointProducerAsync(db, store, workspaces, stage, owner, partId, taskId, output, handoff, ct);
             if (output is not {Kind: "processedFiles", Managed: true, State: ArtifactLocationState.Available or ArtifactLocationState.Retired} || !output.ParentArtifactIds.SequenceEqual([input.Id]) ||
                 await store.GetOperationAsync(output.OperationId, ct) is not {Kind: "files.process", State: ArtifactOperationState.Completed} producer ||
                 producer.InputFingerprint != input.Fingerprint || producer.OutputArtifactId != output.Id) continue;
@@ -124,6 +126,14 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
             if (snapshot == null) continue;
             if (!AddEntries(snapshot.InputManifest.Entries, Path.Combine(snapshot.Directory, "inputs"), stage.Directory, files))
                 throw new InvalidDataException("Conflicting processing input manifests.");
+            if (checkpointTaskId != null)
+            {
+                proofIds.Add(output.Id);
+                proofIds.Add(id);
+                // This follow-up owns only the recorded input snapshot. Old step-output
+                // ledgers can still describe files independently retired by earlier passes.
+                continue;
+            }
             IReadOnlyList<ArtifactManifestEntry> intermediate;
             try
             {
@@ -136,6 +146,41 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
             if (!AddEntries(intermediate, snapshot.Directory, stage.Directory, files))
                 throw new InvalidDataException("Conflicting processing output manifests.");
         }
+    }
+
+    private static async Task<ArtifactRecord?> RetiredCheckpointProducerAsync(BakabaseDbContext db, IArtifactOperationStore store,
+        FileProcessingWorkspaceResolver workspaces, AcquisitionStageDirectory stage, string owner, string partId,
+        int taskId, ArtifactRecord registered, AcquisitionProcessingStageCommitReceipt evidence, CancellationToken ct)
+    {
+        if (registered is not {Kind: "processedFiles", Managed: true, State: ArtifactLocationState.Retired} ||
+            !AllowsCleanup(Read(registered), "keep") || evidence.Version != 1 || evidence.TaskId != taskId ||
+            evidence.RunId.ToString(System.Globalization.CultureInfo.InvariantCulture) != owner || evidence.PartId != partId ||
+            evidence.BindingId != stage.BindingId || !Same(evidence.Directory, stage.Directory) ||
+            evidence.Id != registered.OperationId || !registered.ParentArtifactIds.SequenceEqual([evidence.SourceArtifactId]) ||
+            evidence.Id != ArtifactManifestFiles.Hash($"processing-stage-v1:{taskId}:{partId}:{stage.BindingId}:{evidence.SourceArtifactId}") ||
+            !await db.ArtifactOperationBindings.AsNoTracking().AnyAsync(b => b.OperationId == registered.OperationId &&
+                    b.OwnerKind == "workflow" && b.OwnerId == owner && b.Slot == partId + ":process:stage:" + registered.Id, ct)) return null;
+        var row = await db.Artifacts.AsNoTracking().SingleAsync(a => a.Id == registered.Id, ct);
+        var original = await workspaces.ReadOriginalArtifactDirectoryAsync(row, ct);
+        if (original == null || !Same(original, stage.Directory)) return null;
+        var source = await store.GetArtifactAsync(evidence.SourceArtifactId, ct);
+        var operation = await store.GetOperationAsync(registered.OperationId, ct);
+        if (source is not {Kind: "processedFiles", Managed: true, State: ArtifactLocationState.Retired} ||
+            source.Fingerprint != evidence.SourceFingerprint ||
+            operation is not {Kind: "files.process", State: ArtifactOperationState.Completed} ||
+            operation.OutputArtifactId != registered.Id || operation.InputFingerprint != source.Fingerprint ||
+            !FileDispositionProofs.SameManifest(source.Manifest, registered.Manifest) ||
+            !FileDispositionProofs.ValidFor(Read(registered)?.FileDisposition, source, registered)) return null;
+        var custody = await AcquisitionTaskCleanupViews.OwnedClosuresAsync(db, [registered.Id, source.Id], [owner], ct);
+        if (!custody.Contains(registered.Id) || !custody.Contains(source.Id)) return null;
+        var path = Path.Combine(workspaces.StageCommitMetadataDirectory, evidence.Id + ".json");
+        ArtifactManifestFiles.RejectLinks(path);
+        if (!File.Exists(path) || new FileInfo(path).Length > 64 * 1024 * 1024) return null;
+        var journal = JsonSerializer.Deserialize<AcquisitionProcessingStageCommitReceipt>(await File.ReadAllTextAsync(path, ct), Json);
+        var producerRow = await db.Artifacts.AsNoTracking().SingleAsync(a => a.Id == source.Id, ct);
+        var producerRoot = await workspaces.ReadOriginalArtifactDirectoryAsync(producerRow, ct);
+        return producerRoot != null && Same(evidence.SourceDirectory, producerRoot) &&
+            OwnsCommittedFiles(registered with {RootDirectory = original}, evidence, journal) ? source : null;
     }
 
     private static async Task<Dictionary<string, ArtifactRecord>> RegisteredBoundariesAsync(BakabaseDbContext db,

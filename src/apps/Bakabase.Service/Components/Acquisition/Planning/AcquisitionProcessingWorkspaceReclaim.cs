@@ -20,11 +20,14 @@ internal sealed record AcquisitionProcessingWorkspaceCandidate(ProcessingWorkspa
     internal IReadOnlyList<string> RetainedDownloadIds { get; init; } = [];
     internal IReadOnlyList<string> PublicationIds { get; init; } = [];
     internal IReadOnlyList<string> RetireMovedInputs { get; init; } = [];
+    internal IReadOnlyList<string> CheckpointProofIds { get; init; } = [];
+    internal bool RetiredCheckpoint { get; init; }
 }
 
 public sealed partial class AcquisitionPlanService
 {
     private string WorkspaceReclaimReceipts => Path.Combine(workspaces!.StageCleanupMetadataDirectory, "confirmed-processing-files");
+    private string CheckpointReclaimReceipts => Path.Combine(workspaces!.StageCleanupMetadataDirectory, "confirmed-processing-checkpoints");
 
     // A retained download can have a regular processedFiles registration for its working copy.
     // Only the stage selection checks that its independently retained source still exists. Prevent
@@ -50,7 +53,7 @@ public sealed partial class AcquisitionPlanService
     // the acquisition's current retention, isolation and reference policies authorize this reclamation.
     private async Task<List<AcquisitionProcessingWorkspaceCandidate>> ProcessingWorkspacesAsync(AcquisitionTaskDbModel row,
         IReadOnlyList<int> owners, Func<string, Task> guard, PublishedArtifactAncestorCleanup? ancestors, CancellationToken ct,
-        AcquisitionStageDirectoryReferenceGuard? references = null)
+        AcquisitionStageDirectoryReferenceGuard? references = null, bool retiredCheckpointsOnly = false)
     {
         var candidates = new List<AcquisitionProcessingWorkspaceCandidate>();
         if (workspaces == null || artifacts == null || ancestors == null || row.PlanJson == null) return candidates;
@@ -75,23 +78,24 @@ public sealed partial class AcquisitionPlanService
             {
                 var stage = stages.Parts[part.Id].Processing;
                 if (stage is not {Ownership: "exclusive", BindingId: not null, Allocation: not null} ||
-                    ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy) is not {CleanupIntermediates: true, SourceCleanup: "delete" or "keep"} ||
+                    ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy) is not
+                        {CleanupIntermediates: true, SourceCleanup: "delete" or "keep"} ||
                     protectedRoots.Any(root => StageDirectoryOverlap(stage.Directory, root))) continue;
                 await guard(stage.Directory);
                 try
                 {
-                    var evidence = await AcquisitionProcessingWorkspaceEvidence.FindAsync(db, artifacts, workspaces, row, plan,
-                        part.Id, stage, owners, publications, ct);
-                    if (evidence == null) continue;
-                    var generation = ArtifactManifestFiles.Hash(Serialize(new {version, stage, owners = owners.Order().ToArray(),
-                        publications = authorization.Consent.Publications, artifacts = evidence.StageArtifactIds.Order().ToArray()}));
-                    if (evidence.RetainedDownloadIds.Count > 0)
-                        generation = ArtifactManifestFiles.Hash(generation + "\n" + string.Join("\n", evidence.RetainedDownloadIds));
-                    var selected = await AcquisitionProcessingWorkspaceRemoval.InspectAsync(WorkspaceReclaimReceipts, part.Id,
-                        stage.BindingId, stage.Directory, generation, evidence.Files, ct, held => references.RequireAsync(
-                            row, ownerIds, part.Id, stage.Directory, ct, explicitTaskCleanup: true, privateReceiptDirectory: held));
+                    var evidence = retiredCheckpointsOnly ? null : await AcquisitionProcessingWorkspaceEvidence.FindAsync(db,
+                        artifacts, workspaces, row, plan, part.Id, stage, owners, publications, ct);
+                    var selected = await InspectSelectionAsync(evidence, checkpointOnly: false);
+                    var retiredCheckpoint = selected == null;
+                    if (retiredCheckpoint)
+                    {
+                        evidence = await AcquisitionProcessingWorkspaceEvidence.FindAsync(db, artifacts, workspaces, row, plan,
+                            part.Id, stage, owners, publications, ct, previousWorkspaceReceipts: WorkspaceReclaimReceipts);
+                        selected = await InspectSelectionAsync(evidence, checkpointOnly: true);
+                    }
                     if (selected == null || selected.Phase == "new" && await db.Artifacts.AsNoTracking().AnyAsync(a =>
-                        evidence.StageArtifactIds.Contains(a.Id) && !evidence.PurgedStageIds.Contains(a.Id) && a.State == ArtifactLocationState.Retired, ct)) continue;
+                        evidence!.StageArtifactIds.Contains(a.Id) && !evidence.PurgedStageIds.Contains(a.Id) && a.State == ArtifactLocationState.Retired, ct)) continue;
                     if (!verified)
                     {
                         foreach (var output in publications)
@@ -102,14 +106,34 @@ public sealed partial class AcquisitionPlanService
                         verified = true;
                     }
                     var movedInputs = new List<string>();
-                    foreach (var artifactId in evidence.StageArtifactIds)
+                    foreach (var artifactId in evidence!.StageArtifactIds)
                     {
                         if (await artifacts.GetArtifactAsync(artifactId, ct) is not {ParentArtifactIds.Count: 1} committed ||
                             await artifacts.GetArtifactAsync(committed.ParentArtifactIds[0], ct) is not {} original) continue;
                         if (ArtifactCleanupAbsence.AllConfirmedAbsent(original.RootDirectory, original.Files, ct))
                             movedInputs.Add(original.Id);
                     }
-                    candidates.Add(new(selected, evidence.StageArtifactIds, movedInputs) {PublicationIds = publications.Select(p => p.Id).ToArray(), RetainedDownloadIds = evidence.RetainedDownloadIds, RetainedFiles = evidence.RetainedFiles});
+                    candidates.Add(new(selected, evidence.StageArtifactIds, movedInputs) {PublicationIds = publications.Select(p => p.Id).ToArray(),
+                        RetainedDownloadIds = evidence.RetainedDownloadIds, RetainedFiles = evidence.RetainedFiles,
+                        CheckpointProofIds = evidence.CheckpointProofIds, RetiredCheckpoint = retiredCheckpoint});
+
+                    async Task<ProcessingWorkspaceSelection?> InspectSelectionAsync(AcquisitionProcessingWorkspaceFiles? proof, bool checkpointOnly)
+                    {
+                        if (proof == null) return null;
+                        var generation = ArtifactManifestFiles.Hash(Serialize(new {version, stage, owners = owners.Order().ToArray(),
+                            publications = authorization.Consent.Publications, artifacts = proof.StageArtifactIds.Order().ToArray()}));
+                        if (proof.RetainedDownloadIds.Count > 0)
+                            generation = ArtifactManifestFiles.Hash(generation + "\n" + string.Join("\n", proof.RetainedDownloadIds));
+                        if (checkpointOnly)
+                            generation = ArtifactManifestFiles.Hash(generation + "\n" + string.Join("\n", proof.CheckpointProofIds));
+                        try
+                        {
+                            return await AcquisitionProcessingWorkspaceRemoval.InspectAsync(checkpointOnly ? CheckpointReclaimReceipts : WorkspaceReclaimReceipts,
+                                part.Id, stage.BindingId, stage.Directory, generation, proof.Files, ct, held => references.RequireAsync(
+                                    row, ownerIds, part.Id, stage.Directory, ct, explicitTaskCleanup: true, privateReceiptDirectory: held));
+                        }
+                        catch (Exception e) when (WorkspaceEvidenceUnavailable(e)) { return null; }
+                    }
                 }
                 catch (Exception e) when (WorkspaceEvidenceUnavailable(e)) { }
             }
@@ -129,11 +153,13 @@ public sealed partial class AcquisitionPlanService
         long bytes = 0;
         await using var fence = await artifacts!.AcquireMaintenanceAsync(ct);
         var references = new AcquisitionStageDirectoryReferenceGuard(db, artifacts, storage, workspaces, reuseManifestReads: true);
-        var current = await ProcessingWorkspacesAsync(row, owners, guard, ancestors, ct, references);
+        var current = await ProcessingWorkspacesAsync(row, owners, guard, ancestors, ct, references,
+            retiredCheckpointsOnly: selected.All(c => c.RetiredCheckpoint));
         foreach (var old in selected)
         {
             var match = current.SingleOrDefault(c => c.Selection.PartId == old.Selection.PartId);
-            if (match == null || !old.StageArtifactIds.SequenceEqual(match.StageArtifactIds) ||
+            if (match == null || old.RetiredCheckpoint != match.RetiredCheckpoint ||
+                !old.StageArtifactIds.SequenceEqual(match.StageArtifactIds) || !old.CheckpointProofIds.SequenceEqual(match.CheckpointProofIds) ||
                 !old.RetainedFiles.SequenceEqual(match.RetainedFiles) ||
                 !old.RetireMovedInputs.All(match.MovedInputIds.Contains) ||
                 !AcquisitionProcessingWorkspaceRemoval.Same(old.Selection, match.Selection))
@@ -141,7 +167,8 @@ public sealed partial class AcquisitionPlanService
         }
         var ownerIds = owners.ToArray();
         var remaining = selected.ToList();
-        var protectedIds = current.SelectMany(c => c.StageArtifactIds.Concat(c.PublicationIds).Concat(c.MovedInputIds).Concat(c.RetainedDownloadIds)).Distinct().ToArray();
+        var protectedIds = current.SelectMany(c => c.StageArtifactIds.Concat(c.PublicationIds).Concat(c.MovedInputIds)
+            .Concat(c.RetainedDownloadIds).Concat(c.CheckpointProofIds)).Distinct().ToArray();
         var handoff = new AcquisitionProcessingWorkspaceHandoff(db, fence, protectedIds, async token =>
         {
             foreach (var pending in remaining)
@@ -156,7 +183,8 @@ public sealed partial class AcquisitionPlanService
         foreach (var item in selected)
         {
             var checkOriginalBeforePurge = true;
-            var result = await AcquisitionProcessingWorkspaceRemoval.RemoveAsync(WorkspaceReclaimReceipts, item.Selection, ct, async token =>
+            var result = await AcquisitionProcessingWorkspaceRemoval.RemoveAsync(item.RetiredCheckpoint ? CheckpointReclaimReceipts : WorkspaceReclaimReceipts,
+                item.Selection, ct, async token =>
             {
                 // Final reference proof and retirement stay under the same fence as the slot-absence check.
                 await handoff.RequireBeforeRetirementAsync(token);

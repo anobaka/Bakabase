@@ -31,6 +31,23 @@ internal static class AcquisitionProcessingWorkspaceRemoval
     private static string ReceiptPath(string directory, string binding) => Path.Combine(directory, binding + ".json");
     private static string HeldRoot(string root, string token) => Path.Combine(root, ".bakabase-reclaim-" + token);
     private static string Held(string directory, int i) => Path.Combine(directory, i.ToString("X8"));
+
+    internal static async Task<bool> CoversCompletedSelectionAsync(string directory, string binding, string root,
+        ArtifactManifest manifest, CancellationToken ct)
+    {
+        if (!Guid.TryParseExact(binding, "N", out _) || manifest.Entries.Count == 0) return false;
+        var path = ReceiptPath(directory, binding);
+        if (!Exists(path) || new FileInfo(path).Length > 64 * 1024 * 1024) return false;
+        await using var stream = File.OpenRead(path);
+        var receipt = await JsonSerializer.DeserializeAsync<Receipt>(stream, Json, ct);
+        if (receipt is not {Phase: "done", Files.Count: > 0} || receipt.BindingId != binding ||
+            !Guid.TryParseExact(receipt.Token, "N", out _) || Exists(HeldRoot(root, receipt.Token))) return false;
+        var files = receipt.Files.Select(f => f.Entry).ToHashSet();
+        return files.Count == receipt.Files.Count && manifest.Entries.All(files.Contains) &&
+            (new HashSet<string>(files.Select(f => f.RelativePath), FileProcessingFiles.PathComparer).Count == files.Count) &&
+            ArtifactManifestFiles.Fingerprint(receipt.Files.Select(f => f.Entry).ToArray()) == receipt.Evidence;
+    }
+
     private static bool Exists(string path)
     {
         ArtifactManifestFiles.RejectLinks(path);

@@ -61,6 +61,7 @@ public sealed partial class AcquisitionPlanService
         var result = new List<AcquisitionWorkspaceCleanupRow>();
         var versions = new Dictionary<int, string>();
         var captured = new Dictionary<int, IReadOnlyList<ArtifactWorkspaceCleanupPreview>>();
+        var processing = new Dictionary<int, IReadOnlyList<AcquisitionProcessingWorkspaceCandidate>>();
         var ownerRuns = new Dictionary<int, IReadOnlyList<int>>();
         var consents = new Dictionary<int, ArtifactDeliveryCleanupConsent>();
         var dependencies = new Dictionary<int, IReadOnlyDictionary<string, IReadOnlyList<ArtifactCleanupRetirementDependency>>>();
@@ -72,6 +73,7 @@ public sealed partial class AcquisitionPlanService
             var row = rows.SingleOrDefault(t => t.Id == id);
             var (reason, artifactIds, _, owners) = await CleanupArtifacts(row, ct);
             var candidates = new List<ArtifactWorkspaceCleanupPreview>();
+            IReadOnlyList<AcquisitionProcessingWorkspaceCandidate> stageFiles = [];
             var version = row == null ? "" : StorageVersion(row);
             if (reason == "not_completed" && ancestors != null && await ReadCheckpointReviewAsync(row, ct) is {} wait)
             {
@@ -117,36 +119,46 @@ public sealed partial class AcquisitionPlanService
                     var intermediates = await RegisteredCleanupIntermediatesAsync(candidates, ct);
                     candidates.RemoveAll(c => !intermediates.Contains(c.ArtifactId));
                 }
+                stageFiles = await ProcessingWorkspacesAsync(row!, owners, guard, ancestors, ct, retiredCheckpointsOnly: true);
                 foreach (var candidate in candidates) await guard(candidate.ResultDirectory);
-                var selection = SelectExplicitWorkspaceCleanup(candidates, includedPaths);
+                var stagedPaths = stageFiles.SelectMany(stage => stage.Selection.Remaining.Select(file =>
+                    Path.GetFullPath(Path.Combine(stage.Selection.Root, file.Entry.RelativePath)))).ToArray();
+                var selection = SelectExplicitWorkspaceCleanup(candidates, includedPaths, stagedPaths);
                 candidates = selection ?? [];
-                if (selection == null) reason = "cleanup_overlap_requires_review";
-                else if (candidates.Count == 0) reason = "nothing_to_reclaim";
+                if (selection == null) { reason = "cleanup_overlap_requires_review"; stageFiles = []; }
+                else if (candidates.Count == 0 && stageFiles.Count == 0) reason = "nothing_to_reclaim";
                 else
                 {
                     versions[id] = version; ownerRuns[id] = owners;
                     captured[id] = candidates.Select(c => c.RegisteredPreviewFiles == null ? c : c with {RegisteredPreviewFiles = null}).ToArray();
+                    if (stageFiles.Count > 0) processing[id] = stageFiles;
                     consents[id] = authorization.Consent;
                     dependencies[id] = authorization.RetirementDependencies.ToDictionary(p => p.Key, p => p.Value);
                     included.UnionWith(candidates.Select(c => c.ArtifactId));
+                    included.UnionWith(stageFiles.SelectMany(c => c.StageArtifactIds));
                 }
             }
-            result.Add(new(id, row?.Title, reason == null, reason, candidates.Select(c => c.ArtifactId).Distinct(StringComparer.Ordinal).ToArray(),
-                candidates.Sum(c => c.FileCount), candidates.Sum(c => c.Bytes)));
+            result.Add(new(id, row?.Title, reason == null, reason,
+                candidates.Select(c => c.ArtifactId).Concat(stageFiles.SelectMany(s => s.StageArtifactIds)).Distinct(StringComparer.Ordinal).ToArray(),
+                candidates.Sum(c => c.FileCount) + stageFiles.Sum(s => s.Selection.Remaining.Count),
+                candidates.Sum(c => c.Bytes) + stageFiles.Sum(s => s.Selection.Remaining.Sum(f => f.Entry.Length))));
         }
         var preview = new AcquisitionWorkspaceCleanupPreview(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow.AddMinutes(10), result, versions.Count);
         previews.Add(preview.PreviewId, new("cleanup", preview.ExpiresAt, versions)
             {Artifacts = captured, CleanupOwnerRuns = ownerRuns, CleanupConsents = consents, CleanupDependencies = dependencies,
-                PreserveOriginalDownloads = input.PreserveOriginalDownloads, ReviewedCheckpoints = reviewed});
+                PreserveOriginalDownloads = input.PreserveOriginalDownloads, ReviewedCheckpoints = reviewed, ProcessingWorkspaces = processing});
         return preview;
     }
 
     internal static List<ArtifactWorkspaceCleanupPreview>? SelectExplicitWorkspaceCleanup(
-        IReadOnlyList<ArtifactWorkspaceCleanupPreview> candidates, HashSet<string> includedPaths)
+        IReadOnlyList<ArtifactWorkspaceCleanupPreview> candidates, HashSet<string> includedPaths,
+        IReadOnlyList<string>? stagedPaths = null)
     {
         var selected = new bool[candidates.Count];
         var selectedPaths = new HashSet<string>(includedPaths.Comparer);
         var overlappingPrivatePaths = new HashSet<string>(includedPaths.Comparer);
+        foreach (var path in stagedPaths ?? [])
+            if (includedPaths.Contains(path) || !selectedPaths.Add(path)) return null;
         // Keep registered retirement proofs ahead of overlapping private selections. Among
         // private selections prefer a complete larger proof. Each proof is indivisible:
         // editing its file list would invalidate its fingerprint on apply.
@@ -240,6 +252,16 @@ public sealed partial class AcquisitionPlanService
                 }
                 authorization!.RestoreRetirementDependencies(entry.CleanupDependencies[id]);
                 await GuardStoragePathsAsync(row!, guard);
+                if (entry.ProcessingWorkspaces.TryGetValue(id, out var stageFiles))
+                {
+                    // This path independently verifies every current publication under
+                    // its fence without altering the registration if the bytes changed.
+                    var outcome = await RemoveProcessingWorkspacesAsync(row!, owners, stageFiles, guard, ancestors, ct);
+                    removedFiles += outcome.RemovedFiles;
+                    removedBytes += outcome.RemovedBytes;
+                    if (!outcome.Completed) {skipped.Add(new(id, outcome.Reason ?? "artifact_busy")); continue;}
+                    if (entry.Artifacts[id].Count == 0) {completed.Add(id); continue;}
+                }
                 var verified = true;
                 // Verify EVERY required part now, even if only one part has cleanup
                 // candidates. The normal mutation path independently verifies again.

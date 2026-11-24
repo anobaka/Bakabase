@@ -22,6 +22,7 @@ internal sealed record AcquisitionProcessingWorkspaceFiles(IReadOnlyList<Artifac
     internal IReadOnlyList<AcquisitionRetainedDownloadFile> RetainedFiles { get; init; } = [];
     internal IReadOnlyList<string> PurgedStageIds { get; init; } = [];
     internal IReadOnlyList<string> RetainedDownloadIds { get; init; } = [];
+    internal IReadOnlyList<string> CheckpointProofIds { get; init; } = [];
 }
 
 /// <summary>Reconstructs owned, delivered payload from immutable registrations and writer receipts.
@@ -33,7 +34,7 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
     internal static async Task<AcquisitionProcessingWorkspaceFiles?> FindAsync(BakabaseDbContext db,
         IArtifactOperationStore store, FileProcessingWorkspaceResolver workspaces, AcquisitionTaskDbModel task,
         AcquisitionPlan plan, string partId, AcquisitionStageDirectory stage, IReadOnlyList<int> ownerRuns,
-        IReadOnlyList<ArtifactRecord> verifiedPublications, CancellationToken ct)
+        IReadOnlyList<ArtifactRecord> verifiedPublications, CancellationToken ct, string? previousWorkspaceReceipts = null)
     {
         if (stage is not {Ownership: "exclusive", Evidence: "taskAllocation", Allocation: {} allocation} ||
             allocation.OwnerKind != "acquisition" || allocation.OwnerId != task.Id.ToString(CultureInfo.InvariantCulture) ||
@@ -44,6 +45,8 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
         var part = plan.Parts.Single(p => p.Id == partId);
         if (plan.StoragePolicy == null) return null;
         var sourceCleanup = ArtifactStoragePolicies.Resolve(plan.StoragePolicy, part.StoragePolicy).SourceCleanup;
+        var checkpointOnly = previousWorkspaceReceipts != null;
+        if (checkpointOnly && sourceCleanup != "keep") return null;
         if (sourceCleanup == "keep")
         {
             if (part.Processing?.Steps.Any(s => s.StoragePolicy is {CleanupIntermediates: false} or {SourceCleanup: "keep"}) == true)
@@ -60,6 +63,7 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
         var selected = new Dictionary<string, ArtifactManifestEntry>(FileProcessingFiles.PathComparer);
         var committedFiles = new Dictionary<string, IReadOnlyList<ArtifactManifestEntry>>(StringComparer.Ordinal);
         var purgedStages = new HashSet<string>(StringComparer.Ordinal);
+        var checkpointProofIds = new HashSet<string>(StringComparer.Ordinal);
         var removedInputs = new Dictionary<string, HashSet<ArtifactManifestEntry>>(StringComparer.Ordinal);
         foreach (var binding in bindings)
         {
@@ -67,7 +71,17 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
             if (committed is not {Kind: "processedFiles", Managed: true} || binding.OperationId != committed.OperationId ||
                 committed.State is not (ArtifactLocationState.Available or ArtifactLocationState.Missing or ArtifactLocationState.Retired)) continue;
             var previouslyPurged = !Same(committed.RootDirectory, stage.Directory);
-            if (previouslyPurged)
+            if (checkpointOnly)
+            {
+                // Older stage cleanup retired this canonical download copy in place.
+                // The completed receipt and readable absence prove exactly which copy was removed.
+                if (previouslyPurged || committed.State != ArtifactLocationState.Retired ||
+                    !await AcquisitionProcessingWorkspaceRemoval.CoversCompletedSelectionAsync(previousWorkspaceReceipts!, stage.BindingId!,
+                        stage.Directory, committed.Manifest, ct) ||
+                    !ArtifactCleanupAbsence.AllConfirmedAbsent(stage.Directory, committed.Files, ct)) continue;
+                previouslyPurged = true;
+            }
+            else if (previouslyPurged)
             {
                 // Earlier cleanup versions may have purged the visible working copy while leaving its
                 // private checkpoints. The purged receipt proves the original directory, never its new occupants.
@@ -104,8 +118,13 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
             var journal = JsonSerializer.Deserialize<AcquisitionProcessingStageCommitReceipt>(await File.ReadAllTextAsync(path, ct), Json);
             if (!OwnsCommittedFiles(committed, evidence, journal)) continue;
             var registeredSource = await db.Artifacts.AsNoTracking().SingleOrDefaultAsync(a => a.Id == source.Id, ct);
-            if (registeredSource == null || await workspaces.ReadOriginalArtifactDirectoryAsync(registeredSource, ct) is not {} original ||
-                !Same(evidence.SourceDirectory, original)) continue;
+            if (registeredSource == null) continue;
+            var original = await workspaces.ReadOriginalArtifactDirectoryAsync(registeredSource, ct);
+            if (original == null && checkpointOnly && source.State == ArtifactLocationState.Retired &&
+                Same(source.RootDirectory, evidence.SourceDirectory) &&
+                ArtifactCleanupPathReferences.StrictlyUnder(source.RootDirectory, stage.Directory) &&
+                ArtifactCleanupAbsence.AllConfirmedAbsent(stage.Directory, source.Files, ct)) original = source.RootDirectory;
+            if (original == null || !Same(evidence.SourceDirectory, original)) continue;
             var input = parentMetadata.InputArtifactId == null ? null : await store.GetArtifactAsync(parentMetadata.InputArtifactId, ct);
             if (input == null || !source.ParentArtifactIds.Contains(input.Id) ||
                 !FileDispositionProofs.ValidFor(parentMetadata.FileDisposition, input, source)) continue;
@@ -123,7 +142,7 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
                 try
                 {
                     await AddDeliveredCheckpointCopiesAsync(db, store, workspaces, stage, binding.OwnerId, partId, committed,
-                        verifiedPublications, privateFiles, ct);
+                        verifiedPublications, privateFiles, ct, checkpointOnly ? task.Id : null, checkpointProofIds);
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or
                     InvalidDataException or ArgumentException or InvalidOperationException)
@@ -141,6 +160,7 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
             }
             if (previouslyPurged) purgedStages.Add(committed.Id);
             committedFiles[committed.Id] = previouslyPurged ? [] : committed.Manifest.Entries;
+            if (checkpointOnly) continue;
             var removed = ReplacedStageInputs(input, source, committed, parentMetadata.FileDisposition!, journal!);
             if (removed.Count > 0)
             {
@@ -182,7 +202,8 @@ internal static partial class AcquisitionProcessingWorkspaceEvidence
         return selected.Count == 0 ? null : new(selected.Values.OrderBy(f => f.RelativePath, StringComparer.Ordinal).ToArray(),
             committedFiles.Keys.Order(StringComparer.Ordinal).ToArray()) {RetainedDownloadIds = retainedDownloads.Keys.Order(StringComparer.Ordinal).ToArray(),
                 RetainedFiles = retainedDownloads.Values.SelectMany(d => d.Files).OrderBy(f => f.Path, StringComparer.Ordinal).ToArray(),
-                PurgedStageIds = purgedStages.Order(StringComparer.Ordinal).ToArray()};
+                PurgedStageIds = purgedStages.Order(StringComparer.Ordinal).ToArray(),
+                CheckpointProofIds = checkpointProofIds.Order(StringComparer.Ordinal).ToArray()};
     }
 
     internal static IReadOnlyList<ArtifactManifestEntry> ReplacedStageInputs(ArtifactRecord input, ArtifactRecord source,

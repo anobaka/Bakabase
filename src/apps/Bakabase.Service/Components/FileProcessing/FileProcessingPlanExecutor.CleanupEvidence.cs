@@ -26,7 +26,7 @@ public sealed partial class FileProcessingPlanExecutor
             if (depth == 1)
             {
                 rootField = name.ToLowerInvariant();
-                return rootField is "lineageversion" or "completed" or "pendingoperation" or "readonlyvolumeartifactid" or
+                return rootField is "lineageversion" or "completed" or "pendingoperation" or "snapshotsourceartifactid" or "readonlyvolumeartifactid" or
                     "readonlyvolumemembers" or "storagepolicy" or "steppolicies" or "operations" or "inputmanifest" or
                     "boundaryresults" or "outputs" or "retainedfiles";
             }
