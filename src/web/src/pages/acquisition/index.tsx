@@ -21,6 +21,7 @@ import InboxDrawer from "./components/InboxDrawer";
 import AcquisitionRow from "./components/AcquisitionRow";
 import StartAcquisitionModal from "./components/StartAcquisitionModal";
 import AcquisitionSettingsModal from "./components/AcquisitionSettingsModal";
+import AcquisitionThroughput from "./components/throughput";
 import AcquisitionReserveSetting from "./components/AcquisitionReserveSetting";
 import AcquisitionAttentionFilters from "./components/AcquisitionAttentionFilters";
 import AcquisitionTaskSearch from "./components/AcquisitionTaskSearch";
@@ -471,6 +472,7 @@ const AcquisitionPage: React.FC = () => {
           </div>
         </div>
       </div>
+      <AcquisitionThroughput />
       <div className="flex flex-wrap items-center gap-2">
         <AcquisitionTaskSearch
           value={keyword}
