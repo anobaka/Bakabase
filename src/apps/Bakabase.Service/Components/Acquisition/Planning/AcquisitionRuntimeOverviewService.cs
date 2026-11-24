@@ -299,7 +299,9 @@ public sealed class AcquisitionRuntimeOverviewService(BakabaseDbContext db, IAcq
                 DownloadActivity = downloadActivity?.Activity,
                 DownloadContinuation = run == null ? null : AcquisitionDownloadContinuationService.Read(task)?.Mode ?? AcquisitionDownloadContinuationService.Manual,
                 DownloadsCompletedAwaitingWorkflow = completedWait,
-                CanDiagnoseDownloadContinuation = completedWait && run?.PendingSignalJson == null,
+                CanDiagnoseDownloadContinuation = completedWait && run?.PendingSignalJson == null ||
+                    kind == "download.awaitCompletion" && run != null &&
+                    AcquisitionDownloadContinuationService.IsPausedDownloadOwner(task, run),
                 CanStopWaitingRun = task.Status == AcquisitionStatus.Waiting &&
                     run is {Status: WorkflowRunStatus.Waiting, PendingSignalJson: null} &&
                     summary.ActiveCount == 0 && downloadActivity?.Activity == null &&

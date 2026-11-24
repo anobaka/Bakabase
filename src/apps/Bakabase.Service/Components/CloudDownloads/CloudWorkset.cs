@@ -139,7 +139,11 @@ public sealed record CloudDownloadResumeTarget(string TargetId, string DownloadI
 
 public sealed record CloudTransferReplaySignal(string RemoteDirectory, IReadOnlyDictionary<string, string> Attempts);
 
-public sealed record CloudPreparedDownloadRetry(string OperationId, long FailedAtTicks);
+public sealed record CloudPreparedDownloadRetry(string OperationId, long FailedAtTicks)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool WasPaused { get; init; }
+}
 
 public sealed record CloudSelectionSignal
 {
@@ -161,7 +165,9 @@ public sealed record CloudSelectionSignal
     internal bool HasValidPreparedRetrySelection() => PreparedDownloadRetries == null ||
         RevalidateExistingDownloads == true && ObserveExistingOnly == true && VerifyExistingFilesOnly != true &&
         ResumeTargetIds != null && PreparedDownloadRetries.Count > 0 && PreparedDownloadRetries.Count <= ResumeTargetIds.Count &&
-        PreparedDownloadRetries.All(p => ResumeTargetIds.Contains(p.Key) && p.Value != null && !string.IsNullOrWhiteSpace(p.Value.OperationId));
+        PreparedDownloadRetries.All(p => ResumeTargetIds.Contains(p.Key) && p.Value != null && !string.IsNullOrWhiteSpace(p.Value.OperationId)) &&
+        (!PreparedDownloadRetries.Values.Any(p => p.WasPaused) ||
+         PreparedDownloadRetries.Count == ResumeTargetIds.Count && PreparedDownloadRetries.Values.All(p => p.WasPaused));
 
     /// <summary>Only verify and register original existing files. Never restart a downloader or transfer.</summary>
     public bool? VerifyExistingFilesOnly { get; init; }

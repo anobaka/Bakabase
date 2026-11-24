@@ -78,7 +78,8 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
             var (task, run) = await CurrentAsync(id, ct);
             var entry = task == null ? null : AcquisitionLocalRecoveryQueueEntry.Read(task);
             if (task == null || entry == null || entry.Status is not ("starting" or "running")) return;
-            if (task.DeletedAt != null || task.Status == AcquisitionStatus.Cancelled)
+            if (task.DeletedAt != null || task.Status == AcquisitionStatus.Cancelled &&
+                run?.Status is not (WorkflowRunStatus.Pending or WorkflowRunStatus.Running))
             {await SaveAsync(task, entry with {Status = "cancelled", ReasonCode = "RECOVERY_TASK_CANCELLED"}, ct); return;}
             // A local-files adoption may have committed a new run before its response was
             // persisted. Observe that exact next revision; never call adoption twice.
@@ -281,7 +282,8 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
             if (volumes.Any(v => v.BlocksAdmission))
             {await SaveAsync(task, entry with {Status = "spaceBlocked", ReasonCode = StorageWriteGuard.ReserveLowCode}, ct); return;}
             if (run != null && entry.RecoveryScope == "workflow")
-                task = await GrantWhileLockedAsync(task, run, entry, ct);
+                task = await GrantWhileLockedAsync(task, run, entry, ct,
+                    pausedOriginal: check.WorkflowRow?.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady);
             dispatch = entry with {Status = "starting", ReasonCode = null, Signal = e.Signal, VerificationPending = false,
                 CheckpointWrite = e.CheckpointWrite,
                 AttemptVersion = AcquisitionLocalRecoveryQueueEntry.ContentVersion(task, run)};
@@ -443,10 +445,10 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
         entry.OverrideValid(DateTimeOffset.UtcNow) ? entry.ReserveMode ?? AcquisitionSpaceReserve.Emergency : AcquisitionSpaceReserve.Inherit);
 
     private async Task<AcquisitionTaskDbModel> GrantWhileLockedAsync(AcquisitionTaskDbModel task, WorkflowRunDbModel run,
-        AcquisitionLocalRecoveryQueueEntry entry, CancellationToken ct)
+        AcquisitionLocalRecoveryQueueEntry entry, CancellationToken ct, bool pausedOriginal = false)
     {
         if (task.WorkflowRunId != run.Id || task.PlanRevision != entry.PlanRevision ||
-            run.Status is WorkflowRunStatus.Success or WorkflowRunStatus.Cancelled ||
+            run.Status == WorkflowRunStatus.Success || run.Status == WorkflowRunStatus.Cancelled && !pausedOriginal ||
             !(entry.UsesConfiguredReserve || IsLocalRemainder(run) || entry.CanOverrideStorage && AcquisitionContinuationReserve.IsDownload(run))) return task;
         var gate = WorkflowRunMutationGate.For(run.Id); await gate.WaitAsync(ct);
         try
@@ -454,6 +456,8 @@ public sealed partial class AcquisitionLocalRecoveryBatchService
             var (latest, latestRun) = await CurrentAsync(task.Id, ct);
             if (latest == null || latestRun == null || latest.WorkflowRunId != run.Id || latest.PlanRevision != entry.PlanRevision ||
                 AcquisitionLocalRecoveryQueueEntry.Read(latest)?.BatchId != entry.BatchId) throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
+            if (pausedOriginal && !AcquisitionDownloadContinuationService.IsPausedDownloadOwner(latest, latestRun))
+                throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
             var existing = AcquisitionStorageOverrideGrant.Read(latest);
             var approved = entry.UsesConfiguredReserve || entry.OverrideValid(DateTimeOffset.UtcNow);
             // An inherited selection must not silently retain a previous single-operation

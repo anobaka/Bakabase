@@ -406,9 +406,12 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
     {
         Checked Block(string reason) => new(new(task.Id, task.Title, run?.Id, false, reason, estimate.Bytes, estimate.Partial, null, null, null));
         if (task.DeletedAt != null) return Block("ACQUISITION_TASK_DELETED");
-        if (task.Status is AcquisitionStatus.Completed or AcquisitionStatus.Cancelled) return Block("RECOVERY_ALREADY_COMPLETED");
+        var pausedOriginal = mode == "automatic" && offered == null && run != null &&
+            AcquisitionDownloadContinuationService.IsPausedDownloadOwner(task, run);
+        if (task.Status == AcquisitionStatus.Completed || task.Status == AcquisitionStatus.Cancelled && !pausedOriginal)
+            return Block("RECOVERY_ALREADY_COMPLETED");
         if (run != null && (run.Status is WorkflowRunStatus.Pending or WorkflowRunStatus.Running ||
-            run.PendingSignalJson != null || tasks?.IsPending("workflow.run." + run.Id) == true)) return Block("ACQUISITION_TASK_ACTIVE");
+            run.PendingSignalJson != null && !pausedOriginal || tasks?.IsPending("workflow.run." + run.Id) == true)) return Block("ACQUISITION_TASK_ACTIVE");
         try
         {
             var plan = JsonSerializer.Deserialize<AcquisitionPlan>(task.PlanJson ?? "{}", WorkflowJson.Options);
@@ -428,7 +431,7 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
             // An original download already owns its destination. Check that operation before
             // considering different directories for a possible revision adopting local files.
             AcquisitionRecoveryDiagnosis? originalDownloadDiagnosis = null;
-            if (offered == null && mode == "automatic" && continuations != null && awaitingDownloads)
+            if (offered == null && mode == "automatic" && continuations != null && (awaitingDownloads || pausedOriginal))
             {
                 var candidate = await diagnostics.DiagnoseAsync(task, run, ct, verifyFiles,
                     deferCompletedDownloadVerification: true);
@@ -436,12 +439,15 @@ public sealed partial class AcquisitionLocalRecoveryBatchService(BakabaseDbConte
                     candidate.Row.CurrentProblemCode != null)
                     return Block(candidate.Row.ReasonCode == "RECOVERY_SOURCE_STILL_BLOCKED"
                         ? candidate.Row.CurrentProblemCode : candidate.Row.ReasonCode);
-                if (!verifyFiles && candidate.Row.ReasonCode == "RECOVERY_RECHECK_SOURCE" ||
+                if (candidate.PreparedDownloadReason == AcquisitionRecoveryDiagnostics.PausedOriginalReady ||
+                    awaitingDownloads && (!verifyFiles && candidate.Row.ReasonCode == "RECOVERY_RECHECK_SOURCE" ||
                     candidate.Row.CanContinue && candidate.Row.Action == "resume" &&
                     AcquisitionDownloadOnlyRecoveryService.Targets(run, candidate.SignalJson,
-                        verificationOnly: candidate.Row.ReasonCode == "RECOVERY_EXISTING_FILES_VERIFY_REQUIRED") != null)
+                        verificationOnly: candidate.Row.ReasonCode == "RECOVERY_EXISTING_FILES_VERIFY_REQUIRED") != null))
                     originalDownloadDiagnosis = candidate;
             }
+            if (task.Status == AcquisitionStatus.Cancelled && originalDownloadDiagnosis == null)
+                return Block("RECOVERY_TASK_CANCELLED");
             var preferCurrentStorage = false;
             if (offered == null && originalDownloadDiagnosis == null && plans != null && awaitingDownloads)
             {

@@ -382,12 +382,14 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
                                     throw new RecoveryBlockedException("ACQUISITION_TASK_CHANGED");
                             await preparation.CommitAsync(token);
                         }
+                        var pausedOriginal = current.Row.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady;
                         task = await AcquisitionContinuationReserve.SaveWhileLockedAsync(db, task, run, input.UseEmergencySpaceReserve,
-                            "recovery:" + input.PreviewToken, token, preserveReserve);
+                            "recovery:" + input.PreviewToken, token, preserveReserve, pausedOriginal);
                         // Enqueue may be consumed immediately. Commit the confirmed follow-up
                         // mode under the same task/run gates, before handing over the signal.
                         await new AcquisitionDownloadContinuationService(db).SaveWhileLockedAsync(task, run.Id,
-                            AcquisitionDownloadContinuationService.Automatic, token);
+                            pausedOriginal ? AcquisitionDownloadContinuationService.Paused : AcquisitionDownloadContinuationService.Automatic,
+                            token, approvePausedSignal: pausedOriginal ? current.SignalJson : null);
                     }, ct);
                 continued.Add(id);
             }
@@ -409,7 +411,8 @@ public sealed class AcquisitionRecoveryService(BakabaseDbContext db, IAcquisitio
     private static AcquisitionRecoveryDiagnosis ForScope(AcquisitionRecoveryDiagnosis diagnosis, WorkflowRunDbModel? run, string scope)
     {
         if (scope != "downloads" || !diagnosis.Row.CanContinue) return diagnosis;
-        return AcquisitionDownloadOnlyRecoveryService.Targets(run, diagnosis.SignalJson,
+        return diagnosis.Row.ReasonCode == AcquisitionRecoveryDiagnostics.PausedOriginalReady ||
+            AcquisitionDownloadOnlyRecoveryService.Targets(run, diagnosis.SignalJson,
             verificationOnly: diagnosis.Row.ReasonCode == "RECOVERY_EXISTING_FILES_VERIFY_REQUIRED") == null
             ? diagnosis with {Row = diagnosis.Row with {CanContinue = false, Action = null, ReasonCode = "RECOVERY_DOWNLOAD_SCOPE_UNAVAILABLE"}}
             : diagnosis with {Row = diagnosis.Row with {Action = "downloads"}};

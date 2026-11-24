@@ -20,6 +20,7 @@ using Bakabase.Modules.Workflow.Abstractions.Components;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.DownloadIntents;
+using Bakabase.Service.Components.Acquisition.Planning;
 using Bakabase.Service.Components.FileProcessing;
 using Bakabase.Abstractions.Exceptions;
 using Microsoft.EntityFrameworkCore;
@@ -229,8 +230,12 @@ public abstract class CloudActivity(string kind, string name, string description
             if (workset.Targets.Any(t => selected.Contains(t.Id) && t.DownloadTaskId == null && t.TransportTaskId == null &&
                 t.DownloadArtifactId == null && t.ProcessedArtifactId == null && t.PublishedArtifactId == null))
                 throw new ArgumentException("Selected targets must already have a download or a saved artifact.");
+            DateTimeOffset? pauseAdmission = signal.PreparedDownloadRetries?.Values.Any(p => p.WasPaused) == true
+                ? await ctx.Services.GetRequiredService<AcquisitionDownloadContinuationService>().ConsumePausedSignalAsync(
+                    checked((int)ctx.RunId), workset.Id, JsonSerializer.Serialize(signal, WorkflowJson.Options), ct)
+                : null;
             return await ResumeSelectedDownloads(ctx, workset, selected, ct, signal.RevalidateExistingDownloads == true,
-                signal.VerifyExistingFilesOnly == true, signal.PreparedDownloadRetries);
+                signal.VerifyExistingFilesOnly == true, signal.PreparedDownloadRetries, pauseAdmission);
         }
         if (kind == "download.awaitCompletion" && signal != null && signal.ObserveExistingOnly != true &&
             workset.Targets.Count > 1)
@@ -500,7 +505,7 @@ public abstract class CloudActivity(string kind, string name, string description
 
     private static async Task<WorkflowItemOutcome> ResumeSelectedDownloads(WorkflowExecutionContext ctx,
         DownloadWorkset workset, IReadOnlySet<string> selected, CancellationToken ct, bool revalidate = false, bool verifyExisting = false,
-        IReadOnlyDictionary<string, CloudPreparedDownloadRetry>? preparedRetries = null)
+        IReadOnlyDictionary<string, CloudPreparedDownloadRetry>? preparedRetries = null, DateTimeOffset? pauseAdmission = null)
     {
         var artifacts = ctx.Services.GetService<DownloadArtifactCoordinator>();
         var recovery = revalidate ? ctx.Services.GetRequiredService<CloudDownloadRecoveryService>() : null;
@@ -541,7 +546,8 @@ public abstract class CloudActivity(string kind, string name, string description
                             var grouped = owner != null;
                             if (!grouped && groupedNativeIds.Contains(target.DownloadTaskId.GetValueOrDefault()))
                                 throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
-                            await StartRevalidatedDownload(ctx, recovery, target, workset.OutputDirectory, grouped, preparedRetries?.GetValueOrDefault(target.Id), ct);
+                            await StartRevalidatedDownload(ctx, recovery, target, workset.OutputDirectory, grouped,
+                                preparedRetries?.GetValueOrDefault(target.Id), pauseAdmission, ct);
                         }
                         else if (target.DownloadArtifactId == null)
                         {
@@ -555,6 +561,9 @@ public abstract class CloudActivity(string kind, string name, string description
                     { admissionProblems.Add(target.Id, TargetProblem(error)); }
                 }
             }
+            if (pauseAdmission is {} admitted && admissionProblems.Count == 0)
+                await ctx.Services.GetRequiredService<AcquisitionDownloadContinuationService>().ActivatePausedAdmissionAsync(
+                    checked((int)ctx.RunId), admitted, ct);
 
             foreach (var target in workset.Targets)
             {
@@ -607,10 +616,14 @@ public abstract class CloudActivity(string kind, string name, string description
     }
 
     private static async Task StartRevalidatedDownload(WorkflowExecutionContext ctx, CloudDownloadRecoveryService recovery,
-        CloudDownloadTarget target, string outputDirectory, bool grouped, CloudPreparedDownloadRetry? confirmedPrepared, CancellationToken ct)
+        CloudDownloadTarget target, string outputDirectory, bool grouped, CloudPreparedDownloadRetry? confirmedPrepared,
+        DateTimeOffset? pauseAdmission, CancellationToken ct)
     {
         var runId = checked((int)ctx.RunId);
-        var check = await recovery.CheckAsync(runId, target, outputDirectory, true, ct, requireEquivalentGroup: grouped);
+        Task<CloudDownloadRecoveryCheck> Check(bool verify, CancellationToken token) => confirmedPrepared?.WasPaused == true
+            ? recovery.CheckPausedPreparedAsync(runId, target, outputDirectory, verify, token)
+            : recovery.CheckAsync(runId, target, outputDirectory, verify, token, requireEquivalentGroup: grouped);
+        var check = await Check(true, ct);
         if (!check.CanRetry || check.VerifyExistingOnly) throw new InvalidOperationException(check.ReasonCode == "RECOVERY_SOURCE_STILL_BLOCKED"
             ? check.FailureCode ?? check.ReasonCode : check.ReasonCode);
         if (check.PreparedRetry != confirmedPrepared)
@@ -618,12 +631,19 @@ public abstract class CloudActivity(string kind, string name, string description
         var response = await ctx.Services.GetRequiredService<DownloadTaskService>().StartConditionally(
             target.DownloadTaskId!.Value, async token =>
             {
-                var local = await recovery.CheckAsync(runId, target, outputDirectory, false, token, requireEquivalentGroup: grouped);
+                var local = await Check(false, token);
                 if (!local.Candidate || local.VerifyExistingOnly) throw new InvalidOperationException(local.ReasonCode);
                 if (local.PreparedRetry != check.PreparedRetry)
                     throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
             }, ct, check.PreparedRetry is { } prepared
-                ? token => recovery.ValidatePreparedAdmissionAsync(runId, target, outputDirectory, prepared, token)
+                ? async token =>
+                {
+                    if (prepared.WasPaused)
+                        await ctx.Services.GetRequiredService<AcquisitionDownloadContinuationService>()
+                            .RequirePausedAdmissionWhileLockedAsync(runId, pauseAdmission ??
+                                throw new InvalidOperationException("RECOVERY_DOWNLOAD_IDENTITY_CHANGED"), token);
+                    await recovery.ValidatePreparedAdmissionAsync(runId, target, outputDirectory, prepared, token);
+                }
                 : grouped ? async token =>
             {
                 if ((await recovery.ReadEquivalentGroupAsync(runId, target, outputDirectory, token))?.Owner.Id != target.Id)

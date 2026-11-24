@@ -54,6 +54,8 @@ public sealed partial class PikPakCliTests
         Assert.AreEqual("keep", await File.ReadAllTextAsync(Path.Combine(unknown.FullName, "opaque")));
         Assert.AreEqual(0, _restored.Transfers.Count);
         unknown.Delete(recursive: true);
+        Assert.IsFalse((await _provider.CheckPausedPreparedDownloadAsync(Request, default)).Available,
+            "The removed native partial and its journal do not prove an HTTP checkpoint.");
 
         _restored.Fail = true;
         var interrupted = await Assert.ThrowsExceptionAsync<CloudProviderException>(() =>
@@ -61,6 +63,7 @@ public sealed partial class PikPakCliTests
         Assert.AreEqual("PIKPAK_NETWORK_UNAVAILABLE", interrupted.Message);
         var preserved = _restored.Transfers.Single().Directory;
         Assert.IsTrue((await _provider.CheckPreparedDownloadRetryAsync(Request, default)).Available);
+        Assert.IsTrue((await _provider.CheckPausedPreparedDownloadAsync(Request, default)).Available);
         await File.WriteAllTextAsync(Path.Combine(preserved, "unrecognized-file"), "preserve");
         Assert.IsFalse((await _provider.CheckPreparedDownloadRetryAsync(Request, default)).Available);
         Assert.AreEqual("preserve", await File.ReadAllTextAsync(Path.Combine(preserved, "unrecognized-file")));

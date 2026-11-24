@@ -39,12 +39,17 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
         CheckCoreAsync(runId, target, outputRoot, revalidate, forSourceRevision: false, ct, includeStopped, includeStoppedForVerification,
             requireEquivalentGroup);
 
+    internal Task<CloudDownloadRecoveryCheck> CheckPausedPreparedAsync(int runId, CloudDownloadTarget target,
+        string outputRoot, bool revalidate, CancellationToken ct) =>
+        CheckCoreAsync(runId, target, outputRoot, revalidate, false, ct, includeStopped: true, resumePausedPrepared: true);
+
     internal async Task ValidatePreparedAdmissionAsync(int runId, CloudDownloadTarget target, string outputRoot,
         CloudPreparedDownloadRetry confirmed, CancellationToken ct)
     {
         // The native service holds the task/owner leases and may already have enabled this
         // exact row before allocating a source slot. No other recovery accepts InProgress.
-        var local = await CheckCoreAsync(runId, target, outputRoot, false, false, ct, enablingPreparedOperationId: confirmed.OperationId);
+        var local = await CheckCoreAsync(runId, target, outputRoot, false, false, ct, includeStopped: confirmed.WasPaused,
+            enablingPreparedOperationId: confirmed.OperationId, resumePausedPrepared: confirmed.WasPaused);
         if (!local.Candidate || local.PreparedRetry != confirmed)
             throw new InvalidOperationException(local.Candidate ? "RECOVERY_DOWNLOAD_IDENTITY_CHANGED" : local.ReasonCode);
     }
@@ -58,7 +63,8 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
 
     private async Task<CloudDownloadRecoveryCheck> CheckCoreAsync(int runId, CloudDownloadTarget target,
         string outputRoot, bool revalidate, bool forSourceRevision, CancellationToken ct, bool includeStopped = false,
-        bool includeStoppedForVerification = false, bool requireEquivalentGroup = false, NativeVerificationScope? nativeVerification = null, string? enablingPreparedOperationId = null)
+        bool includeStoppedForVerification = false, bool requireEquivalentGroup = false, NativeVerificationScope? nativeVerification = null,
+        string? enablingPreparedOperationId = null, bool resumePausedPrepared = false)
     {
         string? failure = null;
         CloudDownloadRecoveryCheck Block(string code, bool candidate = false) => new(false, code, failure, candidate);
@@ -71,6 +77,7 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             if (download == null) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             var stopped = download.Status == DownloadTaskDbModelStatus.Disabled;
             var enabling = enablingPreparedOperationId != null && download.Status == DownloadTaskDbModelStatus.InProgress;
+            if (resumePausedPrepared && !stopped && !enabling) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             if (!enabling && download.Status != DownloadTaskDbModelStatus.Failed &&
                 !(stopped && (includeStopped || includeStoppedForVerification)))
                 return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
@@ -107,7 +114,8 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                         revalidate, ct, includeStopped: true, requireRetainedFiles: true);
                 return verification;
             }
-            if (!requireEquivalentGroup && !forSourceRevision && provider is ICloudRetainedDownloadRecoveryProvider retained)
+            if (!requireEquivalentGroup && !forSourceRevision && !resumePausedPrepared &&
+                provider is ICloudRetainedDownloadRecoveryProvider retained)
             {
                 // Older user stops persisted this message on the owning workset only.
                 // The download-only action still needs the original transfer, retained
@@ -134,8 +142,10 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 IsExactLegacyStorageFailure(download.Message, download.DownloadPath, download.Options)
                     ? "LOCAL_STORAGE_UNAVAILABLE" : null;
             var preparedProvider = !forSourceRevision && !requireEquivalentGroup ? provider as ICloudPreparedDownloadRetryProvider : null;
-            var needsPreparedProof = originalFailure != null && preparedProvider?.CanRetryPreparedDownloadFailure(originalFailure) == true;
-            if (stopped || originalFailure == null || (forSourceRevision
+            var needsPreparedProof = resumePausedPrepared ||
+                originalFailure != null && preparedProvider?.CanRetryPreparedDownloadFailure(originalFailure) == true;
+            if (resumePausedPrepared ? preparedProvider == null || capability == null :
+                stopped || originalFailure == null || (forSourceRevision
                     ? provider is not ICloudDownloadAbandonmentProvider
                     : capability == null || (!needsPreparedProof && !capability.CanRevalidateDownloadFailure(originalFailure))))
                 return Block("RECOVERY_MANUAL_REVIEW");
@@ -195,8 +205,9 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             var executionRequest = CloudDownloadDestinations.ExecutionRequest(request);
             // A prepared retry must prove the provider's exact saved copy and previous native
             // attempt even when filesystem deletion markers have disappeared since preview.
-            var prepared = preparedProvider != null &&
-                (await preparedProvider.CheckPreparedDownloadRetryAsync(executionRequest, ct)).Available;
+            var prepared = preparedProvider != null && (await (resumePausedPrepared
+                ? preparedProvider.CheckPausedPreparedDownloadAsync(executionRequest, ct)
+                : preparedProvider.CheckPreparedDownloadRetryAsync(executionRequest, ct))).Available;
             if (!prepared && download.Progress != 0) return Block("RECOVERY_DOWNLOAD_HAS_OUTPUT");
             if (!prepared && needsPreparedProof) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             if (prepared)
@@ -216,7 +227,8 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 var local = await capability.CheckLocalRecoveryAsync(executionRequest, ct);
                 if (!local.Available) return Block("RECOVERY_DOWNLOAD_REVIEW_REQUIRED");
             }
-            var preparedRetry = prepared ? new CloudPreparedDownloadRetry(intent, download.DownloadStatusUpdateDt.Ticks) : null;
+            var preparedRetry = prepared ? new CloudPreparedDownloadRetry(intent, download.DownloadStatusUpdateDt.Ticks)
+                {WasPaused = resumePausedPrepared} : null;
             if (!revalidate) return Block("RECOVERY_RECHECK_SOURCE", candidate: true) with {PreparedRetry = preparedRetry};
             if (!capability!.RevalidationChecksReadiness)
             {
@@ -235,7 +247,9 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             }
             // A network probe can overlap another consumer or user edit. Do not certify a stale
             // local snapshot; execution repeats this local guard under the downloader action lock.
-            var latest = await CheckAsync(runId, target, outputRoot, revalidate: false, ct, requireEquivalentGroup: requireEquivalentGroup);
+            var latest = resumePausedPrepared
+                ? await CheckPausedPreparedAsync(runId, target, outputRoot, revalidate: false, ct)
+                : await CheckAsync(runId, target, outputRoot, revalidate: false, ct, requireEquivalentGroup: requireEquivalentGroup);
             if (!latest.Candidate) return latest;
             if (latest.PreparedRetry != preparedRetry)
                 return Block("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");

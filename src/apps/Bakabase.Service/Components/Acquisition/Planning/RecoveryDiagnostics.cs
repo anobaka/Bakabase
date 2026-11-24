@@ -78,7 +78,8 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
                 reason, ready ? null : manual, run == null ? null : new DateTimeOffset((run.CompletedAt ?? run.WaitingSince ?? run.StartedAt).ToUniversalTime()),
                 kind, problem), signal);
         if (task.DeletedAt != null) return Result("ACQUISITION_TASK_DELETED");
-        if (task.Status == AcquisitionStatus.Cancelled) return Result("RECOVERY_TASK_CANCELLED");
+        var pausedDownload = run != null && AcquisitionDownloadContinuationService.IsPausedDownloadOwner(task, run);
+        if (task.Status == AcquisitionStatus.Cancelled && !pausedDownload) return Result("RECOVERY_TASK_CANCELLED");
         if (run == null)
         {
             if (plans == null || task.PlanJson == null) return Result("RECOVERY_NO_RUN");
@@ -97,9 +98,9 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
         if (tasks?.IsPending("workflow.run." + run.Id) == true) return Result("ACQUISITION_TASK_ACTIVE");
         if (run.Status is WorkflowRunStatus.Running or WorkflowRunStatus.Pending) return Result("ACQUISITION_TASK_ACTIVE");
         if (run.Status == WorkflowRunStatus.Success) return Result("RECOVERY_ALREADY_COMPLETED");
-        if (run.Status is not (WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted or WorkflowRunStatus.Waiting))
+        if (!pausedDownload && run.Status is not (WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted or WorkflowRunStatus.Waiting))
             return Result("RECOVERY_TASK_CANCELLED");
-        if (run.PendingSignalJson != null) return Result("RECOVERY_PENDING_ANSWER");
+        if (run.PendingSignalJson != null && !pausedDownload) return Result("RECOVERY_PENDING_ANSWER");
         try
         {
             var plan = WorkflowRunPlans.Read(run.PlanSnapshotJson);
@@ -128,6 +129,14 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
             if (workset == null || workset.Targets.Count is 0 or > 100 || workset.Targets.All(t => t.Excluded) ||
                 workset.Targets.Any(t => !t.Excluded && (t.SelectedSource == null || t.AcquisitionNonce != null)))
                 return Result("RECOVERY_CHECKPOINT_UNSUPPORTED");
+            if (pausedDownload && kind == "download.awaitCompletion" && downloads != null)
+            {
+                var paused = await InspectPausedOriginalAsync(task, run, workset, verifyFiles, ct);
+                if (paused != null) return paused;
+            }
+            if (run.PendingSignalJson != null) return Result("RECOVERY_PENDING_ANSWER");
+            if (run.Status == WorkflowRunStatus.Cancelled || task.Status == AcquisitionStatus.Cancelled)
+                return Result("RECOVERY_TASK_CANCELLED");
             if (kind == "download.enqueueSupported" && run.Status is WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted &&
                 transferredDownloads != null && workset.Targets.Any(t => !t.Excluded && t.RemoteEntry != null && t.DownloadTaskId == null))
             {

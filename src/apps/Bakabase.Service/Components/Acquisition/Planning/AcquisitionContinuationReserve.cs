@@ -31,12 +31,14 @@ internal static class AcquisitionContinuationReserve
     // Caller holds task -> run gates and has validated the frozen continuation. Omitted
     // options inherit the global default. Internal handoffs can retain a grant already confirmed upstream.
     internal static async Task<AcquisitionTaskDbModel> SaveWhileLockedAsync(BakabaseDbContext db,
-        AcquisitionTaskDbModel task, WorkflowRunDbModel run, bool? useEmergency, string token, CancellationToken ct, bool preserveExisting = false)
+        AcquisitionTaskDbModel task, WorkflowRunDbModel run, bool? useEmergency, string token, CancellationToken ct,
+        bool preserveExisting = false, bool pausedOriginal = false)
     {
         if (!Supports(run) || useEmergency == null && (preserveExisting || AcquisitionStorageOverrideGrant.Read(task) == null)) return task;
         if (task.DeletedAt != null || task.PlanRevision < 1 || task.WorkflowRunId != run.Id ||
-            task.Status is AcquisitionStatus.Completed or AcquisitionStatus.Cancelled ||
-            run.Status is WorkflowRunStatus.Success or WorkflowRunStatus.Cancelled)
+            task.Status == AcquisitionStatus.Completed || run.Status == WorkflowRunStatus.Success ||
+            (task.Status == AcquisitionStatus.Cancelled || run.Status == WorkflowRunStatus.Cancelled) &&
+            !(pausedOriginal && AcquisitionDownloadContinuationService.IsPausedDownloadOwner(task, run)))
             throw new InvalidOperationException("ACQUISITION_TASK_CHANGED");
         var now = DateTimeOffset.UtcNow;
         var grant = new AcquisitionStorageOverrideGrant(run.Id, task.PlanRevision, token, now, now.AddHours(24),
