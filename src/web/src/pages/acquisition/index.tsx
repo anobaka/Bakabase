@@ -399,7 +399,8 @@ const AcquisitionPage: React.FC = () => {
             {t<string>("acquisition.overview.description")}
           </p>
         </div>
-        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 lg:ml-auto">
+          <AcquisitionThroughput />
           <AcquisitionReserveSetting revision={settingsRevision} />
           <Tooltip
             content={t("acquisition.continueEntry.queueCountHint", { count: queueTaskCount })}
@@ -473,7 +474,6 @@ const AcquisitionPage: React.FC = () => {
           </div>
         </div>
       </div>
-      <AcquisitionThroughput />
       <div className="flex flex-wrap items-center gap-2">
         <AcquisitionTaskSearch
           value={keyword}

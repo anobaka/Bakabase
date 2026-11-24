@@ -1,13 +1,13 @@
 import { lazy, Suspense, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuActivity, LuChevronRight } from "react-icons/lu";
+import { LuDownload, LuFileEdit, LuFileSearch } from "react-icons/lu";
 
-import { metrics, sampleTime } from "./model";
-import RateValue from "./RateValue";
+import { metrics, reportedRate, sampleTime } from "./model";
 import useAcquisitionThroughput from "./useAcquisitionThroughput";
-import { Button, Modal, Spinner } from "@/components/bakaui";
+import { Button, Modal, Spinner, Tooltip } from "@/components/bakaui";
 
 const ThroughputHistory = lazy(() => import("./ThroughputHistory"));
+const metricIcons = { download: LuDownload, read: LuFileSearch, write: LuFileEdit } as const;
 
 export default function AcquisitionThroughput() {
   const { t, i18n } = useTranslation();
@@ -30,46 +30,71 @@ export default function AcquisitionThroughput() {
           ? t("acquisition.throughput.noSamples")
           : null;
 
+  const title = t("acquisition.throughput.title");
+  const readings = metrics.map(({ key, color }) => {
+    const { text, qualifier } = reportedRate(rates, key);
+
+    return { key, color, label: t(`acquisition.throughput.${key}`), text, hint: qualifier && t(qualifier) };
+  });
+  const accessibleName = [
+    title,
+    ...readings.map(({ label, text, hint }) => [label, text, hint].filter(Boolean).join(" ")),
+    status,
+  ].filter(Boolean).join(". ");
+
   return (
     <>
-      <Button
-        fullWidth
-        disableRipple
-        variant="bordered"
-        type="button"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onPress={() => setOpen(true)}
-        className="grid h-auto min-w-0 max-w-full grid-cols-[1fr_auto] items-center justify-start whitespace-normal gap-x-5 gap-y-2 self-start rounded-lg border border-default-200 px-3 py-2 text-left text-sm transition-colors hover:bg-default-100 focus-visible:outline-primary sm:flex sm:w-fit sm:flex-wrap"
+      <Tooltip
+        delay={400}
+        placement="bottom"
+        isDisabled={open}
+        content={
+          <div className="space-y-1 py-0.5 text-xs">
+            <div className="font-medium">{title}</div>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+              {readings.map(({ key, label, text, hint }) => (
+                <div key={key} className="contents">
+                  <dt>{label}</dt>
+                  <dd className="tabular-nums">
+                    {text}
+                    {hint && <span className="text-default-500"> {hint}</span>}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {status && <div>{status}</div>}
+          </div>
+        }
       >
-        <span className="inline-flex items-center gap-1.5 font-medium">
-          <LuActivity aria-hidden />
-          {t("acquisition.throughput.title")}
-        </span>
-        <span className="col-span-2 row-start-2 grid grid-cols-3 gap-x-3 sm:flex sm:gap-x-5">
-          {metrics.map((metric) => {
-            return (
-              <span
-                key={metric.key}
-                className="inline-flex flex-col gap-0.5 whitespace-nowrap sm:flex-row sm:items-baseline sm:gap-1.5"
-              >
-                <span className="text-xs text-default-500">
-                  {t(`acquisition.throughput.${metric.key}`)}
+        <Button
+          disableRipple
+          size="sm"
+          variant="bordered"
+          type="button"
+          aria-label={accessibleName}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onPress={() => setOpen(true)}
+          className="h-auto min-h-8 min-w-0 max-w-full shrink-0 justify-start gap-0 rounded-lg border border-default-200 px-2 py-1 text-xs hover:bg-default-100 focus-visible:outline-primary"
+        >
+          <span aria-hidden className="flex min-w-0 max-w-full flex-wrap items-center gap-x-2.5 gap-y-1">
+            {readings.map(({ key, color, text }) => {
+              const Icon = metricIcons[key];
+
+              return (
+                <span key={key} className="inline-flex items-center gap-1 whitespace-nowrap font-medium tabular-nums">
+                  <Icon aria-hidden className="size-4 shrink-0" style={{ color }} />
+                  {text}
                 </span>
-                <span className="font-medium tabular-nums">
-                  <RateValue rates={rates} metric={metric.key} />
-                </span>
-              </span>
-            );
-          })}
-        </span>
-        {status && <span className="col-span-2 text-xs text-default-500">{status}</span>}
-        <LuChevronRight aria-hidden className="col-start-2 row-start-1 ml-auto text-default-500" />
-      </Button>
+              );
+            })}
+          </span>
+        </Button>
+      </Tooltip>
       {open && (
         <Modal
           visible
-          title={t("acquisition.throughput.title")}
+          title={title}
           size="5xl"
           scrollBehavior="inside"
           footer={false}

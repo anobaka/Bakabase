@@ -10,6 +10,7 @@
   "acquisition.throughput.legend": "≥ marks downloads with partial coverage. * marks partial or estimated file I/O. Triangles identify these samples. Gaps indicate missing data.",
   "acquisition.throughput.partialDownload": "Some download sources are measured",
   "acquisition.throughput.partialIo": "Partially measured or estimated file I/O",
+  "acquisition.throughput.rateUnavailable": "No measurement",
   "acquisition.throughput.loading": "Loading throughput…",
   "acquisition.throughput.noSamples": "Waiting for the first sample.",
   "acquisition.throughput.disconnected": "Throughput data unavailable",

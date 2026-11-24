@@ -33,9 +33,15 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 vi.mock("@/components/bakaui", () => ({
-  Button: ({ children, onPress }: { children: ReactNode; onPress: () => void }) => (
-    <button onClick={onPress}>{children}</button>
-  ),
+  Button: ({
+    children,
+    onPress,
+    "aria-label": label,
+  }: {
+    children: ReactNode;
+    onPress: () => void;
+    "aria-label": string;
+  }) => <button aria-label={label} onClick={onPress}>{children}</button>,
   Modal: ({
     title,
     children,
@@ -51,6 +57,7 @@ vi.mock("@/components/bakaui", () => ({
     </div>
   ),
   Spinner: () => <span>Loading</span>,
+  Tooltip: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("react-chartjs-2", () => ({
   Line: ({
@@ -123,6 +130,10 @@ it("breaks the trend at missing buckets and absent tasks and preserves every obs
 it("opens the server-wide history and shows historical contributors outside the latest snapshot", async () => {
   render(<AcquisitionThroughput />);
   const button = await screen.findByRole("button", { name: /1\.0 KiB\/s/ });
+  expect(button).toHaveAccessibleName(/acquisition\.throughput\.title/);
+  expect(button).toHaveAccessibleName(/acquisition\.throughput\.read — acquisition\.throughput\.rateUnavailable/);
+  expect(button.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(3);
+  expect(within(button).queryByText("acquisition.throughput.title")).toBeNull();
   expect(button.textContent).toContain("≥ ");
   expect(getThroughput.mock.calls[0][0]).toEqual({ includeHistory: false });
   fireEvent.click(button);

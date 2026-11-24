@@ -37,6 +37,20 @@ export function formatReportedRate(metric: Metric, value: number | null, qualifi
   return metric === "download" ? `≥ ${formatted}` : `${formatted}*`;
 }
 
+export function reportedRate(rates: Rates | null | undefined, metric: Metric) {
+  const value = rate(rates, metric);
+  const qualified = value !== null && partial(rates, metric);
+  const qualifier = value === null
+    ? "acquisition.throughput.rateUnavailable"
+    : qualified
+      ? metric === "download"
+        ? "acquisition.throughput.partialDownload"
+        : "acquisition.throughput.partialIo"
+      : undefined;
+
+  return { text: formatReportedRate(metric, value, qualified), qualifier };
+}
+
 export function sampleTime(sample: Sample) {
   const value = sample.sampledAt ?? "";
   // Bakabase's shared serializer can return UTC without an offset.
