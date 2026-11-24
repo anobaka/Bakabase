@@ -1,10 +1,13 @@
 import { useTranslation } from "react-i18next";
+import { LuLink2Off } from "react-icons/lu";
 import { Button, Tooltip } from "@/components/bakaui";
-import { DownloadSourceIcon, downloadSourceLabel } from "@/components/DownloadSource";
+import { DownloadSourceIcon } from "@/components/DownloadSource";
 import { acquisitionFilterCount, showAcquisitionFilter } from "../acquisitionFilters";
 import {
+  acquisitionDownloadSourceLabel,
   acquisitionDownloadSources,
   normalizeAcquisitionDownloadSource,
+  unsupportedDownloadSource,
 } from "../downloadSourceFilter";
 
 export default function AcquisitionDownloadSourceFilter({
@@ -24,7 +27,7 @@ export default function AcquisitionDownloadSourceFilter({
 
   const choices = [
     { value: "all", label: t("downloader.filter.allSources") },
-    ...sources.map(source => ({ value: source, label: downloadSourceLabel(source, t) })),
+    ...sources.map(source => ({ value: source, label: acquisitionDownloadSourceLabel(source, t) })),
   ];
   return (
     <div
@@ -55,7 +58,9 @@ export default function AcquisitionDownloadSourceFilter({
                   aria-hidden
                   className="flex size-4 shrink-0 items-center justify-center [&>*]:!size-4"
                 >
-                  <DownloadSourceIcon source={choice.value} />
+                  {choice.value === unsupportedDownloadSource
+                    ? <LuLink2Off />
+                    : <DownloadSourceIcon source={choice.value} />}
                 </span>
               )
             }

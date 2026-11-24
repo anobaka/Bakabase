@@ -43,7 +43,7 @@ import RecipeCatalog from "./components/RecipeCatalog";
 import AcquisitionStageFilters from "./components/AcquisitionStageFilters";
 import AcquisitionDownloadSourceFilter from "./components/AcquisitionDownloadSourceFilter";
 import AcquisitionRuntimeCapabilityFilters from "./components/AcquisitionRuntimeCapabilityFilters";
-import { downloadSourceLabel } from "@/components/DownloadSource";
+import { acquisitionDownloadSourceLabel } from "./downloadSourceFilter";
 import SourceAvailabilityReviewModal from "@/components/SourceAvailability/SourceAvailabilityReviewModal";
 
 import BApi from "@/sdk/BApi";
@@ -132,7 +132,7 @@ const AcquisitionPage: React.FC = () => {
     : undefined;
   const scopeLabel = [
     t(`acquisition.stage.${stage}`),
-    downloadSource && downloadSourceLabel(downloadSource, t),
+    downloadSource && acquisitionDownloadSourceLabel(downloadSource, t),
     runtimeCapabilityLabel,
     executionState && t(`acquisition.runtime.executionState.${executionState}`, { defaultValue: executionState }),
     ...filters.attentionTags.map((tag) => t(`acquisition.attention.tag.${tag}`)),

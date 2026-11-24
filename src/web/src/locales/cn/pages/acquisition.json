@@ -901,6 +901,7 @@
   "acquisition.settings.openSources": "在获取资源设置中调整来源优先级",
   "acquisition.filters.title": "任务标签",
   "acquisition.filters.sourceCountsHint": "数字表示符合其他筛选条件的任务数。同一任务可有多个来源，「全部来源」按任务去重。",
+  "acquisition.filters.sourceUnsupported": "不支持的来源",
   "acquisition.filters.countsHint": "数字表示当前阶段、关键词、来源和运行条件下带有该标签的任务数。多选时只显示符合全部已选标签的任务。",
   "acquisition.filters.matchAll": "全部满足",
   "acquisition.filters.matchCount": "匹配 {{count}} 项",

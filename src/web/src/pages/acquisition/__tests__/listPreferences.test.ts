@@ -26,11 +26,11 @@ it("fails safely for unavailable storage and malformed or future records", () =>
   expect(() => writeAcquisitionListPreferences(readAcquisitionListPreferences())).not.toThrow();
 });
 
-it("persists a known Download Center source key and drops invalid or unsupported saved choices", () => {
-  const saved = { ...readAcquisitionListPreferences(), downloadSource: "site:14", keyword: "archive" };
+it.each(["site:14", "unsupported"])("persists %s and drops invalid saved choices", (source) => {
+  const saved = { ...readAcquisitionListPreferences(), downloadSource: source, keyword: "archive" };
   writeAcquisitionListPreferences(saved);
-  expect(readAcquisitionListPreferences()).toMatchObject({ downloadSource: "site:14", keyword: "archive" });
-  for (const invalid of ["baidu.pcs", "site:999999", "site:014", "../http", [], null]) {
+  expect(readAcquisitionListPreferences()).toMatchObject({ downloadSource: source, keyword: "archive" });
+  for (const invalid of ["baidu.pcs", "site:999999", "site:014", "unknown", "../http", [], null]) {
     localStorage.setItem(acquisitionListPreferencesKey(), JSON.stringify({ version: 1, downloadSource: invalid }));
     expect(readAcquisitionListPreferences().downloadSource).toBeUndefined();
   }

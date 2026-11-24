@@ -901,6 +901,7 @@
   "acquisition.settings.openSources": "Adjust source priority in acquisition settings",
   "acquisition.filters.title": "Task tags",
   "acquisition.filters.sourceCountsHint": "Counts include tasks matching the other filters. A task can use several sources. All sources counts each task once.",
+  "acquisition.filters.sourceUnsupported": "Unsupported sources",
   "acquisition.filters.countsHint": "Each count shows tasks with that tag in the current stage, search, source and runtime filters. Select multiple tags to see tasks that match all of them.",
   "acquisition.filters.matchAll": "Match all",
   "acquisition.filters.matchCount": "{{count}} matching",

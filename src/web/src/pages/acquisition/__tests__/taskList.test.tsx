@@ -1274,7 +1274,11 @@ it("persists the acquisition reserve preference separately from directory and ca
   expect(mocks.setUp.mock.calls[1][0]).toEqual({ useEmergencySpaceReserve: false });
 });
 
-it("combines a persisted download source with stages and tags, resets page and selection, and includes it in bulk scope", async () => {
+it.each([
+  { sourceKey: "site:14", label: "enum.thirdPartyId.baiduNetdisk", count: 20 },
+  { sourceKey: "unsupported", label: "acquisition.filters.sourceUnsupported", count: 3 },
+])("applies $sourceKey with other filters, resets selection, persists it and names the bulk scope", async ({ sourceKey, label, count }) => {
+  mocks.search.mockResolvedValue(response({ downloadSourceCounts: { all: 60, http: 24, bt: 2, "site:14": 20, unsupported: 3 } }));
   localStorage.setItem(
     acquisitionListPreferencesKey(),
     JSON.stringify({
@@ -1311,11 +1315,11 @@ it("combines a persisted download source with stages and tags, resets page and s
       expect.anything(),
     ),
   );
-  fireEvent.click(screen.getByRole("button", { name: "enum.thirdPartyId.baiduNetdisk 20" }));
+  fireEvent.click(screen.getByRole("button", { name: `${label} ${count}` }));
   await waitFor(() =>
     expect(mocks.search).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        downloadSource: "site:14",
+        downloadSource: sourceKey,
         stage: "attention",
         keyword: "archive",
         page: 1,
@@ -1327,13 +1331,13 @@ it("combines a persisted download source with stages and tags, resets page and s
     screen.queryAllByRole("checkbox").every((input) => !(input as HTMLInputElement).checked),
   ).toBe(true);
   expect(JSON.parse(localStorage.getItem(acquisitionListPreferencesKey())!).downloadSource).toBe(
-    "site:14",
+    sourceKey,
   );
   fireEvent.click(actions());
   const continuation = mocks.portal.mock.calls.find(
     ([component]) => component === AcquisitionContinueModal,
   )?.[1];
-  expect(continuation.scopeLabel).toContain("enum.thirdPartyId.baiduNetdisk");
+  expect(continuation.scopeLabel).toContain(label);
   fireEvent.click(screen.getByRole("button", { name: "downloader.filter.allSources 60" }));
   await waitFor(() => expect(mocks.search.mock.lastCall?.[0].downloadSource).toBeUndefined());
   expect(mocks.search.mock.lastCall?.[0].keyword).toBe("archive");
