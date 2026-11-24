@@ -229,6 +229,7 @@ const response = (overrides: any = {}) => ({
     page: 1,
     pageSize: 24,
     stageCounts: counts,
+    downloadSourceCounts: { all: 60, http: 24, bt: 2, "site:14": 20 },
     attentionCounts: tags,
     factCounts: { downloadedPending: 12, spaceInsufficient: 8 },
     taskFacts: {},
@@ -1293,7 +1294,7 @@ it("combines a persisted download source with stages and tags, resets page and s
       expect.anything(),
     ),
   );
-  const source = screen.getByRole("button", { name: "downloadCenter.provider.http" });
+  const source = screen.getByRole("button", { name: "downloadCenter.provider.http 24" });
   expect(source).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(stageButton("attention", 30));
   await waitFor(() =>
@@ -1310,7 +1311,7 @@ it("combines a persisted download source with stages and tags, resets page and s
       expect.anything(),
     ),
   );
-  fireEvent.click(screen.getByRole("button", { name: "enum.thirdPartyId.baiduNetdisk" }));
+  fireEvent.click(screen.getByRole("button", { name: "enum.thirdPartyId.baiduNetdisk 20" }));
   await waitFor(() =>
     expect(mocks.search).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -1333,7 +1334,7 @@ it("combines a persisted download source with stages and tags, resets page and s
     ([component]) => component === AcquisitionContinueModal,
   )?.[1];
   expect(continuation.scopeLabel).toContain("enum.thirdPartyId.baiduNetdisk");
-  fireEvent.click(screen.getByRole("button", { name: "downloader.filter.allSources" }));
+  fireEvent.click(screen.getByRole("button", { name: "downloader.filter.allSources 60" }));
   await waitFor(() => expect(mocks.search.mock.lastCall?.[0].downloadSource).toBeUndefined());
   expect(mocks.search.mock.lastCall?.[0].keyword).toBe("archive");
 });
@@ -1357,8 +1358,50 @@ it("clears the download source when a newly created task resets the list scope",
   const create = mocks.portal.mock.lastCall?.[1];
   act(() => create.onStarted(42));
   await waitFor(() => expect(mocks.search.mock.lastCall?.[0].downloadSource).toBeUndefined());
-  expect(screen.getByRole("button", { name: "downloader.filter.allSources" })).toHaveAttribute(
+  expect(screen.getByRole("button", { name: "downloader.filter.allSources 60" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
+});
+
+it("keeps all selected empty facets individually removable, including sparse provider counts", async () => {
+  localStorage.setItem(acquisitionListPreferencesKey(), JSON.stringify({
+    version: 1, stage: "attention", downloadSource: "site:14", capabilityId: "archive", executionState: "running",
+    attentionTags: ["sourceUnavailable", "localStorage"], facts: ["downloadedPending"],
+  }));
+  mocks.search.mockResolvedValue(response({
+    items: [], filteredTaskIds: [], checkableTaskIds: [], totalCount: 0,
+    stageCounts: { all: 2, running: 2, attention: 0 }, downloadSourceCounts: { all: 0 },
+    runtimeCapabilityCounts: {}, runtimeExecutionStateCounts: {}, attentionCounts: { networkIssue: 0 }, factCounts: {},
+  }));
+  show();
+  expect(await screen.findByRole("button", { name: "acquisition.stage.attention 0" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "acquisition.stage.all 2" })).toBeEnabled();
+  expect(screen.queryByRole("button", { name: /acquisition.stage.completed/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /acquisition.attention.tag.networkIssue/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /acquisition.filters.fact.spaceInsufficient/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "enum.thirdPartyId.baiduNetdisk 0" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "downloader.filter.allSources 0" })).toBeEnabled();
+  for (const name of ["archive 0", "Running 0", "acquisition.filters.fact.downloadedPending 0",
+    "acquisition.attention.tag.localStorage 0", "acquisition.attention.tag.sourceUnavailable 0"]) {
+    expect(screen.getByRole("button", { name })).toBeEnabled();
+  }
+
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.stage.all 2" }));
+  await waitFor(() => expect(mocks.search.mock.lastCall![0]).toMatchObject({
+    stage: "all", capabilityId: "archive", executionState: "running", downloadSource: "site:14",
+    attentionTags: ["localStorage", "sourceUnavailable"], facts: ["downloadedPending"],
+  }));
+  mocks.search.mockImplementation(() => new Promise(() => {}));
+  fireEvent.click(await screen.findByRole("button", { name: "archive 0" }));
+  await waitFor(() => expect(mocks.search.mock.lastCall![0].capabilityId).toBeUndefined());
+  const otherTag = screen.getByRole("button", { name: "acquisition.attention.tag.localStorage —" });
+  fireEvent.click(otherTag);
+  expect(screen.queryByRole("button", { name: /acquisition.attention.tag.localStorage/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "acquisition.attention.tag.sourceUnavailable —" })).toBeEnabled();
+  await waitFor(() => expect(mocks.search.mock.lastCall![0]).toMatchObject({
+    attentionTags: ["sourceUnavailable"], facts: ["downloadedPending"], executionState: "running",
+  }));
+  fireEvent.click(screen.getByRole("button", { name: "acquisition.filters.clear" }));
+  await waitFor(() => expect(mocks.search.mock.lastCall![0]).toMatchObject({ attentionTags: [], facts: [] }));
 });

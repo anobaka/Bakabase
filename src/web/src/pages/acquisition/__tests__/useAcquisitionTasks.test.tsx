@@ -6,7 +6,8 @@ const search = vi.hoisted(() => vi.fn());
 vi.mock("@/sdk/BApi", () => ({ default: { acquisition: { searchAcquisitionTasks: search } } }));
 const page = (ids = [12]) => ({ code: 0, data: {
   items: [], filteredTaskIds: ids, checkableTaskIds: ids, totalCount: ids.length,
-  attentionCounts: { localStorage: 8 }, factCounts: { downloadedPending: 12, spaceInsufficient: 8 },
+  downloadSourceCounts: { all: 4, http: 0 }, runtimeCapabilityCounts: { scanner: 3 },
+  runtimeExecutionStateCounts: { running: 3 }, attentionCounts: { localStorage: 8 }, factCounts: { downloadedPending: 12, spaceInsufficient: 8 },
   taskFacts: {}, stageCounts: { all: 20 },
 } });
 beforeEach(() => { search.mockReset().mockResolvedValue(page()); });
@@ -76,4 +77,54 @@ it("invalidates source-scoped facet counts and stale batch IDs when the download
   await act(async () => completeOld(page([999])));
   expect(result.current.data?.filteredTaskIds).toEqual([6]);
   expect(search).toHaveBeenLastCalledWith(expect.objectContaining({ downloadSource: "site:14" }), expect.anything());
+});
+
+it("uses the scope of each facet for in-flight queries, independently of page and sort", async () => {
+  type Query = Parameters<typeof useAcquisitionTasks>[0];
+  const base: Query = { stage: "attention", keyword: "resource", page: 1, pageSize: 24 };
+  const { result, rerender } = renderHook((query: Query) => useAcquisitionTasks(query), { initialProps: base });
+  await waitFor(() => expect(result.current.downloadSourceCounts?.http).toBe(0));
+  search.mockImplementation(() => new Promise(() => {}));
+
+  rerender({ ...base, page: 2, sort: "sizeAsc" });
+  expect(result.current.downloadSourceCounts?.all).toBe(4);
+  rerender({ ...base, downloadSource: "bt" });
+  expect(result.current.downloadSourceCounts?.http).toBe(0);
+  expect(result.current.runtimeCapabilityCounts).toBeUndefined();
+  expect(result.current.factCounts).toBeUndefined();
+
+  for (const filter of [{ capabilityId: "archive" }, { executionState: "queued" }]) {
+    rerender({ ...base, ...filter });
+    expect(result.current.downloadSourceCounts).toBeUndefined();
+    expect(result.current.runtimeCapabilityCounts?.scanner).toBe(3);
+    expect(result.current.runtimeExecutionStateCounts?.running).toBe(3);
+    expect(result.current.attentionCounts).toBeUndefined();
+    expect(result.current.factCounts).toBeUndefined();
+  }
+  for (const filter of [{ attentionTags: ["localStorage"] }, { facts: ["spaceInsufficient"] }]) {
+    rerender({ ...base, ...filter });
+    expect(result.current.downloadSourceCounts).toBeUndefined();
+    expect(result.current.factCounts?.spaceInsufficient).toBe(8);
+  }
+  rerender({ ...base, stage: "ready" });
+  expect(result.current.downloadSourceCounts).toBeUndefined();
+  expect(result.current.stageCounts?.all).toBe(20);
+});
+
+it("withholds stale zeroes during keyword debounce and after a failed refresh", async () => {
+  const base = { stage: "attention", page: 1, pageSize: 24 };
+  const { result, rerender } = renderHook((pending: boolean) => useAcquisitionTasks(base, pending),
+    { initialProps: false });
+  await waitFor(() => expect(result.current.downloadSourceCounts?.http).toBe(0));
+  rerender(true);
+  expect(result.current.downloadSourceCounts).toBeUndefined();
+  expect(result.current.attentionCounts).toBeUndefined();
+  expect(result.current.attentionTagIds).toContain("localStorage");
+  rerender(false);
+  expect(result.current.downloadSourceCounts?.http).toBe(0);
+  search.mockRejectedValueOnce(new Error("offline"));
+  await act(async () => { await result.current.refresh(); });
+  expect(result.current.downloadSourceCounts).toBeUndefined();
+  expect(result.current.runtimeCapabilityCounts).toBeUndefined();
+  expect(result.current.stageCounts).toBeUndefined();
 });

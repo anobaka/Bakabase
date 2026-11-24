@@ -1,5 +1,10 @@
 export const acquisitionFactFilters = ["downloadedPending", "spaceInsufficient"] as const;
 
+/** A received facet dictionary is complete; a missing response has no counts yet. */
+export function acquisitionFilterCount(counts: Record<string, number> | null | undefined, id: string) {
+  return counts == null ? undefined : counts[id] ?? 0;
+}
+
 export type AcquisitionFilterSelection = {
   attentionTags: string[];
   facts: string[];

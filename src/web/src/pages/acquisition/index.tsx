@@ -93,9 +93,13 @@ const AcquisitionPage: React.FC = () => {
   const openedTask = useRef<string>();
   const [settingsRevision, setSettingsRevision] = useState(0);
   const [recipesOpen, setRecipesOpen] = useState(false);
+  const filterPending = keyword.trim() !== searchKeyword;
   const {
     data,
     stageCounts,
+    downloadSourceCounts,
+    attentionTagIds,
+    runtimeExecutionStates,
     attentionCounts,
     factCounts,
     runtimeCapabilityCounts,
@@ -116,9 +120,8 @@ const AcquisitionPage: React.FC = () => {
     page,
     pageSize: 24,
     sort,
-  });
+  }, filterPending);
   const tasks = (data?.items ?? []) as PlanTask[];
-  const filterPending = keyword.trim() !== searchKeyword;
   const checkableIds = data?.checkableTaskIds ?? [];
   const filteredIds = data?.filteredTaskIds ?? [];
   // A same-query poll preserves the accepted rows. Toggling HeroUI's disabled
@@ -490,12 +493,13 @@ const AcquisitionPage: React.FC = () => {
         <AcquisitionStageFilters
           counts={stageCounts}
           value={stage}
-          loading={!stageCounts}
           onChange={(value) => {
             setStage(value);
-            setCapabilityId(undefined);
-            setExecutionState(undefined);
-            setFilters({ attentionTags: [], facts: [] });
+            if (value !== "all") {
+              setCapabilityId(undefined);
+              setExecutionState(undefined);
+              setFilters({ attentionTags: [], facts: [] });
+            }
             setPage(1);
           }}
         />
@@ -548,6 +552,7 @@ const AcquisitionPage: React.FC = () => {
         </div>
       </div>
       <AcquisitionDownloadSourceFilter
+        counts={downloadSourceCounts}
         value={downloadSource}
         onChange={(value) => {
           setDownloadSource(value);
@@ -559,6 +564,7 @@ const AcquisitionPage: React.FC = () => {
         capabilityCounts={runtimeCapabilityCounts}
         executionStateCounts={runtimeExecutionStateCounts}
         capabilities={runtimeCapabilities}
+        executionStates={runtimeExecutionStates}
         facets={taskRuntimeFacets}
         capabilityId={capabilityId}
         executionState={executionState}
@@ -574,25 +580,19 @@ const AcquisitionPage: React.FC = () => {
           setSelectedTaskIds(new Set());
         }}
       />
-      {attentionCounts &&
-        (stage === "attention" ||
-          filters.attentionTags.length ||
-          filters.facts.length ||
-          Object.values(attentionCounts).some((count) => count > 0) ||
-          Object.values(factCounts ?? {}).some((count) => count > 0)) && (
-          <AcquisitionAttentionFilters
-            counts={attentionCounts}
-            factCounts={factCounts}
-            matchingCount={data?.totalCount}
-            value={filters}
-            disabled={loadFailed || filterPending}
-            onChange={(value) => {
-              setSelectedTaskIds(new Set());
-              setFilters(normalizeAcquisitionFilters(value));
-              setPage(1);
-            }}
-          />
-        )}
+      <AcquisitionAttentionFilters
+        counts={attentionCounts}
+        tagIds={attentionTagIds}
+        factCounts={factCounts}
+        matchingCount={filterPending || loadFailed ? undefined : data?.totalCount}
+        value={filters}
+        disabled={loadFailed || filterPending}
+        onChange={(value) => {
+          setSelectedTaskIds(new Set());
+          setFilters(normalizeAcquisitionFilters(value));
+          setPage(1);
+        }}
+      />
 
       {loadFailed && (
         <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-danger">

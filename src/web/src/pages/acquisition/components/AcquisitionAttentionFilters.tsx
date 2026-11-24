@@ -3,19 +3,22 @@ import { Button, Tooltip } from "@/components/bakaui";
 import { taskTag } from "@/components/Acquire/taskTags";
 import {
   acquisitionFactFilters,
+  acquisitionFilterCount,
   toggleAcquisitionFilter,
   type AcquisitionFilterSelection,
 } from "../acquisitionFilters";
 
 export default function AcquisitionAttentionFilters({
   counts,
+  tagIds = [],
   factCounts,
   value,
   onChange,
   disabled,
   matchingCount,
 }: {
-  counts: Record<string, number>;
+  counts?: Record<string, number> | null;
+  tagIds?: string[];
   factCounts?: Record<string, number> | null;
   value: AcquisitionFilterSelection;
   onChange: (value: AcquisitionFilterSelection) => void;
@@ -24,9 +27,11 @@ export default function AcquisitionAttentionFilters({
 }) {
   const { t } = useTranslation();
   const tags = [
-    ...acquisitionFactFilters.map(id => ({ ...taskTag("facts", id), count: factCounts?.[id] })),
-    ...Object.entries(counts).map(([id, count]) => ({ ...taskTag("attentionTags", id), count })),
-  ];
+    ...acquisitionFactFilters.map(id => ({ ...taskTag("facts", id), count: acquisitionFilterCount(factCounts, id) })),
+    ...[...new Set([...tagIds, ...Object.keys(counts ?? {}), ...value.attentionTags])]
+      .map(id => ({ ...taskTag("attentionTags", id), count: acquisitionFilterCount(counts, id) })),
+  ].filter(({ kind, id, count }) => count !== 0 || value[kind].includes(id));
+  if (!tags.length) return null;
   const selectedCount = value.attentionTags.length + value.facts.length;
 
   return (
@@ -45,7 +50,7 @@ export default function AcquisitionAttentionFilters({
               size="sm"
               variant={selected ? "flat" : "light"}
               color={selected ? "primary" : "default"}
-              isDisabled={disabled || count == null}
+              isDisabled={!selected && (disabled || count == null)}
               onPress={() => onChange({ ...value, [kind]: toggleAcquisitionFilter(value[kind], id) })}
             >
               <span>{t(label)}</span>
@@ -61,7 +66,7 @@ export default function AcquisitionAttentionFilters({
         </span>
       )}
       {selectedCount > 0 && (
-        <Button size="sm" variant="light" className="h-7 min-w-0 px-2 text-xs" isDisabled={disabled}
+        <Button size="sm" variant="light" className="h-7 min-w-0 px-2 text-xs"
           onPress={() => onChange({ attentionTags: [], facts: [] })}>{t("acquisition.filters.clear")}</Button>
       )}
     </div>
