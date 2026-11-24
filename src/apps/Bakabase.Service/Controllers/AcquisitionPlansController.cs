@@ -168,6 +168,32 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
     public Task<SingletonResponse<AcquisitionPlanTaskDetail>> ApplyRegisteredDownload(int id, [FromBody] AcquisitionRegisteredDownloadSelection input) =>
         Respond(async () => {await GuardSavedDirectory(id); return await service.ApplyRegisteredDownloadAsync(id, input, HttpContext.RequestAborted, GuardDirectory);});
 
+    [HttpPost("{id:int}/local-downloads/preview")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "PreviewAcquisitionLocalDownloads")]
+    public Task<SingletonResponse<AcquisitionLocalDownloadsPreview>> PreviewLocalDownloads(int id, [FromBody] AcquisitionLocalDownloadsInput input) =>
+        RespondLocalDownloads(() => service.PreviewLocalDownloadsAsync(id, input, GuardDirectory, HttpContext.RequestAborted));
+
+    [HttpPost("{id:int}/local-downloads/prepare")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "PrepareAcquisitionLocalDownloads")]
+    public Task<SingletonResponse<AcquisitionLocalDownloadsPreview>> PrepareLocalDownloads(int id, [FromBody] AcquisitionLocalDownloadsInput input) =>
+        RespondLocalDownloads(async () =>
+        {
+            await GuardSavedDirectory(id);
+            return await service.PrepareLocalDownloadsAsync(id, input, GuardDirectory, HttpContext.RequestAborted);
+        });
+
+    [HttpPost("{id:int}/local-downloads/apply")]
+    [RemoteAccessible]
+    [SwaggerOperation(OperationId = "ApplyAcquisitionLocalDownloads")]
+    public Task<SingletonResponse<AcquisitionPlanTaskDetail>> ApplyLocalDownloads(int id, [FromBody] AcquisitionLocalDownloadsApplyInput input) =>
+        RespondLocalDownloads(async () =>
+        {
+            await GuardSavedDirectory(id);
+            return await service.ApplyLocalDownloadsAsync(id, input, GuardDirectory, HttpContext.RequestAborted);
+        });
+
     [HttpPost("{id:int}/replan")]
     [RemoteAccessible]
     [SwaggerOperation(OperationId = "ReplanAcquisitionTask")]
@@ -234,6 +260,15 @@ public sealed class AcquisitionPlansController(AcquisitionPlanService service, I
         try {return new(await operation());}
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or UnauthorizedAccessException)
         {return SingletonResponseBuilder<AcquisitionPlanTaskDetail>.BuildBadRequest(error.Message);}
+    }
+
+    private static async Task<SingletonResponse<T>> RespondLocalDownloads<T>(Func<Task<T>> operation)
+    {
+        try {return new(await operation());}
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException or UnauthorizedAccessException)
+        {return SingletonResponseBuilder<T>.BuildBadRequest(error.Message);}
+        catch (System.IO.IOException)
+        {return SingletonResponseBuilder<T>.BuildBadRequest("LOCAL_DOWNLOAD_FILES_UNREADABLE");}
     }
 
     private static async Task<SingletonResponse<AcquisitionDraftImportResult>> RespondImport(Func<Task<AcquisitionDraftImportResult>> operation)

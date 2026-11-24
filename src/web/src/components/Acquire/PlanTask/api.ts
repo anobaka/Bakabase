@@ -50,6 +50,15 @@ export const planTaskApi = {
   useRegisteredDownload: (id: number, expectedRevision: number, token: string) =>
     requireResult(BApi.acquisition.applyAcquisitionRegisteredDownload(id, { expectedRevision, token },
       { sensitiveResponse: true, showErrorToast: false })),
+  previewLocalDownloads: (id: number, expectedRevision: number, signal: AbortSignal) =>
+    requireResult(BApi.acquisition.previewAcquisitionLocalDownloads(id, { expectedRevision },
+      { signal, sensitiveResponse: true, showErrorToast: false })),
+  prepareLocalDownloads: (id: number, expectedRevision: number) =>
+    requireResult(BApi.acquisition.prepareAcquisitionLocalDownloads(id, { expectedRevision },
+      { sensitiveResponse: true, showErrorToast: false })),
+  applyLocalDownloads: (id: number, expectedRevision: number, token: string) =>
+    requireResult(BApi.acquisition.applyAcquisitionLocalDownloads(id, { expectedRevision, token },
+      { sensitiveResponse: true, showErrorToast: false })),
   keepPreparedFiles: (id: number, expectedRevision: number, reason?: string) =>
     requireResult(BApi.acquisition.keepPreparedAcquisitionFiles(id, { expectedRevision, reason },
       { sensitiveResponse: true, showErrorToast: false })),

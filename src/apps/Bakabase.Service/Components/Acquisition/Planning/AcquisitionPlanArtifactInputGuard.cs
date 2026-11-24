@@ -24,6 +24,17 @@ internal static class AcquisitionPlanArtifactInputGuard
         int taskId, string partId, AcquisitionPlanArtifactInput input, CancellationToken ct, bool publishedOutputOnly = false,
         bool publicationInputOnly = false, bool currentDirectorySource = false, AcquisitionStageDirectory? capturedDelivery = null)
     {
+        if (input.PreviousRunId == 0)
+        {
+            var received = await store.GetArtifactAsync(input.ArtifactId, ct);
+            if (input.TaskId != taskId || publishedOutputOnly || publicationInputOnly ||
+                received is not {State: ArtifactLocationState.Available} || received.OperationId != input.OperationId ||
+                received.Fingerprint != input.Fingerprint ||
+                !await AcquisitionCurrentDirectoryFiles.IsOwnedAsync(db, store, received, taskId, 0, partId, ct))
+                throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
+            return received;
+        }
+        if (input.ManualDownload == true) throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
         var previous = input.PreviousRunId.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var run = await db.Set<WorkflowRunDbModel>().AsNoTracking()
             .SingleOrDefaultAsync(r => r.Id == input.PreviousRunId, ct);

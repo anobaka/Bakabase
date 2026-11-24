@@ -198,6 +198,8 @@ internal static partial class AcquisitionCurrentDirectoryFiles
         if (artifact.Kind != Kind || artifact.Managed || artifact.MetadataJson == null) return false;
         try
         {
+            if (ManualDownloadReceipt(artifact) is { } manualDownload)
+                return await IsManualDownloadOwnedAsync(db, store, artifact, manualDownload, taskId, runId, partId, ct);
             if (JsonSerializer.Deserialize<AcquisitionStageDirectoryCaptureReceipt>(artifact.MetadataJson, Json) is {Version: 2} stage)
                 return await IsStageOwnedAsync(db, store, artifact, stage, taskId, runId, partId, ct);
             var receipt = JsonSerializer.Deserialize<AcquisitionCurrentDirectoryReceipt>(artifact.MetadataJson, Json);

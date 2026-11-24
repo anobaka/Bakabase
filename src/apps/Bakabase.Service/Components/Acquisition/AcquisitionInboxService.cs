@@ -54,6 +54,8 @@ public class AcquisitionInboxService(
         ".crdownload", ".part", ".partial", ".download", ".tmp", ".!qb", ".td", ".aria2", ".opdownload"
     };
 
+    internal static bool HasPartialDownloadExtension(string file) => PartialExtensions.Contains(Path.GetExtension(file));
+
     public string? InboxDirectory => options.Value.InboxDirectory;
 
     public async Task<List<InboxCandidate>> ListAsync(CancellationToken ct = default)
@@ -246,7 +248,7 @@ public class AcquisitionInboxService(
     /// </summary>
     public static bool IsStable(string path)
     {
-        if (PartialExtensions.Contains(Path.GetExtension(path))) return false;
+        if (HasPartialDownloadExtension(path)) return false;
 
         try
         {

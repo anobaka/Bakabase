@@ -62,7 +62,8 @@ public static class AcquisitionPlanCompiler
                 throw new ArgumentException("The plan contains an invalid source.");
             if (part.SelectionMode is not (null or "manual" or "automatic"))
                 throw new ArgumentException("Choose manual or automatic mirror selection.");
-            if (part.ContinueFrom is { } input && (input.TaskId <= 0 || input.PreviousRunId <= 0 ||
+            if (part.ContinueFrom is { } input && (input.TaskId <= 0 ||
+                (input.ManualDownload == true ? input.PreviousRunId != 0 : input.PreviousRunId <= 0) ||
                 new[] {input.ArtifactId, input.OperationId, input.Fingerprint}.Any(v => string.IsNullOrWhiteSpace(v) || v.Length > 128)))
                 throw new ArgumentException("PLAN_REPLAN_EVIDENCE_INVALID");
             if (part.UseAdaptiveAssessment == true && (part.ContinueFrom == null ||

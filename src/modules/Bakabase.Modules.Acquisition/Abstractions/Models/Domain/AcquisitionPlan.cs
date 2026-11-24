@@ -78,7 +78,12 @@ public sealed record AcquisitionPlanPart
 }
 
 public sealed record AcquisitionPlanArtifactInput(int TaskId, int PreviousRunId, string ArtifactId,
-    string OperationId, string Fingerprint);
+    string OperationId, string Fingerprint)
+{
+    /// <summary>A task-owned first intake has no earlier workflow run.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? ManualDownload { get; init; }
+}
 
 public sealed record AcquisitionPlanSource
 {

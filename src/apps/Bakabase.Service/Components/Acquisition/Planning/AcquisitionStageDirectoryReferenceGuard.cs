@@ -98,6 +98,9 @@ internal sealed class AcquisitionStageDirectoryReferenceGuard(BakabaseDbContext 
             var bindings = await db.ArtifactOperationBindings.AsNoTracking().Where(b => b.OperationId == artifact.OperationId).ToListAsync(ct);
             var sameTask = bindings.Count > 0 && bindings.All(b => b.OwnerKind == "workflow" &&
                 int.TryParse(b.OwnerId, out var owner) && owners.Contains(owner));
+            if (!sameTask && bindings.Count == 0 && AcquisitionStageDirectoryFileMove.Same(directory, root))
+                sameTask = await AcquisitionCurrentDirectoryFiles.IsLocalDownloadDirectoryArtifactAsync(
+                    artifacts, row, partId, directory, artifact, ct);
             if (ArtifactCleanupPathReferences.StrictlyUnder(directory, root))
             {
                 // Manifest roots can be shared containers. Only their exact registered

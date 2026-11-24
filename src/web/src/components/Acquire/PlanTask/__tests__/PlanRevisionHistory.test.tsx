@@ -125,3 +125,11 @@ it("translates the default as-is delivery note and preserves a task's custom sco
   expect(planRevisionReason("Accepted 9 of 10 packages.", translate as unknown as TFunction)).toBe("Accepted 9 of 10 packages.");
   for (const messages of [cnAcquisition, enAcquisition]) expect(messages[key]).toBeTruthy();
 });
+
+it.each(["download.prepareLocalReception", "download.receiveLocalFiles"] as const)(
+  "translates the local intake revision %s", reason => {
+    const key = `acquisition.plan.history.reason.${reason}` as const;
+    expect(planRevisionReason(reason, ((value: string) => value) as unknown as TFunction)).toBe(key);
+    for (const messages of [cnAcquisition, enAcquisition]) expect(messages[key]).toBeTruthy();
+  },
+);

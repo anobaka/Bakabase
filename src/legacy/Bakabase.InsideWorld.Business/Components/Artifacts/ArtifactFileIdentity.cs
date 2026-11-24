@@ -36,6 +36,18 @@ public static class ArtifactFileIdentity
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetFileInformationByHandle(SafeFileHandle handle, out WindowsFileInformation info);
 
+    /// <summary>Reject special files before opening a user-provided payload.</summary>
+    public static void RequireRegularFile(string path)
+    {
+        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+        {
+            if (LStat(path, out var file) != 0 || (file.Mode & 0xF000) != 0x8000)
+                throw new InvalidDataException("The input is not a regular file.");
+        }
+        else if ((File.GetAttributes(path) & (FileAttributes.Directory | FileAttributes.Device | FileAttributes.ReparsePoint)) != 0)
+            throw new InvalidDataException("The input is not a regular file.");
+    }
+
     /// <summary>A filesystem object identity that remains stable when a regular file moves on the same volume.</summary>
     public static string Read(string path)
     {

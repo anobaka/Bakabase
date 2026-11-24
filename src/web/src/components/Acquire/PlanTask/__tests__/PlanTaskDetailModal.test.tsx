@@ -16,6 +16,9 @@ const mocks = vi.hoisted(() => ({
   setBuilder: vi.fn(),
   previewPreparation: vi.fn(),
   confirmPreparation: vi.fn(),
+  previewLocalDownloads: vi.fn(),
+  prepareLocalDownloads: vi.fn(),
+  applyLocalDownloads: vi.fn(),
   keepPreparedFiles: vi.fn(),
   deferPreparedProcessing: vi.fn(),
   options: vi.fn(),
@@ -598,6 +601,79 @@ const readyWithFiles = {
     { partId: "part", artifactId: "local", fingerprint: "hash", manifest: { entries: [{}, {}] } },
   ] }],
 };
+const receivingPart = {
+  partId: "main", title: "Example group", directory: "/work/receive/main",
+  fileCount: 1, bytes: 192, files: [{ relativePath: "part/archive.zip", bytes: 192 }], filesTruncated: false,
+};
+const receivingTask = { ...detail, canReceiveLocalDownloads: true };
+const reviewedLocalFiles = { revision: 3, parts: [receivingPart], canApply: true, canPrepare: false, token: "review-token" };
+
+it.each([
+  ["unreported", detail],
+  ["unavailable", { ...detail, canReceiveLocalDownloads: false }],
+  ["deleted", { ...receivingTask, task: { ...detail.task, isDeleted: true } }],
+])("hides local intake and avoids scanning when %s", async (_, snapshot) => {
+  mocks.get.mockResolvedValue(snapshot);
+  render(<PlanTaskDetailModal taskId={42} />);
+  await screen.findByText("Chosen content", { exact: false });
+  expect(screen.queryByRole("button", { name: "acquisition.receiveLocal.title" })).toBeNull();
+  expect(mocks.previewLocalDownloads).not.toHaveBeenCalled();
+});
+
+it("prepares the receiving folder, reviews its files and opens the normal start confirmation", async () => {
+  mocks.get.mockResolvedValue(receivingTask);
+  mocks.previewLocalDownloads.mockResolvedValueOnce({
+    revision: 3, canPrepare: true, canApply: false, parts: [{ ...receivingPart, directory: null, files: [], fileCount: 0, bytes: 0 }],
+  }).mockResolvedValueOnce({ ...reviewedLocalFiles, revision: 4 });
+  mocks.prepareLocalDownloads.mockResolvedValue({
+    revision: 4, canPrepare: false, canApply: false, parts: [{ ...receivingPart, files: [], fileCount: 0, bytes: 0,
+      reasonCode: "LOCAL_DOWNLOAD_FILES_MISSING" }],
+  });
+  const saved = { ...readyWithFiles, task: { ...readyWithFiles.task, planRevision: 5 }, steps: [
+    { id: "process", kind: "fileProcessing.apply", stage: "processing" },
+  ] };
+  mocks.applyLocalDownloads.mockResolvedValue(saved);
+  mocks.run.mockResolvedValue({ ...saved, task: { ...saved.task, workflowRunId: 103 } });
+  render(<PlanTaskDetailModal taskId={42} />);
+  const entry = await screen.findByRole("button", { name: "acquisition.receiveLocal.title" });
+  expect(mocks.previewLocalDownloads).not.toHaveBeenCalled();
+  fireEvent.click(entry);
+  const modal = within(await screen.findByRole("dialog", { name: "acquisition.receiveLocal.title" }));
+  fireEvent.click(await modal.findByRole("button", { name: "acquisition.receiveLocal.prepare" }));
+  expect(await modal.findByText(receivingPart.directory)).toBeVisible();
+  expect(modal.getByText("acquisition.receiveLocal.reason.LOCAL_DOWNLOAD_FILES_MISSING")).toBeVisible();
+  expect(modal.queryByRole("button", { name: "acquisition.receiveLocal.confirm" })).toBeNull();
+  expect(mocks.prepareLocalDownloads).toHaveBeenCalledExactlyOnceWith(42, 3);
+  fireEvent.click(modal.getByRole("button", { name: "acquisition.receiveLocal.refresh" }));
+  expect(await modal.findByText("part/archive.zip")).toBeVisible();
+  expect(mocks.previewLocalDownloads).toHaveBeenLastCalledWith(42, 4, expect.any(AbortSignal));
+  fireEvent.click(modal.getByRole("button", { name: "acquisition.receiveLocal.confirm" }));
+  expect(mocks.applyLocalDownloads).toHaveBeenCalledExactlyOnceWith(42, 4, "review-token");
+  const start = within(await screen.findByRole("dialog", { name: "acquisition.timeline.stage.processing" }));
+  expect(mocks.run).not.toHaveBeenCalled();
+  await act(async () => { fireEvent.click(start.getByRole("button", { name: "acquisition.plan.run" })); });
+  expect(mocks.run).toHaveBeenCalledExactlyOnceWith(42, 5);
+});
+
+it("requires a fresh preview and token after files change during intake", async () => {
+  mocks.get.mockResolvedValue(receivingTask);
+  mocks.previewLocalDownloads.mockResolvedValueOnce({ ...reviewedLocalFiles, parts: [{ ...receivingPart, filesTruncated: true, fileCount: 240 }] })
+    .mockResolvedValueOnce({ ...reviewedLocalFiles, token: "new-review" });
+  mocks.applyLocalDownloads.mockRejectedValue(new Error("LOCAL_DOWNLOAD_FILES_CHANGED"));
+  render(<PlanTaskDetailModal taskId={42} />);
+  fireEvent.click(await screen.findByRole("button", { name: "acquisition.receiveLocal.title" }));
+  const modal = within(await screen.findByRole("dialog", { name: "acquisition.receiveLocal.title" }));
+  expect(await modal.findByText("acquisition.receiveLocal.truncated")).toBeVisible();
+  fireEvent.click(modal.getByRole("button", { name: "acquisition.receiveLocal.confirm" }));
+  expect(await modal.findByText("acquisition.receiveLocal.reason.LOCAL_DOWNLOAD_FILES_CHANGED")).toBeVisible();
+  expect(modal.queryByRole("button", { name: "acquisition.receiveLocal.confirm" })).toBeNull();
+  fireEvent.click(modal.getByRole("button", { name: "acquisition.receiveLocal.refresh" }));
+  await modal.findByText("part/archive.zip");
+  await act(async () => { fireEvent.click(modal.getByRole("button", { name: "acquisition.receiveLocal.confirm" })); });
+  expect(mocks.applyLocalDownloads).toHaveBeenLastCalledWith(42, 3, "new-review");
+  expect(mocks.run).not.toHaveBeenCalled();
+});
+
 const keepRevision = {
   ...readyWithFiles, task: { ...readyWithFiles.task, planRevision: 4 }, plan: {
     parts: [{...readyWithFiles.plan.parts[0], processing: { requirement: "notRequired", steps: [] } }],

@@ -34,6 +34,7 @@ import PreparedFilesModal, { canChoosePreparedFiles } from "./PreparedFilesModal
 import TaskPreparationModal from "./TaskPreparationModal";
 import TaskPreparationSettingsModal from "./TaskPreparationSettingsModal";
 import RegisteredDownloadAction from "./RegisteredDownloadAction";
+import ReceiveLocalDownloadsAction from "./ReceiveLocalDownloadsAction";
 import SourceCorrectionPanel from "./SourceCorrectionPanel";
 import SourceRevisionModal from "./SourceRevisionModal";
 import useSourceRevisionAvailability from "./useSourceRevisionAvailability";
@@ -598,6 +599,14 @@ export default function PlanTaskDetailModal({
               </Popover>
             ) : null}
             {sourceChange}
+            {!readOnly && detail?.canReceiveLocalDownloads === true && (
+              <ReceiveLocalDownloadsAction key={taskId}
+                taskId={taskId} revision={detail.task.planRevision} disabled={busy || replanOpen}
+                onSaved={next => void mutate(async () => {
+                  setRunPlanOpen(true);
+                  return next;
+                })} />
+            )}
             {!readOnly && !!task?.workflowRunId && !!detail?.plan?.parts.length && reviewAction}
             {editable && detail && !!task.creationOrigins?.length && !detail.planHistory?.some(revision => revision.previousRunId != null) &&
               !detail.replanArtifacts?.length && (!detail.plan || (detail.plan.parts.length === 1 && !detail.plan.parts[0].continueFrom)) &&

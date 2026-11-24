@@ -4530,6 +4530,7 @@ export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPl
   artifactId: string;
   operationId: string;
   fingerprint: string;
+  manualDownload?: boolean;
 }
 
 export interface BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanPart {
@@ -8267,6 +8268,46 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLegacyLe
   sourceRefsJson?: string;
 }
 
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadFile {
+  relativePath: string;
+  /** @format int64 */
+  bytes: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadPart {
+  partId: string;
+  title?: string;
+  directory?: string;
+  /** @format int32 */
+  fileCount: number;
+  /** @format int64 */
+  bytes: number;
+  reasonCode?: string;
+  files: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadFile[];
+  filesTruncated: boolean;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsApplyInput {
+  /** @format int32 */
+  expectedRevision: number;
+  token: string;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsInput {
+  /** @format int32 */
+  expectedRevision: number;
+}
+
+export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsPreview {
+  /** @format int32 */
+  revision: number;
+  canApply: boolean;
+  canPrepare: boolean;
+  reasonCode?: string;
+  parts: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadPart[];
+  token?: string;
+}
+
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalFilesRecoveryOutcome {
   /** @format int32 */
   taskId: number;
@@ -8573,6 +8614,7 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTask
   canEditDeliverySettings: boolean;
   storagePolicy?: BakabaseModulesWorkflowArtifactsArtifactStoragePolicy;
   canEditStoragePolicy: boolean;
+  canReceiveLocalDownloads?: boolean;
   canKeepPreparedFiles?: boolean;
   canDeferPreparedProcessing?: boolean;
   planHistory: BakabaseModulesAcquisitionAbstractionsModelsDomainAcquisitionPlanRevision[];
@@ -14182,6 +14224,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionDraftImportResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsPreview {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsPreview;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalRecoveryBatchCapacityPreview {
   /** @format int32 */
   code: number;
@@ -17737,6 +17786,78 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/acquisition/plans/${id}/registered-downloads/apply`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name PreviewAcquisitionLocalDownloads
+     * @request POST:/acquisition/plans/{id}/local-downloads/preview
+     */
+    previewAcquisitionLocalDownloads: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsPreview,
+        any
+      >({
+        path: `/acquisition/plans/${id}/local-downloads/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name PrepareAcquisitionLocalDownloads
+     * @request POST:/acquisition/plans/{id}/local-downloads/prepare
+     */
+    prepareAcquisitionLocalDownloads: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsPreview,
+        any
+      >({
+        path: `/acquisition/plans/${id}/local-downloads/prepare`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AcquisitionPlans
+     * @name ApplyAcquisitionLocalDownloads
+     * @request POST:/acquisition/plans/{id}/local-downloads/apply
+     */
+    applyAcquisitionLocalDownloads: (
+      id: number,
+      data: BakabaseServiceComponentsAcquisitionPlanningAcquisitionLocalDownloadsApplyInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsAcquisitionPlanningAcquisitionPlanTaskDetail,
+        any
+      >({
+        path: `/acquisition/plans/${id}/local-downloads/apply`,
         method: "POST",
         body: data,
         type: ContentType.Json,

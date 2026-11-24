@@ -33,6 +33,8 @@ public sealed record AcquisitionPlanTaskDetail(AcquisitionTask Task, Acquisition
     public ArtifactStoragePolicy? StoragePolicy { get; init; }
     public bool CanEditStoragePolicy { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? CanReceiveLocalDownloads { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? CanKeepPreparedFiles { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? CanDeferPreparedProcessing => CanKeepPreparedFiles;
@@ -88,6 +90,8 @@ internal sealed record AcquisitionPlanBuilderState
     public AcquisitionLocalFilesRecoveryReceipt? LocalFilesRecovery { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public AcquisitionRegisteredDownload? RegisteredDownload { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public AcquisitionLocalDownloadIntake? LocalDownloadIntake { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<AcquisitionDeliveryRetirement>? PendingDeliveryRetirements { get; init; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
