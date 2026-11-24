@@ -17,7 +17,7 @@ export default function AcquisitionTaskSearch({
   onOpenTask: (task: PlanTask) => void;
 }) {
   const { t } = useTranslation();
-  const [candidate, setCandidate] = useState<PlanTask>();
+  const [lookup, setLookup] = useState<{ id: number; task?: PlanTask }>();
   const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
   const navigatedCandidate = useRef(false);
   const idText = /^#(\d+)$/.exec(value.trim())?.[1];
@@ -25,7 +25,7 @@ export default function AcquisitionTaskSearch({
   const candidateId = id && Number.isSafeInteger(id) && id <= 2147483647 ? id : undefined;
 
   useEffect(() => {
-    setCandidate(undefined);
+    setLookup(undefined);
     if (!candidateId) return;
     let current = true;
     const timer = window.setTimeout(async () => {
@@ -33,10 +33,12 @@ export default function AcquisitionTaskSearch({
         const result = await BApi.acquisition.getAcquisition(candidateId, {
           sensitiveResponse: true,
         });
-        if (current && result && !result.code && result.data?.id === candidateId)
-          setCandidate(result.data);
+        if (current) {
+          const task = result && !result.code && result.data?.id === candidateId ? result.data : undefined;
+          setLookup({ id: candidateId, task });
+        }
       } catch {
-        // A failed optional suggestion must not prevent ordinary text search.
+        if (current) setLookup({ id: candidateId });
       }
     }, 250);
     return () => {
@@ -45,8 +47,9 @@ export default function AcquisitionTaskSearch({
     };
   }, [candidateId]);
 
-  const matchingCandidate =
-    !suggestionsDismissed && candidate?.id === candidateId ? candidate : undefined;
+  const matchingCandidate = !suggestionsDismissed && lookup?.id === candidateId ? lookup?.task : undefined;
+  // HeroUI needs an open menu while an exact-ID suggestion loads. A text search has no suggestions.
+  const pendingLookup = !!candidateId && lookup?.id !== candidateId && !suggestionsDismissed;
   return (
     <div
       className="w-full sm:w-52 sm:shrink-0"
@@ -69,6 +72,7 @@ export default function AcquisitionTaskSearch({
         aria-label={t("acquisition.tasks.search")}
         placeholder={t("acquisition.tasks.search")}
         allowsCustomValue
+        allowsEmptyCollection={pendingLookup}
         menuTrigger="input"
         disableAnimation
         selectedKey={null}

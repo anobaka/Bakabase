@@ -47,6 +47,7 @@ it("offers an exact ID candidate without selecting it or replacing a literal has
   expect(mocks.search).toHaveBeenLastCalledWith("#946");
   expect(mocks.open).not.toHaveBeenCalled();
   expect(input).toHaveValue("#946");
+  await waitFor(() => expect(input).toHaveAttribute("aria-expanded", "false"));
 });
 
 it("opens the explicitly selected task and keeps the search text", async () => {
@@ -94,7 +95,21 @@ it("keeps search available when a task lookup fails", async () => {
   render(<Harness />);
   const input = type("#946");
   await waitFor(() => expect(mocks.get).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(input).toHaveAttribute("aria-expanded", "false"));
+  type(" #946");
+  expect(input).toHaveAttribute("aria-expanded", "false");
   fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
-  expect(mocks.search).toHaveBeenLastCalledWith("#946");
+  expect(mocks.search).toHaveBeenLastCalledWith(" #946");
   expect(mocks.open).not.toHaveBeenCalled();
+});
+
+it("keeps the page accessible while submitting a keyword without any task suggestions", async () => {
+  render(<><Harness /><button>Selected source</button></>);
+  const input = type("beta");
+  fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+  expect(mocks.search).toHaveBeenCalledWith("beta");
+  expect(input).toHaveFocus();
+  expect(input).toHaveAttribute("aria-expanded", "false");
+  expect(screen.getByRole("button", { name: "Selected source" })).toBeVisible();
+  expect(screen.queryByRole("listbox", { hidden: true })).toBeNull();
 });
