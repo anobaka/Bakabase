@@ -82,7 +82,7 @@ internal sealed class HttpDownloadGuard(HttpClient hostClient, HttpRemoteIdentit
 
             validateSourceResponse?.Invoke(response);
             ValidateIdentity(response);
-            ValidateRange(forwarded.Headers.Range, response);
+            ValidateRange(forwarded.Headers.Range, response, identity.Length, TransferStarted);
 
             if (!allowRanges || forwarded.Headers.Range != null && response.StatusCode == HttpStatusCode.OK)
             {
@@ -136,7 +136,8 @@ internal sealed class HttpDownloadGuard(HttpClient hostClient, HttpRemoteIdentit
                 "The remote file's total length changed during the download.");
     }
 
-    private void ValidateRange(RangeHeaderValue? requestedRange, HttpResponseMessage response)
+    internal static void ValidateRange(RangeHeaderValue? requestedRange, HttpResponseMessage response,
+        long? expectedTotal, bool transferStarted)
     {
         if (requestedRange == null)
         {
@@ -153,7 +154,7 @@ internal sealed class HttpDownloadGuard(HttpClient hostClient, HttpRemoteIdentit
 
         if (response.StatusCode == HttpStatusCode.OK)
         {
-            if (!TransferStarted) return;
+            if (!transferStarted) return;
             throw new HttpDownloadProtocolException(HttpGuardFailure.RangeIgnored,
                 "The server returned the whole file instead of the requested byte range.");
         }
@@ -166,7 +167,7 @@ internal sealed class HttpDownloadGuard(HttpClient hostClient, HttpRemoteIdentit
             received == null || !string.Equals(received.Unit, "bytes", StringComparison.OrdinalIgnoreCase) ||
             received.From != range.From || received.To != range.To || received.Length == null ||
             received.Length <= received.To ||
-            identity.Length is { } expectedLength && received.Length != expectedLength)
+            expectedTotal is { } expectedLength && received.Length != expectedLength)
             throw new HttpDownloadProtocolException(HttpGuardFailure.InvalidRange,
                 "The server returned a Content-Range that does not match the requested bytes.");
 

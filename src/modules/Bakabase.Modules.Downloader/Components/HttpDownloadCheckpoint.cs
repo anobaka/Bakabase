@@ -75,12 +75,15 @@ internal sealed record HttpDownloadCheckpoint(HttpRemoteIdentity Identity, Chunk
         File.Move(temporary, Path.Combine(directory, "checkpoint.json"), true);
     }
 
-    private static async Task<string> HashPrefixAsync(FileStream stream, Chunk chunk, CancellationToken ct)
+    private static Task<string> HashPrefixAsync(FileStream stream, Chunk chunk, CancellationToken ct) =>
+        HashRangeAsync(stream, chunk.Start, chunk.Position, ct);
+
+    internal static async Task<string> HashRangeAsync(FileStream stream, long start, long length, CancellationToken ct)
     {
-        stream.Position = chunk.Start;
+        stream.Position = start;
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var buffer = new byte[81920];
-        var remaining = chunk.Position;
+        var remaining = length;
         while (remaining > 0)
         {
             var read = await stream.ReadAsync(buffer.AsMemory(0, (int)Math.Min(buffer.Length, remaining)), ct);
