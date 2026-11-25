@@ -57,22 +57,31 @@ export function reportClientFailure(response: Response | undefined, error: any):
   }
 
   const t = i18n.t.bind(i18n);
-  // The relay writes its own message and it is more specific than anything that can
-  // be said from here — it names the path, or the route it cannot run yet.
   const description = error?.message ?? error?.error?.message;
 
   switch (failure) {
-    case ClientForwardingFailure.PathNotMapped:
+    case ClientForwardingFailure.PathNotMapped: {
+      const path = error?.error?.serverPath ?? error?.serverPath;
+
+      if (typeof path !== "string" || !path.trim()) {
+        toast.warning(t("client.failure.serverPathMissing"));
+        break;
+      }
+
       toast.warning({
         title: t("client.failure.pathNotMapped"),
-        description,
+        description: t("client.failure.mapServerPath", { path }),
         endContent: (
-          <a className="text-primary underline" href={PATH_MAPPING_ROUTE}>
+          <a
+            className="shrink-0 whitespace-nowrap text-primary underline"
+            href={PATH_MAPPING_ROUTE}
+          >
             {t<string>("client.failure.addMapping")}
           </a>
         ),
       });
       break;
+    }
 
     case ClientForwardingFailure.NeedsNewerClient:
       toast.warning({ title: t("client.failure.needsNewerClient"), description });

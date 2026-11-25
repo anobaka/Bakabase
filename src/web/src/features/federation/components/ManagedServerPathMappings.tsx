@@ -240,7 +240,6 @@ export function ManagedMappingEditor({
               <input
                 className={fieldClass}
                 disabled={disabled}
-                placeholder={"D:\\Media"}
                 value={mapping.serverPath}
                 onChange={(event) =>
                   edit((rows) =>
@@ -256,7 +255,6 @@ export function ManagedMappingEditor({
               <input
                 className={fieldClass}
                 disabled={disabled}
-                placeholder="/Volumes/Media"
                 value={mapping.localPath}
                 onChange={(event) =>
                   edit((rows) =>
