@@ -388,9 +388,13 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             // Root selection is frozen; there is no hash or old-manifest reconstruction.
             if (current.DirectDeletion && current.ManifestArtifactId == null)
             {
+                // A previous unlink can leave only SMB delete-on-close names. Retrying those
+                // unlinks can stall the remaining stages until the file server releases them.
+                if (authorization.Consent.WholeTaskFiles &&
+                    DeferredEmptyDirectoryTree.CaptureMarkerTree(current.RootDirectory, ct) is {} waiting)
+                    return await RetainedAsync("SmbDeletePending", false, waiting);
                 // Confirmation selects the owned directory's current contents. Recursive
                 // deletion unlinks directory symlinks instead of traversing their targets.
-                // No manifest, file timestamps or tree inventory is read beforehand.
                 Directory.Delete(current.RootDirectory, recursive: true);
             }
             else if (!authorization.Consent.WholeTaskFiles && current.ManifestArtifactId == null)
@@ -439,23 +443,25 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
             return result;
         }
 
-        async Task<ArtifactWorkspaceCleanupResult> RetainedAsync(string status, bool checkMarkers)
+        async Task<ArtifactWorkspaceCleanupResult> RetainedAsync(string status, bool checkMarkers,
+            IReadOnlyList<DeferredDirectoryIdentity>? waiting = null)
         {
             if (receipt == null) return new(expected.Id, false, "CLEANUP_FILES_RETAINED", removed, removedBytes);
-            var (reason, id) = await RecordRetainedStageAsync(expected, receipt, status, checkMarkers, removed, removedBytes);
+            var (reason, id) = await RecordRetainedStageAsync(expected, receipt, status, checkMarkers, removed, removedBytes, waiting);
             if (id != null) deferred?.Invoke(id);
             return new(expected.Id, false, reason, removed, removedBytes);
         }
     }
 
     internal async Task<(string Reason, string? DeferredReceipt)> RecordRetainedStageAsync(StageDirectoryCandidate expected,
-        AcquisitionStageDirectoryCleanupReceipt receipt, string status, bool checkMarkers, int removed, long removedBytes)
+        AcquisitionStageDirectoryCleanupReceipt receipt, string status, bool checkMarkers, int removed, long removedBytes,
+        IReadOnlyList<DeferredDirectoryIdentity>? waiting = null)
     {
         const string retained = "CLEANUP_FILES_RETAINED";
         try
         {
             var checkSmb = checkMarkers && expected.DirectDeletion && expected.ManifestArtifactId == null && receipt.Consent.WholeTaskFiles;
-            var directories = checkSmb ? await DeferredEmptyDirectoryTree.CaptureAfterDeleteAsync(expected.RootDirectory) : null;
+            var directories = waiting ?? (checkSmb ? await DeferredEmptyDirectoryTree.CaptureAfterDeleteAsync(expected.RootDirectory) : null);
             var finished = receipt with {Status = directories == null ? status : "SmbDeletePending", WaitingDirectories = directories,
                 SelectionId = expected.SelectionId, Scopes = expected.Group.Scopes, CleanupIntermediates = expected.CleanupIntermediates,
                 FinishedAt = DateTime.UtcNow, RemovedFiles = removed, RemovedBytes = removedBytes};

@@ -24,7 +24,7 @@ internal static partial class DeferredEmptyDirectoryTree
         // Only a running extraction's independently pinned, private directory can opt in.
         internal Dictionary<string, RegularEntry>? ExtractionFiles;
         internal long? MountId;
-        internal bool Markers, OtherRegularFiles;
+        internal bool Markers, OtherRegularFiles, AllowTransientRegularFiles;
         internal int Entries;
     }
 
@@ -36,7 +36,7 @@ internal static partial class DeferredEmptyDirectoryTree
 
     internal static async Task<IReadOnlyList<DeferredDirectoryIdentity>?> CaptureAfterDeleteAsync(string root, CancellationToken ct = default)
     {
-        var first = Capture(root, null, ct);
+        var first = Capture(root, null, ct, allowTransientRegularFiles: true);
         if (first is not { Markers: true }) return null;
         // Some clients briefly expose old regular names alongside delete-on-close files.
         if (first.OtherRegularFiles) await Task.Delay(TimeSpan.FromMilliseconds(200), ct);
@@ -53,11 +53,12 @@ internal static partial class DeferredEmptyDirectoryTree
             : null;
     }
 
-    private static Snapshot? Capture(string root, Dictionary<string, DeferredDirectoryIdentity>? approved, CancellationToken ct, bool bind = false)
+    private static Snapshot? Capture(string root, Dictionary<string, DeferredDirectoryIdentity>? approved, CancellationToken ct,
+        bool bind = false, bool allowTransientRegularFiles = false)
     {
         ct.ThrowIfCancellationRequested();
         if (!Supported) return null;
-        var snapshot = new Snapshot();
+        var snapshot = new Snapshot {AllowTransientRegularFiles = allowTransientRegularFiles};
         try
         {
             WithParent(root, (parent, leaf) => Inspect(parent, leaf, "", 0, snapshot, approved, ct, bind));
@@ -195,7 +196,7 @@ internal static partial class DeferredEmptyDirectoryTree
                     var fact = ReadRegular(fd, child, state.MountId);
                     if (fact.Device != device || !files.TryAdd(Child(relative, child), fact)) throw new ChangedTree();
                 }
-                else if (kind == 8 && approved == null) state.OtherRegularFiles = true;
+                else if (kind == 8 && state.AllowTransientRegularFiles) state.OtherRegularFiles = true;
                 else throw new ChangedTree(); // Includes symlinks, special files and unknown SMB entry types.
             }
         }

@@ -6,6 +6,34 @@ namespace Bakabase.Tests.Artifacts;
 
 public sealed partial class PublishedArtifactAncestorCleanupTests
 {
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task Direct_delete_defers_an_already_unlinked_stage_and_cleans_other_selected_stages(bool deleteDelivery)
+    {
+        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux()) Assert.Inconclusive();
+        var f = await StageDeletion();
+        foreach (var file in Directory.EnumerateFiles(f.Download, "*", SearchOption.AllDirectories)) File.Delete(file);
+        var marker = Path.Combine(Directory.CreateDirectory(Path.Combine(f.Download, "nested")).FullName, ".smbdelete01.1");
+        await File.WriteAllTextAsync(marker, "held by the file server");
+
+        var result = await f.Service.DeleteAsync(DirectDelete(f.Task.Id, deleteDelivery));
+        Assert.IsTrue(File.Exists(marker));
+        Assert.IsFalse(Directory.Exists(f.Processing));
+        Assert.AreEqual(!deleteDelivery, Directory.Exists(f.Delivery));
+        Assert.AreEqual(0, result.DeletedTaskIds.Count);
+        var outcome = result.CleanupResults!.Single();
+        CollectionAssert.Contains(outcome.ReasonCodes.ToArray(), DeferredStageCleanup.AwaitRemoval);
+        Assert.AreEqual(AcquisitionCleanupScopes.Intermediate, outcome.DeferredReceipts.Single().Scopes);
+        CollectionAssert.DoesNotContain(result.RemovedDirectories!.ToArray(), f.Download);
+        var row = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == f.Task.Id);
+        Assert.AreEqual(DeferredStageCleanup.AwaitRemoval, row.DeletedCleanupReasons);
+
+        await f.Cleanup.FinishPendingSmbBatchAsync(0, default);
+        Assert.IsTrue(File.Exists(marker));
+
+    }
+
     // The local test filesystem unlinks open files immediately. Simulate only the SMB
     // client's marker retention; persist and consume the same verified stage receipt as the service.
     private async Task<(StageDeletionFixture Fixture, string Marker)> PendingStage(string otherStatus = "notRequested",
