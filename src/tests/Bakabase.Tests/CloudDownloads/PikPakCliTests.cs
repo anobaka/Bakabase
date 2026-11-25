@@ -806,6 +806,8 @@ public sealed partial class PikPakCliTests
         internal string VerificationUri = "https://mypikpak.com/drive/activate";
         internal string? Continuation;
         internal string? Storage;
+        internal int MalformedStatusReplies;
+        internal bool OmitLoginStatus;
         internal Action? AfterMkdir;
         private string? _folderName;
         private bool _restored;
@@ -824,9 +826,17 @@ public sealed partial class PikPakCliTests
                 return JsonSerializer.SerializeToElement(new {flow = "device", device_code = "device-secret-canary",
                     verification_uri = VerificationUri, user_code = "ABCD-EFGH", expires_in = 300, interval = 2});
             }
-            if (arguments.Take(2).SequenceEqual(new[] {"auth", "status"})) return Storage == null ?
-                JsonSerializer.SerializeToElement(new {logged_in = Approved, name = "Fixture"}) :
-                JsonSerializer.SerializeToElement(new {logged_in = Approved, name = "Fixture", storage = J(Storage)});
+            if (arguments.Take(2).SequenceEqual(new[] {"auth", "status"}))
+            {
+                if (MalformedStatusReplies > 0)
+                {
+                    MalformedStatusReplies--;
+                    if (OmitLoginStatus) return J("{}");
+                    throw new PikPakCliException("PIKPAK_CLI_RESPONSE_INVALID");
+                }
+                return Storage == null ? JsonSerializer.SerializeToElement(new {logged_in = Approved, name = "Fixture"}) :
+                    JsonSerializer.SerializeToElement(new {logged_in = Approved, name = "Fixture", storage = J(Storage)});
+            }
             if (arguments.Take(2).SequenceEqual(new[] {"auth", "logout"})) { Approved = false; return J("{}"); }
             if (arguments.Take(2).SequenceEqual(new[] {"share", "get"}))
             {

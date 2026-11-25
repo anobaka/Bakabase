@@ -373,7 +373,13 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
                     CheckIdentity(journal, request.Source, account);
                     if (journal.State is not ("planned" or "folderReady") || journal.Files.Count != 0 || journal.Attempts.Count != 0)
                         return new(false, "PIKPAK_RESTORE_REVIEW_REQUIRED");
-                    var capacity = CheckCapacity(await account.ReadStatusAsync(ct), journal.Selection);
+                    JsonElement status;
+                    try { status = await account.ReadStatusAsync(ct); }
+                    catch (PikPakCliException error) when (error.Code == "PIKPAK_CLI_RESPONSE_INVALID")
+                    {
+                        return new CloudReadiness(false, "PIKPAK_CAPACITY_UNAVAILABLE") {CanWaitForCapacity = true};
+                    }
+                    var capacity = CheckCapacity(status, journal.Selection);
                     if (capacity.FitsAvailableSpace) return new CloudReadiness(true);
                     if (capacity.Result == "unknown")
                         return new CloudReadiness(false, "PIKPAK_CAPACITY_UNAVAILABLE") {CanWaitForCapacity = true};

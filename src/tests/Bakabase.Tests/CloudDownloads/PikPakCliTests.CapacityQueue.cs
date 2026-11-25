@@ -10,6 +10,62 @@ public sealed partial class PikPakCliTests
             () => _provider.DownloadAsync(Request, _ => Task.CompletedTask, ct),
             waiting, ct, TimeSpan.Zero);
 
+    [DataTestMethod]
+    [DataRow(1, false, true, null)]
+    [DataRow(1, true, true, null)]
+    [DataRow(2, false, true, "PIKPAK_CLI_RESPONSE_INVALID")]
+    [DataRow(0, false, false, "PIKPAK_ACCOUNT_REQUIRED")]
+    public async Task AccountReadinessRetriesAMalformedStatusOnce(int malformedReplies, bool omitLoginStatus,
+        bool loggedIn, string? problem)
+    {
+        await Login();
+        _native.Calls.Clear();
+        _native.Approved = loggedIn;
+        _native.MalformedStatusReplies = malformedReplies;
+        _native.OmitLoginStatus = omitLoginStatus;
+
+        var readiness = await _provider.CheckReadyAsync(null, default);
+
+        Assert.AreEqual(problem == null, readiness.Available);
+        Assert.AreEqual(problem, readiness.Problem);
+        Assert.IsFalse(readiness.CanWaitForCapacity);
+        CollectionAssert.AreEqual(Enumerable.Repeat("auth status", malformedReplies == 0 ? 1 : 2).ToArray(),
+            _native.Calls.Select(c => string.Join(' ', c)).ToArray());
+    }
+
+    [TestMethod]
+    public async Task UnreadableStatusKeepsAQueuedTransferWaitingUntilSpaceIsAvailable()
+    {
+        await Login();
+        _native.Storage = """{"used":"3 B","total":"4 B"}""";
+        var waits = 0;
+        await QueueOriginal(() =>
+        {
+            Assert.AreEqual(0, _native.Mkdirs);
+            Assert.AreEqual(0, _native.Restores);
+            switch (++waits)
+            {
+                case 1:
+                    _native.Calls.Clear();
+                    _native.MalformedStatusReplies = 2;
+                    break;
+                case 2:
+                    CollectionAssert.AreEqual(new[] {"auth status", "auth status"},
+                        _native.Calls.Select(c => string.Join(' ', c)).ToArray());
+                    _native.Storage = """{"used":"0 B","total":"4 B"}""";
+                    break;
+                default:
+                    Assert.Fail("The transfer should resume once space is available.");
+                    break;
+            }
+            return Task.CompletedTask;
+        });
+
+        Assert.AreEqual(2, waits);
+        Assert.AreEqual(1, _native.Mkdirs);
+        Assert.AreEqual(1, _native.Restores);
+    }
+
     [TestMethod]
     public async Task QueuedOriginalReadsOnlyCapacityUntilItFitsAndRestoresOnce()
     {

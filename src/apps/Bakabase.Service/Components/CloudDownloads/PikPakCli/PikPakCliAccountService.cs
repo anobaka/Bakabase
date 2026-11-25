@@ -518,9 +518,19 @@ internal sealed record PikPakCliAccountLease(string Id, string Version, string P
     internal async Task RequireOnline(CancellationToken ct) { await ReadStatusAsync(ct); }
     internal async Task<JsonElement> ReadStatusAsync(CancellationToken ct)
     {
-        var status = await Run(["auth", "status"], ct);
-        ValidateStatus(status, CanManageFiles);
-        return status;
+        async Task<JsonElement> ReadOnce()
+        {
+            var status = await Run(["auth", "status"], ct);
+            ValidateStatus(status, CanManageFiles);
+            return status;
+        }
+        try { return await ReadOnce(); }
+        catch (PikPakCliException error) when (error.Code == "PIKPAK_CLI_RESPONSE_INVALID")
+        {
+            // Only repeat this read-only command when its output is malformed.
+            await Task.Delay(TimeSpan.FromSeconds(1), ct);
+            return await ReadOnce();
+        }
     }
 
     internal async Task<JsonElement?> TryReadStatusAsync(CancellationToken ct)
@@ -532,7 +542,10 @@ internal sealed record PikPakCliAccountLease(string Id, string Version, string P
 
     private void ValidateStatus(JsonElement status, bool requireProviderIdentity)
     {
-        if (!PikPakCliJson.True(status, "logged_in")) throw new PikPakCliException("PIKPAK_ACCOUNT_REQUIRED");
+        if (status.ValueKind != JsonValueKind.Object || !status.TryGetProperty("logged_in", out var loggedIn) ||
+            loggedIn.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            throw new PikPakCliException("PIKPAK_CLI_RESPONSE_INVALID");
+        if (!loggedIn.GetBoolean()) throw new PikPakCliException("PIKPAK_ACCOUNT_REQUIRED");
         if (requireProviderIdentity && (ProviderIdentity == null || PikPakCliAccountService.ReadProviderIdentity(status) != ProviderIdentity))
             throw new PikPakCliException("PIKPAK_ACCOUNT_CHANGED");
     }
