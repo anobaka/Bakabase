@@ -29,6 +29,7 @@ public sealed class ManagedLibraryMappingTreeService(BakabaseDbContext db, IUser
     public const int MaximumResponseBytes = 1024 * 1024;
     public static readonly TimeSpan ReadDeadline = TimeSpan.FromSeconds(4);
     private AnchorSet? _anchors;
+    private const string RootFunction = "bakabase_managed_mapping_root";
     private const string Collation = "bakabase_managed_mapping_paths";
 
     public async Task<ManagedLibraryMappingTreePage> ReadAsync(string? parent, string? cursor, int limit,
@@ -42,7 +43,7 @@ public sealed class ManagedLibraryMappingTreeService(BakabaseDbContext db, IUser
             var node = await identity.GetAsync(deadline.Token);
             var directory = parent == null ? null : ManagedLibraryMappingPaths.Normalize(parent)!;
             var after = cursor == null ? "" : tokens.Read(node, directory ?? "", cursor);
-            var anchors = await GetAnchorsAsync(deadline.Token);
+            var anchors = directory == null ? await GetAnchorsAsync(deadline.Token) : null;
             var rows = await ReadRowsAsync(directory, after, limit + 1, anchors, deadline.Token);
             var more = rows.Count > limit;
             if (more) rows.RemoveAt(rows.Count - 1);
@@ -61,7 +62,7 @@ public sealed class ManagedLibraryMappingTreeService(BakabaseDbContext db, IUser
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             throw new FederationQueryException("MappingTreeBusy", 503,
-                "This directory tree read exceeded its time budget. Retry a smaller branch.", retryable: true);
+                "Reading the resource directories timed out. Retry or enter the mapping manually.", retryable: true);
         }
     }
 
@@ -101,7 +102,7 @@ public sealed class ManagedLibraryMappingTreeService(BakabaseDbContext db, IUser
         return _anchors = new(roots, normalizedMarks);
     }
 
-    private async Task<List<Row>> ReadRowsAsync(string? parent, string after, int limit, AnchorSet anchors, CancellationToken ct)
+    private async Task<List<Row>> ReadRowsAsync(string? parent, string after, int limit, AnchorSet? anchors, CancellationToken ct)
     {
         var connection = (SqliteConnection)db.Database.GetDbConnection();
         var wasOpen = connection.State == ConnectionState.Open;
@@ -116,42 +117,29 @@ public sealed class ManagedLibraryMappingTreeService(BakabaseDbContext db, IUser
             var table = db.Model.FindEntityType(typeof(ResourceDbModel))!.GetTableName()!.Replace("\"", "\"\"");
             if (parent != null && !ManagedLibraryMappingPaths.IsWindows(parent))
                 return await ReadPosixChildrenAsync(connection, table, parent, after, limit, ct);
-            if (parent == null && await TryReadPosixRootsAsync(connection, table, after, limit, anchors, ct) is { } fastRoots)
-                return fastRoots;
-            var anchorCases = new StringBuilder("CASE WHEN 0 THEN dir ");
-            var index = 0;
-            foreach (var anchor in anchors.Roots.Concat(anchors.Marks))
+            if (anchors != null)
             {
-                var parameter = "$a" + index++;
-                command.Parameters.AddWithValue(parameter, anchor);
-                anchorCases.Append($"WHEN CASE WHEN win=1 THEN ('w' || dir) COLLATE {Collation} = ('w' || {parameter}) COLLATE {Collation} OR ('w' || substr(dir,1,length(rtrim({parameter},'/'))+1)) COLLATE {Collation} = ('w' || rtrim({parameter},'/') || '/') COLLATE {Collation} ELSE dir = {parameter} OR substr(dir,1,length(rtrim({parameter},'/'))+1) = (rtrim({parameter},'/') || '/') END THEN {parameter} ");
+                if (await TryReadPosixRootsAsync(connection, table, after, limit, anchors, ct) is { } fastRoots)
+                    return fastRoots;
+                connection.CreateFunction<string, string>(RootFunction, anchors.ResolveRoot, isDeterministic: true);
             }
-            // Unmounted metadata starts at drive/UNC roots or the first two POSIX segments.
-            anchorCases.Append("ELSE CASE WHEN win = 1 AND substr(dir,2,1) = ':' THEN substr(dir,1,3) ");
-            anchorCases.Append("WHEN instr(substr(dir, CASE WHEN substr(dir,1,2)='//' THEN 3 ELSE 2 END),'/')=0 THEN dir ");
-            anchorCases.Append("ELSE CASE WHEN instr(substr(dir, instr(substr(dir,CASE WHEN substr(dir,1,2)='//' THEN 3 ELSE 2 END),'/') + CASE WHEN substr(dir,1,2)='//' THEN 3 ELSE 2 END),'/')=0 THEN dir ");
-            anchorCases.Append("ELSE substr(dir,1, instr(substr(dir,CASE WHEN substr(dir,1,2)='//' THEN 3 ELSE 2 END),'/') + CASE WHEN substr(dir,1,2)='//' THEN 1 ELSE 0 END + instr(substr(dir, instr(substr(dir,CASE WHEN substr(dir,1,2)='//' THEN 3 ELSE 2 END),'/') + CASE WHEN substr(dir,1,2)='//' THEN 3 ELSE 2 END),'/')) END END END");
-            // POSIX parent reads use the existing Path index and a strict separator boundary. Windows
-            // metadata may contain either slash and casing: those branches use the bounded aggregate
-            // and a Windows ordinal collation instead of incorrectly dropping matching resources.
-            var prefilter = parent != null && !ManagedLibraryMappingPaths.IsWindows(parent)
-                ? " AND (Path = $parent OR Path >= $prefix AND Path < $upper)" : "";
             command.Parameters.AddWithValue("$parent", parent ?? "");
-            command.Parameters.AddWithValue("$prefix", parent?.TrimEnd('/') + "/" ?? "");
-            command.Parameters.AddWithValue("$upper", parent?.TrimEnd('/') + "0" ?? "");
             command.Parameters.AddWithValue("$after", after);
             command.Parameters.AddWithValue("$limit", limit);
-            var childExpression = parent == null ? anchorCases.ToString() :
+            var childExpression = parent == null ? $"{RootFunction}(dir)" :
                 "CASE WHEN instr(substr(dir,length(rtrim($parent,'/'))+2),'/')=0 THEN dir " +
                 "ELSE rtrim($parent,'/') || '/' || substr(substr(dir,length(rtrim($parent,'/'))+2),1,instr(substr(dir,length(rtrim($parent,'/'))+2),'/')-1) END";
             var parentFilter = parent == null ? "" :
-                $"AND win={(ManagedLibraryMappingPaths.IsWindows(parent) ? 1 : 0)} AND CASE WHEN win=1 THEN ('w'||dir) COLLATE {Collation} <> ('w'||$parent) COLLATE {Collation} AND ('w'||substr(dir,1,length(rtrim($parent,'/'))+1)) COLLATE {Collation} = ('w'||rtrim($parent,'/')||'/') COLLATE {Collation} ELSE dir<>$parent AND substr(dir,1,length(rtrim($parent,'/'))+1) = rtrim($parent,'/')||'/' END";
+                $"AND win=1 AND ('w'||dir) COLLATE {Collation} <> ('w'||$parent) COLLATE {Collation} " +
+                $"AND ('w'||substr(dir,1,length(rtrim($parent,'/'))+1)) COLLATE {Collation} = ('w'||rtrim($parent,'/')||'/') COLLATE {Collation}";
+            const string windowsPath = "substr(Path,2,1)=':' OR substr(Path,1,2) IN ('//', char(92)||char(92))";
+            var platformFilter = parent == null ? "" : $" AND ({windowsPath})";
             command.CommandText = $"""
                 WITH normalized AS (
-                  SELECT IsFile, CASE WHEN substr(Path,2,1)=':' OR substr(Path,1,2)=char(92)||char(92) OR substr(Path,1,2)='//' THEN 1 ELSE 0 END AS win,
-                    CASE WHEN substr(Path,2,1)=':' OR substr(Path,1,2)=char(92)||char(92) OR substr(Path,1,2)='//' THEN replace(Path,char(92),'/') ELSE Path END AS p
-                  FROM "{table}" WHERE Path IS NOT NULL AND length(Path) BETWEEN 1 AND 4096 {prefilter}
-                ), directories AS (
+                  SELECT IsFile, ({windowsPath}) AS win,
+                    CASE WHEN {windowsPath} THEN replace(Path,char(92),'/') ELSE Path END AS p
+                  FROM "{table}" WHERE Path IS NOT NULL AND length(Path) BETWEEN 1 AND 4096 {platformFilter}
+                ), directories AS MATERIALIZED (
                   SELECT win, CASE WHEN IsFile=1 THEN
                       CASE WHEN length(rtrim(p,replace(p,'/','')))=1 THEN '/'
                         WHEN length(rtrim(rtrim(p,replace(p,'/','')),'/'))=2 AND substr(p,2,1)=':' THEN substr(p,1,2)||'/'
@@ -161,13 +149,12 @@ public sealed class ManagedLibraryMappingTreeService(BakabaseDbContext db, IUser
                   WHERE (substr(p,1,1)='/' OR (win=1 AND p GLOB '[A-Za-z]:/*'))
                     AND instr(p,char(0))=0 AND instr('/'||p||'/','/../')=0 AND instr('/'||p||'/','/./')=0
                     AND substr(p,1,3)<>'///' AND instr(substr(p,3),'//')=0
-                ), children AS (
+                ), children AS MATERIALIZED (
                   SELECT win, dir, {childExpression} AS child FROM directories WHERE dir<>'' {parentFilter}
                 ), keyed AS NOT MATERIALIZED (
                   SELECT win, dir, child, (CASE WHEN win=1 THEN 'w' ELSE 'p' END || child) AS k
                   FROM children WHERE child COLLATE BINARY<>''
                 ), posix_page AS (
-                  -- CASE can inherit COLLATE from its Windows condition even on a POSIX row.
                   -- Explicit BINARY keeps the million-row POSIX aggregate inside SQLite instead
                   -- of marshalling every comparison into the managed Windows callback.
                   SELECT min(child COLLATE BINARY) AS path, min(k COLLATE BINARY) AS key,
@@ -184,27 +171,15 @@ public sealed class ManagedLibraryMappingTreeService(BakabaseDbContext db, IUser
                   (SELECT * FROM posix_page UNION ALL SELECT * FROM windows_page)
                 ORDER BY key COLLATE {Collation} LIMIT $limit
                 """;
-            var result = new List<Row>(limit);
-            try
-            {
-                using var reader = await command.ExecuteReaderAsync(ct);
-                while (await reader.ReadAsync(ct))
-                {
-                    ct.ThrowIfCancellationRequested();
-                    var path = reader.GetString(0);
-                    if (ManagedLibraryMappingPaths.Normalize(path) != path)
-                        throw new FederationQueryException("MappingTreeMetadataTooLarge", 503);
-                    result.Add(new(path, reader.GetString(1), reader.GetInt64(2), reader.GetInt32(3) != 0));
-                }
-                ct.ThrowIfCancellationRequested();
-                return result;
-            }
-            catch (SqliteException e) when (e.SqliteErrorCode == 9 && ct.IsCancellationRequested)
-            { throw new OperationCanceledException("The directory metadata read was cancelled.", e, ct); }
+            return await ReadRowsFromCommandAsync(command, ct);
         }
         catch (SqliteException e) when (e.SqliteErrorCode == 9 && ct.IsCancellationRequested)
         { throw new OperationCanceledException("The directory metadata read was cancelled.", e, ct); }
-        finally { if (!wasOpen) await connection.CloseAsync(); }
+        finally
+        {
+            if (anchors != null) connection.CreateFunction<string, string>(RootFunction, null);
+            if (!wasOpen) await connection.CloseAsync();
+        }
     }
 
     // Keep the common mounted POSIX case on the existing binary Path index. Unlike normalizing
@@ -318,6 +293,45 @@ public sealed class ManagedLibraryMappingTreeService(BakabaseDbContext db, IUser
             // SQLite BINARY compares UTF-8 bytes, unlike .NET Ordinal's UTF-16 code units.
             // Keeping the merge/cursor order identical matters for private-use vs astral names.
             : Encoding.UTF8.GetBytes(left).AsSpan().SequenceCompareTo(Encoding.UTF8.GetBytes(right));
-    private sealed record AnchorSet(string[] Roots, string[] Marks);
+    private sealed record AnchorSet(string[] Roots, string[] Marks)
+    {
+        // Storage roots (most specific first) precede path marks (least specific first).
+        // For a mixed library, find the winning anchor by the path's own ancestors, regardless
+        // of how many other marks exist. Only the bounded anchor list is kept in memory.
+        private readonly Dictionary<string, (string Root, int Priority)> _posix = Index(Roots, Marks, false);
+        private readonly Dictionary<string, (string Root, int Priority)> _windows = Index(Roots, Marks, true);
+
+        private static Dictionary<string, (string Root, int Priority)> Index(string[] roots, string[] marks, bool windows)
+        {
+            var comparer = windows ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            return roots.Concat(marks).Select((root, index) => (Root: root, Priority: index))
+                .Where(entry => ManagedLibraryMappingPaths.IsWindows(entry.Root) == windows)
+                .DistinctBy(entry => entry.Root, comparer).ToDictionary(entry => entry.Root, comparer);
+        }
+
+        public string ResolveRoot(string directory)
+        {
+            var index = ManagedLibraryMappingPaths.IsWindows(directory) ? _windows : _posix;
+            var ranks = index.GetAlternateLookup<ReadOnlySpan<char>>();
+            var prefix = directory.AsSpan();
+            var drive = prefix.Length >= 3 && char.IsAsciiLetter(prefix[0]) && prefix[1] == ':';
+            var best = (Root: (string?)null, Priority: int.MaxValue);
+            while (!prefix.IsEmpty)
+            {
+                if (ranks.TryGetValue(prefix, out var candidate) && candidate.Priority < best.Priority)
+                    best = candidate;
+                var slash = prefix.LastIndexOf('/');
+                if (slash <= 0 || drive && prefix.Length == 3) break;
+                prefix = prefix[..(drive && slash == 2 ? 3 : slash)];
+            }
+            if (best.Root != null) return best.Root;
+            if (drive) return directory[..3];
+            // Unmounted paths start at their share or first two POSIX components.
+            var start = directory.StartsWith("//", StringComparison.Ordinal) ? 2 : 1;
+            var first = directory.IndexOf('/', start);
+            var second = first < 0 ? -1 : directory.IndexOf('/', first + 1);
+            return second < 0 ? directory : directory[..second];
+        }
+    }
     private sealed record Row(string Path, string Key, long Count, bool HasChildren);
 }

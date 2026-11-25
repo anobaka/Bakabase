@@ -221,7 +221,15 @@ export default function ManagedMappingTree({
         )}
         {page.error && (
           <li>
-            <ErrorNotice error={page.error} onRetry={() => void load(parent, page.nextCursor)} />
+            <ErrorNotice
+              error={page.error}
+              onRetry={
+                page.error instanceof FederationError &&
+                ["MappingTreeExpired", "LibraryEpochChanged"].includes(page.error.code)
+                  ? refresh
+                  : () => void load(parent, page.nextCursor)
+              }
+            />
           </li>
         )}
         {!page.loading && !page.error && page.nodes.length === 0 && (
@@ -229,7 +237,7 @@ export default function ManagedMappingTree({
             {t("federation.managedMappings.tree.empty")}
           </li>
         )}
-        {page.nextCursor && !page.loading && (
+        {page.nextCursor && !page.loading && !page.error && (
           <li>
             <button
               className={`${buttonClass} !py-1 !text-xs`}

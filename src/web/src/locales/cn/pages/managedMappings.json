@@ -22,7 +22,7 @@
   "federation.managedMappings.current": "当前已保存的映射",
   "federation.managedMappings.replace": "用我的编辑替换",
   "federation.managedMappings.useCurrent": "放弃编辑，使用当前配置",
-  "federation.error.MappingTreeBusy": "目录树正在生成，请稍后重试。",
+  "federation.error.MappingTreeBusy": "读取资源目录超时。可以重试，或在下方手动填写路径映射。",
   "federation.error.MappingTreeExpired": "目录树已过期，请刷新目录树。",
   "federation.error.ManagementUpdateRequired": "对方版本暂不支持此功能，请更新对方。你仍可手动填写路径映射。",
   "federation.error.MappingTreeUnavailable": "暂时无法读取资源目录，请检查设备连接后重试。",

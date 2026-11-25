@@ -212,6 +212,49 @@ public sealed class ManagedLibraryMappingTreeTests
     }
 
     [TestMethod]
+    public async Task RootPageCompletesForALargeMixedLibraryWithManyPathMarks()
+    {
+        await using var f = await Fixture.CreateAsync([new("/mounted", "Mounted", "mount", false)]);
+        f.Db.PathMarks.AddRange(Enumerable.Range(0, 45).Select(i => new PathMarkDbModel {
+            Path = $"/logical/library/category-{i:D2}", ConfigJson = "{}"
+        }));
+        f.Db.PathMarks.Add(new PathMarkDbModel { Path = "/mounted/child", ConfigJson = "{}" });
+        await f.Db.SaveChangesAsync();
+        await f.SeedAsync(50_000, "printf('/logical/library/category-%02d/work-%07d',x%45,x)");
+        await f.AddAsync(("/mounted/child/work", false), ("/unmarked/share/book.cbz", true),
+            (@"Z:\Library\Book", false));
+        var roots = await f.ReadAsync();
+        Assert.AreEqual(48, roots.Nodes.Length);
+        Assert.AreEqual(50_003L, roots.Nodes.Sum(x => x.ResourceCount));
+        Assert.AreEqual(1L, roots.Nodes.Single(x => x.ServerPath == "/mounted").ResourceCount);
+        Assert.IsFalse(roots.Nodes.Single(x => x.ServerPath == "/unmarked/share").HasChildren);
+        Assert.IsTrue(roots.Nodes.Single(x => x.ServerPath == "Z:/").HasChildren);
+        Assert.AreEqual(0, f.Db.ChangeTracker.Entries().Count());
+        Assert.AreEqual(0, f.Storage.Probes);
+    }
+
+    [TestMethod]
+    public async Task MixedRootLookupPreservesAnchorPrecedenceAndSpelling()
+    {
+        await using var f = await Fixture.CreateAsync([
+            new("Y:/", "Drive", "mount", false), new("Y:/Média", "Nested", "mount", false)
+        ]);
+        f.Db.PathMarks.AddRange(new PathMarkDbModel { Path = "y:/média/Photos", ConfigJson = "{}" },
+            new PathMarkDbModel { Path = "//NAS/Share", ConfigJson = "{}" },
+            new PathMarkDbModel { Path = "//nas/share/Books", ConfigJson = "{}" });
+        await f.Db.SaveChangesAsync();
+        await f.AddAsync((@"y:\MÉDIA\photos\Book", false), ("y:/Other/Book", false),
+            (@"\\nas\SHARE\books\Book", false), ("/media/unmarked/book", false));
+        var roots = await f.ReadAsync();
+        CollectionAssert.AreEquivalent(new[] { "Y:/Média", "Y:/", "//NAS/Share", "/media/unmarked" },
+            roots.Nodes.Select(x => x.ServerPath).ToArray());
+        // An open connection handed back to another request must not retain this owner's marks.
+        using var command = f.Db.Database.GetDbConnection().CreateCommand();
+        command.CommandText = "SELECT count(*) FROM pragma_function_list WHERE name='bakabase_managed_mapping_root'";
+        Assert.AreEqual(0L, (long)(await command.ExecuteScalarAsync())!);
+    }
+
+    [TestMethod]
     public async Task FastRootCursorsUseSqliteBinaryOrderingForUnicodeNames()
     {
         // Fast-root ordering and its opaque cursor must agree with SQLite BINARY rather than

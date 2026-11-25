@@ -218,6 +218,14 @@ describe("managed mapping tree and drafts", () => {
     fireEvent.click(screen.getByLabelText("federation.managedMappings.tree.expand"));
     expect(await screen.findByText("LibraryEpochChanged")).toBeInTheDocument();
     expect(screen.queryByText("wrong")).toBeNull();
+    fireEvent.click(screen.getByText("retry"));
+    expect(await screen.findByText("Volumes")).toBeInTheDocument();
+    expect(managedServerApi.mappingTree).toHaveBeenLastCalledWith(
+      "server-a",
+      { parent: undefined, cursor: undefined, libraryEpoch: undefined },
+      expect.any(AbortSignal),
+    );
+    expect(screen.queryByText("LibraryEpochChanged")).toBeNull();
   });
   it("uses the host folder picker and retains edits when browser storage is unavailable", async () => {
     show(saved());
