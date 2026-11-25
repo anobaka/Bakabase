@@ -501,7 +501,11 @@ export default function AcquisitionDownloadDestinationModal({
                                 </div>
                                 <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2 gap-y-1">
                                   <dt className="text-default-500">
-                                    {t("acquisition.downloadDestination.oldDirectory")}
+                                    {t(
+                                      download.canPreviewReuse || download.reuseEstimate
+                                        ? "acquisition.downloadDestination.sourceDirectory"
+                                        : "acquisition.downloadDestination.oldDirectory",
+                                    )}
                                   </dt>
                                   <dd className="break-all">
                                     {download.oldDirectory ||
@@ -518,6 +522,7 @@ export default function AcquisitionDownloadDestinationModal({
                                 </dl>
                                 {download.reuseEstimate && reuseScope && (
                                   <div className="space-y-1 py-1">
+                                    {download.reasonCode && <p>{reason(download.reasonCode)}</p>}
                                     <p>
                                       {t("acquisition.downloadDestination.reuseCandidates", {
                                         count: download.reuseEstimate.candidateFileCount,

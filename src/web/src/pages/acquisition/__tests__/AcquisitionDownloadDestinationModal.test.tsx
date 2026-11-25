@@ -201,6 +201,41 @@ it("rejects a reuse preview that also includes a sibling download", async () => 
   expect(mocks.apply).not.toHaveBeenCalled();
 });
 
+it("shows the original files and confirmed destination when refreshing a single download", async () => {
+  await selectReuse(
+    preview({
+      rows: [
+        {
+          taskId: 1,
+          title: "Existing destination",
+          canApply: true,
+          downloads: [
+            {
+              ...download(11),
+              reasonCode: "DOWNLOAD_DESTINATION_REUSE_REFRESH_READY",
+              reuseEstimate: {
+                fileCount: 6,
+                candidateFileCount: 2,
+                candidateBytes: 1024,
+                requiredDownloadBytes: 5120,
+                totalBytes: 6144,
+              },
+            },
+          ],
+        },
+      ],
+    }),
+  );
+  await screen.findByText(
+    "acquisition.downloadDestination.reason.DOWNLOAD_DESTINATION_REUSE_REFRESH_READY",
+  );
+  expect(screen.getByText("acquisition.downloadDestination.sourceDirectory")).toBeVisible();
+  expect(screen.getByText("/nas/11")).toBeVisible();
+  expect(screen.getByText("/ssd/11")).toBeVisible();
+  expect(button("applyReuse")).toBeEnabled();
+  expect(mocks.apply).not.toHaveBeenCalled();
+});
+
 it("loads the default root without previewing or changing tasks; closing remains read-only", async () => {
   await show();
   expect(screen.getByText("/ssd/downloads")).toBeVisible();
