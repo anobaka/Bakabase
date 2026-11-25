@@ -177,6 +177,46 @@ public sealed class AcquisitionTaskDeletionTests
         finally { File.Delete(file); }
     }
 
+    private sealed class DisconnectDuringDelete(IAcquisitionDeletionActivityReader actual, CancellationTokenSource browser)
+        : IAcquisitionDeletionActivityReader
+    {
+        public Task<IReadOnlyDictionary<int, AcquisitionDeletionActivity>> ReadAsync(IReadOnlyList<AcquisitionTaskDbModel> tasks,
+            CancellationToken ct)
+        {
+            browser.Cancel();
+            ct.ThrowIfCancellationRequested();
+            return actual.ReadAsync(tasks, ct);
+        }
+    }
+
+    [TestMethod]
+    public async Task AcceptedDeleteOutlivesDisconnectedBrowserButNotServiceShutdown()
+    {
+        var (task, _) = await Seed();
+        using var browser = new CancellationTokenSource();
+        using var server = new CancellationTokenSource();
+        var store = new AcquisitionTaskDeletePreviewStore();
+        var prepare = new AcquisitionTaskDeletionService(_db, _activity, store);
+        var submit = new AcquisitionTaskDeletionService(_db, new DisconnectDuringDelete(_activity, browser), store);
+        var preview = await prepare.PreviewAsync(new([task.Id]));
+        // Before acceptance an abandoned request leaves the preview untouched.
+        await Assert.ThrowsAsync<OperationCanceledException>(() => submit.DeleteAsync(new(preview.PreviewId),
+            new CancellationToken(canceled: true), guardDirectory: null, afterConfirmation: server.Token));
+        Assert.AreEqual("preview", prepare.GetProgress(preview.PreviewId).State);
+        var result = await submit.DeleteAsync(new(preview.PreviewId), browser.Token, guardDirectory: null, afterConfirmation: server.Token);
+        Assert.IsTrue(browser.IsCancellationRequested);
+        CollectionAssert.AreEqual(new[] {task.Id}, result.DeletedTaskIds.ToArray());
+        Assert.AreEqual("completed", prepare.GetProgress(preview.PreviewId).State);
+
+        var (next, _) = await Seed();
+        var nextPreview = await prepare.PreviewAsync(new([next.Id]));
+        var stopping = new AcquisitionTaskDeletionService(_db, new DisconnectDuringDelete(_activity, server), store);
+        await Assert.ThrowsAsync<OperationCanceledException>(() => stopping.DeleteAsync(new(nextPreview.PreviewId),
+            CancellationToken.None, guardDirectory: null, afterConfirmation: server.Token));
+        Assert.AreEqual("interrupted", prepare.GetProgress(nextPreview.PreviewId).State);
+        Assert.IsNull((await _db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == next.Id)).DeletedAt);
+    }
+
     [TestMethod]
     public async Task InterruptedDeletionRemainsObservableAndCannotBeAutomaticallyReplayed()
     {

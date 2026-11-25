@@ -54,6 +54,63 @@ public sealed class AcquisitionDeletionProgressTests
         Assert.AreEqual(entry, store.Claim(id));
     }
 
+    [DataTestMethod]
+    [DataRow(true, false)]
+    [DataRow(false, true)]
+    [DataRow(true, true)]
+    public void ConfirmationAndFinalProgressSurviveAStoreRestartWithoutReplayingFiles(bool intermediates, bool delivery)
+    {
+        var root = Directory.CreateTempSubdirectory("acquisition-delete-receipt-");
+        try
+        {
+            var store = new AcquisitionTaskDeletePreviewStore(() => root.FullName);
+            var preview = Entry(DateTimeOffset.UtcNow.AddMinutes(10));
+            store.Add(preview);
+            Assert.IsNull(store.ReadProgress(preview.Preview.PreviewId).CleanupFiles);
+            Assert.AreEqual(0, root.EnumerateFileSystemInfos().Count());
+            var restarted = new AcquisitionTaskDeletePreviewStore(() => root.FullName);
+            var id = preview.Preview.PreviewId;
+            var entry = store.Claim(new AcquisitionTaskDeleteInput(id, CleanupFiles: intermediates,
+                AcceptDeliveredFiles: true, SkipFileVerification: true, DeleteDeliveredFiles: delivery));
+            Assert.IsFalse(store.ReadProgress(id).ReceiptOnly);
+            var stopped = restarted.ReadProgress(id);
+            Assert.IsTrue(stopped.ReceiptOnly);
+            Assert.AreEqual("interrupted", stopped.State);
+            Assert.AreEqual(intermediates, stopped.CleanupFiles);
+            Assert.AreEqual(delivery, stopped.DeleteDeliveredFiles);
+            Assert.IsFalse(stopped.SelectedDirectoriesOnly);
+            Assert.ThrowsException<ArgumentException>(() => restarted.RequireDirectRequest(id, "another confirmation"));
+            Assert.ThrowsException<ArgumentException>(() => restarted.Claim(id));
+
+            entry.Progress = entry.Progress with { State = "completed", Phase = "completed", FinishedTasks = 1 };
+            store.Checkpoint(entry);
+            Assert.AreEqual("completed", restarted.ReadProgress(id).State);
+            Assert.AreEqual(1, restarted.ReadProgress(id).FinishedTasks);
+            Assert.ThrowsException<ArgumentException>(() => restarted.RequireDirectRequest(id, "changed scope"));
+        }
+        finally { root.Delete(recursive: true); }
+    }
+
+    [TestMethod]
+    public void UnrecordableConfirmationDoesNotClaimTheRequestOrStartWork()
+    {
+        var root = Directory.CreateTempSubdirectory("acquisition-delete-receipt-");
+        try
+        {
+            var invalidRoot = Path.Combine(root.FullName, "not-a-directory");
+            File.WriteAllText(invalidRoot, "existing");
+            var store = new AcquisitionTaskDeletePreviewStore(() => invalidRoot);
+            var entry = Entry(DateTimeOffset.UtcNow.AddMinutes(10));
+            store.Add(entry);
+            Assert.Throws<IOException>(() => store.Claim(entry.Preview.PreviewId));
+            Assert.IsFalse(entry.Claimed);
+            Assert.IsNull(entry.Options);
+            Assert.AreEqual("preview", store.ReadProgress(entry.Preview.PreviewId).State);
+            Assert.AreEqual("existing", File.ReadAllText(invalidRoot));
+        }
+        finally { root.Delete(recursive: true); }
+    }
+
     [TestMethod]
     public void Only_receipted_cancellation_fields_may_change_during_partial_file_cleanup()
     {

@@ -20804,6 +20804,10 @@ export interface components {
             startedAt?: string;
             /** Format: date-time */
             updatedAt: string;
+            cleanupFiles?: boolean;
+            deleteDeliveredFiles?: boolean;
+            selectedDirectoriesOnly: boolean;
+            receiptOnly: boolean;
         };
         "Bakabase.Service.Components.Acquisition.Planning.AcquisitionTaskDeleteResult": {
             deletedTaskIds: number[];

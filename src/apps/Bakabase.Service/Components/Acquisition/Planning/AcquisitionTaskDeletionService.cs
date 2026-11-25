@@ -68,7 +68,7 @@ internal sealed record AcquisitionTaskDeleteOptions(bool CleanupFiles, bool Acce
 }
 
 /// <summary>Short-lived server-owned confirmation, fixed identities and versions. Restart requires a new preview.</summary>
-public sealed class AcquisitionTaskDeletePreviewStore
+public sealed partial class AcquisitionTaskDeletePreviewStore
 {
     internal sealed record Entry(AcquisitionTaskDeletePreview Preview, IReadOnlyDictionary<int, string> Versions,
         IReadOnlyDictionary<int, IReadOnlyList<int>> Runs,
@@ -81,6 +81,7 @@ public sealed class AcquisitionTaskDeletePreviewStore
         public AcquisitionTaskDeleteOptions? Options { get; set; }
         internal string? DirectRequestKey { get; init; }
         public AcquisitionTaskDeleteResult? Result { get; set; }
+        internal DateTimeOffset LastCheckpoint { get; set; }
         public AcquisitionTaskDeleteProgress Progress { get; set; } = new(Preview.PreviewId, "preview",
             Preview.TotalCount, 0, null, "rechecking", 0, 0, null, DateTimeOffset.UtcNow);
     }
@@ -97,7 +98,11 @@ public sealed class AcquisitionTaskDeletePreviewStore
     internal bool RequireDirectRequest(string id, string key)
     {
         if (!Guid.TryParseExact(id, "N", out _)) throw new ArgumentException("ACQUISITION_DELETE_OPTIONS_CHANGED");
-        if (!_entries.TryGetValue(id, out var entry)) return false;
+        if (!_entries.TryGetValue(id, out var entry))
+        {
+            if (ReadReceipt(id) != null) throw new ArgumentException("ACQUISITION_DELETE_OUTCOME_UNKNOWN");
+            return false;
+        }
         lock (entry)
             if (entry.DirectRequestKey != key) throw new ArgumentException("ACQUISITION_DELETE_OPTIONS_CHANGED");
         return true;
@@ -107,13 +112,11 @@ public sealed class AcquisitionTaskDeletePreviewStore
 
     internal AcquisitionTaskDeleteProgress ReadProgress(string id)
     {
-        if (!Guid.TryParseExact(id, "N", out _) || !_entries.TryGetValue(id, out var entry))
-            throw new ArgumentException("ACQUISITION_DELETE_PREVIEW_EXPIRED");
-        lock (entry)
-        {
-            if (Expired(entry)) throw new ArgumentException("ACQUISITION_DELETE_PREVIEW_EXPIRED");
-            return entry.Progress;
-        }
+        if (!Guid.TryParseExact(id, "N", out _)) throw new ArgumentException("ACQUISITION_DELETE_PREVIEW_EXPIRED");
+        if (_entries.TryGetValue(id, out var entry))
+            lock (entry)
+                if (!Expired(entry)) return entry.Progress;
+        return ReadReceipt(id) ?? throw new ArgumentException("ACQUISITION_DELETE_PREVIEW_EXPIRED");
     }
     internal Entry Claim(string id) => Claim(new AcquisitionTaskDeleteInput(id));
     internal Entry Claim(AcquisitionTaskDeleteInput input)
@@ -134,13 +137,17 @@ public sealed class AcquisitionTaskDeletePreviewStore
             if (entry.Claimed && entry.Result == null) throw new ArgumentException("ACQUISITION_DELETE_OUTCOME_UNKNOWN");
             if (!entry.Claimed)
             {
+                var progress = entry.Progress with { State = "running", StartedAt = DateTimeOffset.UtcNow,
+                    UpdatedAt = DateTimeOffset.UtcNow, CleanupFiles = options.CleanupFiles, DeleteDeliveredFiles = options.DeleteDeliveredFiles,
+                    SelectedDirectoriesOnly = directories != null, FinishedTasks = entry.Preview.Rows.Count(r =>
+                        (!r.CanDelete && !(options.RemoveTaskIfCleanupFails && r.CanRemoveTaskIfCleanupFails)) ||
+                        selection.Plans != null && !selection.Plans.ContainsKey(r.TaskId)) };
+                // Commit the fixed confirmation before stopping writers or touching files.
+                WriteReceipt(entry, options, progress, first: true);
+                entry.Progress = progress;
                 entry.Options = options;
                 entry.SelectedPlans = selection.Plans;
                 entry.DirectorySelection = selection.Fingerprint;
-                entry.Progress = entry.Progress with { State = "running", StartedAt = DateTimeOffset.UtcNow,
-                    UpdatedAt = DateTimeOffset.UtcNow, FinishedTasks = entry.Preview.Rows.Count(r =>
-                        (!r.CanDelete && !(options.RemoveTaskIfCleanupFails && r.CanRemoveTaskIfCleanupFails)) ||
-                        entry.SelectedPlans != null && !entry.SelectedPlans.ContainsKey(r.TaskId)) };
             }
             entry.Claimed = true; return entry;
         }
@@ -344,8 +351,11 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
         return preview;
     }
 
-    public async Task<AcquisitionTaskDeleteResult> DeleteAsync(AcquisitionTaskDeleteInput input, CancellationToken ct = default,
-        Func<string, Task>? guardDirectory = null)
+    public Task<AcquisitionTaskDeleteResult> DeleteAsync(AcquisitionTaskDeleteInput input, CancellationToken ct = default,
+        Func<string, Task>? guardDirectory = null) => DeleteAsync(input, ct, guardDirectory, null);
+
+    internal async Task<AcquisitionTaskDeleteResult> DeleteAsync(AcquisitionTaskDeleteInput input, CancellationToken ct,
+        Func<string, Task>? guardDirectory, CancellationToken? afterConfirmation)
     {
         if (input.TaskIds != null)
         {
@@ -356,7 +366,13 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                 await PrepareSelectionAsync(new(input.TaskIds, RetryRetainedFiles: input.RetryRetainedFiles),
                     ct, guardDirectory, input);
         }
+        if (afterConfirmation is {} accepting)
+        {
+            ct.ThrowIfCancellationRequested();
+            accepting.ThrowIfCancellationRequested();
+        }
         var entry = previews.Claim(input);
+        ct = afterConfirmation ?? ct;
         if (entry.Result is {} saved)
         {
             // Another session may hold the same idempotency key. Re-authorize paths in the response.
@@ -607,6 +623,7 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                 entry.Result = result;
                 entry.Progress = entry.Progress with { State = "completed", Phase = "completed", CurrentTaskId = null,
                     FinishedTasks = entry.Preview.TotalCount, UpdatedAt = DateTimeOffset.UtcNow };
+                previews.Checkpoint(entry);
             }
             return result;
         }
@@ -622,10 +639,14 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
             foreach (var (_, gate) in taskLocks) gate.Release();
         }
     }
-    private static void Report(AcquisitionTaskDeletePreviewStore.Entry entry,
+    private void Report(AcquisitionTaskDeletePreviewStore.Entry entry,
         Func<AcquisitionTaskDeleteProgress, AcquisitionTaskDeleteProgress> update)
     {
-        lock (entry) entry.Progress = update(entry.Progress) with { UpdatedAt = DateTimeOffset.UtcNow };
+        lock (entry)
+        {
+            entry.Progress = update(entry.Progress) with { UpdatedAt = DateTimeOffset.UtcNow };
+            previews.Checkpoint(entry);
+        }
     }
     private static string DirectRequestKey(AcquisitionTaskDeleteInput input) => JsonSerializer.Serialize(new
         { TaskIds = input.TaskIds!.Distinct().Order().ToArray(), Options = AcquisitionTaskDeleteOptions.ForDirect(input) });

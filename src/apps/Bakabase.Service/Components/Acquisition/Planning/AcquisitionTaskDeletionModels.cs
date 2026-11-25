@@ -14,7 +14,13 @@ public sealed record AcquisitionTaskDeleteInput(string PreviewId, bool? CleanupF
 // Progress describes confirmed work only; it is not an authorization or a replacement for the final result.
 public sealed record AcquisitionTaskDeleteProgress(string PreviewId, string State, int TotalTasks, int FinishedTasks,
     int? CurrentTaskId, string Phase, int CompletedFiles, long CompletedBytes,
-    DateTimeOffset? StartedAt, DateTimeOffset UpdatedAt);
+    DateTimeOffset? StartedAt, DateTimeOffset UpdatedAt)
+{
+    public bool? CleanupFiles { get; init; }
+    public bool? DeleteDeliveredFiles { get; init; }
+    public bool SelectedDirectoriesOnly { get; init; }
+    public bool ReceiptOnly { get; init; }
+}
 public sealed record AcquisitionTaskDeleteRow(int TaskId, string? Title, bool CanDelete, string? ReasonCode,
     AcquisitionTaskDeleteCleanup? Cleanup = null, bool CanRemoveTaskIfCleanupFails = false, bool WillStopExecution = false);
 public sealed record AcquisitionTaskDeletePreview(string PreviewId, DateTimeOffset ExpiresAt, int TotalCount,

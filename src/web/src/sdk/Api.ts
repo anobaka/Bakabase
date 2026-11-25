@@ -9342,6 +9342,10 @@ export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDele
   startedAt?: string;
   /** @format date-time */
   updatedAt: string;
+  cleanupFiles?: boolean;
+  deleteDeliveredFiles?: boolean;
+  selectedDirectoriesOnly: boolean;
+  receiptOnly: boolean;
 }
 
 export interface BakabaseServiceComponentsAcquisitionPlanningAcquisitionTaskDeleteResult {
