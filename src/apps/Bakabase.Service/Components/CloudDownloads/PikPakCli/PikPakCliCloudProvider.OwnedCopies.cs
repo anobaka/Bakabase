@@ -64,7 +64,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
                         return OwnedReceipt(journal);
                     }, ct), ct), ct);
         }
-        catch (PikPakCliException error) { throw new CloudProviderException(error.Code, true); }
+        catch (PikPakCliException error) { throw new CloudProviderException(error.Code, true) {CanWaitForCapacity = error.CanWaitForCapacity}; }
     }
 
     public async Task<CloudOwnedCopyRelease> ReleaseOwnedCopyAsync(CloudDownloadRequest request,

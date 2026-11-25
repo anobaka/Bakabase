@@ -266,10 +266,12 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
                 }
             }
             var current = await capability.RevalidateDownloadAsync(executionRequest, ct);
+            var waitingForCapacity = !current.Available && current.CanWaitForCapacity &&
+                provider is ICloudDownloadCapacityWaitProvider && !prepared && !forSourceRevision;
             if (!current.Available)
             {
                 failure = WorkflowSourceRunProblems.Extract(current.Problem).FirstOrDefault() ?? failure;
-                return Block("RECOVERY_SOURCE_STILL_BLOCKED");
+                if (!waitingForCapacity) return Block("RECOVERY_SOURCE_STILL_BLOCKED");
             }
             // A network probe can overlap another consumer or user edit. Do not certify a stale
             // local snapshot; execution repeats this local guard under the downloader action lock.
@@ -282,7 +284,9 @@ public sealed partial class CloudDownloadRecoveryService(BakabaseDbContext db, I
             if (!latest.Candidate) return latest;
             if (latest.PreparedRetry != preparedRetry)
                 return Block("RECOVERY_DOWNLOAD_IDENTITY_CHANGED");
-            return new(true, prepared ? "RECOVERY_PREPARED_DOWNLOAD_REVALIDATED" : "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED", failure, true)
+            var reason = waitingForCapacity ? "RECOVERY_WAIT_FOR_CLOUD_STORAGE" :
+                prepared ? "RECOVERY_PREPARED_DOWNLOAD_REVALIDATED" : "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED";
+            return new(true, reason, failure, true)
                 {PreparedRetry = latest.PreparedRetry};
         }
         catch (UserStoragePathException) {return Block("RECOVERY_STORAGE_UNAVAILABLE");}

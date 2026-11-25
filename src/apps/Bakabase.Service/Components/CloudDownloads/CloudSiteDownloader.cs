@@ -178,12 +178,10 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
             Current = "WaitingForStorageCapacity";
             await OnCurrentChangedInternal();
         }
-        var result = await RunWithStorageAsync(services.GetService<IStorageWriteGuard>(), provider, request,
-            Download, WaitingForCapacity, ct, async () =>
-            {
-                Current = "Verifying";
-                await OnCurrentChangedInternal();
-            });
+        Task<CloudDownloadResult> Run() => RunWithStorageAsync(services.GetService<IStorageWriteGuard>(), provider,
+            request, Download, WaitingForCapacity, ct, () => ReportProgress(new(null, Stage: "Verifying")));
+        var result = await RunWithCloudCapacityAsync(provider as ICloudDownloadCapacityWaitProvider, request, Run,
+            () => ReportProgress(new(null, Stage: ICloudDownloadCapacityWaitProvider.WaitStage)), ct);
         CloudDownloadManifest.Validate(task.DownloadPath, result.Files);
         foreach (var file in result.Files)
         {
@@ -205,6 +203,31 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
             if (ownedCopies != null) await ownedCopies.DownloadVerifiedAsync(task.Id, request, receipt);
         }
         await OnProgressInternal(100);
+    }
+
+    internal static async Task<CloudDownloadResult> RunWithCloudCapacityAsync(ICloudDownloadCapacityWaitProvider? provider,
+        CloudDownloadRequest request, Func<Task<CloudDownloadResult>> execute, Func<Task> waiting,
+        CancellationToken ct, TimeSpan? checkInterval = null)
+    {
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            try { return await execute(); }
+            catch (CloudProviderException error) when (error.CanWaitForCapacity && provider != null)
+            {
+                // The original attempt has released its local reservations, account lease and transfer lock.
+                // Keep this native queue slot and its stop token. Poll metadata only until it fits.
+                CloudReadiness readiness;
+                do
+                {
+                    await waiting();
+                    await Task.Delay(checkInterval ?? TimeSpan.FromMinutes(1), ct);
+                    readiness = await provider.CheckWaitingCapacityAsync(request, ct);
+                } while (!readiness.Available && readiness.CanWaitForCapacity);
+                if (!readiness.Available) throw new CloudProviderException(readiness.Problem ?? error.Message);
+                // The ordinary provider start validates the source, journal and capacity again under its write lock.
+            }
+        }
     }
 
     internal static async Task<CloudDownloadResult> RunWithStorageAsync(IStorageWriteGuard? writes,

@@ -17,3 +17,11 @@ public interface ICloudDownloadRecoveryProvider
 
     Task<CloudReadiness> RevalidateDownloadAsync(CloudDownloadRequest request, CancellationToken ct);
 }
+
+/// <summary>Read-only recheck for an already admitted original download waiting before its cloud copy is submitted.</summary>
+public interface ICloudDownloadCapacityWaitProvider
+{
+    const string WaitStage = "WaitingForCloudStorageCapacity";
+
+    Task<CloudReadiness> CheckWaitingCapacityAsync(CloudDownloadRequest request, CancellationToken ct);
+}

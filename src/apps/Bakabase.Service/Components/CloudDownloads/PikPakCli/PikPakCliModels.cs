@@ -52,6 +52,7 @@ public sealed class PikPakCliException(string code) : InvalidOperationException(
 {
     public string Code { get; } = code;
     internal PikPakCliFailureEvidence? Evidence { get; init; }
+    internal bool CanWaitForCapacity { get; init; }
 }
 
 // Diagnostic facts, never a promise that a remote write was rejected. In particular,

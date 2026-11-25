@@ -17,7 +17,7 @@ namespace Bakabase.Service.Components.CloudDownloads.PikPakCli;
 
 /// <summary>Official share restore and original-file download. Every remote write has a durable
 /// intent and a private destination; an unknown result is reconciled, never blindly repeated.</summary>
-public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownloadRecoveryProvider, ICloudDownloadAbandonmentProvider
+public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICloudDownloadRecoveryProvider, ICloudDownloadAbandonmentProvider, ICloudDownloadCapacityWaitProvider
 {
     private readonly PikPakCliAccountService accounts;
     private readonly IUserStoragePolicy? storage;
@@ -95,8 +95,10 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
                 if (journal is {State: "folderCreating"}) return new(false, "PIKPAK_RESTORE_REVIEW_REQUIRED");
                 var selection = await ReadShare(account, request.Source, ct);
                 if (journal != null && !Same(journal.Selection, selection)) return new(false, "PIKPAK_SHARE_CHANGED");
-                if (CheckCapacity(status, selection).IsInsufficient)
-                    return new(false, "PIKPAK_STORAGE_QUOTA_EXCEEDED");
+                var capacity = CheckCapacity(status, selection);
+                if (capacity.IsInsufficient)
+                    return new CloudReadiness(false, "PIKPAK_STORAGE_QUOTA_EXCEEDED")
+                        {CanWaitForCapacity = capacity.FitsEmptyAccount};
                 // A metadata check never saves shares or opens payload URLs. Even an old
                 // anonymous failed task can therefore use this without changing its history.
                 return new CloudReadiness(true);
@@ -125,7 +127,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
                 return await DownloadFiles(request, output, journal, account, progress, ct);
             }, ct), ct);
         }
-        catch (PikPakCliException error) { throw new CloudProviderException(error.Code, true); }
+        catch (PikPakCliException error) { throw new CloudProviderException(error.Code, true) {CanWaitForCapacity = error.CanWaitForCapacity}; }
     }
 
     private async Task<T> WithOperation<T>(string operationId, Func<Task<T>> action, CancellationToken ct)
@@ -355,7 +357,31 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         var check = CheckCapacity(await account.ReadStatusAsync(ct), journal.Selection);
         journal.CapacityChecks.Add(check);
         await SaveJournal(operationId, journal, ct);
-        if (check.IsInsufficient) throw new PikPakCliException("PIKPAK_STORAGE_QUOTA_EXCEEDED");
+        if (check.IsInsufficient) throw new PikPakCliException("PIKPAK_STORAGE_QUOTA_EXCEEDED")
+            {CanWaitForCapacity = check.FitsEmptyAccount};
+    }
+
+    public async Task<CloudReadiness> CheckWaitingCapacityAsync(CloudDownloadRequest request, CancellationToken ct)
+    {
+        try
+        {
+            return await WithOperation(request.OperationId, () => accounts.WithAccountAsync(
+                request.AccountId ?? request.Source.AccountId, request.Source.AccountVersion, async account =>
+                {
+                    var journal = await ReadJournal(request.OperationId, ct);
+                    if (journal == null) return new(false, "PIKPAK_OPERATION_CHANGED");
+                    CheckIdentity(journal, request.Source, account);
+                    if (journal.State is not ("planned" or "folderReady") || journal.Files.Count != 0 || journal.Attempts.Count != 0)
+                        return new(false, "PIKPAK_RESTORE_REVIEW_REQUIRED");
+                    var capacity = CheckCapacity(await account.ReadStatusAsync(ct), journal.Selection);
+                    if (capacity.FitsAvailableSpace) return new CloudReadiness(true);
+                    if (capacity.Result == "unknown")
+                        return new CloudReadiness(false, "PIKPAK_CAPACITY_UNAVAILABLE") {CanWaitForCapacity = true};
+                    return new CloudReadiness(false, "PIKPAK_STORAGE_QUOTA_EXCEEDED")
+                        {CanWaitForCapacity = capacity.FitsEmptyAccount};
+                }, ct), ct);
+        }
+        catch (PikPakCliException error) { return new(false, error.Code); }
     }
 
     internal static async Task<IReadOnlyList<ShareNode>> ReadShare(PikPakCliAccountLease account, CloudSource source, CancellationToken ct)

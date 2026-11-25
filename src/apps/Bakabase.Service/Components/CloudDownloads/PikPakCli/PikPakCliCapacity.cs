@@ -16,6 +16,13 @@ internal static class PikPakCliCapacity
         decimal? RequiredMinimum)
     {
         public bool IsInsufficient => Result == "insufficient";
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public decimal? RequiredMaximum { get; init; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool FitsEmptyAccount => Total is {Minimum: > 0} && RequiredMaximum <= Total.Minimum;
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool FitsAvailableSpace => Result == "unlimited" || FitsEmptyAccount && Used?.Maximum + RequiredMaximum <= Total!.Minimum;
     }
 
     internal static Bounds? Parse(string? display)
@@ -41,24 +48,26 @@ internal static class PikPakCliCapacity
     internal static Check Evaluate(JsonElement status, IEnumerable<string?> fileSizes)
     {
         Bounds? used = null, total = null;
+        var unlimited = false;
         if (status.TryGetProperty("storage", out var storage) && storage.ValueKind == JsonValueKind.Object)
         {
+            unlimited = PikPakCliJson.True(storage, "is_unlimited");
             used = Parse(PikPakCliJson.Text(storage, "used"));
             total = Parse(PikPakCliJson.Text(storage, "total"));
         }
-        decimal? required = 0;
+        decimal? required = 0, maximum = 0;
         foreach (var size in fileSizes)
         {
             var bounds = Parse(size);
-            if (bounds == null) { required = null; break; }
-            try { required = checked(required + bounds.Minimum); }
-            catch (OverflowException) { required = null; break; }
+            if (bounds == null) { required = maximum = null; break; }
+            try { required = checked(required + bounds.Minimum); maximum = checked(maximum + bounds.Maximum); }
+            catch (OverflowException) { required = maximum = null; break; }
         }
         var known = used != null && total is {Minimum: > 0};
         // A zero/unavailable total may mean an unsupported account type. Also do not
         // subtract trash: the provider's reported used value already defines its quota.
         var insufficient = known && used!.Minimum + (required ?? 0) > total!.Maximum;
-        return new(DateTimeOffset.UtcNow, insufficient ? "insufficient" : known && required != null
-            ? "notProvenInsufficient" : "unknown", used, total, required);
+        return new(DateTimeOffset.UtcNow, unlimited ? "unlimited" : insufficient ? "insufficient" : known && required != null
+            ? "notProvenInsufficient" : "unknown", used, total, required) {RequiredMaximum = maximum};
     }
 }

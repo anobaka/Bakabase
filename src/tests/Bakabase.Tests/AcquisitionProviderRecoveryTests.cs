@@ -270,8 +270,11 @@ public sealed partial class AcquisitionRecoveryTests
         Assert.IsFalse(Directory.Exists(download.DownloadPath)); Assert.AreEqual(1, await _db.DownloadTasks.CountAsync());
     }
 
-    [TestMethod]
-    public async Task PikPak_original_download_preview_reads_fresh_account_status_once_and_reports_cloud_capacity()
+    [DataTestMethod]
+    [DataRow("workflow", "resume")]
+    [DataRow("downloads", "downloads")]
+    public async Task PikPak_original_download_preview_reads_fresh_account_status_once_and_reports_cloud_capacity(
+        string scope, string expectedAction)
     {
         var native = new PikPakCliTests.Native();
         var cliRoot = Path.Combine(_root, "pikpak");
@@ -297,22 +300,28 @@ public sealed partial class AcquisitionRecoveryTests
         var service = new AcquisitionRecoveryService(_db, diagnostics, new(), new RecordingHost());
         var before = JsonSerializer.Serialize(new {task, run, download, operation});
         async Task<AcquisitionRecoveryRow> Preview() =>
-            (await service.PreviewAsync(new([task.Id], "downloads"))).Rows.Single();
+            (await service.PreviewAsync(new([task.Id], scope))).Rows.Single();
 
         native.Storage = """{"used":"3 B","total":"4 B"}""";
         native.Calls.Clear();
-        var blocked = await Preview();
-        Assert.IsFalse(blocked.CanContinue);
-        Assert.AreEqual("RECOVERY_SOURCE_STILL_BLOCKED", blocked.ReasonCode);
-        Assert.AreEqual("PIKPAK_STORAGE_QUOTA_EXCEEDED", blocked.CurrentProblemCode);
+        var waiting = await Preview();
+        Assert.IsTrue(waiting.CanContinue, waiting.ReasonCode);
+        Assert.AreEqual("RECOVERY_WAIT_FOR_CLOUD_STORAGE", waiting.ReasonCode);
+        Assert.AreEqual(expectedAction, waiting.Action);
         CollectionAssert.AreEqual(new[] {"auth status", "share get", "share get"},
             native.Calls.Select(command => string.Join(' ', command.Take(2))).ToArray());
+
+        native.Storage = """{"used":"0 B","total":"2 B"}""";
+        var oversized = await Preview();
+        Assert.IsFalse(oversized.CanContinue);
+        Assert.AreEqual("RECOVERY_SOURCE_STILL_BLOCKED", oversized.ReasonCode);
+        Assert.AreEqual("PIKPAK_STORAGE_QUOTA_EXCEEDED", oversized.CurrentProblemCode);
 
         native.Storage = """{"used":"0 B","total":"4 B"}""";
         native.Calls.Clear();
         var ready = await Preview();
         Assert.IsTrue(ready.CanContinue, ready.ReasonCode);
-        Assert.AreEqual("downloads", ready.Action);
+        Assert.AreEqual(expectedAction, ready.Action);
         Assert.AreEqual(1, native.Calls.Count(command => command.SequenceEqual(new[] {"auth", "status"})));
 
         native.Approved = false;

@@ -39,7 +39,11 @@ public sealed record CloudAccessCodeRevision
     public DateTime AppliedAt { get; init; }
 }
 
-public sealed record CloudReadiness(bool Available, string? Problem = null);
+public sealed record CloudReadiness(bool Available, string? Problem = null)
+{
+    /// <summary>The provider verified that the selected input fits this account after other files are released.</summary>
+    public bool CanWaitForCapacity { get; init; }
+}
 public sealed record CloudRemoteEntry(string ProviderId, string AccountId, string Path, string? ManifestJson = null)
 {
     /// <summary>A provider-issued reference, not proof by itself; download must verify its durable transfer receipt.</summary>
@@ -79,6 +83,8 @@ public sealed record CloudTransferDiagnostic(string Code, int? ProviderCode, int
 public sealed class CloudProviderException(string message, bool mayHaveSideEffects = false) : InvalidOperationException(message)
 {
     public bool MayHaveSideEffects { get; } = mayHaveSideEffects;
+    /// <summary>Issued only at a checked capacity boundary before submission, never inferred from a remote error message.</summary>
+    public bool CanWaitForCapacity { get; init; }
     public CloudVerificationLocation? VerificationLocation { get; init; }
     public CloudTransferDiagnostic? TransferDiagnostic { get; init; }
 }

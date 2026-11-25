@@ -810,6 +810,8 @@ public sealed partial class PikPakCliTests
         private string? _folderName;
         private bool _restored;
         internal void CompleteRestore() => _restored = true;
+        public async Task<JsonElement?> TryReadStatusAsync(string profile, CancellationToken ct) =>
+            await RunAsync(profile, ["auth", "status"], ct);
         public async Task<JsonElement> RunAsync(string profile, IReadOnlyList<string> arguments, CancellationToken ct,
             bool payload = false, Action? observeProgress = null)
         {

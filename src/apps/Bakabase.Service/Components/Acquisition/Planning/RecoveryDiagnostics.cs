@@ -264,7 +264,9 @@ public sealed partial class AcquisitionRecoveryDiagnostics(BakabaseDbContext db,
                     var signal = new CloudSelectionSignal {ObserveExistingOnly = true, ResumeTargetIds = targets.Select(t => t.Id).ToList(),
                         RevalidateExistingDownloads = true, PreparedDownloadRetries = prepared.Count > 0 ? prepared : null};
                     var ready = checkedRemote || preparedReason == "RECOVERY_SEALED_DOWNLOAD_HANDOFF_READY";
-                    return Result(ready ? preparedReason ?? "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED" : "RECOVERY_RECHECK_SOURCE",
+                    var originalReason = targets.Any(t => t.Check.ReasonCode == "RECOVERY_WAIT_FOR_CLOUD_STORAGE")
+                        ? "RECOVERY_WAIT_FOR_CLOUD_STORAGE" : "RECOVERY_ORIGINAL_DOWNLOAD_REVALIDATED";
+                    return Result(ready ? preparedReason ?? originalReason : "RECOVERY_RECHECK_SOURCE",
                         ready, signal: JsonSerializer.Serialize(signal, WorkflowJson.Options)) with {PreparedDownloadReason = preparedReason};
                 }
                 var candidates = checkedTargets.Where(t => t.Check.Candidate).ToList();
