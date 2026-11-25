@@ -141,8 +141,14 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
                     var check = await PreviewAsync(task, owners, true, true, ct,
                         cleanupIntermediates: intermediate == AcquisitionTaskDeletionService.CompleteCleanup,
                         deleteDeliveredFiles: delivery == AcquisitionTaskDeletionService.CompleteCleanup, directDirectoryDeletion: true);
-                    if (check.Summary.ReasonCode == null && check.Summary.Groups.Count > 0 &&
-                        check.Summary.Groups.All(g => g.Eligible && g.ReasonCode == "AlreadyAbsent"))
+                    // A registered file in a shared container can be gone while its directory
+                    // and unrelated siblings are still present. Confirm those exact names only.
+                    bool Gone(AcquisitionTaskDeleteCleanupGroup group) => group.Eligible &&
+                        (group.ReasonCode == "AlreadyAbsent" ||
+                         group is {RegisteredFilesOnly: true, ReasonCode: null, FilesTruncated: false, Files.Count: > 0} &&
+                         group.FileCount == group.Files.Count &&
+                         ArtifactCleanupAbsence.AllConfirmedAbsent(group.Directory, group.Files.Select(f => f.Path).ToArray(), ct));
+                    if (check.Summary.ReasonCode == null && check.Summary.Groups.Count > 0 && check.Summary.Groups.All(Gone))
                     { deletedAt = DateTime.UtcNow; codes = ""; }
                     else codes = DeferredStageCleanup.RequiresReview;
                 }

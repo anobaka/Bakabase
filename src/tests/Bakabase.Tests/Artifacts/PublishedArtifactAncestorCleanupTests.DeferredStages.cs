@@ -7,9 +7,11 @@ namespace Bakabase.Tests.Artifacts;
 public sealed partial class PublishedArtifactAncestorCleanupTests
 {
     [DataTestMethod]
-    [DataRow(false)]
-    [DataRow(true)]
-    public async Task Direct_delete_defers_an_already_unlinked_stage_and_cleans_other_selected_stages(bool deleteDelivery)
+    [DataRow(false, false)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task Direct_delete_defers_an_already_unlinked_stage_and_cleans_other_selected_stages(bool deleteDelivery,
+        bool registeredFileReappears)
     {
         if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux()) Assert.Inconclusive();
         var f = await StageDeletion();
@@ -32,6 +34,20 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
         await f.Cleanup.FinishPendingSmbBatchAsync(0, default);
         Assert.IsTrue(File.Exists(marker));
 
+        var registered = f.HistoricalSource.Files.First();
+        Assert.IsFalse(File.Exists(registered));
+        var sibling = Path.Combine(f.HistoricalSource.RootDirectory, "other-owner.bin");
+        await File.WriteAllTextAsync(sibling, "keep this file");
+        if (registeredFileReappears) await File.WriteAllTextAsync(registered, "a new file at the old path");
+        File.Delete(marker);
+        await f.Cleanup.FinishPendingSmbBatchAsync(0, default);
+        Assert.IsFalse(Directory.Exists(f.Download));
+        row = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == f.Task.Id);
+        Assert.AreEqual(registeredFileReappears, row.DeletedAt == null);
+        Assert.AreEqual(registeredFileReappears, File.Exists(registered));
+        Assert.AreEqual("keep this file", await File.ReadAllTextAsync(sibling));
+        if (registeredFileReappears)
+            Assert.AreEqual(DeferredStageCleanup.RequiresReview, row.DeletedCleanupReasons);
     }
 
     // The local test filesystem unlinks open files immediately. Simulate only the SMB
