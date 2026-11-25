@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
@@ -71,6 +72,8 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
             var verification = source.FileVerification;
             var summary = verification == null ? summaries.GetValueOrDefault(source.Id) : null;
             var status = verification != null ? "running" : summary?.Status ?? SiteStatus(source.Status);
+            var stage = verification?.Stage ?? summary?.Status ?? source.Current;
+            var waitingForCloud = status == "running" && stage == ICloudDownloadCapacityWaitProvider.WaitStage;
             IReadOnlyList<string> actions = verification != null ? [] : owner == null && (cloudOwner == null || run?.Status is
                     WorkflowRunStatus.Success or WorkflowRunStatus.Cancelled or WorkflowRunStatus.Failed or WorkflowRunStatus.Interrupted)
                     ? SiteActions(source, status)
@@ -85,8 +88,8 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
                 Id = $"site:{source.Id}", Category = "site", Provider = "site", ProviderTaskId = source.Id.ToString(),
                 OwnedCopy = ownedCopies.GetValueOrDefault(source.Id),
                 SiteTaskId = source.Id, ThirdPartyId = (int)source.ThirdPartyId, Key = source.Key,
-                Name = source.DisplayName, OutputDirectory = source.DownloadPath, Status = status,
-                Stage = verification?.Stage ?? summary?.Status ?? source.Current,
+                Name = source.DisplayName, OutputDirectory = source.DownloadPath, Status = waitingForCloud ? "queued" : status,
+                Stage = stage,
                 Progress = verification != null ? null : summary != null ? summary.Progress : (double)source.Progress,
                 CompletedBytes = verification == null ? source.TransferredBytes ?? source.DownloadedBytes : null,
                 TotalBytes = verification == null ? source.TotalBytes : null,

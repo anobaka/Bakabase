@@ -63,6 +63,22 @@ public sealed class AcquisitionDownloadActivityTests
         new(id, parent, run, status, 20, 20, 100, DateTimeOffset.UtcNow, status == "failed" ? "LOCAL_STORAGE_RESERVE_LOW" : null);
 
     [TestMethod]
+    public async Task CloudStorageWaitStaysInTheQueueUntilAChildStartsDownloading()
+    {
+        await Seed([Target("one", 11), Target("two", 12)]);
+        var wait = Download("site:11", "running") with
+        {
+            Stage = AcquisitionRuntimeDownloadReader.SafeStage("WaitingForCloudStorageCapacity")
+        };
+        _reader.Values = [wait, Download("site:12", "queued")];
+        var waiting = await _search.SearchAsync(new(Stage: "running"));
+        Assert.AreEqual("waitingForCloudStorage", waiting.Items.Single().DownloadActivity);
+        _reader.Values = [wait, Download("site:12", "running")];
+        var active = await _search.SearchAsync(new(Stage: "running"));
+        Assert.AreEqual("running", active.Items.Single().DownloadActivity);
+    }
+
+    [TestMethod]
     public async Task CountsFiltersAndPageShareActivityWhilePersistedWaitingSurvivesCompletion()
     {
         var (running, run) = await Seed([Target("one", 11, problem: "LOCAL_STORAGE_RESERVE_LOW")]);

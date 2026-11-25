@@ -326,6 +326,7 @@
   "downloadCenter.stage.LOCAL_STORAGE_ACCESS_DENIED": "Access to the target directory was denied. Restore permissions before continuing the original task.",
   "downloadCenter.stage.LOCAL_STORAGE_UNAVAILABLE": "Target storage is unavailable. Restore the original mount before continuing the original task.",
   "downloadCenter.stage.LOCAL_STORAGE_RESERVE_LOW": "The destination volume does not meet the free-space reserve; new writes are paused. Free space, then use Diagnose and continue or Start. Existing files and checkpoints are retained.",
+  "downloadCenter.stage.WaitingForCloudStorageCapacity": "Waiting for cloud storage to become available. The download will resume automatically.",
   "downloadCenter.stage.WaitingForStorageCapacity": "Waiting for reserved storage capacity",
   "downloadCenter.existingFiles.action": "Verify and register existing files",
   "downloadCenter.existingFiles.confirm": "Verify files",

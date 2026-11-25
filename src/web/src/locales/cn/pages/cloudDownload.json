@@ -584,7 +584,7 @@
   "cloudDownload.problemCode.PIKPAK_CAPACITY_UNAVAILABLE": "暂时无法读取 PikPak 容量。请稍后刷新空间。",
   "pikpakCli.cleanup.title": "云端临时副本",
   "pikpakCli.cleanup.toggle": "下载校验后，将临时转存副本移入回收站",
-  "pikpakCli.cleanup.hint": "仅处理此账号中由 Bakabase 为单个下载创建的临时副本。PikPak 回收站仍占用空间，可在官方客户端核对后永久删除。",
+  "pikpakCli.cleanup.hint": "仅清理 Bakabase 为单个下载创建的临时副本。移入回收站后仍占空间。可在 PikPak 官方客户端核对后永久删除，空间足够时，排队的下载会自动开始。",
   "pikpakCli.cleanup.permissionGranted": "已授权管理文件，可以将临时副本移入回收站。",
   "pikpakCli.cleanup.authorize": "授权管理文件",
   "cloudDownload.problemCode.PIKPAK_MANAGE_FILES_SCOPE_REQUIRED": "将副本移入回收站需要文件管理权限。请在 PikPak 账号设置中选择“授权管理文件”。",

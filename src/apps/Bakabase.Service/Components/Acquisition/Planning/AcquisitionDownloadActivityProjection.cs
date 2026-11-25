@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Acquisition.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Abstractions.Models.Domain.Constants;
 using Microsoft.EntityFrameworkCore;
@@ -102,7 +103,9 @@ public sealed class AcquisitionDownloadActivityProjection(BakabaseDbContext db, 
     }
 
     internal static string? Activity(IEnumerable<AcquisitionRuntimeDownload> values) =>
-        values.Any(d => d.Status == "running") ? "running" : values.Any(d => d.Status == "queued") ? "queued" : null;
+        values.Any(d => d.Status == "running" && d.Stage != ICloudDownloadCapacityWaitProvider.WaitStage) ? "running" :
+        values.Any(d => d.Status is ("running" or "queued") && d.Stage == ICloudDownloadCapacityWaitProvider.WaitStage) ? "waitingForCloudStorage" :
+        values.Any(d => d.Status == "queued") ? "queued" : null;
     internal static bool IsDownloadNode(string? kind) => kind is "download.awaitCompletion" or "download.enqueueSupported" or
         "cloud.download" or "acquisition.fetchSupported";
 

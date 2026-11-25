@@ -54,7 +54,7 @@ it("matches hash-prefixed IDs and preserves literal hash text in task names", ()
   ]);
 });
 
-it.each(["running", "queued"])("presents a waiting workflow with %s child activity as acquiring", (activity) => {
+it.each(["running", "queued", "waitingForCloudStorage"])("presents a waiting workflow with %s child activity as acquiring", (activity) => {
   const task = { id: 8, workflowRunId: 30, status: Status.Waiting, stage: "attention", downloadActivity: activity } as PlanTask;
   expect(acquisitionTaskStage(task)).toBe("running");
   expect(acquisitionStageLabel(((key: string) => key) as TFunction, task)).toBe(`acquisition.downloadActivity.${activity}`);

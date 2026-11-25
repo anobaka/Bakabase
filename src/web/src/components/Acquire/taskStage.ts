@@ -38,7 +38,7 @@ export function acquisitionDownloadActivity(task: StageTask, overview?: Download
   const current = currentDownloadOverview(task, overview);
   // An authoritative current observation with no activity clears an older list snapshot.
   const activity = current ? current.downloadActivity : task.downloadActivity;
-  return activity === "running" || activity === "queued" ? activity : undefined;
+  return activity === "running" || activity === "queued" || activity === "waitingForCloudStorage" ? activity : undefined;
 }
 
 /** Preparation and a prepared plan both use Waiting internally; only an executing wait needs intervention. */

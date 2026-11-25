@@ -38,7 +38,7 @@ public record AcquisitionTask
         AcquisitionStatus.Completed => "completed",
         AcquisitionStatus.Failed => "attention",
         AcquisitionStatus.Running => "running",
-        AcquisitionStatus.Waiting when downloadActivity is "running" or "queued" => "running",
+        AcquisitionStatus.Waiting when downloadActivity is "running" or "queued" or "waitingForCloudStorage" => "running",
         _ when workflowRunId != null => status is AcquisitionStatus.Pending or AcquisitionStatus.Running
             ? "running" : "attention",
         _ when builderId != null => phase == "attention" ? "attention" :

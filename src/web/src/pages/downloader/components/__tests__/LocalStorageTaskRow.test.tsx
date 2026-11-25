@@ -19,6 +19,7 @@ vi.mock("react-i18next", () => ({
 }));
 
 const codes = [
+  "WaitingForCloudStorageCapacity",
   "LOCAL_STORAGE_FULL",
   "LOCAL_STORAGE_RESERVE_LOW",
   "LOCAL_STORAGE_WRITE_FAILED",

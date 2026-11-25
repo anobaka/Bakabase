@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business;
+using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.Modules.Bittorrent.Abstractions;
 using Bakabase.Modules.Bittorrent.Models;
@@ -121,6 +122,7 @@ public sealed class AcquisitionRuntimeDownloadReader(BakabaseDbContext db, Downl
         "transferfinishing" => "TransferFinishing", "transferfailed" => "TransferFailed",
         "transfercancelled" => "TransferCancelled", "transfermixed" => "TransferMixed",
         "transferstateunavailable" => "TransferStateUnavailable", "waitingfortransferquota" => "WaitingForTransferQuota",
+        "waitingforcloudstoragecapacity" => ICloudDownloadCapacityWaitProvider.WaitStage,
         "downloading" or "downloading original files" or "downloading original files with rclone" => "Downloading",
         _ => null
     };

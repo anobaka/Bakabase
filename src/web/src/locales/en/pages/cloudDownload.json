@@ -584,7 +584,7 @@
   "cloudDownload.problemCode.PIKPAK_CAPACITY_UNAVAILABLE": "PikPak capacity is currently unavailable. Refresh storage to try again.",
   "pikpakCli.cleanup.title": "Temporary cloud copies",
   "pikpakCli.cleanup.toggle": "Move temporary copies to the trash after download verification",
-  "pikpakCli.cleanup.hint": "Applies to copies Bakabase creates in this account for an individual download. Items in the PikPak trash still use storage. Review and permanently delete them in the official client to free space.",
+  "pikpakCli.cleanup.hint": "Applies to temporary copies Bakabase creates for an individual download. Items in the PikPak trash still use storage. You can review and permanently delete them in the official client. Queued downloads start automatically when enough space is available.",
   "pikpakCli.cleanup.permissionGranted": "File management is authorized. Temporary copies can be moved to the trash.",
   "pikpakCli.cleanup.authorize": "Authorize file management",
   "cloudDownload.problemCode.PIKPAK_MANAGE_FILES_SCOPE_REQUIRED": "Moving a copy to the trash requires file management permission. Choose “Authorize file management” in PikPak account settings.",

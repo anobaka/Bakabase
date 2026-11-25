@@ -326,6 +326,7 @@
   "downloadCenter.stage.LOCAL_STORAGE_ACCESS_DENIED": "无法读写目标目录。请修复目录权限后继续原任务。",
   "downloadCenter.stage.LOCAL_STORAGE_UNAVAILABLE": "目标存储不可访问。请恢复原挂载后继续原任务。",
   "downloadCenter.stage.LOCAL_STORAGE_RESERVE_LOW": "目标存储未达到预留空间要求，新增写入已暂停。释放空间后使用“诊断并继续”或“启动”，保留原文件和断点。",
+  "downloadCenter.stage.WaitingForCloudStorageCapacity": "等待云盘释放空间，空间足够后自动继续",
   "downloadCenter.stage.WaitingForStorageCapacity": "等待其他写入释放预留容量",
   "downloadCenter.existingFiles.action": "核验并登记已有文件",
   "downloadCenter.existingFiles.confirm": "开始核验",
