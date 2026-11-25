@@ -21,7 +21,7 @@ using Microsoft.Extensions.Localization;
 namespace Bakabase.Tests;
 
 [TestClass, DoNotParallelize]
-public sealed class CloudDownloadDestinationTests
+public sealed partial class CloudDownloadDestinationTests
 {
     private IServiceProvider _services = null!;
     private BakabaseDbContext _db = null!;
@@ -272,13 +272,16 @@ public sealed class CloudDownloadDestinationTests
         Assert.AreEqual("DOWNLOAD_DESTINATION_PATH_INVALID",check.ReasonCode);
     }
 
-    [TestMethod]
-    public void BaiduPathMapIsNeverRewrittenEvenWhenNoPayloadExists()
+    [DataTestMethod]
+    [DataRow(".paths-v1.json")]
+    [DataRow(".reuse-v1.json")]
+    [DataRow(".reuse-v1.json.lock")]
+    public void BaiduProviderEvidenceIsNeverRewrittenEvenWhenNoPayloadExists(string suffix)
     {
         var account = Path.Combine(_root,"account");Directory.CreateDirectory(account);
         Assert.IsTrue(BaiduCloudDownloadProvider.InspectPathJournal(account,"intent").Available);
         var key = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("intent"))).ToLowerInvariant();
-        Directory.CreateDirectory(Path.Combine(account,"operations"));var path=Path.Combine(account,"operations",key+".paths-v1.json");File.WriteAllText(path,"original");
+        Directory.CreateDirectory(Path.Combine(account,"operations"));var path=Path.Combine(account,"operations",key+suffix);File.WriteAllText(path,"original");
         Assert.AreEqual("DOWNLOAD_DESTINATION_PROVIDER_STATE_PRESENT",BaiduCloudDownloadProvider.InspectPathJournal(account,"intent").Problem);
         Assert.AreEqual("original",File.ReadAllText(path));
     }
@@ -420,12 +423,17 @@ public sealed class CloudDownloadDestinationTests
     {
         public string ProviderId=>"baidu";public string? Problem;public int Checks;public Func<Task>? DuringCheck;
         public async Task<CloudReadiness> InspectDestinationRevisionAsync(CloudDownloadRequest request,string newDirectory,CancellationToken ct)
-        {Checks++;if(DuringCheck!=null)await DuringCheck();return new(Problem==null,Problem);}
+        {Checks++;LastDestinationInspection=request;if(DuringCheck!=null)await DuringCheck();return new(Problem==null,Problem);}
         public string ObservedFingerprint = new('a', 64);
         public int ReuseInspections;
+        public CloudDownloadRequest? LastSourceInspection;
+        public CloudDownloadRequest? LastDestinationInspection;
+        public Action? DuringSourceInspection;
         public Task<CloudDownloadReuseInventory> InspectReuseSourceAsync(CloudDownloadRequest request, CancellationToken ct)
         {
             ReuseInspections++;
+            LastSourceInspection = request;
+            DuringSourceInspection?.Invoke();
             return Task.FromResult(new CloudDownloadReuseInventory(new(4, 100, 2, 30), ObservedFingerprint));
         }
         public CloudDownloadRequest? LastRetainedRequest;

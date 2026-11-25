@@ -37,6 +37,9 @@ public sealed record CloudDownloadDestinationRevision(string RevisionId, string 
     /// <summary>Persist only the source snapshot identity. Source directory and provider scope follow the validated revision chain.</summary>
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? ReuseInventoryFingerprint { get; init; }
+    /// <summary>A new source snapshot for this existing placement. Both provider layout identities stay fixed.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? RefreshOfRevisionId { get; init; }
 }
 
 /// <summary>One resolver for physical placement; never change the persisted semantic input or operation key.</summary>
@@ -65,6 +68,11 @@ public static class CloudDownloadDestinations
         CloudDownloadReuseSource? source = null;
         foreach (var revision in revisions)
         {
+            if (revision.RefreshOfRevisionId != null)
+            {
+                source = source! with {InventoryFingerprint = revision.ReuseInventoryFingerprint!};
+                continue;
+            }
             source = revision.ReuseInventoryFingerprint is { } fingerprint
                 ? new(layout, revision.PreviousDirectory, fingerprint) : null;
             if (source != null) layout = request.OperationId + ":destination:" + revision.RevisionId;
@@ -72,10 +80,17 @@ public static class CloudDownloadDestinations
         return request with {OutputDirectory = directory, DestinationRevisions = null, ProviderLayoutId = layout, ReuseSource = source};
     }
 
+    /// <summary>Inspect the retained source with its original provider layout, independently of the current destination.</summary>
+    public static CloudDownloadRequest RetainedSourceRequest(CloudDownloadRequest execution)
+    {
+        var source = execution.ReuseSource ?? throw new InvalidOperationException("DOWNLOAD_DESTINATION_REUSE_UNSUPPORTED");
+        return execution with {OutputDirectory = source.OutputDirectory, ProviderLayoutId = source.OperationId, ReuseSource = null};
+    }
+
     public static IEnumerable<CloudDownloadDestinationRevision> RetainedSources(CloudDownloadRequest request)
     {
         Validate(request);
-        return request.DestinationRevisions?.Where(r => r.ReuseInventoryFingerprint != null) ?? [];
+        return request.DestinationRevisions?.Where(r => r.ReuseInventoryFingerprint != null && r.RefreshOfRevisionId == null) ?? [];
     }
 
     public static void Validate(CloudDownloadRequest request)
@@ -84,20 +99,35 @@ public static class CloudDownloadDestinations
         if (request.DestinationRevisions.Count is < 1 or > 32)
             throw new InvalidDataException("DOWNLOAD_DESTINATION_HISTORY_INVALID");
         var previous = Canonical(request.OutputDirectory);
+        CloudDownloadDestinationRevision? placement = null;
+        string? inventory = null;
         var ids = new HashSet<string>(StringComparer.Ordinal);
         foreach (var revision in request.DestinationRevisions)
         {
             if (revision == null || revision.ReuseInventoryFingerprint is { } snapshot &&
                 (snapshot.Length != 64 || snapshot.Any(c => !Uri.IsHexDigit(c))) || !Guid.TryParseExact(revision.RevisionId, "N", out _) || !ids.Add(revision.RevisionId) ||
                 revision.PreviousFingerprint is not {Length: 64} || revision.PreviousFingerprint.Any(c => !Uri.IsHexDigit(c)) ||
-                revision.AppliedAt == default || !Canonical(revision.PreviousDirectory).Equals(previous, Paths))
+                revision.AppliedAt == default)
                 throw new InvalidDataException("DOWNLOAD_DESTINATION_HISTORY_INVALID");
             var root = Canonical(revision.RootDirectory);
             var directory = Canonical(revision.Directory);
-            if (directory.Equals(previous, Paths) || !directory.StartsWith(Path.EndsInDirectorySeparator(root)
+            var from = Canonical(revision.PreviousDirectory);
+            if (revision.RefreshOfRevisionId != null)
+            {
+                if (placement?.RevisionId != revision.RefreshOfRevisionId || inventory == null ||
+                    revision.ReuseInventoryFingerprint == null || revision.ReuseInventoryFingerprint.Equals(inventory, StringComparison.OrdinalIgnoreCase) ||
+                    !from.Equals(Canonical(placement.PreviousDirectory), Paths) || !directory.Equals(previous, Paths) ||
+                    !root.Equals(Canonical(placement.RootDirectory), Paths))
+                    throw new InvalidDataException("DOWNLOAD_DESTINATION_HISTORY_INVALID");
+                inventory = revision.ReuseInventoryFingerprint;
+                continue;
+            }
+            if (!from.Equals(previous, Paths) || directory.Equals(previous, Paths) || !directory.StartsWith(Path.EndsInDirectorySeparator(root)
                     ? root : root + Path.DirectorySeparatorChar, Paths))
                 throw new InvalidDataException("DOWNLOAD_DESTINATION_HISTORY_INVALID");
             previous = directory;
+            placement = revision;
+            inventory = revision.ReuseInventoryFingerprint;
         }
     }
 

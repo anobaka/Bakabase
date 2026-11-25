@@ -140,6 +140,8 @@ internal sealed partial class ArtifactCleanupReferenceGuard(BakabaseDbContext db
                         var contract = new[] {"revisionId", "previousDirectory", "directory", "rootDirectory", "appliedAt", "previousFingerprint"};
                         if (fields.Contains("reuseInventoryFingerprint", StringComparer.OrdinalIgnoreCase))
                             contract = [..contract, "reuseInventoryFingerprint"];
+                        if (fields.Contains("refreshOfRevisionId", StringComparer.OrdinalIgnoreCase))
+                            contract = [..contract, "refreshOfRevisionId"];
                         if (fields.Length != contract.Length || fields.Distinct(StringComparer.OrdinalIgnoreCase).Count() != fields.Length ||
                             fields.Any(name => !contract.Contains(name, StringComparer.OrdinalIgnoreCase))) return Refers(json, true);
                     }

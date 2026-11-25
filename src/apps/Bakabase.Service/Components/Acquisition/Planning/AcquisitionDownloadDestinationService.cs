@@ -106,8 +106,9 @@ public sealed class AcquisitionDownloadDestinationService(BakabaseDbContext db,
                     await guard(directory);
                     var check = await destinations.PreviewAsync(state.Run!.Id, target, state.Workset.OutputDirectory,
                         root, directory, ct, reuseExistingFiles, guard);
+                    if (check.NewDirectory != null && check.NewDirectory != directory) await guard(check.NewDirectory);
                     if (check.PreviousDirectory != null) await guard(check.PreviousDirectory);
-                    items.Add(new(check.DownloadTaskId ?? target.DownloadTaskId, check.PreviousDirectory, directory, check.CanRevise, check.ReasonCode,
+                    items.Add(new(check.DownloadTaskId ?? target.DownloadTaskId, check.PreviousDirectory, check.NewDirectory ?? directory, check.CanRevise, check.ReasonCode,
                         check.CanPreviewReuse, check.ReuseEstimate));
                     if (check.CanRevise)
                         targets.Add(new(target, check, Guid.NewGuid().ToString("N")));
@@ -123,7 +124,7 @@ public sealed class AcquisitionDownloadDestinationService(BakabaseDbContext db,
                 {
                     entries[id] = new(state.Run!.Id, state.Version, state.Workset.OutputDirectory, targets);
                     reason = targets.Count != items.Count ? "DOWNLOAD_DESTINATION_ELIGIBLE_PARTS" :
-                        reuseExistingFiles ? "DOWNLOAD_DESTINATION_REUSE_READY" : "DOWNLOAD_DESTINATION_READY";
+                        reuseExistingFiles ? targets.Single().Preview.ReasonCode : "DOWNLOAD_DESTINATION_READY";
                 }
             }
             rows.Add(new(id, state.Task?.Title, targets.Count > 0, reason ?? "DOWNLOAD_DESTINATION_CHECKPOINT_UNSUPPORTED", items));

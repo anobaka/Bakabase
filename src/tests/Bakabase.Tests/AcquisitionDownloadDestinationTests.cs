@@ -19,14 +19,17 @@ public sealed partial class AcquisitionRecoveryTests
         public List<int> Applied = [];
         public Dictionary<int, string> Blocked = [];
         public Func<Task>? BeforeApply;
+        public string? RetainedDestination;
         public Task<CloudDownloadDestinationPreview> PreviewAsync(int runId, CloudDownloadTarget target,
             string semanticOutputRoot, string newRoot, string newDirectory, CancellationToken ct, bool reuseExistingFiles = false, Func<string, Task>? guard = null)
         {
             var id = target.DownloadTaskId!.Value;
             return Task.FromResult(Blocked.TryGetValue(id, out var reason)
                 ? new CloudDownloadDestinationPreview(false, reason)
-                : new(true, "DOWNLOAD_DESTINATION_READY", "fingerprint-" + id, id, "operation-" + id,
-                    Path.Combine(semanticOutputRoot, "old-" + id), newDirectory, newRoot,
+                : new(true, reuseExistingFiles
+                    ? RetainedDestination != null ? "DOWNLOAD_DESTINATION_REUSE_REFRESH_READY" : "DOWNLOAD_DESTINATION_REUSE_READY"
+                    : "DOWNLOAD_DESTINATION_READY", "fingerprint-" + id, id, "operation-" + id,
+                    Path.Combine(semanticOutputRoot, "old-" + id), RetainedDestination ?? newDirectory, newRoot,
                     ReuseEstimate: reuseExistingFiles ? new(2, 100, 1, 70) : null));
         }
         public async Task<CloudDownloadDestinationRevisionReceipt> ApplyAsync(int runId, CloudDownloadTarget target,
@@ -54,6 +57,24 @@ public sealed partial class AcquisitionRecoveryTests
         });
         await _db.SaveChangesAsync(); return (task.Id, run.Id);
     }
+    [TestMethod]
+    public async Task RefreshPreviewRetainsTheBoundDirectoryAndOnlyAppliesToTheSelectedIncompletePart()
+    {
+        var (id, _) = await SeedDestination(701, 702);
+        var bound = Path.Combine(_root, "original-frozen-name");
+        var provider = new DestinationCapability {RetainedDestination = bound};
+        provider.Blocked[701] = "DOWNLOAD_DESTINATION_HAS_OUTPUT";
+        var service = DestinationService(provider);
+        var preview = await service.PreviewAsync(new([id], _root, true, [702]), AllowDirectory);
+        var row = preview.Rows.Single();
+        Assert.AreEqual("DOWNLOAD_DESTINATION_REUSE_REFRESH_READY", row.ReasonCode);
+        Assert.AreEqual(bound, row.Downloads.Single().NewDirectory);
+        Assert.AreEqual(702, row.Downloads.Single().DownloadTaskId);
+        var result = await service.ApplyAsync(new(preview.PreviewToken, [id]), AllowDirectory);
+        Assert.AreEqual(1, result.AppliedDownloadCount);
+        CollectionAssert.AreEqual(new[] {702}, provider.Applied);
+    }
+
     [TestMethod]
     public async Task ReusingExistingFilesRequiresAnExplicitNativePartAndConfirmationOnlyChangesThatPart()
     {

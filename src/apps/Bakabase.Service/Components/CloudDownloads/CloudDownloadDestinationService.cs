@@ -55,11 +55,13 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
         try
         {
             var found = await InspectAsync(runId, target, semanticOutputRoot, newRoot, newDirectory, reuseExistingFiles, ct, guard);
-            return new(true, reuseExistingFiles ? "DOWNLOAD_DESTINATION_REUSE_READY" : "DOWNLOAD_DESTINATION_READY", found.Fingerprint, found.Download.Id,
-                found.Operation.Id, found.Download.DownloadPath, found.NewDirectory, found.NewRoot, ReuseEstimate: found.Reuse?.Estimate);
+            var reason = found.RefreshOfRevisionId != null ? "DOWNLOAD_DESTINATION_REUSE_REFRESH_READY" :
+                reuseExistingFiles ? "DOWNLOAD_DESTINATION_REUSE_READY" : "DOWNLOAD_DESTINATION_READY";
+            return new(true, reason, found.Fingerprint, found.Download.Id,
+                found.Operation.Id, found.SourceDirectory, found.NewDirectory, found.NewRoot, ReuseEstimate: found.Reuse?.Estimate);
         }
         catch (DestinationBlocked error) { return new(false, error.Code, DownloadTaskId: target.DownloadTaskId,
-            PreviousDirectory: error.ReuseSourceDirectory, CanPreviewReuse: error.ReuseSourceDirectory != null); }
+            PreviousDirectory: error.ReuseSourceDirectory, NewDirectory: error.NewDirectory, CanPreviewReuse: error.ReuseSourceDirectory != null); }
         catch (CloudProviderException error) { return new(false, error.Message); }
         catch (LocalStorageException error) { return new(false, error.Code); }
         catch (Exception error) when (error is IOException or InvalidDataException or UnauthorizedAccessException or ArgumentException or JsonException)
@@ -85,11 +87,11 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
             var previous = await ReadAppliedAsync(runId, target.Id, intent, downloadId, revisionId, expectedFingerprint, newRoot, newDirectory, reuseExistingFiles, ct);
             if (previous != null) return previous;
             var found = await InspectAsync(runId, target, semanticOutputRoot, newRoot, newDirectory, reuseExistingFiles, ct, guard);
-            if (found.Fingerprint != expectedFingerprint)
+            if (found.Fingerprint != expectedFingerprint || !SamePath(found.NewDirectory, newDirectory))
                 throw new InvalidOperationException("DOWNLOAD_DESTINATION_PREVIEW_CHANGED");
-            var revision = new CloudDownloadDestinationRevision(revisionId, found.Download.DownloadPath,
+            var revision = new CloudDownloadDestinationRevision(revisionId, found.SourceDirectory,
                 found.NewDirectory, found.NewRoot, DateTime.UtcNow, expectedFingerprint)
-                {ReuseInventoryFingerprint = found.Reuse?.InventoryFingerprint};
+                {ReuseInventoryFingerprint = found.Reuse?.InventoryFingerprint, RefreshOfRevisionId = found.RefreshOfRevisionId};
             var revised = found.Request with {DestinationRevisions = [.. found.Request.DestinationRevisions ?? [], revision]};
             CloudDownloadDestinations.Validate(revised);
             var json = JsonSerializer.Serialize(revised, Json);
@@ -102,7 +104,8 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
                 d.LastFileVerificationJson == found.Download.LastFileVerificationJson &&
                 d.Message == found.Download.Message).ExecuteUpdateAsync(set => set
                     .SetProperty(d => d.DownloadPath, found.NewDirectory).SetProperty(d => d.Options, json)
-                    .SetProperty(d => d.Progress, 0m).SetProperty(d => d.LastFileVerificationJson, (string?)null), ct);
+                    .SetProperty(d => d.Progress, 0m).SetProperty(d => d.LastFileVerificationJson,
+                        d => found.RefreshOfRevisionId == null ? null : d.LastFileVerificationJson), ct);
             if (changed != 1) throw new InvalidOperationException("DOWNLOAD_DESTINATION_PREVIEW_CHANGED");
             changed = await db.CloudDownloadOperations.Where(o => o.Id == intent && o.RequestJson == found.Operation.RequestJson &&
                 o.State == found.Operation.State && o.DownloadTaskId == downloadId && o.ReceiptJson == null)
@@ -137,11 +140,13 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
     }
 
     private sealed record Inspection(DownloadTaskDbModel Download, CloudOperationDbModel Operation,
-        CloudDownloadRequest Request, string NewRoot, string NewDirectory, string Fingerprint, CloudDownloadReuseInventory? Reuse);
-    private sealed class DestinationBlocked(string code, string? reuseSourceDirectory = null) : InvalidOperationException(code)
+        CloudDownloadRequest Request, string SourceDirectory, string NewRoot, string NewDirectory, string Fingerprint,
+        CloudDownloadReuseInventory? Reuse, string? RefreshOfRevisionId);
+    private sealed class DestinationBlocked(string code, string? reuseSourceDirectory = null, string? newDirectory = null) : InvalidOperationException(code)
     {
         public string Code => code;
         public string? ReuseSourceDirectory => reuseSourceDirectory;
+        public string? NewDirectory => newDirectory;
     }
     private static void Require(bool condition, string code) { if (!condition) throw new DestinationBlocked(code); }
     private static string Serialize<T>(T value) => JsonSerializer.Serialize(value, Json);
@@ -199,11 +204,6 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
         Require(request!.DestinationRevisions == null || request.DestinationRevisions.Count < 32, "DOWNLOAD_DESTINATION_HISTORY_LIMIT");
         var currentDirectory = CloudDownloadDestinations.ExecutionDirectory(request);
         var currentRoot = CloudDownloadDestinations.ExecutionRoot(request, semanticRoot);
-        if (guard != null)
-        {
-            await guard(currentDirectory);
-            await guard(newDirectory);
-        }
         Require(SamePath(currentDirectory, download.DownloadPath), "DOWNLOAD_DESTINATION_IDENTITY_CHANGED");
         var bindings = await db.ArtifactOperationBindings.AsNoTracking().Where(b => b.OperationId == intent ||
             b.OwnerKind == "workflow" && b.OwnerId == runId.ToString()).ToListAsync(ct);
@@ -213,14 +213,39 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
         var transferEvidence = await ValidateTransferAsync(runId, target, request, bindings, ct);
         newRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(newRoot));
         newDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(newDirectory));
-        Require(!SamePath(currentDirectory, newDirectory), "DOWNLOAD_DESTINATION_UNCHANGED");
-        Require(!Overlaps(currentDirectory, newDirectory), "DOWNLOAD_DESTINATION_PATH_INVALID");
+        var execution = CloudDownloadDestinations.ExecutionRequest(request);
+        var sourceDirectory = currentDirectory;
+        var sourceRoot = currentRoot;
+        string? refreshOf = null;
+        if (SamePath(currentRoot, newRoot) && execution.ReuseSource is {} retained)
+        {
+            // The caller selected the same root. The persisted placement owns the physical destination,
+            // including its original name, and the provider owns the layouts on both sides.
+            var history = request.DestinationRevisions!;
+            var last = history[^1];
+            refreshOf = last.RefreshOfRevisionId ?? last.RevisionId;
+            var placement = history.FindIndex(r => r.RevisionId == refreshOf);
+            sourceRoot = placement > 0 ? history[placement - 1].RootDirectory : semanticRoot;
+            sourceDirectory = retained.OutputDirectory;
+            newDirectory = currentDirectory;
+            Require(download.Progress == 0, "DOWNLOAD_DESTINATION_HAS_OUTPUT");
+        }
+        else
+        {
+            Require(!SamePath(currentDirectory, newDirectory), "DOWNLOAD_DESTINATION_UNCHANGED");
+        }
+        if (guard != null)
+        {
+            await guard(sourceDirectory);
+            await guard(newDirectory);
+        }
+        Require(!Overlaps(sourceDirectory, newDirectory), "DOWNLOAD_DESTINATION_PATH_INVALID");
         Require(!CloudDownloadDestinations.RetainedSources(request).Any(r => Overlaps(r.PreviousDirectory, newDirectory)),
             "DOWNLOAD_DESTINATION_SHARED");
-        InspectDirectory(currentRoot, currentDirectory, requireEmpty: false);
+        InspectDirectory(sourceRoot, sourceDirectory, requireEmpty: false);
         InspectDirectory(newRoot, newDirectory, requireEmpty: true);
         var paths = await db.DownloadTasks.AsNoTracking().Where(d => d.Id != download.Id).Select(d => d.DownloadPath).ToListAsync(ct);
-        Require(!paths.Any(p => Overlaps(p, newDirectory) || Overlaps(p, currentDirectory)), "DOWNLOAD_DESTINATION_SHARED");
+        Require(!paths.Any(p => Overlaps(p, newDirectory) || Overlaps(p, sourceDirectory)), "DOWNLOAD_DESTINATION_SHARED");
         // A move retains the old source for future retries. Match only requests that opted into source reuse.
         var oldSources = await db.DownloadTasks.AsNoTracking().Where(d => d.Id != download.Id && d.Options != null &&
                 d.Options.Contains("\"reuseInventoryFingerprint\"")).Select(d => d.Options!).ToListAsync(ct);
@@ -229,7 +254,7 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
             var other = JsonSerializer.Deserialize<CloudDownloadRequest>(json, Json);
             Require(other != null, "DOWNLOAD_DESTINATION_SHARED");
             Require(!CloudDownloadDestinations.RetainedSources(other!).Any(r =>
-                Overlaps(r.PreviousDirectory, newDirectory) || Overlaps(r.PreviousDirectory, currentDirectory)), "DOWNLOAD_DESTINATION_SHARED");
+                Overlaps(r.PreviousDirectory, newDirectory) || Overlaps(r.PreviousDirectory, sourceDirectory)), "DOWNLOAD_DESTINATION_SHARED");
         }
         var artifacts = await db.Artifacts.AsNoTracking().Where(a => a.State != ArtifactLocationState.Retired)
             .Select(a => new ArtifactPlacement(a.Id, a.State, a.Managed, a.RootPath, a.RootIsAppData,
@@ -237,22 +262,42 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
         foreach (var artifact in artifacts)
         {
             Require(artifact.QuarantineSourceRootPath == null || artifact.QuarantineSourceRootIsAppData ||
-                !Overlaps(artifact.QuarantineSourceRootPath, newDirectory) && !Overlaps(artifact.QuarantineSourceRootPath, currentDirectory),
+                !Overlaps(artifact.QuarantineSourceRootPath, newDirectory) && !Overlaps(artifact.QuarantineSourceRootPath, sourceDirectory),
                 "DOWNLOAD_DESTINATION_SHARED");
             if (artifact.RootIsAppData) continue;
-            var intersecting = new[] {currentDirectory, newDirectory}.Where(path => Overlaps(artifact.RootPath, path)).ToArray();
+            var intersecting = new[] {sourceDirectory, newDirectory}.Where(path => Overlaps(artifact.RootPath, path)).ToArray();
             if (intersecting.Length == 0) continue;
             Require(!await ArtifactOccupiesAsync(artifact, intersecting, ct), "DOWNLOAD_DESTINATION_SHARED");
         }
         // Caller-owned acquisition settings supply the reserve through the existing write-policy provider.
         await writes.CheckAsync(newDirectory, new("cloudOperation", intent), ct);
-        var execution = CloudDownloadDestinations.ExecutionRequest(request);
-        var canInspect = reuseProvider?.CanInspectReuseSource(execution) == true;
+        var sourceRequest = refreshOf != null ? CloudDownloadDestinations.RetainedSourceRequest(execution) : execution;
+        var canInspect = reuseProvider?.CanInspectReuseSource(sourceRequest) == true;
         CloudDownloadReuseInventory? reuse = null;
+        async Task RequireUnstartedDestination()
+        {
+            // A provider can journal discovery or a checkpoint before writing the first destination file.
+            var readiness = await provider!.InspectDestinationRevisionAsync(execution, newDirectory, ct);
+            Require(readiness.Available, ProviderProblem(readiness));
+            InspectDirectory(newRoot, newDirectory, requireEmpty: true);
+        }
+        if (refreshOf != null)
+        {
+            Require(canInspect, "DOWNLOAD_DESTINATION_REUSE_UNSUPPORTED");
+            await RequireUnstartedDestination();
+            if (!reuseExistingFiles)
+                throw new DestinationBlocked("DOWNLOAD_DESTINATION_REUSE_REFRESH_AVAILABLE", sourceDirectory, newDirectory);
+        }
         if (reuseExistingFiles)
         {
             Require(canInspect, "DOWNLOAD_DESTINATION_REUSE_UNSUPPORTED");
-            reuse = await reuseProvider!.InspectReuseSourceAsync(execution, ct);
+            reuse = await reuseProvider!.InspectReuseSourceAsync(sourceRequest, ct);
+            if (refreshOf != null)
+            {
+                await RequireUnstartedDestination();
+                Require(!reuse.InventoryFingerprint.Equals(execution.ReuseSource!.InventoryFingerprint, StringComparison.OrdinalIgnoreCase),
+                    "DOWNLOAD_DESTINATION_UNCHANGED");
+            }
             await writes.CheckAllocationAsync(newDirectory, reuse.Estimate.TotalBytes, new("cloudOperation", intent), ct);
         }
         else
@@ -272,8 +317,7 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
             var readiness = await provider!.InspectDestinationRevisionAsync(execution, newDirectory, ct);
             if (!readiness.Available)
             {
-                var code = readiness.Problem?.StartsWith("DOWNLOAD_DESTINATION_", StringComparison.Ordinal) == true
-                    ? readiness.Problem : "DOWNLOAD_DESTINATION_PROVIDER_STATE_UNKNOWN";
+                var code = ProviderProblem(readiness);
                 throw new DestinationBlocked(code, canInspect && code == "DOWNLOAD_DESTINATION_PROVIDER_STATE_PRESENT" ? currentDirectory : null);
             }
             RequireEmptySource();
@@ -283,8 +327,12 @@ public sealed class CloudDownloadDestinationService(BakabaseDbContext db, IEnume
         {runId, target, semanticRoot, newRoot, newDirectory, download, operation, transferEvidence, reuse,
             RunStatus = run!.Status, run.CurrentItemJson, run.PlanSnapshotJson, run.PendingSignalJson,
             Bindings = bindings.OrderBy(b => b.Id).ToArray()})))).ToLowerInvariant();
-        return new(download, operation, request, newRoot, newDirectory, fingerprint, reuse);
+        return new(download, operation, request, sourceDirectory, newRoot, newDirectory, fingerprint, reuse, refreshOf);
     }
+
+    private static string ProviderProblem(CloudReadiness readiness) =>
+        readiness.Problem?.StartsWith("DOWNLOAD_DESTINATION_", StringComparison.Ordinal) == true
+            ? readiness.Problem : "DOWNLOAD_DESTINATION_PROVIDER_STATE_UNKNOWN";
 
     private sealed record ArtifactPlacement(string Id, ArtifactLocationState State, bool Managed, string RootPath,
         bool RootIsAppData, string? QuarantineSourceRootPath, bool QuarantineSourceRootIsAppData, string Fingerprint);

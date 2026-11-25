@@ -71,18 +71,22 @@ public sealed partial class BaiduCloudDownloadProvider
 
     internal static CloudReadiness InspectPathJournal(string accountDirectory, string operationId)
     {
-        // The bridge's path-map fingerprint includes its physical root. Keep every existing map;
-        // absence is the only compatible empty-state proof for this provider's first revision.
+        // The bridge may persist a path map, reuse receipt or its operation lock before writing payload files.
         var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(operationId))).ToLowerInvariant();
-        var journal = Path.Combine(accountDirectory, "operations", key + ".paths-v1.json");
-        ArtifactManifestFiles.RejectLinks(accountDirectory); ArtifactManifestFiles.RejectLinks(journal);
+        ArtifactManifestFiles.RejectLinks(accountDirectory);
         if (!Directory.Exists(accountDirectory)) return new(false, "DOWNLOAD_DESTINATION_PROVIDER_STATE_UNKNOWN");
-        try
+        foreach (var suffix in new[] {".paths-v1.json", ".reuse-v1.json", ".reuse-v1.json.lock"})
         {
-            _ = File.GetAttributes(journal);
-            return new(false, "DOWNLOAD_DESTINATION_PROVIDER_STATE_PRESENT");
+            var journal = Path.Combine(accountDirectory, "operations", key + suffix);
+            ArtifactManifestFiles.RejectLinks(journal);
+            try
+            {
+                _ = File.GetAttributes(journal);
+                return new(false, "DOWNLOAD_DESTINATION_PROVIDER_STATE_PRESENT");
+            }
+            catch (FileNotFoundException) { }
+            catch (DirectoryNotFoundException) { }
         }
-        catch (FileNotFoundException) { return new(true); }
-        catch (DirectoryNotFoundException) { return new(true); }
+        return new(true);
     }
 }

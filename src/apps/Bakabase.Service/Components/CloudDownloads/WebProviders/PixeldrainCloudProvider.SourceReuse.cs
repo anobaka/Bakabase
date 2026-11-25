@@ -25,10 +25,7 @@ public sealed partial class PixeldrainCloudProvider
             return new(request, [new(request.OutputDirectory, remaining)]);
         if (source.DisableSourceRead)
             throw new CloudProviderException("DOWNLOAD_DESTINATION_REUSE_SOURCE_CHANGED");
-        var original = request with
-        {
-            OutputDirectory = source.OutputDirectory, ProviderLayoutId = source.OperationId, ReuseSource = null
-        };
+        var original = CloudDownloadDestinations.RetainedSourceRequest(request);
         var inventory = await InspectReuseSourceAsync(original, ct);
         if (inventory.InventoryFingerprint != source.InventoryFingerprint)
             throw new CloudProviderException("DOWNLOAD_DESTINATION_PREVIEW_CHANGED");
