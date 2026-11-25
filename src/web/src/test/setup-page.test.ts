@@ -364,12 +364,15 @@ describe("standalone setup wizard", () => {
     expect(element("finish")).toBeVisible();
   });
 
-  it("validates first-run source and destination together after the destination has been selected", async () => {
+  it("offers the default copy destination on the source step and allows changing it before validation", async () => {
     const fetchMock = await mountPage();
 
     selectSource();
-    await toTarget();
-    // The default directory might be unsuitable; it must not block selecting a new target.
+    expect(element("importDestinationPath")).toHaveTextContent(firstRun.currentPath);
+    expect(element("step2")).not.toBeVisible();
+    expect(element("targetFields")).not.toBeVisible();
+    click("editDestination");
+    expect(element("targetFields")).toBeVisible();
     expect(flowCalls(fetchMock)).toHaveLength(1);
     selectTarget();
     await toReview();
@@ -388,6 +391,42 @@ describe("standalone setup wizard", () => {
     );
     expect(element("reviewSource")).toHaveTextContent("/imports/old-library");
     expect(element("reviewTarget")).toHaveTextContent("/server/new-data");
+  });
+
+  it("keeps the source editable when the default copy destination cannot be used", async () => {
+    const fetchMock = await mountPage(firstRun, undefined, {
+      validate: (request) =>
+        request.targetPath === firstRun.currentPath
+          ? { valid: false, error: "Directory is not empty" }
+          : { valid: true, ...request },
+    });
+
+    selectSource();
+    click("next");
+    await waitFor(() => expect(element("error")).toHaveTextContent("Directory is not empty"));
+    expect(element("dataSection")).toBeVisible();
+    expect(element("editDestination")).toBeVisible();
+    expect(callsTo(fetchMock, "/preflight")).toHaveLength(0);
+    click("editDestination");
+    selectTarget();
+    await toPreflight();
+    await waitFor(() => expect(element("previous")).toBeEnabled());
+    click("previous");
+    expect(element("sourceTitle")).toHaveFocus();
+    expect(input("source")).toHaveValue("/imports/old-library");
+    expect(input("target")).toHaveValue("/server/new-data");
+  });
+
+  it("uses the deployment destination directly on a first-run import with fixed storage", async () => {
+    const fetchMock = await mountPage({ ...firstRun, canChooseTargetPath: false });
+    selectSource();
+    expect(element("importDestinationPath")).toHaveTextContent(firstRun.currentPath);
+    expect(element("editDestination")).not.toBeVisible();
+    expect(element("step2")).not.toBeVisible();
+
+    await toReview();
+    expect(element("reviewTarget")).toHaveTextContent(firstRun.currentPath);
+    expect(callsTo(fetchMock, "/apply")).toHaveLength(0);
   });
 
   it("explains automatic maintenance and opens the independent desktop progress host after confirmation", async () => {
@@ -450,7 +489,8 @@ describe("standalone setup wizard", () => {
     selectSource();
     expect(element("step2")).toBeDisabled();
     expect(element("step3")).toBeDisabled();
-    await toTarget();
+    expect(element("importDestinationPath")).toHaveTextContent("/server/new-data");
+    click("editDestination");
     expect(input("changePath")).toBeChecked();
     expect(input("target")).toHaveValue("/server/new-data");
     await toReview();
@@ -464,7 +504,8 @@ describe("standalone setup wizard", () => {
       const fetchMock = await mountPage(status);
 
       selectSource();
-      await toTarget();
+      if (status.mode === "first-run") click("editDestination");
+      else await toTarget();
       selectTarget();
       await toReview();
       expect(element("reviewTarget")).toHaveTextContent("/server/new-data");
@@ -489,11 +530,11 @@ describe("standalone setup wizard", () => {
       backToTarget();
       choosePathChange(true);
       expect(input("target")).toHaveValue("/server/new-data");
-      click("previous");
+      if (status.mode !== "first-run") click("previous");
       chooseImport(false);
       chooseImport(true);
       expect(input("source")).toHaveValue("/imports/old-library");
-      await toTarget();
+      if (status.mode !== "first-run") await toTarget();
       expect(input("changePath")).toBeChecked();
       expect(input("target")).toHaveValue("/server/new-data");
     },
@@ -840,7 +881,6 @@ async function importPreflight(overrides: ApiOverrides = {}) {
   });
 
   selectSource();
-  await toTarget();
   await toPreflight();
   await waitFor(() => expect(element("mappingEditor")).toBeVisible());
 
@@ -851,7 +891,9 @@ describe("import path preflight", () => {
   it("requires a scan-backed preview even when keeping all original paths", async () => {
     const fetchMock = await importPreflight();
 
-    expect(element("step4Item")).toBeVisible();
+    expect(element("step2")).not.toBeVisible();
+    expect(element("step3")).toHaveTextContent("2Check paths");
+    expect(element("step4")).toHaveTextContent("3Review");
     expect(element("step3")).toHaveAttribute("aria-current", "step");
     expect(element("step4")).toBeDisabled();
     expect(element("submit")).not.toBeVisible();
@@ -1034,7 +1076,6 @@ describe("import path preflight", () => {
     await waitFor(() => expect(element("next")).toBeEnabled());
     expect(element("mappingPreview")).not.toBeVisible();
     expect(element("step4")).toBeDisabled();
-    await toTarget();
     await toPreflight();
     expect(JSON.parse(callsTo(fetchMock, "/preflight").at(-1)![1].body).sourcePath).toBe(
       "/imports/changed-library",
@@ -1047,7 +1088,8 @@ describe("import path preflight", () => {
 
     click("next");
     await waitFor(() => expect(element("reviewSection")).toBeVisible());
-    click("step2");
+    click("step1");
+    click("editDestination");
     choosePathChange(true);
     click("manualTarget");
     enter("target", "/storage/changed");
@@ -1128,7 +1170,6 @@ describe("import path preflight", () => {
       },
     });
     selectSource();
-    await toTarget();
     await toPreflight();
     await waitFor(() => expect(element("scanStatus")).toHaveTextContent("250"));
     await waitFor(() => expect(element("scanError")).toHaveTextContent("reconnecting"), {
@@ -1158,7 +1199,6 @@ describe("import path preflight", () => {
     });
 
     selectSource();
-    await toTarget();
     await toPreflight();
     await waitFor(() => expect(element("scanStatus")).toHaveTextContent("ResourceCaches"));
     expect(element("scanStatus")).toHaveTextContent("250");
