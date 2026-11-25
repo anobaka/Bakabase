@@ -116,10 +116,9 @@ export default function AcquisitionDownloadDestinationModal({
         if (
           next.rows.length !== 1 ||
           row.taskId !== scope.taskId ||
-          (row.canApply &&
-            (row.downloads.length !== 1 ||
-              download?.downloadTaskId !== scope.downloadTaskId ||
-              !download.reuseEstimate))
+          row.downloads.length > 1 ||
+          (download && download.downloadTaskId !== scope.downloadTaskId) ||
+          (row.canApply && !download?.reuseEstimate)
         ) {
           throw new Error("DOWNLOAD_DESTINATION_PREVIEW_CHANGED");
         }
@@ -189,6 +188,10 @@ export default function AcquisitionDownloadDestinationModal({
   const partiallyApplied = result?.skipped.some(
     (row) => row.reasonCode === "DOWNLOAD_DESTINATION_PARTIALLY_APPLIED",
   );
+  const reuseConfirmed =
+    reuseScope &&
+    (resultIds.includes(reuseScope.taskId) ||
+      (!result && rows[0]?.downloads[0]?.reasonCode === "DOWNLOAD_DESTINATION_UNCHANGED"));
 
   return (
     <Modal
@@ -206,19 +209,19 @@ export default function AcquisitionDownloadDestinationModal({
           <Button variant="light" isDisabled={submitting} onPress={() => setVisible(false)}>
             {t("common.action.close")}
           </Button>
-          {result ? (
+          {reuseConfirmed ? (
+            <a
+              className="text-sm text-primary"
+              href={`#/downloader?id=${encodeURIComponent(`site:${reuseScope.downloadTaskId}`)}`}
+              onClick={() => setVisible(false)}
+            >
+              {t("acquisition.downloadDestination.viewSelectedDownload", {
+                id: reuseScope.downloadTaskId,
+              })}
+            </a>
+          ) : result ? (
             resultIds.length > 0 &&
-            (reuseScope ? (
-              <a
-                className="text-sm text-primary"
-                href={`#/downloader?id=${encodeURIComponent(`site:${reuseScope.downloadTaskId}`)}`}
-                onClick={() => setVisible(false)}
-              >
-                {t("acquisition.downloadDestination.viewSelectedDownload", {
-                  id: reuseScope.downloadTaskId,
-                })}
-              </a>
-            ) : (
+            !reuseScope && (
               <Button
                 color="primary"
                 onPress={() => {
@@ -233,7 +236,7 @@ export default function AcquisitionDownloadDestinationModal({
               >
                 {t("acquisition.downloadDestination.diagnose", { count: resultIds.length })}
               </Button>
-            ))
+            )
           ) : (
             <Button
               color="primary"

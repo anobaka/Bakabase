@@ -236,6 +236,27 @@ it("shows the original files and confirmed destination when refreshing a single 
   expect(mocks.apply).not.toHaveBeenCalled();
 });
 
+it("links to the original download when the source inventory still matches", async () => {
+  await selectReuse(
+    preview({
+      rows: [
+        {
+          taskId: 1,
+          title: "Same inventory",
+          canApply: false,
+          downloads: [{ ...download(11, false), reasonCode: "DOWNLOAD_DESTINATION_UNCHANGED" }],
+        },
+      ],
+    }),
+  );
+  expect(
+    await screen.findByRole("link", {
+      name: "acquisition.downloadDestination.viewSelectedDownload",
+    }),
+  ).toHaveAttribute("href", "#/downloader?id=site%3A11");
+  expect(mocks.apply).not.toHaveBeenCalled();
+});
+
 it("loads the default root without previewing or changing tasks; closing remains read-only", async () => {
   await show();
   expect(screen.getByText("/ssd/downloads")).toBeVisible();
