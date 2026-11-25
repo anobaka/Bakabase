@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { v4 as uuidv4 } from "uuid";
+import { useRemoteAccessStore } from "@/stores/remoteAccess";
 import { Button, Checkbox, Modal, Pagination, Spinner } from "@/components/bakaui";
 import { bytesToSize, extractErrorMessage } from "@/components/utils";
 import CleanupDirectoryPicker, { type CleanupDirectorySelection } from "./CleanupDirectoryPicker";
@@ -22,11 +23,30 @@ type Confirmation = {
   preview?: AcquisitionDeletionPreview;
 };
 
+type PendingReceipt = { operationId: string; submission?: Confirmation; reason?: string };
+
+// Keep only the operation ID in this tab. A bookmark can look up progress, never submit a deletion.
+function receiptBookmark(ids: number[], retained: boolean, server?: string) {
+  const key = JSON.stringify(["acquisition.deletion", server ?? "", retained, [...ids].sort((a, b) => a - b)]);
+  return {
+    read() {
+      try { return sessionStorage.getItem(key) || undefined; } catch { return undefined; }
+    },
+    remember(id: string) {
+      try { sessionStorage.setItem(key, id); return true; } catch { return false; }
+    },
+    forget(id: string) {
+      try { if (sessionStorage.getItem(key) === id) sessionStorage.removeItem(key); } catch { /* Storage is optional. */ }
+    },
+  };
+}
+
 function deletionStatusLabel(progress: AcquisitionDeletionProgress | undefined, receivingReceipt: boolean,
-  unavailable: boolean, expired: boolean) {
+  unavailable: boolean, expired: boolean, readOnly: boolean) {
   if (receivingReceipt) {
     if (unavailable) return expired ? "acquisition.delete.receipt.expired" : "acquisition.delete.receipt.unavailable";
     if (!progress) return "acquisition.delete.receipt.checking";
+    if (progress.state === "completed" && readOnly) return "acquisition.delete.receipt.finished";
     if (progress.state !== "running") {
       return ["completed", "interrupted", "preview"].includes(progress.state)
         ? `acquisition.delete.receipt.${progress.state}` : "acquisition.delete.receipt.unavailable";
@@ -64,7 +84,13 @@ export default function DeleteAcquisitionTasksModal({
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation>();
   const [result, setResult] = useState<AcquisitionDeletionResult>();
-  const [unconfirmed, setUnconfirmed] = useState<(Confirmation & { reason?: string })>();
+  const serverId = useRemoteAccessStore(state => state.serverId);
+  const bookmark = useMemo(() => receiptBookmark(selection, retainedReview, serverId), [selection, retainedReview, serverId]);
+  const [unconfirmed, setUnconfirmed] = useState<PendingReceipt | undefined>(() => {
+    const operationId = bookmark.read();
+    return operationId ? { operationId } : undefined;
+  });
+  const [bookmarkSaved, setBookmarkSaved] = useState(false);
   const [receiptExpired, setReceiptExpired] = useState(false);
   const [page, setPage] = useState(1);
   const cleanupAllowed = selection.length > 0 && selection.length <= 100;
@@ -112,7 +138,14 @@ export default function DeleteAcquisitionTasksModal({
   useEffect(() => {
     if (confirmation) backButton.current?.focus();
   }, [confirmation]);
+  // The active server identity can arrive after a page refresh.
+  useEffect(() => {
+    if (confirmation || submitting || result || unconfirmed) return;
+    const operationId = bookmark.read();
+    if (operationId) setUnconfirmed({ operationId });
+  }, [bookmark, confirmation, submitting, result, unconfirmed]);
   const trackedId = submitting ? confirmation?.operationId : unconfirmed?.operationId;
+  const readOnlyReceipt = !unconfirmed?.submission || !!progress?.receiptOnly;
   useEffect(() => {
     if (!trackedId || !visible) return;
     const controller = new AbortController();
@@ -125,11 +158,13 @@ export default function DeleteAcquisitionTasksModal({
         setProgress(next);
         setProgressUnavailable(false);
         if (unconfirmed && next.state !== "running") {
-          if (next.state === "completed") {
+          if (next.state === "completed" && unconfirmed.submission && !next.receiptOnly) {
             // A completed operation is replayed with the same ID and scope only
             // to retrieve its saved result after a lost HTTP response.
-            const saved = await acquisitionDeletionApi.remove(unconfirmed.operationId, unconfirmed.preview ? undefined : unconfirmed.taskIds, unconfirmed.options);
+            const { preview, taskIds, options } = unconfirmed.submission;
+            const saved = await acquisitionDeletionApi.remove(unconfirmed.operationId, preview ? undefined : taskIds, options);
             if (controller.signal.aborted) return;
+            bookmark.forget(trackedId);
             setResult(saved);
             setUnconfirmed(undefined);
           }
@@ -151,9 +186,11 @@ export default function DeleteAcquisitionTasksModal({
       controller.abort();
       clearTimeout(timer);
     };
-  }, [trackedId, unconfirmed, visible]);
+  }, [trackedId, unconfirmed, visible, bookmark]);
+  const confirmedInBackground = bookmarkSaved && progress?.state === "running" && progress.cleanupFiles != null;
+  const awaitingAcceptance = submitting && !confirmedInBackground;
   const close = () => {
-    if (busy.current) return;
+    if (busy.current && !confirmedInBackground) return;
     reviewRequest.current?.abort();
     setVisible(false);
   };
@@ -197,15 +234,21 @@ export default function DeleteAcquisitionTasksModal({
     setProgress(undefined);
     setProgressUnavailable(false);
     setReceiptExpired(false);
+    setBookmarkSaved(bookmark.remember(submitted.operationId));
     try {
       const next = await acquisitionDeletionApi.remove(submitted.operationId, submitted.preview ? undefined : submitted.taskIds, submitted.options);
-      if (mounted.current) setResult(next);
+      if (mounted.current) {
+        bookmark.forget(submitted.operationId);
+        setResult(next);
+      }
     } catch (cause) {
       const reason = extractErrorMessage(cause);
       if (mounted.current && reason === "ACQUISITION_DELETE_DIRECTORY_SELECTION_INVALID") {
+        bookmark.forget(submitted.operationId);
         setSelectionInvalid(true);
       } else if (mounted.current) setUnconfirmed({
-        ...submitted,
+        operationId: submitted.operationId,
+        submission: submitted,
         reason: deletionReasonCodes.has(reason) ? reason : undefined,
       });
     } finally {
@@ -218,6 +261,7 @@ export default function DeleteAcquisitionTasksModal({
     }
   };
   const resetReview = (ids = selection, retained = retainedReview, removeOnFailure = false) => {
+    if (unconfirmed) bookmark.forget(unconfirmed.operationId);
     setSelection(ids);
     setRetainedReview(retained);
     setChooseDirectories(false);
@@ -250,9 +294,9 @@ export default function DeleteAcquisitionTasksModal({
       classNames={{ body: "min-w-0" }}
       onClose={close}
       onDestroyed={onDestroyed}
-      isDismissable={!submitting}
-      isKeyboardDismissDisabled={submitting}
-      hideCloseButton={submitting}
+      isDismissable={!awaitingAcceptance}
+      isKeyboardDismissDisabled={awaitingAcceptance}
+      hideCloseButton={awaitingAcceptance}
       footer={confirmation && !submitting ? (
         <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <Button color="danger" className="h-auto min-h-10 max-w-full whitespace-normal py-2"
@@ -264,7 +308,7 @@ export default function DeleteAcquisitionTasksModal({
           </Button>
         </div>
       ) : <>
-        <Button variant="light" isDisabled={submitting} onPress={close}>{t("common.action.close")}</Button>
+        <Button variant="light" isDisabled={awaitingAcceptance} onPress={close}>{t("common.action.close")}</Button>
         {!result && !submitting && !unconfirmed && <Button color="primary" isDisabled={!selectionReady || reviewingRuns} isLoading={reviewingRuns} onPress={() => void review()}>
           {t("acquisition.delete.next")}
         </Button>}
@@ -274,12 +318,21 @@ export default function DeleteAcquisitionTasksModal({
         <div role="status" className="space-y-2 py-3 text-sm" aria-live="polite">
           <div className="flex items-center gap-2">
             {(submitting || (!progressUnavailable && (!progress || progress.state === "running"))) && <Spinner size="sm" />}
-            <span>{t(deletionStatusLabel(progress, !!unconfirmed, progressUnavailable, receiptExpired))}</span>
+            <span>{t(deletionStatusLabel(progress, !!unconfirmed, progressUnavailable, receiptExpired, readOnlyReceipt))}</span>
             {progress?.currentTaskId != null && <span className="min-w-0 [overflow-wrap:anywhere]">{taskName(progress.currentTaskId)}</span>}
           </div>
           {progress && <p>{t("acquisition.delete.progress.tasks", {
             completed: progress.finishedTasks, total: progress.totalTasks,
           })}</p>}
+          {progress?.cleanupFiles != null && progress.deleteDeliveredFiles != null && <div>
+            <p>{t("acquisition.delete.receipt.scope")}</p>
+            <ul className="list-disc pl-5">
+              {progress.cleanupFiles && <li>{t("acquisition.delete.cleanup.option")}</li>}
+              {progress.deleteDeliveredFiles && <li>{t("acquisition.delete.delivered.option")}</li>}
+              {!progress.cleanupFiles && !progress.deleteDeliveredFiles && <li>{t("acquisition.delete.final.taskOnly")}</li>}
+              {progress.selectedDirectoriesOnly && <li>{t("acquisition.delete.receipt.selectedDirectories")}</li>}
+            </ul>
+          </div>}
           {unconfirmed ? <>
             {unconfirmed.reason && <p className="text-sm text-danger">{reason(unconfirmed.reason)}</p>}
             {progressUnavailable && !receiptExpired ? (
@@ -291,7 +344,8 @@ export default function DeleteAcquisitionTasksModal({
               <Button size="sm" variant="flat" onPress={() => resetReview()}>{t("acquisition.delete.cleanup.retry")}</Button>
             )}
           </> : <p className="text-xs text-default-600">{t(progressUnavailable
-            ? "acquisition.delete.progress.unavailable" : "acquisition.delete.progress.safety")}</p>}
+            ? "acquisition.delete.progress.unavailable" : confirmedInBackground
+              ? "acquisition.delete.progress.background" : "acquisition.delete.progress.safety")}</p>}
         </div>
       ) : confirmation ? (
         <div className="space-y-3 text-sm">

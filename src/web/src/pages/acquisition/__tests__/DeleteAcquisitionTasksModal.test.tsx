@@ -7,6 +7,7 @@ import en from "@/locales/en/pages/acquisition.json";
 import { deletionReasonCodes, deletionReasonLabel } from "../components/deletionReasonLabel";
 const api = vi.hoisted(() => ({ preview: vi.fn(), previewRetained: vi.fn(), remove: vi.fn(), progress: vi.fn(), names: vi.fn() }));
 const translate = vi.hoisted(() => vi.fn((key: string, _options?: unknown) => key));
+vi.mock("@/stores/remoteAccess", () => ({ useRemoteAccessStore: (select: (state: { serverId: string }) => unknown) => select({ serverId: "test-server" }) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: translate }) }));
 vi.mock("../components/acquisitionDeletionApi", () => ({ acquisitionDeletionApi: api }));
 vi.mock("@/components/Workflow/displayNames", () => ({
@@ -71,6 +72,7 @@ const finishReview = async () => {
   await screen.findByText("acquisition.delete.result");
 };
 beforeEach(() => {
+  sessionStorage.clear();
   vi.clearAllMocks();
   api.preview.mockReset();
   api.previewRetained.mockReset();
@@ -231,6 +233,41 @@ it("keeps the backend limit for cleaning files while allowing larger record-only
   expect(api.remove).toHaveBeenCalledWith(expect.any(String), ids, {
     cleanupFiles: false, deleteDeliveredFiles: false, retryRetainedFiles: false, removeTaskIfCleanupFails: false,
   });
+});
+
+it("reopens the confirmed scope after a refresh and only reads the receipt", async () => {
+  api.remove.mockReturnValue(new Promise(() => {}));
+  api.progress.mockImplementation(async (previewId: string) => ({ previewId, state: "running",
+    phase: "cleaning", cleanupFiles: true, deleteDeliveredFiles: true, totalTasks: 2, finishedTasks: 0 }));
+  const dialog = render(<DeleteAcquisitionTasksModal taskIds={[42, 43]} />);
+  fireEvent.click(checkbox("delivered.option"));
+  fireEvent.click(next());
+  fireEvent.click(confirm());
+  await screen.findByText("acquisition.delete.progress.background");
+  expect(button("common.action.close")).toBeEnabled();
+  const [operationId] = api.remove.mock.calls[0];
+  dialog.unmount();
+  api.progress.mockImplementation(async (previewId: string) => ({ previewId, state: "completed",
+    receiptOnly: true, cleanupFiles: true, deleteDeliveredFiles: true, totalTasks: 2, finishedTasks: 2 }));
+  render(<DeleteAcquisitionTasksModal taskIds={[43, 42]} />);
+  await screen.findByText("acquisition.delete.receipt.finished");
+  expect(screen.getByText("acquisition.delete.delivered.option")).toBeVisible();
+  expect(api.progress).toHaveBeenLastCalledWith(operationId, expect.any(AbortSignal));
+  expect(api.remove).toHaveBeenCalledTimes(1);
+  fireEvent.click(button("acquisition.delete.cleanup.retry"));
+  expect(checkbox("delivered.option")).not.toBeChecked();
+  expect(api.remove).toHaveBeenCalledTimes(1);
+});
+
+it("does not replay a completed read-only receipt after losing the response", async () => {
+  api.remove.mockRejectedValue(new Error("connection lost"));
+  api.progress.mockImplementation(async (previewId: string) => ({ previewId, state: "completed",
+    totalTasks: 1, finishedTasks: 1, receiptOnly: true, cleanupFiles: true, deleteDeliveredFiles: false }));
+  render(<DeleteAcquisitionTasksModal taskIds={[42]} />);
+  fireEvent.click(next());
+  fireEvent.click(confirm());
+  await screen.findByText("acquisition.delete.receipt.finished");
+  expect(api.remove).toHaveBeenCalledTimes(1);
 });
 
 it("retrieves the saved result with the same operation ID after a lost response", async () => {
