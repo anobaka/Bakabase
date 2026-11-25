@@ -589,6 +589,23 @@ public sealed class AcquisitionTaskDeletionService(BakabaseDbContext db, IAcquis
                     var intermediate = options.CleanupFiles ? SavedCleanupStatus(lastCleanup, AcquisitionCleanupScopes.Intermediate) : NoCleanup;
                     var delivery = options.DeleteDeliveredFiles ? SavedCleanupStatus(lastCleanup, AcquisitionCleanupScopes.Delivery) : NoCleanup;
                     var lastReasons = lastCleanup == null ? null : SavedCleanupReasons(lastCleanup);
+                    if (!options.HasFileCleanup && task!.DeletedCleanupReasons == DeferredStageCleanup.AwaitRemoval)
+                    {
+                        // Record-only removal grants no new file access. Carry forward the original
+                        // receipts verbatim, or leave their scopes for manual review if proof expired.
+                        bool valid;
+                        try { valid = cleanup != null && await cleanup.CanArchivePendingCleanupAsync(task, ct); }
+                        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
+                        {
+                            // A temporarily unreadable receipt must stay attached to the live task.
+                            skipped.Add(new(id, DeferredStageCleanup.RequiresReview)); taskFinished = true; continue;
+                        }
+                        string ExistingScope(string? scope) => valid || scope is CompleteCleanup or NoCleanup
+                            ? scope! : IncompleteCleanup;
+                        intermediate = ExistingScope(task.DeletedIntermediateCleanup);
+                        delivery = ExistingScope(task.DeletedDeliveryCleanup);
+                        lastReasons = valid ? DeferredStageCleanup.PendingReason : DeferredStageCleanup.RequiresReview;
+                    }
                     var changed = await db.AcquisitionTasks.Where(t => t.Id == id && t.DeletedAt == null &&
                         t.UpdatedAt == task!.UpdatedAt && t.PlanRevision == task.PlanRevision && t.WorkflowRunId == task.WorkflowRunId && t.Status == task.Status)
                         .ExecuteUpdateAsync(update => update.SetProperty(t => t.DeletedAt, (DateTime?)DateTime.UtcNow)

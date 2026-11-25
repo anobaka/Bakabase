@@ -964,7 +964,7 @@
   "acquisition.delete.final.submit": "确认删除",
   "acquisition.delete.final.back": "返回修改",
   "acquisition.delete.final.scope": "此次提交涉及 {{count}} 个任务。移除后无法在列表中撤销。",
-  "acquisition.delete.final.taskOnly": "仅从获取列表移除任务，保留所有文件。",
+  "acquisition.delete.final.taskOnly": "仅将任务移入删除历史并保留现有文件。已删除文件若仍被系统占用，后台会继续收尾。",
   "acquisition.delete.final.boundInventory": "此次清理范围如下。正在使用或被其他任务引用的文件会保留。",
   "acquisition.delete.final.removeOnFailure": "即使部分文件需要保留或清理失败，也移除可删除的任务，并列出遗留原因。",
   "acquisition.delete.final.keepOnFailure": "清理未完成的任务留在列表中。",

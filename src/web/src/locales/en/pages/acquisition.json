@@ -964,7 +964,7 @@
   "acquisition.delete.final.submit": "Confirm removal",
   "acquisition.delete.final.back": "Back to options",
   "acquisition.delete.final.scope": "This request covers {{count}} tasks. Removal cannot be undone from the list.",
-  "acquisition.delete.final.taskOnly": "Remove the tasks from the acquisition list and keep all files.",
+  "acquisition.delete.final.taskOnly": "Move the tasks to deletion history and keep existing files. Background cleanup will finish when the system releases files already deleted.",
   "acquisition.delete.final.boundInventory": "The following files are in the cleanup scope. Files in use or shared with other tasks are protected.",
   "acquisition.delete.final.removeOnFailure": "Remove eligible tasks even if cleanup is incomplete. The result lists why files were kept.",
   "acquisition.delete.final.keepOnFailure": "Keep tasks in the list if cleanup is incomplete.",

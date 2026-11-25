@@ -50,6 +50,46 @@ public sealed partial class PublishedArtifactAncestorCleanupTests
             Assert.AreEqual(DeferredStageCleanup.RequiresReview, row.DeletedCleanupReasons);
     }
 
+    [DataTestMethod]
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    public async Task Record_only_removal_carries_only_the_same_live_pending_receipt(bool changeTask, bool addForeignFile)
+    {
+        if (!OperatingSystem.IsMacOS() && !OperatingSystem.IsLinux()) Assert.Inconclusive();
+        var f = await StageDeletion();
+        foreach (var file in Directory.EnumerateFiles(f.Download, "*", SearchOption.AllDirectories)) File.Delete(file);
+        var marker = Path.Combine(f.Download, ".smbdelete01.1");
+        await File.WriteAllTextAsync(marker, "held");
+        var first = await f.Service.DeleteAsync(DirectDelete(f.Task.Id));
+        Assert.AreEqual(DeferredStageCleanup.AwaitRemoval, first.Skipped.Single().ReasonCode);
+        var before = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == f.Task.Id);
+        Assert.IsTrue(DeferredStageCleanup.IsAwaitingFileRelease(before.DeletedIntermediateCleanup));
+        if (changeTask)
+            await db.AcquisitionTasks.Where(t => t.Id == f.Task.Id).ExecuteUpdateAsync(u =>
+                u.SetProperty(t => t.UpdatedAt, before.UpdatedAt.AddMinutes(1)));
+
+        var archive = await f.Service.DeleteAsync(new(Guid.NewGuid().ToString("N"), TaskIds: [f.Task.Id]));
+        CollectionAssert.AreEqual(new[] {f.Task.Id}, archive.DeletedTaskIds.ToArray());
+        Assert.IsTrue(File.Exists(marker));
+        var row = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == f.Task.Id);
+        Assert.AreEqual(changeTask ? AcquisitionTaskDeletionService.IncompleteCleanup : before.DeletedIntermediateCleanup,
+            row.DeletedIntermediateCleanup);
+        Assert.AreEqual(before.DeletedDeliveryCleanup, row.DeletedDeliveryCleanup);
+        var history = (await f.Service.GetDeletedTasksAsync(1, 25, "all", default)).Items.Single();
+        CollectionAssert.AreEqual(changeTask ? Array.Empty<string>() : new[] {"intermediate"}, history.AwaitingFileReleaseScopes.ToArray());
+
+        var incoming = Path.Combine(f.Download, "new-file.bin");
+        if (addForeignFile) await File.WriteAllTextAsync(incoming, "do not delete");
+        File.Delete(marker);
+        await f.Cleanup.FinishPendingSmbBatchAsync(0, default);
+        Assert.AreEqual(changeTask || addForeignFile, Directory.Exists(f.Download));
+        Assert.AreEqual(addForeignFile, File.Exists(incoming));
+        row = await db.AcquisitionTasks.AsNoTracking().SingleAsync(t => t.Id == f.Task.Id);
+        Assert.AreEqual(changeTask || addForeignFile ? AcquisitionTaskDeletionService.IncompleteCleanup : AcquisitionTaskDeletionService.CompleteCleanup,
+            row.DeletedIntermediateCleanup);
+    }
+
     // The local test filesystem unlinks open files immediately. Simulate only the SMB
     // client's marker retention; persist and consume the same verified stage receipt as the service.
     private async Task<(StageDeletionFixture Fixture, string Marker)> PendingStage(string otherStatus = "notRequested",

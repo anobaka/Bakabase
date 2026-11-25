@@ -163,21 +163,50 @@ public sealed partial class AcquisitionTaskDeletionCleanupService
         finally { gate.Release(); }
     }
 
+    // Archiving a task without further file cleanup may carry only a previously confirmed
+    // live receipt. Recheck its frozen task version before the tombstone changes that version.
+    internal async Task<bool> CanArchivePendingCleanupAsync(AcquisitionTaskDbModel task, CancellationToken ct)
+    {
+        if (task.DeletedAt != null || task.DeletedCleanupReasons != DeferredStageCleanup.AwaitRemoval ||
+            !DeferredStageCleanup.HasPendingRemovalReceipts(task.DeletedIntermediateCleanup, task.DeletedDeliveryCleanup)) return false;
+        try
+        {
+            foreach (var (state, scope) in new[] {(task.DeletedIntermediateCleanup, AcquisitionCleanupScopes.Intermediate),
+                         (task.DeletedDeliveryCleanup, AcquisitionCleanupScopes.Delivery)})
+            {
+                if (!DeferredStageCleanup.Pending(state)) continue;
+                foreach (var id in DeferredStageCleanup.Decode(state!).Ids)
+                    if (await ReadSmbReceiptAsync(task, id, scope, ct) == null) return false;
+            }
+            return true;
+        }
+        catch (Exception error) when (error is FileNotFoundException or DirectoryNotFoundException or InvalidDataException or JsonException or ArgumentException)
+        { return false; }
+    }
+
+    private async Task<AcquisitionStageDirectoryCleanupReceipt?> ReadSmbReceiptAsync(AcquisitionTaskDbModel task,
+        string id, AcquisitionCleanupScopes scope, CancellationToken ct)
+    {
+        var path = Path.Combine(maintenance.StageCleanupMetadataDirectory, id + ".json");
+        ArtifactManifestFiles.RejectLinks(path);
+        var receipt = JsonSerializer.Deserialize<AcquisitionStageDirectoryCleanupReceipt>(await File.ReadAllTextAsync(path, ct), JsonSerializerOptions.Web);
+        if (receipt == null || receipt.Id != id || receipt.Revision != task.PlanRevision || receipt.TaskId != task.Id ||
+            receipt.Status is not ("SmbDeletePending" or "SmbDeleteFinalized") || receipt.SelectionId == null || receipt.WaitingDirectories is not {Count: > 0} ||
+            receipt.Consent is not { WholeTaskFiles: true, OwnerRunIds: not null } || receipt.Consent.TaskId != task.Id || receipt.Consent.PlanRevision != task.PlanRevision || (receipt.Scopes & scope) == 0 ||
+            scope == AcquisitionCleanupScopes.Delivery && !receipt.Consent.DeleteDeliveredFiles ||
+            scope == AcquisitionCleanupScopes.Intermediate && !receipt.CleanupIntermediates) return null;
+        if (task.DeletedAt == null && (receipt.LiveTaskVersion == null || receipt.LiveTaskVersion != Version(task) ||
+            receipt.Consent.CompletedRunId != task.WorkflowRunId)) return null;
+        return receipt;
+    }
+
     private async Task<DeferredEmptyDirectoryResult> FinishSmbReceiptAsync(AcquisitionTaskDbModel task, string id, AcquisitionCleanupScopes scope, CancellationToken ct)
     {
         var locks = new List<SemaphoreSlim>();
         try
         {
-            var path = Path.Combine(maintenance.StageCleanupMetadataDirectory, id + ".json");
-            ArtifactManifestFiles.RejectLinks(path);
-            var receipt = JsonSerializer.Deserialize<AcquisitionStageDirectoryCleanupReceipt>(await File.ReadAllTextAsync(path, ct), JsonSerializerOptions.Web);
-            if (receipt == null || receipt.Id != id || receipt.Revision != task.PlanRevision || receipt.TaskId != task.Id ||
-                receipt.Status is not ("SmbDeletePending" or "SmbDeleteFinalized") || receipt.SelectionId == null || receipt.WaitingDirectories is not {Count: > 0} ||
-                receipt.Consent is not { WholeTaskFiles: true, OwnerRunIds: not null } || receipt.Consent.TaskId != task.Id || receipt.Consent.PlanRevision != task.PlanRevision || (receipt.Scopes & scope) == 0 ||
-                scope == AcquisitionCleanupScopes.Delivery && !receipt.Consent.DeleteDeliveredFiles ||
-                scope == AcquisitionCleanupScopes.Intermediate && !receipt.CleanupIntermediates) return DeferredEmptyDirectoryResult.Changed;
-            if (task.DeletedAt == null && (receipt.LiveTaskVersion == null || receipt.LiveTaskVersion != Version(task) ||
-                receipt.Consent.CompletedRunId != task.WorkflowRunId)) return DeferredEmptyDirectoryResult.Changed;
+            var receipt = await ReadSmbReceiptAsync(task, id, scope, ct);
+            if (receipt == null) return DeferredEmptyDirectoryResult.Changed;
             // While a client holds an SMB handle, only inspect the confirmed tree. The
             // run gates, global maintenance fence and reference checks are needed at mutation.
             storage.EnsurePathAllowed(receipt.Directory);
