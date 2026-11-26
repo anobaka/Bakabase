@@ -22,15 +22,19 @@ public sealed partial class PikPakCliCloudProvider
     private static string NativePayload(string stage, RemoteFile file) =>
         Path.Combine(stage, PikPakCliStorage.Hash(file.Id) + ".payload");
 
-    // The CLI may preallocate the entire original. Its private .part is kept in place;
+    // The CLI may preallocate the entire original. Keep its private .part throughout HTTP recovery;
     // only the separate HTTP checkpoint can authorize resuming or publishing bytes.
-    private static string InspectNativePart(string path, RemoteFile file)
+    private static string InspectNativePart(string path, RemoteFile file, out string? version)
     {
         PikPakCliStorage.NoLinks(path);
         using var part = RegularFileHandle.TryOpenRead(path);
         if (part == null || part.Length > file.Size || !RegularFileHandle.HasSingleLink(part.SafeFileHandle))
             throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
-        return RegularFileHandle.Identity(part, path);
+        var identity = RegularFileHandle.Identity(part, path);
+        // Lack of a reliable generation need not prevent the HTTP retry. It prevents retiring this file.
+        try { version = RegularFileHandle.ReadRetirementVersion(part, path); }
+        catch (IOException) { version = null; }
+        return identity;
     }
 
     private static string RestoredHttpDirectory(string stage, RemoteFile file) =>
@@ -73,7 +77,12 @@ public sealed partial class PikPakCliCloudProvider
                 if (!copies.Started.Contains(file.Id) || copies.Completed.ContainsKey(file.Path))
                     throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
                 copies.PreservedNativePartIdentities ??= new(StringComparer.Ordinal);
-                copies.PreservedNativePartIdentities.Add(file.Id, InspectNativePart(nativePart, file));
+                copies.PreservedNativePartIdentities.Add(file.Id, InspectNativePart(nativePart, file, out var version));
+                if (version != null)
+                {
+                    copies.PreservedNativePartVersions ??= new(StringComparer.Ordinal);
+                    copies.PreservedNativePartVersions.Add(file.Id, version);
+                }
             }
             copies.RestoredHttpMembers.Add(file.Id, identity.AttemptScope);
         }

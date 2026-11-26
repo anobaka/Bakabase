@@ -20,6 +20,7 @@ using Bakabase.Modules.Downloader.Cloud;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Components.CloudDownloads;
 
@@ -200,6 +201,11 @@ public abstract class CloudSiteDownloader<T>(IServiceProvider services) : Abstra
                 task.Key, task.Name ?? task.Key,
                 CloudDownloadPayloadRoot.Select(task.DownloadPath, result.PayloadRootDirectory, result.Files),
                 result.Files.ToArray(), null, _ => Touch(), ct);
+            try { result.OnLocalFilesCommitted?.Invoke(receipt.Fingerprint); }
+            catch (Exception error)
+            {
+                Logger.LogWarning("Could not retire transport scratch for verified download {TaskId} ({Failure})", task.Id, error.GetType().Name);
+            }
             if (ownedCopies != null) await ownedCopies.DownloadVerifiedAsync(task.Id, request, receipt);
         }
         await OnProgressInternal(100);

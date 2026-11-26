@@ -241,7 +241,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         if (!sealedHandoffOnly && !Same(journal.Files, await ReadRemote(account, journal.FolderId!, ct)))
             throw new PikPakCliException("PIKPAK_REMOTE_CHANGED");
         CloudDownloadManifest.Validate(output, result);
-        return new(result);
+        return new(result) {OnLocalFilesCommitted = PlanSupersededPartCleanup(request, journal, copies)};
     }
 
     private static string StagingAttemptDirectory(string stage, string? attempt) => attempt == null ? stage :
@@ -615,5 +615,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         public Dictionary<string, string>? RestoredHttpMembers { get; set; }
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
         public Dictionary<string, string>? PreservedNativePartIdentities { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, string>? PreservedNativePartVersions { get; set; }
     }
 }

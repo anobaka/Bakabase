@@ -6,7 +6,7 @@ using Microsoft.Win32.SafeHandles;
 namespace Bakabase.Abstractions.Components.FileSystem;
 
 /// <summary>Checks regular files by the opened filesystem object and its current name.</summary>
-public static class RegularFileHandle
+public static partial class RegularFileHandle
 {
     // System.Native unifies Darwin and Linux stat layouts in .NET 9/10 (pal_io.h).
     [StructLayout(LayoutKind.Sequential)]

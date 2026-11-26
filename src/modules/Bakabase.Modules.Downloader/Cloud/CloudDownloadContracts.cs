@@ -77,6 +77,9 @@ public sealed record CloudDownloadResult(IReadOnlyList<string> Files)
 {
     /// <summary>Optional content root after proving ownership of a transport wrapper. Physical files and checkpoints stay put.</summary>
     public string? PayloadRootDirectory { get; init; }
+    /// <summary>Retire superseded transport scratch only after the site commits the exact local-files fingerprint.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Action<string>? OnLocalFilesCommitted { get; init; }
 }
 public sealed record CloudTransferDiagnostic(string Code, int? ProviderCode, int[] ItemCodes, int? FileCount, int? FileLimit);
 

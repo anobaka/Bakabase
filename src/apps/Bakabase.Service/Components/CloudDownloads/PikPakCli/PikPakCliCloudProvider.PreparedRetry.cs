@@ -195,7 +195,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
                 {
                     if (_restoredOriginals == null || (attributes & FileAttributes.Directory) != 0)
                         throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
-                    var nativeIdentity = InspectNativePart(entry, nativeMember);
+                    var nativeIdentity = InspectNativePart(entry, nativeMember, out _);
                     if (copies.RestoredHttpMembers?.ContainsKey(nativeMember.Id) == true
                         ? copies.PreservedNativePartIdentities?.GetValueOrDefault(nativeMember.Id) != nativeIdentity
                         : copies.Completed.ContainsKey(nativeMember.Path))
