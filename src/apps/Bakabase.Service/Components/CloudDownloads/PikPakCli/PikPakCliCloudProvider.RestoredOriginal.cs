@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.InsideWorld.Business.Components.Artifacts;
 using Bakabase.Modules.Downloader.Cloud;
 using Bakabase.Modules.Downloader.Models;
@@ -17,6 +18,20 @@ public sealed partial class PikPakCliCloudProvider
 
     private static string DownloadStage(string output, string operationId) =>
         Path.Combine(output, ".bakabase-pikpak-" + PikPakCliStorage.Hash(operationId));
+
+    private static string NativePayload(string stage, RemoteFile file) =>
+        Path.Combine(stage, PikPakCliStorage.Hash(file.Id) + ".payload");
+
+    // The CLI may preallocate the entire original. Its private .part is kept in place;
+    // only the separate HTTP checkpoint can authorize resuming or publishing bytes.
+    private static string InspectNativePart(string path, RemoteFile file)
+    {
+        PikPakCliStorage.NoLinks(path);
+        using var part = RegularFileHandle.TryOpenRead(path);
+        if (part == null || part.Length > file.Size || !RegularFileHandle.HasSingleLink(part.SafeFileHandle))
+            throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+        return RegularFileHandle.Identity(part, path);
+    }
 
     private static string RestoredHttpDirectory(string stage, RemoteFile file) =>
         Path.Combine(stage, RestoredHttpStage, PikPakCliStorage.Hash(file.Id));
@@ -52,6 +67,14 @@ public sealed partial class PikPakCliCloudProvider
         {
             PikPakCliStorage.NoLinks(directory);
             if (Path.Exists(directory)) throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+            var nativePart = NativePayload(DownloadStage(request.OutputDirectory, request.OperationId), file) + ".part";
+            if (Path.Exists(nativePart))
+            {
+                if (!copies.Started.Contains(file.Id) || copies.Completed.ContainsKey(file.Path))
+                    throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+                copies.PreservedNativePartIdentities ??= new(StringComparer.Ordinal);
+                copies.PreservedNativePartIdentities.Add(file.Id, InspectNativePart(nativePart, file));
+            }
             copies.RestoredHttpMembers.Add(file.Id, identity.AttemptScope);
         }
         else if (boundScope != identity.AttemptScope)

@@ -15,7 +15,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
 {
     public bool SupportsPausedPreparedDownload => _restoredOriginals != null;
 
-    public bool CanRetryPreparedDownloadFailure(string failureCode) => failureCode == "PIKPAK_CLI_REQUEST_FAILED";
+    public bool CanRetryPreparedDownloadFailure(string failureCode) => failureCode == "PIKPAK_CLI_REQUEST_FAILED" ||
+        _restoredOriginals != null && failureCode == "PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED";
     public bool CanHandoffCompletedPreparedDownloadFailure(string failureCode) =>
         _restoredOriginals != null && failureCode is "PIKPAK_DOWNLOAD_INCOMPLETE" or "PIKPAK_NETWORK_UNAVAILABLE" or "PIKPAK_CLI_REQUEST_FAILED";
 
@@ -142,6 +143,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
             !copies.Started.IsSubsetOf(journal.Files.Select(file => file.Id)) ||
             !copies.Completed.Keys.ToHashSet(StringComparer.Ordinal).IsSubsetOf(journal.Files.Select(file => file.Path)) ||
             copies.RestoredHttpMembers?.Keys.Any(id => !copies.Started.Contains(id)) == true ||
+            copies.PreservedNativePartIdentities?.Keys.Any(id => copies.RestoredHttpMembers?.ContainsKey(id) != true) == true ||
             copies.RestoredHttpMembers is not {Count: > 0} &&
             !journal.Files.Any(file => copies.Started.Contains(file.Id) && !copies.Completed.ContainsKey(file.Path)))
             throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
@@ -164,6 +166,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
         var stage = DownloadStage(output, request.OperationId);
         if (journal.Files.Any(file => file.Path.Split('/')[0].Equals(Path.GetFileName(stage), StringComparison.OrdinalIgnoreCase)))
             throw new PikPakCliException("PIKPAK_LOCAL_PATH_INVALID");
+        var nativeParts = journal.Files.Where(file => copies.Started.Contains(file.Id))
+            .ToDictionary(file => NativePayload(stage, file) + ".part", StringComparer.Ordinal);
         var restoredHttpRoot = Path.Combine(stage, RestoredHttpStage);
         var httpMembers = journal.Files.Where(file => copies.RestoredHttpMembers?.ContainsKey(file.Id) == true)
             .ToDictionary(file => RestoredHttpDirectory(stage, file), ArtifactManifestFiles.PathComparer);
@@ -187,6 +191,17 @@ public sealed partial class PikPakCliCloudProvider : ICloudPreparedDownloadRetry
                 var attributes = File.GetAttributes(entry);
                 if ((attributes & FileAttributes.ReparsePoint) != 0)
                     throw new PikPakCliException("PIKPAK_LOCAL_PATH_INVALID");
+                if (nativeParts.TryGetValue(entry, out var nativeMember))
+                {
+                    if (_restoredOriginals == null || (attributes & FileAttributes.Directory) != 0)
+                        throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+                    var nativeIdentity = InspectNativePart(entry, nativeMember);
+                    if (copies.RestoredHttpMembers?.ContainsKey(nativeMember.Id) == true
+                        ? copies.PreservedNativePartIdentities?.GetValueOrDefault(nativeMember.Id) != nativeIdentity
+                        : copies.Completed.ContainsKey(nativeMember.Path))
+                        throw new PikPakCliException("PIKPAK_PARTIAL_DOWNLOAD_REVIEW_REQUIRED");
+                    continue;
+                }
                 if (ArtifactManifestFiles.PathComparer.Equals(directory.Path, restoredHttpRoot))
                 {
                     if ((attributes & FileAttributes.Directory) == 0 || !httpMembers.TryGetValue(entry, out var httpMember))

@@ -18,12 +18,14 @@ namespace Bakabase.Tests.CloudDownloads;
 
 public sealed partial class PikPakCliTests
 {
-    [TestMethod]
-    public async Task SecondShareRestoresOnlyAfterTheVerifiedFirstCopyStopsConsumingAccountSpace()
+    [DataTestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task SecondShareRestoresOnlyAfterTheVerifiedFirstCopyStopsConsumingAccountSpace(bool interruptFirstDownload)
     {
         var cloud = new TwoShareCloud(_native);
         _accounts = new(Path.Combine(_root, "appdata"), cloud);
-        _provider = new(_accounts, null, _ => Task.CompletedTask);
+        _provider = new(_accounts, null, _ => Task.CompletedTask, _restored);
         _native.Continuation = """{"status":"success","scopes":["account","files:write","files:manage"]}""";
         var session = await _accounts.StartManageFilesAuthorizationAsync(default);
         Assert.AreEqual("authorized", (await _accounts.PollAsync(session.Id, default)).Status);
@@ -66,7 +68,21 @@ public sealed partial class PikPakCliTests
 
         var first = await Register("first");
         var second = await Register("second");
-        var downloaded = await Download(first);
+        CloudDownloadResult downloaded;
+        if (interruptFirstDownload)
+        {
+            _native.FailPayload = true;
+            _native.KeepFailedNativePartial = true;
+            await Assert.ThrowsExceptionAsync<CloudProviderException>(() => Download(first));
+            Assert.AreEqual("waitingDownload", (await copies.GetAsync(first.Task.Id, default)).Status);
+            Assert.IsFalse(await copies.ProcessNextAsync(default));
+            _native.FailPayload = false;
+            Assert.IsTrue((await _provider.CheckPreparedDownloadRetryAsync(first.Request, default)).Available);
+            downloaded = await _provider.RetryPreparedDownloadAsync(first.Request, _ => Task.CompletedTask, default);
+            Assert.AreEqual("bad", await File.ReadAllTextAsync(Directory.GetFiles(first.Request.OutputDirectory,
+                "*.payload.part", SearchOption.AllDirectories).Single()));
+        }
+        else downloaded = await Download(first);
         var waits = 0;
         var secondDownload = await PikPakCloudDownloader.RunWithCloudCapacityAsync(_provider, second.Request,
             () => Download(second), async () =>
@@ -152,6 +168,9 @@ public sealed partial class PikPakCliTests
                         files.Add(new {id = "copy-" + share, name = "original.bin", kind = "drive#file", size = "3",
                             hash = "remote-hash", modified_time = "2026-11-24T08:00:00Z", @params = new {original_share_id = share}});
                     return JsonSerializer.SerializeToElement(new {files});
+                case "get" when args[1] == "copy-first" && _inDrive.ContainsValue("first"):
+                    return JsonSerializer.SerializeToElement(new {id = args[1], type = "file", name = "original.bin",
+                        size = "3 B", hash = "remote-hash", download_url = "https://cdn.mypikpak.net/data"});
                 case "rm":
                     Assert.AreEqual(2, args.Count);
                     var restored = _inDrive.Single(entry => "copy-" + entry.Value == args[1]);

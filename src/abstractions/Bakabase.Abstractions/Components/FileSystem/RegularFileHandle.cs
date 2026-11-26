@@ -40,6 +40,32 @@ public static class RegularFileHandle
     [DllImport("libc", EntryPoint = "open", SetLastError = true)]
     private static extern int Open([MarshalAs(UnmanagedType.LPUTF8Str)] string path, int flags);
 
+    public static bool HasSingleLink(SafeFileHandle handle)
+    {
+        if (OperatingSystem.IsWindows())
+            return GetFileInformationByHandle(handle, out var info) && info.NumberOfLinks == 1;
+        if (OperatingSystem.IsMacOS())
+        {
+            var attributes = new FileAttributesList {Count = 5, File = 1}; // ATTR_FILE_LINKCOUNT
+            return FGetAttributes(handle, ref attributes, out var value, 8, 0) == 0 && value.Length == 8 && value.Links == 1;
+        }
+        const int atEmptyPath = 0x1000;
+        const uint statxNlink = 4;
+        return Statx(handle, "", atEmptyPath, statxNlink, out var result) == 0 && (result.Mask & statxNlink) != 0 && result.Links == 1;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FileAttributesList { internal ushort Count, Reserved; internal uint Common, Volume, Directory, File, Fork; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LinkCountAttribute { internal uint Length, Links; }
+    [StructLayout(LayoutKind.Explicit, Size = 256)]
+    private struct StatxLinkCount { [FieldOffset(0)] internal uint Mask; [FieldOffset(16)] internal uint Links; }
+    [DllImport("libc", EntryPoint = "fgetattrlist")]
+    private static extern int FGetAttributes(SafeFileHandle handle, ref FileAttributesList attributes, out LinkCountAttribute output, nuint length, uint options);
+    [DllImport("libc", EntryPoint = "statx")]
+    private static extern int Statx(SafeFileHandle handle, [MarshalAs(UnmanagedType.LPUTF8Str)] string path, int flags, uint mask, out StatxLinkCount result);
+
+
     /// <summary>Opens the exact leaf, even if a directory listing has stale attributes. On Unix a
     /// substituted pipe must not block and a link must not be followed. Null means the leaf is absent.</summary>
     public static FileStream? TryOpenRead(string path)

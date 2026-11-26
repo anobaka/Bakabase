@@ -161,7 +161,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
             copies.Completed.TryGetValue(file.Path, out var receipt);
             var restoredHttp = receipt?.RestoredHttp == true || receipt == null && retryRestoredOriginal;
             var partDirectory = restoredHttp ? RestoredHttpDirectory(stage, file) : StagingAttemptDirectory(stage, receipt?.StagingAttempt);
-            var part = Path.Combine(partDirectory, restoredHttp ? "payload" : PikPakCliStorage.Hash(file.Id) + ".payload");
+            var part = restoredHttp ? Path.Combine(partDirectory, "payload") : NativePayload(partDirectory, file);
             PikPakCliStorage.NoLinks(part);
             if (File.Exists(destination))
             {
@@ -611,5 +611,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         public Dictionary<string, FileReceipt> Completed { get; set; } = new(StringComparer.Ordinal);
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
         public Dictionary<string, string>? RestoredHttpMembers { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, string>? PreservedNativePartIdentities { get; set; }
     }
 }

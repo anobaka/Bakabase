@@ -223,7 +223,9 @@ public sealed partial class PikPakCliTests
                 await File.WriteAllTextAsync(partial, "a", ct);
                 throw new AuthorizedOriginalDownloadException("ORIGINAL_HTTP_TRANSFER_FAILED");
             }
-            Assert.AreEqual("a", await File.ReadAllTextAsync(partial, ct));
+            if (Transfers.Count(call => call.Directory == checkpointDirectory) > 1)
+                Assert.AreEqual("a", await File.ReadAllTextAsync(partial, ct));
+            else Assert.IsFalse(File.Exists(partial));
             await resolveOriginal(ct);
             var payload = Path.Combine(checkpointDirectory, "payload");
             await File.WriteAllTextAsync(payload, "abc", ct);
