@@ -11,11 +11,13 @@ public sealed record PikPakCliAccountViewModel
     public string? Problem { get; init; }
     public PikPakCliQuotaViewModel? Quota { get; init; }
     public bool CanManageFiles { get; init; }
+    public bool CanPermanentlyDeleteFiles { get; init; }
+    public bool PermanentlyDeleteTemporaryCopiesAfterDownload { get; init; }
     public bool TrashTemporaryCopiesAfterDownload { get; init; }
 }
 
 public sealed record PikPakCliCleanupSettingsInputModel(string ExpectedAccountId, string ExpectedAccountVersion,
-    bool TrashTemporaryCopiesAfterDownload);
+    bool TrashTemporaryCopiesAfterDownload, bool PermanentlyDeleteTemporaryCopiesAfterDownload = false);
 
 public sealed record PikPakCliQuotaViewModel(long? UsedBytes, long? LimitBytes, long? RemainingTransferBytes);
 

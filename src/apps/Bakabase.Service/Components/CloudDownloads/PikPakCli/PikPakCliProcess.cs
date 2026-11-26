@@ -21,11 +21,14 @@ internal interface IPikPakCliProcess
     Task<JsonElement> RunAsync(string profile, IReadOnlyList<string> arguments, CancellationToken ct,
         bool payload = false, Action? observeProgress = null);
 
+    Task PermanentlyDeleteFilesAsync(string profile, string providerIdentity, IReadOnlyList<string> fileIds, CancellationToken ct) =>
+        throw new PikPakCliException("PIKPAK_PURGE_UNAVAILABLE");
+
     /// <summary>Read current status without waiting for another command on the credential profile.</summary>
     Task<JsonElement?> TryReadStatusAsync(string profile, CancellationToken ct) => Task.FromResult<JsonElement?>(null);
 }
 
-/// <summary>Only the official CLI owns OAuth and account protocols. Never logs its raw output,
+/// <summary>The official CLI owns OAuth and refreshes the protected profile. Never logs its raw output,
 /// token-bearing arguments or environment, and never inherits a user's CLI credentials.</summary>
 internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebProxy proxy) : IPikPakCliProcess
 {
@@ -38,6 +41,22 @@ internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebP
         var gate = _profiles.GetOrAdd(profile, _ => new(1, 1));
         await gate.WaitAsync(ct);
         try { return await RunCore(profile, arguments, ct, payload, observeProgress); }
+        finally { gate.Release(); }
+    }
+
+    private readonly PikPakCliPurgeClient _purge = new(proxy);
+
+    public async Task PermanentlyDeleteFilesAsync(string profile, string providerIdentity, IReadOnlyList<string> fileIds, CancellationToken ct)
+    {
+        var gate = _profiles.GetOrAdd(profile, _ => new(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            // auth status may refresh the token and is the authoritative user identity.
+            // Keep the same profile locked until the Drive request finishes.
+            var status = await RunCore(profile, ["auth", "status"], ct, payload: false);
+            await _purge.DeleteFilesAsync(profile, providerIdentity, status, fileIds, ct);
+        }
         finally { gate.Release(); }
     }
 
@@ -196,7 +215,7 @@ internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebP
             // Do not retain arbitrary provider text, response bodies, URLs, or account tokens.
             providerCode = code is "UNAUTHENTICATED" or "UNAUTHORIZED" or "TOKEN_EXPIRED" or "ACCESS_DENIED" or
                 "PERMISSION_DENIED" or "RATE_LIMITED" or "PASS_CODE_ERROR" or "PASS_CODE_EMPTY" or "SHARE_EXPIRED" or
-                "SHARE_DELETED" or "SHARE_NOT_FOUND" or "CAPTCHA_REQUIRED" or "CAPTCHA_INVALID" or "transport_error" ? code : null;
+                "SHARE_DELETED" or "SHARE_NOT_FOUND" or "FILE_NOT_FOUND" or "CAPTCHA_REQUIRED" or "CAPTCHA_INVALID" or "transport_error" ? code : null;
         }
         return new(phase, exitCode, responseKind is "json" or "invalid" or "timeout" ? responseKind : "unknown", providerCode);
     }

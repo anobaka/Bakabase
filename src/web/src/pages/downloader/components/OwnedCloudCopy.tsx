@@ -110,6 +110,9 @@ export function OwnedCloudCopyModal({
   }, [taskId, copy?.status]);
 
   const recheckTrash = copy?.reasonCode === "PIKPAK_OWNED_COPY_TRASH_UNCONFIRMED";
+  const showPikPakTrash = thirdPartyId === ThirdPartyId.PikPak && (
+    copy?.status === "trashed" || recheckTrash || copy?.reasonCode === "PIKPAK_OWNED_COPY_PURGE_UNCONFIRMED"
+  );
   const reason = copy?.reasonCode && downloadProblemSummary(copy.reasonCode, t);
   return (
     <Modal
@@ -152,9 +155,9 @@ export function OwnedCloudCopyModal({
             })}
           </p>
           {reason && <p className="text-default-600">{reason}</p>}
-          {thirdPartyId === ThirdPartyId.PikPak && (copy.status === "trashed" || recheckTrash) && (
-            <ExternalLink href={urls.PikPakDrive} size="sm">
-              {t("pikpakCli.capacity.openDrive")}
+          {showPikPakTrash && (
+            <ExternalLink href={urls.PikPakTrash} size="sm">
+              {t("downloadCenter.ownedCopy.openTrash")}
             </ExternalLink>
           )}
         </div>

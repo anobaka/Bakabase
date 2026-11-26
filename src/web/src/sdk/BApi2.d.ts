@@ -9113,6 +9113,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pikpak-cli/account/authorization/purge-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartPikPakCliPurgeFilesAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/pikpak-cli/account/authorization/{id}/poll": {
         parameters: {
             query?: never;
@@ -21100,6 +21116,8 @@ export interface components {
             problem?: string;
             quota?: components["schemas"]["Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliQuotaViewModel"];
             canManageFiles: boolean;
+            canPermanentlyDeleteFiles: boolean;
+            permanentlyDeleteTemporaryCopiesAfterDownload: boolean;
             trashTemporaryCopiesAfterDownload: boolean;
         };
         "Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAuthorizationViewModel": {
@@ -21136,6 +21154,7 @@ export interface components {
             expectedAccountId: string;
             expectedAccountVersion: string;
             trashTemporaryCopiesAfterDownload: boolean;
+            permanentlyDeleteTemporaryCopiesAfterDownload: boolean;
         };
         "Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliQuotaViewModel": {
             /** Format: int64 */
@@ -44148,6 +44167,28 @@ export interface operations {
         };
     };
     StartPikPakCliManageFilesAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAuthorizationViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAuthorizationViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Components.CloudDownloads.PikPakCli.PikPakCliAuthorizationViewModel]"];
+                };
+            };
+        };
+    };
+    StartPikPakCliPurgeFilesAuthorization: {
         parameters: {
             query?: never;
             header?: never;

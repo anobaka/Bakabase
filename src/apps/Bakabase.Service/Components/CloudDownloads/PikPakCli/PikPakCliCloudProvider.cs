@@ -259,7 +259,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
             var selection = await ReadShare(account, source, ct);
             journal = new() {AccountId = account.Id, AccountVersion = account.Version, SourceIdentity = SourceIdentity(source),
                 Selection = selection, FolderName = "Bakabase-" + PikPakCliStorage.Hash(operationId), State = "planned",
-                EnrolledOwnedCopy = enrollOwnedCopy};
+                EnrolledOwnedCopy = enrollOwnedCopy,
+                EnrolledPermanentDeletion = enrollOwnedCopy && account.PermanentlyDeleteTemporaryCopiesAfterDownload && account.CanPermanentlyDeleteFiles};
             await SaveJournal(operationId, journal, ct);
         }
         CheckIdentity(journal, source, account);
@@ -584,6 +585,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudDownloadProvider, ICl
         public string FolderName { get; set; } = "";
         public string? FolderId { get; set; }
         public bool EnrolledOwnedCopy { get; set; }
+        public bool EnrolledPermanentDeletion { get; set; }
         public string? CreatedOwnedFolderId { get; set; }
         public IReadOnlyList<OwnedCopyEntry>? OwnedEntries { get; set; }
         public string State { get; set; } = "planned";

@@ -58,6 +58,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
                         if (saved is {EnrolledOwnedCopy: false})
                         {
                             saved.EnrolledOwnedCopy = true;
+                            saved.EnrolledPermanentDeletion = account.PermanentlyDeleteTemporaryCopiesAfterDownload && account.CanPermanentlyDeleteFiles;
                             await SaveJournal(request.OperationId, saved, ct);
                         }
                         var journal = await EnsureRestored(request.OperationId, request.Source, account, ct, enrollOwnedCopy: true);
@@ -81,7 +82,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
                 accounts.WithAccountAsync(copy.AccountId, copy.AccountVersion, account =>
                     accounts.WithTransferAsync(account, () => ReleaseAsync(request, copy, local, account, ct), ct), ct), ct);
         }
-        catch (PikPakCliException error) when (error.Code == "PIKPAK_NETWORK_UNAVAILABLE")
+        catch (PikPakCliException error) when (error.Code is "PIKPAK_NETWORK_UNAVAILABLE" or "PIKPAK_VERIFICATION_REQUIRED" or
+            "PIKPAK_PURGE_FILES_SCOPE_REQUIRED" or "PIKPAK_ACCOUNT_REQUIRED" or "PIKPAK_OWNED_COPY_PURGE_UNCONFIRMED")
         { return new("retryable", error.Code); }
         catch (PikPakCliException error) { return Review(error.Code); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
@@ -119,7 +121,12 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
         };
         if (!cleanup.Proves(copy, local, expectedFiles.Keys))
             return Review("PIKPAK_OWNED_COPY_CHANGED");
-        if (cleanup.Trashed.Count == expectedFiles.Count) return new("trashed");
+        if (cleanup.Purged.Count == expectedFiles.Count) return new("released");
+        var purge = journal.EnrolledPermanentDeletion && account.PermanentlyDeleteTemporaryCopiesAfterDownload;
+        if (purge && (!account.CanPermanentlyDeleteFiles || account.ProviderIdentity == null))
+            return new("retryable", "PIKPAK_PURGE_FILES_SCOPE_REQUIRED");
+        if (!purge && cleanup.Trashed.Count == expectedFiles.Count)
+            return cleanup.PurgePending.Count == 0 && cleanup.Purged.Count == 0 ? new("trashed") : Review("PIKPAK_OWNED_COPY_PURGE_UNCONFIRMED");
 
         var localGenerations = local.VerifiedFiles.Select(file =>
             file.ContentGeneration ?? ArtifactFileIdentity.ReadContentGeneration(file.Path)).ToArray();
@@ -135,7 +142,7 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
                 // Both absence from the original tree and an exact bin record are required.
                 var pending = cleanup.Pending.Select(id => expectedFiles[id]).ToArray();
                 if (actual.Any(entry => cleanup.Pending.Contains(entry.Id)) ||
-                    !await IsInTrash(account, pending, ct))
+                    (await FindInTrash(account, pending, ct))?.Count != pending.Length)
                     return new("retryable", "PIKPAK_OWNED_COPY_TRASH_UNCONFIRMED");
                 excluded.UnionWith(cleanup.Pending);
             }
@@ -149,7 +156,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
                 cleanup.Pending.Clear();
                 await PikPakCliStorage.WriteAsync(receiptPath, cleanup, CancellationToken.None);
             }
-            if (cleanup.Trashed.Count == expectedFiles.Count) return new("trashed");
+            if (cleanup.Trashed.Count == expectedFiles.Count)
+                return purge ? await PurgeTrashedFiles(account, expectedFiles, cleanup, receiptPath, local, localGenerations, ct) : new("trashed");
 
             // The CLI trashes a folder recursively and does not condition that operation on
             // the folder being empty. Preserve all directories and trash only proven file IDs.
@@ -176,9 +184,11 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
             !journal.Files.SequenceEqual(journal.OwnedEntries.Where(entry => !entry.IsFolder)
                 .Select(entry => new RemoteFile(entry.Id, entry.Path, entry.Size, entry.Hash, entry.Version))))
             return null;
-        return new(journal.AccountId, journal.AccountVersion, journal.FolderId, PikPakCliStorage.Hash(
-            JsonSerializer.Serialize(new {journal.FolderName, journal.SourceIdentity, journal.Selection, journal.OwnedEntries},
-                PikPakCliStorage.Json)));
+        var manifest = JsonSerializer.Serialize(new {journal.FolderName, journal.SourceIdentity, journal.Selection, journal.OwnedEntries},
+            PikPakCliStorage.Json);
+        // Preserve existing trash-only receipt fingerprints. Permanent deletion is part of the signed-up operation.
+        return new(journal.AccountId, journal.AccountVersion, journal.FolderId,
+            PikPakCliStorage.Hash(journal.EnrolledPermanentDeletion ? "purge:" + manifest : manifest));
     }
 
     private static bool ProvesOwnedEntries(IReadOnlyList<OwnedCopyEntry> entries, IReadOnlyList<ShareNode> selected,
@@ -256,33 +266,33 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
         return true;
     }
 
-    private static async Task<bool> IsInTrash(PikPakCliAccountLease account, IReadOnlyList<OwnedCopyEntry> pending,
+    private static async Task<HashSet<string>?> FindInTrash(PikPakCliAccountLease account, IReadOnlyList<OwnedCopyEntry> targets,
         CancellationToken ct)
     {
-        var unverified = pending.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
+        var expected = targets.ToDictionary(entry => entry.Id, StringComparer.Ordinal);
+        var found = new HashSet<string>(StringComparer.Ordinal);
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var token = "";
         do
         {
-            if (!seen.Add(token) || seen.Count > 10000) return false;
+            if (!seen.Add(token) || seen.Count > 10000) return null;
             var arguments = new List<string> {"trash", "ls", "--limit", "100"};
             if (token.Length != 0) { arguments.Add("--token"); arguments.Add(token); }
             var page = await account.Run(arguments, ct);
-            if (!page.TryGetProperty("files", out var files) || files.ValueKind != JsonValueKind.Array) return false;
+            if (!page.TryGetProperty("files", out var files) || files.ValueKind != JsonValueKind.Array) return null;
             foreach (var file in files.EnumerateArray())
             {
                 var id = PikPakCliJson.Text(file, "id");
-                if (id == null || !unverified.TryGetValue(id, out var expected)) continue;
-                if (PikPakCliJson.Text(file, "parent_id") != expected.ParentId ||
+                if (id == null || !expected.TryGetValue(id, out var entry)) continue;
+                if (!found.Add(id) || PikPakCliJson.Text(file, "parent_id") != entry.ParentId ||
                     PikPakCliJson.Text(file, "kind") is not ("file" or "drive#file") ||
-                    PikPakCliJson.Text(file, "name") != expected.Path.Split('/')[^1]) return false;
-                unverified.Remove(id);
+                    PikPakCliJson.Text(file, "name") != entry.Path.Split('/')[^1]) return null;
             }
-            if (unverified.Count == 0) return true;
+            if (found.Count == expected.Count) return found;
             token = PikPakCliJson.Text(page, "next_page_token") ?? "";
-            if (token.Length > 8192 || token.Length != 0 && files.GetArrayLength() == 0) return false;
+            if (token.Length > 8192 || token.Length != 0 && files.GetArrayLength() == 0) return null;
         } while (token.Length != 0);
-        return false;
+        return found;
     }
 
     private sealed record OwnedCopyEntry(string Id, string ParentId, string Path, bool IsFolder, long Size,
@@ -296,6 +306,8 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
         public int DownloadResultId { get; set; }
         public HashSet<string> Trashed { get; set; } = new(StringComparer.Ordinal);
         public List<string> Pending { get; set; } = [];
+        public HashSet<string> Purged { get; set; } = new(StringComparer.Ordinal);
+        public List<string> PurgePending { get; set; } = [];
 
         public bool Proves(CloudOwnedCopyReceipt copy, CloudVerifiedLocalDownload local, IEnumerable<string> files)
         {
@@ -303,6 +315,9 @@ public sealed partial class PikPakCliCloudProvider : ICloudOwnedCopyProvider
             return Copy == copy && VerificationFingerprint == local.Fingerprint &&
                    DownloadTaskId == local.DownloadTaskId && DownloadResultId == local.DownloadResultId &&
                    Trashed != null && Pending != null && Trashed.IsSubsetOf(expected) &&
+                   Purged != null && PurgePending != null && Purged.IsSubsetOf(Trashed) &&
+                   PurgePending.Distinct(StringComparer.Ordinal).Count() == PurgePending.Count &&
+                   PurgePending.All(id => Trashed.Contains(id) && !Purged.Contains(id)) &&
                    Pending.Distinct(StringComparer.Ordinal).Count() == Pending.Count &&
                    Pending.All(id => expected.Contains(id) && !Trashed.Contains(id));
         }

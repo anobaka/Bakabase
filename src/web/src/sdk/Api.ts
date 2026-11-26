@@ -9664,6 +9664,8 @@ export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAccoun
   problem?: string;
   quota?: BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliQuotaViewModel;
   canManageFiles: boolean;
+  canPermanentlyDeleteFiles: boolean;
+  permanentlyDeleteTemporaryCopiesAfterDownload: boolean;
   trashTemporaryCopiesAfterDownload: boolean;
 }
 
@@ -9704,6 +9706,7 @@ export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliCleanu
   expectedAccountId: string;
   expectedAccountVersion: string;
   trashTemporaryCopiesAfterDownload: boolean;
+  permanentlyDeleteTemporaryCopiesAfterDownload: boolean;
 }
 
 export interface BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliQuotaViewModel {
@@ -38888,6 +38891,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     startPikPakCliManageFilesAuthorizationUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/pikpak-cli/account/authorization/manage-files`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PikPakCli
+     * @name StartPikPakCliPurgeFilesAuthorization
+     * @request POST:/pikpak-cli/account/authorization/purge-files
+     */
+    startPikPakCliPurgeFilesAuthorization: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceComponentsCloudDownloadsPikPakCliPikPakCliAuthorizationViewModel,
+        any
+      >({
+        path: `/pikpak-cli/account/authorization/purge-files`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startPikPakCliPurgeFilesAuthorization
+     * @name startPikPakCliPurgeFilesAuthorizationUrl
+     */
+    startPikPakCliPurgeFilesAuthorizationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/pikpak-cli/account/authorization/purge-files`;
 
       return baseUrl + path;
     },

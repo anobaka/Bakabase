@@ -18,6 +18,7 @@ namespace Bakabase.Service.Components.CloudDownloads.PikPakCli;
 public sealed class PikPakCliAccountService
 {
     private const string ManageFilesScope = "files:manage";
+    private const string PurgeFilesScope = "files:purge";
     private readonly string _root;
     private readonly IPikPakCliProcess _process;
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -31,7 +32,9 @@ public sealed class PikPakCliAccountService
         WithAccountAsync(accountId, null, account => Task.FromResult(new PikPakCliAccountViewModel
         {
             IsConfigured = true, AccountId = account.Id, AccountVersion = account.Version,
-            CanManageFiles = account.CanManageFiles, TrashTemporaryCopiesAfterDownload = account.TrashTemporaryCopiesAfterDownload
+            CanManageFiles = account.CanManageFiles, TrashTemporaryCopiesAfterDownload = account.TrashTemporaryCopiesAfterDownload,
+            CanPermanentlyDeleteFiles = account.CanPermanentlyDeleteFiles,
+            PermanentlyDeleteTemporaryCopiesAfterDownload = account.PermanentlyDeleteTemporaryCopiesAfterDownload
         }), ct);
     private string AccountPath => Path.Combine(_root, "account.json");
     private string ActiveAuthorizationPath => Path.Combine(_root, "active-authorization.json");
@@ -116,10 +119,16 @@ public sealed class PikPakCliAccountService
                 throw new PikPakCliException("PIKPAK_ACCOUNT_CHANGED");
             if (input.TrashTemporaryCopiesAfterDownload && !account.CanManageFiles)
                 throw new PikPakCliException("PIKPAK_MANAGE_FILES_SCOPE_REQUIRED");
-            if (input.TrashTemporaryCopiesAfterDownload == account.TrashTemporaryCopiesAfterDownload)
+            if (input.PermanentlyDeleteTemporaryCopiesAfterDownload && !input.TrashTemporaryCopiesAfterDownload)
+                throw new PikPakCliException("PIKPAK_CLEANUP_SETTINGS_INVALID");
+            if (input.PermanentlyDeleteTemporaryCopiesAfterDownload && !account.CanPermanentlyDeleteFiles)
+                throw new PikPakCliException("PIKPAK_PURGE_FILES_SCOPE_REQUIRED");
+            if (input.TrashTemporaryCopiesAfterDownload == account.TrashTemporaryCopiesAfterDownload &&
+                input.PermanentlyDeleteTemporaryCopiesAfterDownload == account.PermanentlyDeleteTemporaryCopiesAfterDownload)
                 return View(account);
             if (_leases.GetValueOrDefault(account.Id) != 0) throw new PikPakCliException("PIKPAK_ACCOUNT_IN_USE");
-            account = account with {TrashTemporaryCopiesAfterDownload = input.TrashTemporaryCopiesAfterDownload};
+            account = account with {TrashTemporaryCopiesAfterDownload = input.TrashTemporaryCopiesAfterDownload,
+                PermanentlyDeleteTemporaryCopiesAfterDownload = input.PermanentlyDeleteTemporaryCopiesAfterDownload};
             await PikPakCliStorage.WriteAsync(AccountPath, account, ct);
             return View(account);
         }
@@ -145,12 +154,15 @@ public sealed class PikPakCliAccountService
         finally { _gate.Release(); }
     }
 
-    public Task<PikPakCliAuthorizationViewModel> StartAsync(CancellationToken ct) => StartAsync(false, ct);
+    public Task<PikPakCliAuthorizationViewModel> StartAsync(CancellationToken ct) => StartAsync("files:write", ct);
 
-    public Task<PikPakCliAuthorizationViewModel> StartManageFilesAuthorizationAsync(CancellationToken ct) => StartAsync(true, ct);
+    public Task<PikPakCliAuthorizationViewModel> StartManageFilesAuthorizationAsync(CancellationToken ct) => StartAsync(ManageFilesScope, ct);
 
-    private async Task<PikPakCliAuthorizationViewModel> StartAsync(bool manageFiles, CancellationToken ct)
+    public Task<PikPakCliAuthorizationViewModel> StartPurgeFilesAuthorizationAsync(CancellationToken ct) => StartAsync(PurgeFilesScope, ct);
+
+    private async Task<PikPakCliAuthorizationViewModel> StartAsync(string fileScope, CancellationToken ct)
     {
+        var manageFiles = fileScope is ManageFilesScope or PurgeFilesScope;
         await _gate.WaitAsync(ct);
         try
         {
@@ -169,9 +181,8 @@ public sealed class PikPakCliAccountService
             }
             PikPakCliStorage.Directory(_root); PikPakCliStorage.Directory(Path.Combine(_root, "profiles"));
             var id = Guid.NewGuid().ToString("N");
-            // Account scope permits the CLI's post-login identity lookup. File management
-            // includes read/write and moving items to the trash. Never request purge.
-            var scopes = manageFiles ? $"account,{ManageFilesScope}" : "account,files:write";
+            // A purge grant is requested only from its separate authorization action.
+            var scopes = $"account,{fileScope}";
             var result = await _process.RunAsync(Profile(id), ["auth", "login", "--method", "device", "--no-launch-browser",
                 "--scope", scopes, "--label", "Bakabase"], ct);
             var verification = PikPakCliJson.Required(result, "verification_uri");
@@ -182,7 +193,8 @@ public sealed class PikPakCliAccountService
                 VerificationUri = verification, UserCode = PikPakCliJson.Required(result, "user_code"),
                 ExpiresAt = DateTimeOffset.UtcNow.AddSeconds(Math.Clamp(PikPakCliJson.Number(result, "expires_in") ?? 300, 30, 1800)),
                 IntervalSeconds = (int)Math.Clamp(PikPakCliJson.Number(result, "interval") ?? 3, 2, 30),
-                ManageFilesRequested = manageFiles, PreviousAccountId = current?.Id, PreviousAccountVersion = current?.Version,
+                ManageFilesRequested = manageFiles, PurgeFilesRequested = fileScope == PurgeFilesScope,
+                PreviousAccountId = current?.Id, PreviousAccountVersion = current?.Version,
                 PreviousProviderIdentity = expectedIdentity};
             await CancelActivePending(ct);
             await PikPakCliStorage.WriteAsync(SessionPath(id), session, ct);
@@ -229,10 +241,14 @@ public sealed class PikPakCliAccountService
                         if (explicitScopes != null) session.GrantedScopes = explicitScopes;
                         if (session.ManageFilesRequested && status == "success")
                         {
-                            if (explicitScopes?.Contains("account") != true || !explicitScopes.Contains(ManageFilesScope) ||
-                                explicitScopes.Contains("files:purge"))
+                            // The official consent form returns the highest granted file scope.
+                            // A purge grant includes manage, but only the purge action may accept it.
+                            var requiredScope = session.PurgeFilesRequested ? PurgeFilesScope : ManageFilesScope;
+                            if (explicitScopes?.Contains("account") != true || !explicitScopes.Contains(requiredScope) ||
+                                !session.PurgeFilesRequested && explicitScopes.Contains(PurgeFilesScope))
                             {
-                                await RejectPromotionAsync(session, "PIKPAK_MANAGE_FILES_SCOPE_REQUIRED");
+                                await RejectPromotionAsync(session, session.PurgeFilesRequested
+                                    ? "PIKPAK_PURGE_FILES_SCOPE_REQUIRED" : "PIKPAK_MANAGE_FILES_SCOPE_REQUIRED");
                                 return View(session);
                             }
                             // The CLI may already have written credentials. Save the scope
@@ -343,7 +359,8 @@ public sealed class PikPakCliAccountService
                 account = current with {ProfileId = session.Id, ProviderIdentity = providerIdentity,
                     Name = account.Name ?? current.Name};
             }
-            account = account with {CanManageFiles = true};
+            account = account with {CanManageFiles = true, CanPermanentlyDeleteFiles = session.PurgeFilesRequested,
+                PermanentlyDeleteTemporaryCopiesAfterDownload = session.PurgeFilesRequested && account.PermanentlyDeleteTemporaryCopiesAfterDownload};
         }
         await PikPakCliStorage.WriteAsync(AccountPath, account, CancellationToken.None);
         session.Status = "authorized"; session.DeviceCode = ""; session.Problem = null;
@@ -409,6 +426,8 @@ public sealed class PikPakCliAccountService
             return await action(new(account.Id, account.Version, Profile(account.EffectiveProfileId), _process)
             {
                 CanManageFiles = account.CanManageFiles, ProviderIdentity = account.ProviderIdentity,
+                CanPermanentlyDeleteFiles = account.CanPermanentlyDeleteFiles,
+                PermanentlyDeleteTemporaryCopiesAfterDownload = account.PermanentlyDeleteTemporaryCopiesAfterDownload,
                 TrashTemporaryCopiesAfterDownload = account.TrashTemporaryCopiesAfterDownload
             });
         }
@@ -458,7 +477,9 @@ public sealed class PikPakCliAccountService
         ExpiresAt = s.ExpiresAt, IntervalSeconds = s.IntervalSeconds, Problem = s.Problem};
     private static PikPakCliAccountViewModel View(Account account) => new() {IsConfigured = true,
         AccountId = account.Id, AccountVersion = account.Version, DisplayName = account.Name,
-        CanManageFiles = account.CanManageFiles, TrashTemporaryCopiesAfterDownload = account.TrashTemporaryCopiesAfterDownload};
+        CanManageFiles = account.CanManageFiles, TrashTemporaryCopiesAfterDownload = account.TrashTemporaryCopiesAfterDownload,
+        CanPermanentlyDeleteFiles = account.CanPermanentlyDeleteFiles,
+        PermanentlyDeleteTemporaryCopiesAfterDownload = account.PermanentlyDeleteTemporaryCopiesAfterDownload};
     // The official CLI auth status JSON exposes user_id as a stable identity.
     internal static string? ReadProviderIdentity(JsonElement status) =>
         PikPakCliJson.Text(status, "user_id") is {Length: > 0 and <= 160} id && !id.Any(c => char.IsWhiteSpace(c) || char.IsControl(c))
@@ -480,6 +501,8 @@ public sealed class PikPakCliAccountService
         public string? ProfileId { get; init; }
         public string? ProviderIdentity { get; init; }
         public bool CanManageFiles { get; init; }
+        public bool CanPermanentlyDeleteFiles { get; init; }
+        public bool PermanentlyDeleteTemporaryCopiesAfterDownload { get; init; }
         public bool TrashTemporaryCopiesAfterDownload { get; init; }
 
         [System.Text.Json.Serialization.JsonIgnore]
@@ -500,6 +523,7 @@ public sealed class PikPakCliAccountService
         public string? LastProviderStatus { get; set; }
         public List<string>? GrantedScopes { get; set; }
         public bool ManageFilesRequested { get; set; }
+        public bool PurgeFilesRequested { get; set; }
         public bool ManageFilesConsentVerified { get; set; }
         public string? PreviousAccountId { get; set; }
         public string? PreviousAccountVersion { get; set; }
@@ -510,6 +534,8 @@ public sealed class PikPakCliAccountService
 internal sealed record PikPakCliAccountLease(string Id, string Version, string Profile, IPikPakCliProcess Process)
 {
     internal bool CanManageFiles { get; init; }
+    internal bool CanPermanentlyDeleteFiles { get; init; }
+    internal bool PermanentlyDeleteTemporaryCopiesAfterDownload { get; init; }
     internal bool TrashTemporaryCopiesAfterDownload { get; init; }
     internal string? ProviderIdentity { get; init; }
 

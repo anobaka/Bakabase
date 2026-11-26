@@ -122,9 +122,9 @@ it("offers a trash recheck for an unconfirmed PikPak command and a link to the o
   render(<OwnedCloudCopyModal taskId={14} thirdPartyId={ThirdPartyId.PikPak} />);
   fireEvent.click(await screen.findByText("downloadCenter.ownedCopy.recheckTrash"));
   expect(await screen.findByText("downloadCenter.ownedCopy.hint.trashed")).toBeTruthy();
-  expect(screen.getByRole("link", { name: "pikpakCli.capacity.openDrive" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "downloadCenter.ownedCopy.openTrash" })).toHaveAttribute(
     "href",
-    "https://mypikpak.com/drive/",
+    "https://mypikpak.com/drive/trash",
   );
   expect(screen.queryByText("downloadCenter.ownedCopy.retry")).toBeNull();
   expect(retry).toHaveBeenCalledOnce();

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Modal, Spinner, Switch } from "@/components/bakaui";
+import { Button, Chip, Modal, Radio, RadioGroup, Spinner } from "@/components/bakaui";
 import PikPakAccountCapacity from "./PikPakAccountCapacity";
 import ExternalLink from "@/components/ExternalLink";
 import { openExternalUrl } from "@/utils/openExternalUrl";
@@ -128,6 +128,15 @@ export default function PikPakCliAccountsPanel({ onChanged }: { onChanged?: () =
     };
   }, [session?.id, session?.status, busy, error, updateSession]);
 
+  const authorizeCleanup = (permanent: boolean) => {
+    void perform(async (current) => {
+      const request = permanent
+        ? BApi.pikpakCli.startPikPakCliPurgeFilesAuthorization
+        : BApi.pikpakCli.startPikPakCliManageFilesAuthorization;
+      await updateSession(checked(await request(privateRequest)).data ?? undefined, current);
+    });
+  };
+
   const pending = session?.status === "pending";
   const problem = error || session?.problem || (!pending ? account?.problem : undefined);
   return (
@@ -172,17 +181,14 @@ export default function PikPakCliAccountsPanel({ onChanged }: { onChanged?: () =
       </p>
       {account?.isConfigured && !pending && (
         <section className="space-y-2" aria-label={t("pikpakCli.cleanup.title")}>
-          <Switch
-            size="sm"
-            isSelected={account.trashTemporaryCopiesAfterDownload === true}
-            isDisabled={
-              busy ||
-              !ready ||
-              !account.accountId ||
-              !account.accountVersion ||
-              (!account.canManageFiles && !account.trashTemporaryCopiesAfterDownload)
+          <RadioGroup
+            label={t("pikpakCli.cleanup.afterVerification")}
+            value={
+              account.permanentlyDeleteTemporaryCopiesAfterDownload ? "delete"
+                : account.trashTemporaryCopiesAfterDownload ? "trash" : "keep"
             }
-            onValueChange={(enabled) => {
+            isDisabled={busy || !ready || !account.accountId || !account.accountVersion}
+            onValueChange={(mode) => {
               const { accountId, accountVersion } = account;
               if (!accountId || !accountVersion) return;
               void perform(async (current) => {
@@ -191,7 +197,8 @@ export default function PikPakCliAccountsPanel({ onChanged }: { onChanged?: () =
                     {
                       expectedAccountId: accountId,
                       expectedAccountVersion: accountVersion,
-                      trashTemporaryCopiesAfterDownload: enabled,
+                      trashTemporaryCopiesAfterDownload: mode !== "keep",
+                      permanentlyDeleteTemporaryCopiesAfterDownload: mode === "delete",
                     },
                     privateRequest,
                   ),
@@ -204,29 +211,34 @@ export default function PikPakCliAccountsPanel({ onChanged }: { onChanged?: () =
               });
             }}
           >
-            {t("pikpakCli.cleanup.toggle")}
-          </Switch>
+            <Radio value="keep">{t("pikpakCli.cleanup.keep")}</Radio>
+            <Radio value="trash" isDisabled={!account.canManageFiles}>{t("pikpakCli.cleanup.trash")}</Radio>
+            <Radio value="delete" isDisabled={!account.canPermanentlyDeleteFiles}>{t("pikpakCli.cleanup.delete")}</Radio>
+          </RadioGroup>
           <p className="text-xs leading-relaxed text-default-500">{t("pikpakCli.cleanup.hint")}</p>
-          {account.canManageFiles ? (
-            <p className="text-xs text-default-500">{t("pikpakCli.cleanup.permissionGranted")}</p>
-          ) : account.accountId && account.accountVersion ? (
-            <Button
-              size="sm"
-              variant="flat"
-              isDisabled={busy || !ready}
-              onPress={() =>
-                void perform(async (current) => {
-                  await updateSession(
-                    checked(
-                      await BApi.pikpakCli.startPikPakCliManageFilesAuthorization(privateRequest),
-                    ).data ?? undefined,
-                    current,
-                  );
-                })
-              }
-            >
-              {t("pikpakCli.cleanup.authorize")}
-            </Button>
+          {account.accountId && account.accountVersion ? (
+            <div className="flex flex-wrap gap-2">
+              {!account.canManageFiles && (
+                <Button
+                  size="sm"
+                  variant="flat"
+                  isDisabled={busy || !ready}
+                  onPress={() => authorizeCleanup(false)}
+                >
+                  {t("pikpakCli.cleanup.authorize")}
+                </Button>
+              )}
+              {!account.canPermanentlyDeleteFiles && (
+                <Button
+                  size="sm"
+                  variant="flat"
+                  isDisabled={busy || !ready}
+                  onPress={() => authorizeCleanup(true)}
+                >
+                  {t("pikpakCli.cleanup.authorizeDeletion")}
+                </Button>
+              )}
+            </div>
           ) : (
             <p className="text-xs text-warning-600">
               {t("cloudDownload.problemCode.PIKPAK_ACCOUNT_IDENTITY_UNVERIFIED")}

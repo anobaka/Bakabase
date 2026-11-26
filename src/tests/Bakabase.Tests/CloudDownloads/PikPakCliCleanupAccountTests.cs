@@ -60,6 +60,57 @@ public sealed class PikPakCliCleanupAccountTests
     }
 
     [TestMethod]
+    public async Task PermanentDeletionRequiresSeparateSameIdentityGrantAndExplicitPolicy()
+    {
+        var account = await AuthorizeAsync(manageFiles: true);
+        await SetCleanupAsync(account, true);
+        Task<PikPakCliAccountViewModel> SetPermanent(bool enabled = true) => _accounts.SetCleanupSettingsAsync(
+            new(account.AccountId!, account.AccountVersion!, true, enabled), default);
+        await RejectAsync("PIKPAK_PURGE_FILES_SCOPE_REQUIRED", () => SetPermanent());
+
+        var incomplete = await _accounts.StartPurgeFilesAuthorizationAsync(default);
+        _native.Approve(incomplete.Id, "same-provider-user", "account", "files:manage");
+        Assert.AreEqual("PIKPAK_PURGE_FILES_SCOPE_REQUIRED", (await _accounts.PollAsync(incomplete.Id, default)).Problem);
+        var noAccount = await _accounts.StartPurgeFilesAuthorizationAsync(default);
+        _native.Approve(noAccount.Id, "same-provider-user", "files:purge");
+        Assert.AreEqual("PIKPAK_PURGE_FILES_SCOPE_REQUIRED", (await _accounts.PollAsync(noAccount.Id, default)).Problem);
+        var mismatched = await _accounts.StartPurgeFilesAuthorizationAsync(default);
+        _native.Approve(mismatched.Id, "different-user", "account", "files:manage", "files:purge");
+        Assert.AreEqual("PIKPAK_ACCOUNT_CHANGED", (await _accounts.PollAsync(mismatched.Id, default)).Problem);
+        var upgrade = await _accounts.StartPurgeFilesAuthorizationAsync(default);
+        Assert.AreEqual("account,files:purge", _native.RequestedScope(upgrade.Id));
+        _native.Approve(upgrade.Id, "same-provider-user", "account", "files:purge");
+        Assert.AreEqual("authorized", (await _accounts.PollAsync(upgrade.Id, default)).Status);
+
+        var granted = await _accounts.GetAsync(default);
+        Assert.AreEqual(account.AccountId, granted.AccountId);
+        Assert.AreEqual(account.AccountVersion, granted.AccountVersion);
+        Assert.IsTrue(granted.CanPermanentlyDeleteFiles);
+        Assert.IsTrue(granted.TrashTemporaryCopiesAfterDownload);
+        Assert.IsFalse(granted.PermanentlyDeleteTemporaryCopiesAfterDownload);
+        await RejectAsync("PIKPAK_CLEANUP_SETTINGS_INVALID", () => _accounts.SetCleanupSettingsAsync(
+            new(account.AccountId!, account.AccountVersion!, false, true), default));
+        Assert.IsTrue((await SetPermanent()).PermanentlyDeleteTemporaryCopiesAfterDownload);
+
+        _accounts = new(_root, _native);
+        await _accounts.WithAccountAsync(account.AccountId, account.AccountVersion, async lease =>
+        {
+            Assert.IsTrue(lease.CanPermanentlyDeleteFiles);
+            Assert.IsTrue(lease.PermanentlyDeleteTemporaryCopiesAfterDownload);
+            await RejectAsync("PIKPAK_ACCOUNT_IN_USE", () => SetPermanent(false));
+            return true;
+        }, default);
+
+        var managementOnly = await _accounts.StartManageFilesAuthorizationAsync(default);
+        _native.Approve(managementOnly.Id, "same-provider-user", "account", "files:manage");
+        Assert.AreEqual("authorized", (await _accounts.PollAsync(managementOnly.Id, default)).Status);
+        var after = await _accounts.GetAsync(default);
+        Assert.IsTrue(after.TrashTemporaryCopiesAfterDownload);
+        Assert.IsFalse(after.CanPermanentlyDeleteFiles);
+        Assert.IsFalse(after.PermanentlyDeleteTemporaryCopiesAfterDownload);
+    }
+
+    [TestMethod]
     public async Task LegacyRegistrationRecoversIdentityFromItsOriginalCredentialProfile()
     {
         var original = await AuthorizeAsync(providerId: null);

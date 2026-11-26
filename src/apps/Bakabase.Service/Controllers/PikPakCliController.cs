@@ -44,6 +44,10 @@ public sealed class PikPakCliController(PikPakCliAccountService accounts) : Cont
     [SwaggerOperation(OperationId = "StartPikPakCliManageFilesAuthorization")]
     public async Task<SingletonResponse<PikPakCliAuthorizationViewModel>> StartManageFilesAuthorization(CancellationToken ct) =>
         new(await accounts.StartManageFilesAuthorizationAsync(ct));
+    [HttpPost("account/authorization/purge-files")]
+    [SwaggerOperation(OperationId = "StartPikPakCliPurgeFilesAuthorization")]
+    public async Task<SingletonResponse<PikPakCliAuthorizationViewModel>> StartPurgeFilesAuthorization(CancellationToken ct) =>
+        new(await accounts.StartPurgeFilesAuthorizationAsync(ct));
     [HttpPost("account/authorization/{id}/poll")]
     [SwaggerOperation(OperationId = "PollPikPakCliAuthorization")]
     public async Task<SingletonResponse<PikPakCliAuthorizationViewModel>> Poll(string id, CancellationToken ct) => new(await accounts.PollAsync(id, ct));

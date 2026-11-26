@@ -7,6 +7,7 @@ const api = vi.hoisted(() => ({
   getActivePikPakCliAuthorization: vi.fn(),
   startPikPakCliAuthorization: vi.fn(),
   startPikPakCliManageFilesAuthorization: vi.fn(),
+  startPikPakCliPurgeFilesAuthorization: vi.fn(),
   setPikPakCliCleanupSettings: vi.fn(),
   pollPikPakCliAuthorization: vi.fn(),
   cancelPikPakCliAuthorization: vi.fn(),
@@ -19,25 +20,25 @@ vi.mock("@/components/ExternalLink", () => ({
   default: ({ children, href }: any) => <a href={href}>{children}</a>,
 }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
-vi.mock("@/components/bakaui", () => ({
-  Button: ({ children, onPress, isDisabled, isLoading }: any) => (
-    <button disabled={isDisabled || isLoading} onClick={onPress}>
-      {children}
-    </button>
-  ),
-  Switch: ({ children, isSelected, isDisabled, onValueChange }: any) => (
-    <label><input role="switch" type="checkbox" checked={isSelected} disabled={isDisabled}
-      onChange={(event) => onValueChange(event.currentTarget.checked)} />{children}</label>
-  ),
-  Chip: ({ children }: any) => <span>{children}</span>,
-  Spinner: () => <span>loading</span>,
-  Modal: ({ title, children, footer }: any) => (
-    <div role="dialog" aria-label={title}>
-      {children}
-      {footer}
-    </div>
-  ),
-}));
+vi.mock("@/components/bakaui", async () => {
+  const { Radio, RadioGroup } = await import("@/components/bakaui/components/Radio");
+  return {
+    Radio, RadioGroup,
+    Button: ({ children, onPress, isDisabled, isLoading }: any) => (
+      <button disabled={isDisabled || isLoading} onClick={onPress}>
+        {children}
+      </button>
+    ),
+    Chip: ({ children }: any) => <span>{children}</span>,
+    Spinner: () => <span>loading</span>,
+    Modal: ({ title, children, footer }: any) => (
+      <div role="dialog" aria-label={title}>
+        {children}
+        {footer}
+      </div>
+    ),
+  };
+});
 
 const pending = {
   id: "auth-1",
@@ -317,9 +318,9 @@ it("keeps the account policy off until granted and explicitly enabled", async ()
   api.getPikPakCliAccount.mockResolvedValue({ code: 0, data: { ...bound, canManageFiles: false } });
   api.startPikPakCliManageFilesAuthorization.mockResolvedValue({ code: 0, data: pending });
   render(<PikPakCliAccountsPanel />);
-  const toggle = await screen.findByRole("switch");
-  expect(toggle).toBeDisabled();
-  expect(toggle).not.toBeChecked();
+  const trash = await screen.findByRole("radio", { name: "pikpakCli.cleanup.trash" });
+  expect(trash).toBeDisabled();
+  expect(screen.getByRole("radio", { name: "pikpakCli.cleanup.keep" })).toBeChecked();
   fireEvent.click(screen.getByText("pikpakCli.cleanup.authorize"));
   await screen.findByText(pending.userCode);
   expect(api.startPikPakCliManageFilesAuthorization).toHaveBeenCalledWith(quiet);
@@ -330,10 +331,10 @@ it("keeps the account policy off until granted and explicitly enabled", async ()
     data: { ...pending, status: "authorized" },
   });
   fireEvent.click(screen.getByText("pikpakCli.authorization.refresh"));
-  expect(await screen.findByRole("switch")).toBeEnabled();
-  expect(screen.getByRole("switch")).not.toBeChecked();
+  expect(await screen.findByRole("radio", { name: "pikpakCli.cleanup.trash" })).toBeEnabled();
+  expect(screen.getByRole("radio", { name: "pikpakCli.cleanup.keep" })).toBeChecked();
   expect(api.setPikPakCliCleanupSettings).not.toHaveBeenCalled();
-  expect(screen.getByText("pikpakCli.cleanup.permissionGranted")).toBeTruthy();
+  expect(screen.getByRole("radio", { name: "pikpakCli.cleanup.delete" })).toBeDisabled();
 });
 
 it("writes the setting for the displayed account generation and keeps the previous value on error", async () => {
@@ -347,28 +348,63 @@ it("writes the setting for the displayed account generation and keeps the previo
     })
     .mockResolvedValueOnce({ code: 0, data: account });
   render(<PikPakCliAccountsPanel />);
-  const toggle = await screen.findByRole("switch");
-  fireEvent.click(toggle);
+  const trash = await screen.findByRole("radio", { name: "pikpakCli.cleanup.trash" });
+  fireEvent.click(trash);
   await screen.findByRole("alert");
-  expect(toggle).not.toBeChecked();
-  fireEvent.click(toggle);
-  await waitFor(() => expect(toggle).toBeChecked());
+  expect(trash).not.toBeChecked();
+  fireEvent.click(trash);
+  await waitFor(() => expect(trash).toBeChecked());
   expect(api.setPikPakCliCleanupSettings).toHaveBeenLastCalledWith(
     {
       expectedAccountId: bound.accountId,
       expectedAccountVersion: bound.accountVersion,
       trashTemporaryCopiesAfterDownload: true,
+      permanentlyDeleteTemporaryCopiesAfterDownload: false,
     },
     quiet,
   );
-  fireEvent.click(toggle);
-  await waitFor(() => expect(toggle).not.toBeChecked());
+  fireEvent.click(screen.getByRole("radio", { name: "pikpakCli.cleanup.keep" }));
+  await waitFor(() => expect(trash).not.toBeChecked());
   expect(api.setPikPakCliCleanupSettings).toHaveBeenLastCalledWith(
     {
       expectedAccountId: bound.accountId,
       expectedAccountVersion: bound.accountVersion,
       trashTemporaryCopiesAfterDownload: false,
+      permanentlyDeleteTemporaryCopiesAfterDownload: false,
     },
     quiet,
   );
+});
+
+it("requires a separate grant and explicit selection before deleting future transfers permanently", async () => {
+  const account = { ...bound, canManageFiles: true, trashTemporaryCopiesAfterDownload: true };
+  const authorized = { ...account, canPermanentlyDeleteFiles: true };
+  api.getPikPakCliAccount.mockResolvedValue({ code: 0, data: account });
+  api.startPikPakCliPurgeFilesAuthorization.mockResolvedValue({ code: 0, data: pending });
+  render(<PikPakCliAccountsPanel />);
+  expect(await screen.findByRole("radio", { name: "pikpakCli.cleanup.trash" })).toBeChecked();
+  expect(screen.getByRole("radio", { name: "pikpakCli.cleanup.delete" })).toBeDisabled();
+
+  fireEvent.click(screen.getByRole("button", { name: "pikpakCli.cleanup.authorizeDeletion" }));
+  await screen.findByText(pending.userCode);
+  expect(api.startPikPakCliPurgeFilesAuthorization).toHaveBeenCalledWith(quiet);
+  expect(api.startPikPakCliManageFilesAuthorization).not.toHaveBeenCalled();
+  api.getPikPakCliAccount.mockResolvedValue({ code: 0, data: authorized });
+  api.pollPikPakCliAuthorization.mockResolvedValue({ code: 0, data: { ...pending, status: "authorized" } });
+  fireEvent.click(screen.getByText("pikpakCli.authorization.refresh"));
+  const remove = await screen.findByRole("radio", { name: "pikpakCli.cleanup.delete" });
+  expect(remove).not.toBeChecked();
+  expect(api.setPikPakCliCleanupSettings).not.toHaveBeenCalled();
+
+  api.setPikPakCliCleanupSettings.mockResolvedValueOnce({
+    code: 0, data: { ...authorized, permanentlyDeleteTemporaryCopiesAfterDownload: true },
+  });
+  fireEvent.click(remove);
+  await waitFor(() => expect(remove).toBeChecked());
+  expect(api.setPikPakCliCleanupSettings).toHaveBeenCalledWith({
+    expectedAccountId: account.accountId,
+    expectedAccountVersion: account.accountVersion,
+    trashTemporaryCopiesAfterDownload: true,
+    permanentlyDeleteTemporaryCopiesAfterDownload: true,
+  }, quiet);
 });
