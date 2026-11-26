@@ -30,7 +30,7 @@ public class DbSetClassificationTests
         Assert.AreEqual(0, unclassified.Count, $"Unclassified DbSets: {string.Join(", ", unclassified)}. {Rule}");
         var stale = DataSyncDbSetClassification.All.Keys.Except(DbSets).ToList();
         Assert.AreEqual(0, stale.Count, $"Classified but not a DbSet: {string.Join(", ", stale)}.");
-        Assert.AreEqual(98, DbSets.Count);
+        Assert.AreEqual(99, DbSets.Count);
         Assert.AreEqual(DbSets.Count, DataSyncDbSetClassification.All.Count);
     }
 
@@ -41,7 +41,7 @@ public class DbSetClassificationTests
             .ToDictionary(g => g.Key, g => g.Count());
         Assert.AreEqual(2, byClass[DataSyncTableClass.Synced]);
         Assert.AreEqual(31, byClass[DataSyncTableClass.LibraryData]);
-        Assert.AreEqual(65, byClass[DataSyncTableClass.NeverSync]);
+        Assert.AreEqual(66, byClass[DataSyncTableClass.NeverSync]);
         Assert.AreEqual(DataSyncTableClass.NeverSync, DataSyncDbSetClassification.Get("AcquisitionHandoffs")!.Class);
         Assert.IsTrue(DataSyncDbSetClassification.All.Values.All(c => !string.IsNullOrWhiteSpace(c.Reason)));
         Assert.IsTrue(DataSyncDbSetClassification.All.All(e => e.Key == e.Value.DbSetName));
@@ -79,7 +79,7 @@ public class DbSetClassificationTests
         foreach (var dbSet in new[]
                  {
                      nameof(BakabaseDbContext.ResourceScopes), nameof(BakabaseDbContext.ResourceProcessingJobs),
-                     nameof(BakabaseDbContext.ManagedDownloadTasks),
+                     nameof(BakabaseDbContext.ManagedDownloadTasks), nameof(BakabaseDbContext.CloudDownloadOwnedCopies),
                      nameof(BakabaseDbContext.ArtifactOperations), nameof(BakabaseDbContext.Artifacts),
                      nameof(BakabaseDbContext.ArtifactConsumers), nameof(BakabaseDbContext.ArtifactLineage),
                      nameof(BakabaseDbContext.ArtifactOperationBindings),
