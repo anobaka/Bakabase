@@ -30,8 +30,17 @@ repository's `src/scripts/with-scratch.sh`:
 
 The wrapper sets `TMPDIR`, `TMP` and `TEMP` only for that command and its children,
 using a private, short directory for Unix socket compatibility. It prints the
-run directory and leaves it available for inspection. Put explicit report,
-download, publish and archive destinations on SSD too: the environment cannot
+run directory and leaves it available for inspection. On macOS/Linux, a direct
+`dotnet test`, `dotnet vstest` or MSTest test executable also gives TestKit an
+isolated directory for its default databases and migrated template. A successful
+command reclaims only the registered SQLite files and their WAL, SHM and journal
+sidecars once its processes exit and the files are unused. Other files beside
+a database, including diagnostics, are retained. Use `--test-run` before `--` for a script or another test driver. Failed,
+cancelled or still-active runs retain their fixture directory for diagnosis.
+Explicit database paths (including `TestServiceBuilder.NewTestDirectory()`), logs,
+and everything under the ordinary temporary directory retain their usual lifetime.
+
+Put explicit report, download, publish and archive destinations on SSD too: the environment cannot
 redirect hardcoded `/tmp` paths or output paths passed to tools. Repository-local
 `bin`, `obj`, `TestResults` and frontend output are fine when the checkout itself
 is on SSD. Use the wrapper from the current checkout; if an older checkout lacks
