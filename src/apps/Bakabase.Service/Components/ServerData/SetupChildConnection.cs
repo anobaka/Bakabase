@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
@@ -20,7 +21,7 @@ public sealed class SetupChildConnection : IAsyncDisposable
     public const string RoleArgument = "--bakabase-role=";
     internal const string PipeEnvironment = "BAKABASE_SETUP_PIPE";
     internal const string SecretEnvironment = "BAKABASE_SETUP_SECRET";
-    internal sealed record Message(string Type, string? Value = null, string? MonitorUrl = null, int? ParentProcessId = null);
+    internal sealed record Message(string Type, string? Value = null, string? MonitorUrl = null, int? ParentProcessId = null, string? Language = null);
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private readonly StreamReader _reader;
     private readonly StreamWriter _writer;
@@ -95,7 +96,10 @@ public sealed class SetupChildConnection : IAsyncDisposable
         try
         {
             _setupReply = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            Send("setup", mode);
+            // The running application owns the workspace's language setting. Its
+            // coordinator has no application options and can have a different UI culture.
+            var culture = CultureInfo.DefaultThreadCurrentUICulture ?? CultureInfo.CurrentUICulture;
+            Send("setup", mode, culture.TwoLetterISOLanguageName == "zh" ? "cn" : "en");
             return await _setupReply.Task.WaitAsync(TimeSpan.FromSeconds(30), Stopping);
         }
         finally { _setupReply = null; _setupGate.Release(); }
@@ -196,9 +200,9 @@ public sealed class SetupChildConnection : IAsyncDisposable
             if (parentLost) _ = Task.Run(async () => { await Task.Delay(TimeSpan.FromSeconds(15)); Environment.Exit(1); });
         }
     }
-    internal void Send(string type, string? value = null)
+    internal void Send(string type, string? value = null, string? language = null)
     {
-        lock (_sendGate) _writer.WriteLine(JsonSerializer.Serialize(new Message(type, value), Json));
+        lock (_sendGate) _writer.WriteLine(JsonSerializer.Serialize(new Message(type, value, Language: language), Json));
     }
     internal static async Task<Message?> ReadMessage(StreamReader reader, CancellationToken cancellationToken)
     {

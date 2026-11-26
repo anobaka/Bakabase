@@ -1,13 +1,10 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
+import { fireEvent } from "@testing-library/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { readSetupPage } from "./embedded-setup-page";
+
 // Run the actual embedded maintenance page, including polling and reconnect behavior.
-const html = readFileSync(
-  resolve(__dirname, "../../../apps/Bakabase.Service/Components/ServerData/ImportProgress.html"),
-  "utf8",
-);
+const html = readSetupPage("ImportProgress");
 const token = "a".repeat(64);
 const page = "/bakabase/app/data-path/import/progress";
 const element = <T extends HTMLElement = HTMLElement>(id: string) =>
@@ -51,6 +48,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-08T00:01:05Z"));
   sessionStorage.clear();
+  localStorage.clear();
   history.replaceState({}, "", `${page}#token=${token}&lang=en`);
 });
 afterEach(() => {
@@ -61,6 +59,55 @@ afterEach(() => {
 });
 
 describe("maintenance progress page", () => {
+  it("changes the language of a completed operation without restarting polling", async () => {
+    localStorage.setItem("bakabase.setup.language", "cn");
+    const fetchMock = await mountPage(() => response(snapshot("completed")));
+    const language = element<HTMLSelectElement>("language");
+
+    expect(language.value).toBe("en");
+    expect(element("return")).toHaveTextContent("Open the app");
+    fireEvent.change(language, { target: { value: "cn" } });
+    expect(document.documentElement.lang).toBe("zh-CN");
+    expect(element("return")).toHaveTextContent("打开应用");
+    expect(element("timeline")).toHaveTextContent("备份与安装");
+    expect(element("bar")).toHaveAttribute("aria-label", "文件复制进度");
+    expect(location.hash).toBe(`#token=${token}&lang=cn`);
+    expect(localStorage.getItem("bakabase.setup.language")).toBe("cn");
+    expect(sessionStorage.getItem("bakabase.import.monitorLanguage")).toBe("cn");
+    await nextPoll();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a disconnected snapshot and its confirmation time when switching languages", async () => {
+    let connected = true;
+    const fetchMock = await mountPage(() => response(snapshot("copying"), connected ? 200 : 503));
+
+    connected = false;
+    await nextPoll();
+    const confirmedAt = new Date("2026-10-08T00:01:05Z").toLocaleTimeString("zh-CN");
+
+    fireEvent.change(element("language"), { target: { value: "cn" } });
+    expect(element("lastKnown")).toHaveTextContent(confirmedAt);
+    expect(element("lastKnown")).toHaveTextContent("最后确认：正在复制文件");
+    expect(element("connection")).toHaveAttribute("data-state", "offline");
+    expect(element("bar")).not.toBeVisible();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the saved wizard language on a direct progress link and can switch with a missing token", async () => {
+    localStorage.setItem("bakabase.setup.language", "cn");
+    sessionStorage.setItem("bakabase.import.monitorLanguage", "en");
+    history.replaceState({}, "", page);
+    const fetchMock = await mountPage(() => response(snapshot("copying")));
+
+    expect(element("phase")).toHaveTextContent("需要有效的进度链接");
+    fireEvent.change(element("language"), { target: { value: "en" } });
+    expect(element("phase")).toHaveTextContent("A valid progress link is required");
+    expect(location.hash).toBe("#lang=en");
+    expect(localStorage.getItem("bakabase.setup.language")).toBe("en");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("uses a preparation step for first-run imports that already execute without a restart", async () => {
     history.replaceState({}, "", `${page}#token=${token}&lang=cn`);
     await mountPage(() => response(snapshot("scanning")));

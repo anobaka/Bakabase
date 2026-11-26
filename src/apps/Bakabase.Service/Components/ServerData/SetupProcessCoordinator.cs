@@ -175,7 +175,7 @@ public static class SetupProcessCoordinator
                 var businessReady = false;
                 child = await Child.Start("business", options.Arguments, SetupAddress!, BeforeBind,
                     address => { businessReady = true; privateServer.ApplicationAddress = address; options.OnBusinessReady?.Invoke(address); },
-                    async mode =>
+                    async (mode, language) =>
                     {
                         if (!businessReady) throw new IOException("Wait for the application to finish starting before opening Setup.");
                         if (ServerAppDataImport.ReadPending(DataPath()) != null || ServerAppDataRelocation.ReadPending(anchor) != null)
@@ -192,7 +192,11 @@ public static class SetupProcessCoordinator
                             }
                             var token = ServerSetupSession.Current.Token;
                             var setupUrl = (options.IsDesktop ? SetupAddress : "") + ImportProgressServer.SetupPath;
-                            if (options.OnSetupUrl != null) await options.OnSetupUrl(setupUrl + "#setupToken=" + token);
+                            if (options.OnSetupUrl != null)
+                            {
+                                var locale = language is "cn" or "en" ? "&lang=" + language : "";
+                                await options.OnSetupUrl(setupUrl + "#setupToken=" + token + locale);
+                            }
                             return JsonSerializer.Serialize(new { setupToken = token, setupUrl });
                         }
                         catch { options.SetupRejected?.Invoke(); throw; }
@@ -304,7 +308,7 @@ public static class SetupProcessCoordinator
             _writer = new StreamWriter(pipe, new UTF8Encoding(false), 4096, true);
         }
         public static async Task<Child> Start(string role, string[] arguments, string setupAddress,
-            Func<Task> beforeBind, Action<string>? ready, Func<string, Task<string>>? createSetup,
+            Func<Task> beforeBind, Action<string>? ready, Func<string, string?, Task<string>>? createSetup,
             Func<string, bool, Action?>? workspaceSwitch, Action<bool>? reserveRestart, bool gracefulOnly, CancellationToken token)
         {
             var name = "bk" + Guid.NewGuid().ToString("N")[..16];
@@ -338,7 +342,7 @@ public static class SetupProcessCoordinator
         }
         public void Send(string type, string? value = null, string? monitorUrl = null, int? parentProcessId = null)
         { lock (_gate) { if (!_pipe.IsConnected) throw new IOException("Setup child is not connected."); _writer.WriteLine(JsonSerializer.Serialize(new SetupChildConnection.Message(type, value, monitorUrl, parentProcessId), SetupChildConnection.Json)); } }
-        private async Task Receive(Func<Task> beforeBind, Action<string>? ready, Func<string, Task<string>>? createSetup,
+        private async Task Receive(Func<Task> beforeBind, Action<string>? ready, Func<string, string?, Task<string>>? createSetup,
             Func<string, bool, Action?>? workspaceSwitch, Action<bool>? reserveRestart)
         {
             try
@@ -375,7 +379,7 @@ public static class SetupProcessCoordinator
                             catch (Exception e) { Send("setup-error", e.Message); }
                             break;
                         case "setup":
-                            try { Send("setup-result", await createSetup!(message.Value!)); }
+                            try { Send("setup-result", await createSetup!(message.Value!, message.Language)); }
                             catch (Exception e) { Send("setup-error", e.Message); }
                             break;
                     }

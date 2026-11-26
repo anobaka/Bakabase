@@ -1,14 +1,9 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
 import { fireEvent, waitFor } from "@testing-library/dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Exercise the same embedded page served during startup, without copying its logic.
-const html = readFileSync(
-  resolve(__dirname, "../../../apps/Bakabase.Service/Components/ServerData/ServerSetup.html"),
-  "utf8",
-);
+import { readSetupPage } from "./embedded-setup-page";
+
+const html = readSetupPage("ServerSetup");
 
 type SetupStatus = {
   mode: "first-run" | "relocate" | "import";
@@ -40,17 +35,18 @@ const element = <T extends HTMLElement = HTMLElement>(id: string) =>
 const input = (id: string) => element<HTMLInputElement>(id);
 const click = (id: string) => element(id).click();
 const enter = (id: string, value: string) => fireEvent.input(input(id), { target: { value } });
+const chooseLanguage = (value: string) =>
+  fireEvent.change(element<HTMLSelectElement>("language"), { target: { value } });
 const chooseImport = (value: boolean) => {
   const radio = input(value ? "import" : "empty");
 
   radio.checked = true;
   fireEvent.input(radio);
 };
-const choosePathChange = (value: boolean) => {
-  const radio = input(value ? "changePath" : "keepPath");
+const choosePathChange = (change: boolean) => {
+  const usingCustomPath = !element("targetFields").hidden;
 
-  radio.checked = true;
-  fireEvent.input(radio);
+  if (change !== usingCustomPath) click("editDestination");
 };
 const listing = (currentPath: string, extra: Record<string, unknown> = {}) => ({
   currentPath,
@@ -178,6 +174,13 @@ async function mountPage(
   });
 
   vi.stubGlobal("fetch", fetchMock);
+  renderPage();
+  await waitFor(() => expect(element("form")).toBeVisible());
+
+  return fetchMock;
+}
+
+function renderPage() {
   const parsed = new DOMParser().parseFromString(html, "text/html");
 
   document.body.innerHTML = parsed.body.innerHTML;
@@ -192,30 +195,27 @@ async function mountPage(
   };
   // Execute the unmodified embedded script; intercept only full-page navigation.
   new window.Function("location", parsed.querySelector("script")!.textContent!)({
+    href: location.href,
     pathname: location.pathname,
+    search: location.search,
     hash: location.hash,
     replace: navigate,
   });
-  await waitFor(() => expect(element("form")).toBeVisible());
-
-  return fetchMock;
 }
 
 beforeEach(() => {
   history.replaceState({}, "", "/bakabase/setup#setupToken=test-setup-token&lang=en");
+  localStorage.clear();
   sessionStorage.clear();
   navigate.mockReset();
 });
 
 afterEach(() => {
   document.body.replaceChildren();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
-const toTarget = async () => {
-  click("next");
-  await waitFor(() => expect(element("targetSection")).toBeVisible());
-};
 const toPreflight = async () => {
   click("next");
   await waitFor(() => expect(element("preflightSection")).toBeVisible());
@@ -237,28 +237,28 @@ const flowCalls = (mock: ReturnType<typeof vi.fn>) =>
   mock.mock.calls.filter(([path]) => !path.includes("/draft") && !path.includes("/preflight"));
 const selectSource = (path = "/imports/old-library") => {
   chooseImport(true);
-  click("manualSource");
+  if (input("source").readOnly) click("manualSource");
   enter("source", path);
 };
 const selectTarget = (path = "/server/new-data") => {
   choosePathChange(true);
-  click("manualTarget");
+  if (input("target").readOnly) click("manualTarget");
   enter("target", path);
 };
 
 describe("standalone setup wizard", () => {
-  it("starts with the source page and reveals one step at a time", async () => {
+  it("opens with data and location together and shows two steps for a new library", async () => {
     const fetchMock = await mountPage();
 
     expect(element("title")).toHaveTextContent("Welcome to Bakabase");
     expect(element("dataSection")).toBeVisible();
-    expect(element("targetSection")).not.toBeVisible();
+    expect(element("targetSection")).toBeVisible();
     expect(element("reviewSection")).not.toBeVisible();
     expect(input("empty")).toBeChecked();
-    expect(input("keepPath")).toBeChecked();
+    expect(element("editDestination")).toHaveAttribute("aria-expanded", "false");
     expect(element("step1")).toHaveAttribute("aria-current", "step");
     expect(element("step2")).toBeDisabled();
-    expect(element("step3")).toBeDisabled();
+    expect(element("step3")).not.toBeVisible();
     expect(element("previous")).not.toBeVisible();
     expect(element("submit")).not.toBeVisible();
     expect(element("back")).not.toBeVisible();
@@ -272,15 +272,21 @@ describe("standalone setup wizard", () => {
       ],
     ]);
 
-    await toTarget();
-    expect(element("targetTitle")).toHaveFocus();
-    expect(element("dataSection")).not.toBeVisible();
-    expect(element("reviewSection")).not.toBeVisible();
-    expect(input("target")).toHaveValue(firstRun.currentPath);
+    expect(element("importDestinationPath")).toHaveTextContent(firstRun.currentPath);
+    expect(element("targetFields")).not.toBeVisible();
+    expect(element("editDestination")).toHaveAccessibleName("Change location");
+    click("editDestination");
+    expect(element("targetFields")).toBeVisible();
+    expect(element("editDestination")).toHaveAccessibleName("Use the default data directory");
+    expect(element("editDestination")).toHaveAttribute("aria-expanded", "true");
+    expect(input("target")).toHaveValue("");
     expect(input("target").readOnly).toBe(true);
-    expect(element("browseTarget")).not.toBeVisible();
-    expect(element("manualTarget")).not.toBeVisible();
-    expect(element("step2")).toHaveAttribute("aria-current", "step");
+    expect(element("browseTarget")).toBeVisible();
+    expect(element("manualTarget")).toBeVisible();
+    click("editDestination");
+    expect(element("editDestination")).toHaveAttribute("aria-expanded", "false");
+    expect(element("importDestinationPath")).toHaveTextContent(firstRun.currentPath);
+    expect(element("next")).toBeEnabled();
     expect(flowCalls(fetchMock)).toHaveLength(1);
   });
 
@@ -290,7 +296,6 @@ describe("standalone setup wizard", () => {
 
     expect(element("title")).toHaveTextContent("欢迎使用 Bakabase");
     expect(element("emptyLabel")).toHaveTextContent("创建新数据");
-    await toTarget();
     await toReview();
     expect(element("dataSection")).not.toBeVisible();
     expect(element("targetSection")).not.toBeVisible();
@@ -313,19 +318,19 @@ describe("standalone setup wizard", () => {
     expect(sessionStorage.getItem("bakabase.import.monitorToken")).toBe("monitor-token");
   });
 
-  it("finishes on the second step without validation or restart when existing data and location are kept", async () => {
+  it("returns directly from the first step when the current data and location are kept", async () => {
     const fetchMock = await mountPage(existing);
 
     expect(element("title")).toHaveTextContent("Data settings");
     expect(element("emptyLabel")).toHaveTextContent("Keep current data");
-    expect(element("finish")).not.toBeVisible();
-    await toTarget();
-    expect(input("target")).toHaveValue(existing.currentPath);
+    expect(element("editDestination")).toHaveAccessibleName("Use the current data directory");
+    choosePathChange(false);
+    expect(element("importDestinationPath")).toHaveTextContent(existing.currentPath);
     expect(element("finish")).toBeVisible();
     expect(element("finish")).toHaveAttribute("href", "/bakabase/#/configuration");
     expect(element("next")).not.toBeVisible();
     expect(element("submit")).not.toBeVisible();
-    expect(element("step3")).toBeDisabled();
+    expect(element("step2")).toBeDisabled();
     expect(flowCalls(fetchMock)).toHaveLength(1);
   });
 
@@ -342,7 +347,7 @@ describe("standalone setup wizard", () => {
     click("next");
     await waitFor(() => expect(element("error")).toHaveTextContent("Source database is missing"));
     expect(element("dataSection")).toBeVisible();
-    expect(element("targetSection")).not.toBeVisible();
+    expect(element("targetSection")).toBeVisible();
     expect(element("step2")).toBeDisabled();
     expect(input("source")).toHaveValue("/imports/external-library");
     expect(fetchMock).toHaveBeenLastCalledWith(
@@ -356,11 +361,10 @@ describe("standalone setup wizard", () => {
       }),
     );
     valid = true;
-    await toTarget();
+    await toPreflight();
     expect(element("error")).not.toBeVisible();
     click("previous");
     chooseImport(false);
-    await toTarget();
     expect(element("finish")).toBeVisible();
   });
 
@@ -369,7 +373,7 @@ describe("standalone setup wizard", () => {
 
     selectSource();
     expect(element("importDestinationPath")).toHaveTextContent(firstRun.currentPath);
-    expect(element("step2")).not.toBeVisible();
+    expect(element("step2")).toHaveTextContent("Check paths");
     expect(element("targetFields")).not.toBeVisible();
     click("editDestination");
     expect(element("targetFields")).toBeVisible();
@@ -419,10 +423,11 @@ describe("standalone setup wizard", () => {
 
   it("uses the deployment destination directly on a first-run import with fixed storage", async () => {
     const fetchMock = await mountPage({ ...firstRun, canChooseTargetPath: false });
+
     selectSource();
     expect(element("importDestinationPath")).toHaveTextContent(firstRun.currentPath);
     expect(element("editDestination")).not.toBeVisible();
-    expect(element("step2")).not.toBeVisible();
+    expect(element("step2")).toHaveTextContent("Check paths");
 
     await toReview();
     expect(element("reviewTarget")).toHaveTextContent(firstRun.currentPath);
@@ -439,7 +444,6 @@ describe("standalone setup wizard", () => {
     });
 
     selectSource();
-    await toTarget();
     await toReview();
     expect(element("executionHint")).toHaveTextContent("save and close the current app");
     expect(element("executionHint")).toHaveTextContent("reopen it");
@@ -454,12 +458,12 @@ describe("standalone setup wizard", () => {
 
   it("requires a distinct destination when the user opts into changing it", async () => {
     await mountPage(existing);
-    await toTarget();
-    choosePathChange(true);
+    expect(element("editDestination")).toHaveAttribute("aria-expanded", "true");
+    expect(element("targetFields")).toBeVisible();
     expect(element("next")).toBeVisible();
     expect(element("next")).toBeDisabled();
     expect(element("finish")).not.toBeVisible();
-    expect(input("target")).toHaveValue(existing.currentPath);
+    expect(input("target")).toHaveValue("");
     click("manualTarget");
     enter("target", "/server/new-data");
     expect(element("next")).toBeEnabled();
@@ -469,10 +473,9 @@ describe("standalone setup wizard", () => {
 
   it("preserves inputs when going back or using completed steps, and invalidates review after an edit", async () => {
     await mountPage();
-    await toTarget();
     selectTarget();
     await toReview();
-    expect(element("step3")).toHaveAttribute("aria-current", "step");
+    expect(element("step2")).toHaveAttribute("aria-current", "step");
     backToTarget();
     expect(element("targetSection")).toBeVisible();
     expect(input("target")).toHaveValue("/server/new-data");
@@ -480,18 +483,18 @@ describe("standalone setup wizard", () => {
     expect(element("dataSection")).toBeVisible();
     expect(element("sourceTitle")).toHaveFocus();
     click("step2");
-    expect(element("targetSection")).toBeVisible();
-    expect(input("target")).toHaveValue("/server/new-data");
-    click("step3");
     expect(element("reviewSection")).toBeVisible();
     expect(element("confirmTitle")).toHaveFocus();
     click("step1");
     selectSource();
     expect(element("step2")).toBeDisabled();
     expect(element("step3")).toBeDisabled();
-    expect(element("importDestinationPath")).toHaveTextContent("/server/new-data");
+    expect(element("editDestination")).toHaveAttribute("aria-expanded", "true");
+    expect(input("target")).toHaveValue("/server/new-data");
     click("editDestination");
-    expect(input("changePath")).toBeChecked();
+    expect(element("targetFields")).not.toBeVisible();
+    expect(element("importDestinationPath")).toHaveTextContent(firstRun.currentPath);
+    click("editDestination");
     expect(input("target")).toHaveValue("/server/new-data");
     await toReview();
     expect(element("reviewSource")).toHaveTextContent("/imports/old-library");
@@ -504,8 +507,6 @@ describe("standalone setup wizard", () => {
       const fetchMock = await mountPage(status);
 
       selectSource();
-      if (status.mode === "first-run") click("editDestination");
-      else await toTarget();
       selectTarget();
       await toReview();
       expect(element("reviewTarget")).toHaveTextContent("/server/new-data");
@@ -530,17 +531,15 @@ describe("standalone setup wizard", () => {
       backToTarget();
       choosePathChange(true);
       expect(input("target")).toHaveValue("/server/new-data");
-      if (status.mode !== "first-run") click("previous");
       chooseImport(false);
       chooseImport(true);
       expect(input("source")).toHaveValue("/imports/old-library");
-      if (status.mode !== "first-run") await toTarget();
-      expect(input("changePath")).toBeChecked();
+      expect(element("editDestination")).toHaveAttribute("aria-expanded", "true");
       expect(input("target")).toHaveValue("/server/new-data");
     },
   );
 
-  it("shows fixed deployment information on step two while retaining import and no-op choices", async () => {
+  it("shows the fixed deployment location alongside import and no-op choices", async () => {
     await mountPage({
       ...existing,
       mode: "import",
@@ -550,18 +549,17 @@ describe("standalone setup wizard", () => {
     });
     click("manualSource");
     enter("source", "/import");
-    await toTarget();
-    expect(element("pathChoices")).not.toBeVisible();
+    expect(element("targetFields")).not.toBeVisible();
     expect(element("browseTarget")).not.toBeVisible();
     expect(element("manualTarget")).not.toBeVisible();
     expect(input("target").readOnly).toBe(true);
-    expect(input("target")).toHaveValue(existing.currentPath);
-    expect(element("targetHint")).toHaveTextContent("deployment");
+    expect(element("importDestinationPath")).toHaveTextContent(existing.currentPath);
+    expect(element("editDestination")).not.toBeVisible();
+    expect(element("targetSection")).toHaveTextContent(/deployment/i);
     await toReview();
     expect(element("reviewEffect")).toHaveTextContent("Back up current data, then replace it");
     click("step1");
     chooseImport(false);
-    await toTarget();
     expect(element("finish")).toBeVisible();
   });
 
@@ -578,7 +576,6 @@ describe("standalone setup wizard", () => {
 
     selectSource();
     enter("original", "/original/data");
-    await toTarget();
     selectTarget();
     await toReview();
     expect(element("reviewSource")).toHaveTextContent("/canonical/source");
@@ -609,7 +606,6 @@ describe("standalone setup wizard", () => {
   it("describes a relocation clearly and never applies a changed unvalidated selection", async () => {
     const fetchMock = await mountPage(existing);
 
-    await toTarget();
     selectTarget();
     await toReview();
     expect(element("reviewSource")).toHaveTextContent(existing.currentPath);
@@ -619,25 +615,24 @@ describe("standalone setup wizard", () => {
     input("target").value = "/server/changed-after-validation";
     click("submit");
     expect(element("targetSection")).toBeVisible();
-    expect(element("step3")).toBeDisabled();
+    expect(element("step2")).toBeDisabled();
     expect(fetchMock.mock.calls.some(([path]) => path.endsWith("/apply"))).toBe(false);
   });
 
-  it("stays on the target page after validation fails and preserves edits for retry", async () => {
+  it("keeps the selected destination editable when validation fails", async () => {
     let valid = false;
 
     await mountPage(firstRun, undefined, {
       validate: (body) =>
         valid ? { valid: true, ...body } : { valid: false, error: "Directory is not empty" },
     });
-    await toTarget();
     selectTarget();
     click("next");
     await waitFor(() => expect(element("error")).toHaveTextContent("Directory is not empty"));
     expect(element("targetSection")).toBeVisible();
     expect(element("reviewSection")).not.toBeVisible();
     expect(input("target")).toHaveValue("/server/new-data");
-    expect(element("step3")).toBeDisabled();
+    expect(element("step2")).toBeDisabled();
     valid = true;
     await toReview();
     expect(element("error")).not.toBeVisible();
@@ -647,7 +642,6 @@ describe("standalone setup wizard", () => {
     const pending = deferred<unknown>();
     const fetchMock = await mountPage(firstRun, undefined, { validate: () => pending.promise });
 
-    await toTarget();
     click("next");
     expect(element("next")).toBeDisabled();
     expect(element("next")).toHaveTextContent("Checking");
@@ -665,10 +659,126 @@ describe("standalone setup wizard", () => {
   });
 });
 
+describe("setup language", () => {
+  it("lets a visitor read first-run access instructions in either language before receiving a setup token", async () => {
+    history.replaceState({}, "", "/bakabase/setup#lang=en");
+    const fetchMock = vi.fn(async () => ({ ok: false, status: 403, json: async () => ({}) }));
+
+    vi.stubGlobal("fetch", fetchMock);
+    renderPage();
+    await waitFor(() => expect(element("loading")).toHaveTextContent("docker compose logs server"));
+    expect(element("loading")).toHaveTextContent("startup log");
+    chooseLanguage("cn");
+    expect(element("loading")).toHaveTextContent("启动日志");
+    expect(element("loading")).toHaveTextContent("docker compose logs server");
+    expect(element("form")).not.toBeVisible();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { link: "en-US", saved: "cn", browser: ["zh-CN"], expected: "en" },
+    { link: "zh-Hans", saved: "en", browser: ["en-GB"], expected: "zh-CN" },
+    { link: "ja", saved: "cn", browser: ["en-GB"], expected: "zh-CN" },
+    { link: "", saved: "", browser: ["ja-JP", "zh-CN"], expected: "zh-CN" },
+    { link: "", saved: "", browser: ["ja-JP", "fr"], expected: "en" },
+  ])(
+    "resolves $link / $saved / $browser to $expected",
+    async ({ link, saved, browser, expected }) => {
+      history.replaceState({}, "", "/bakabase/setup#setupToken=test-setup-token&lang=" + link);
+      if (saved) localStorage.setItem("bakabase.setup.language", saved);
+      vi.spyOn(navigator, "languages", "get").mockReturnValue(browser);
+      vi.spyOn(navigator, "language", "get").mockReturnValue(browser[0]);
+      await mountPage();
+
+      expect(document.documentElement).toHaveAttribute("lang", expected);
+      expect(element("language")).toHaveValue(expected === "en" ? "en" : "cn");
+      expect(element("title")).toHaveTextContent(
+        expected === "en" ? "Welcome to Bakabase" : "欢迎使用 Bakabase",
+      );
+    },
+  );
+
+  it("changes language while editing, then preserves the checked review and uses that language for progress", async () => {
+    const fetchMock = await mountPage();
+
+    selectSource("/incoming/收藏");
+    selectTarget("/new/library");
+    chooseLanguage("cn");
+
+    expect(element("dataSection")).toBeVisible();
+    expect(input("source")).toHaveValue("/incoming/收藏");
+    expect(input("target")).toHaveValue("/new/library");
+    expect(input("import")).toBeChecked();
+    expect(element("editDestination")).toHaveAttribute("aria-expanded", "true");
+    expect(input("source").readOnly).toBe(false);
+    expect(element("source").getAttribute("placeholder")).toMatch(/目录/);
+    expect(element("browseSource")).toHaveAccessibleName(/目录/);
+    expect(document.title).toMatch(/设置/);
+    expect(localStorage.getItem("bakabase.setup.language")).toBe("cn");
+    const fragment = new URLSearchParams(location.hash.slice(1));
+
+    expect(fragment.get("setupToken")).toBe("test-setup-token");
+    expect(fragment.get("lang")).toBe("cn");
+    expect(callsTo(fetchMock, "/validate")).toHaveLength(0);
+    await toReview();
+    expect(element("submit")).toHaveTextContent("确认并导入");
+    const validated = callsTo(fetchMock, "/validate").length;
+    const scanCount = callsTo(fetchMock, "/preflight").length;
+
+    chooseLanguage("en");
+    expect(element("submit")).toHaveTextContent("Confirm and import");
+    expect(element("reviewSource")).toHaveTextContent("/incoming/收藏");
+    expect(element("reviewTarget")).toHaveTextContent("/new/library");
+    expect(element("reviewMappings")).toHaveTextContent("Keep the original paths");
+    expect(callsTo(fetchMock, "/validate")).toHaveLength(validated);
+    expect(callsTo(fetchMock, "/preflight")).toHaveLength(scanCount);
+    click("submit");
+    await waitFor(() => expect(navigate).toHaveBeenCalledOnce());
+    expect(navigate).toHaveBeenCalledWith(
+      "/bakabase/app/data-path/import/progress#token=monitor-token&lang=en",
+    );
+    expect(localStorage.length).toBe(1);
+    expect(localStorage.getItem("bakabase.setup.language")).toBe("en");
+  });
+
+  it("translates a known source diagnostic without changing filenames", async () => {
+    history.replaceState({}, "", "/bakabase/setup#setupToken=test-setup-token&lang=cn");
+    const diagnostic = "The source must contain app.json and bakabase_insideworld.db.";
+
+    await mountPage(firstRun, undefined, {
+      validate: () => ({ valid: false, error: diagnostic }),
+    });
+    selectSource();
+    click("next");
+    await waitFor(() => expect(element("error")).toBeVisible());
+    expect(element("error")).toHaveTextContent("app.json");
+    expect(element("error")).toHaveTextContent("bakabase_insideworld.db");
+    expect(element("error")).toHaveTextContent(/[\u4e00-\u9fff]/);
+    expect(element("error")).not.toHaveTextContent(diagnostic);
+  });
+
+  it("translates connection errors in place and keeps the selection available for retry", async () => {
+    const fetchMock = await mountPage(firstRun, undefined, {
+      validate: () => {
+        throw new TypeError("Failed to fetch");
+      },
+    });
+
+    selectTarget("/storage/library");
+    click("next");
+    await waitFor(() => expect(element("error")).toHaveTextContent("Connection failed"));
+    chooseLanguage("cn");
+    expect(element("error")).toHaveTextContent("连接失败");
+    expect(input("target")).toHaveValue("/storage/library");
+    expect(element("next")).toBeEnabled();
+    expect(callsTo(fetchMock, "/validate")).toHaveLength(1);
+  });
+});
+
 describe("setup wizard directory picker", () => {
   it("uses a virtual storage-root view in Docker and keeps read-only sources selectable", async () => {
     const roots = [{ name: "Imported data", path: "/import", readOnly: true }];
-    await mountPage({ ...firstRun, isDocker: true }, (url) =>
+    const fetchMock = await mountPage({ ...firstRun, isDocker: true }, (url) =>
       listing(url.searchParams.get("path") === "/import" ? "/import" : "", {
         parentPath: null,
         isRestricted: true,
@@ -676,9 +786,11 @@ describe("setup wizard directory picker", () => {
         directories: url.searchParams.get("path") === "/import" ? [] : roots,
       }),
     );
+
     chooseImport(true);
     click("browseSource");
     await waitFor(() => expect(element("folderPath")).toHaveTextContent("Storage locations"));
+    expect(callsTo(fetchMock, "/directories")[0][0]).toBe("/bakabase/setup/directories");
     expect(element("folderSelect")).toBeDisabled();
     expect(element("folderUp")).toBeDisabled();
     expect(element("folderRoots")).toHaveTextContent("Imported data · Read-only");
@@ -695,7 +807,11 @@ describe("setup wizard directory picker", () => {
     );
     chooseImport(true);
     click("browseSource");
-    await waitFor(() => expect(element("folderMessage")).toHaveTextContent("No mounted storage directories were found"));
+    await waitFor(() =>
+      expect(element("folderMessage")).toHaveTextContent(
+        "No mounted storage directories were found",
+      ),
+    );
     expect(element("folderSelect")).toBeDisabled();
     expect(element("folderList").children).toHaveLength(0);
   });
@@ -710,7 +826,6 @@ describe("setup wizard directory picker", () => {
           }),
     );
 
-    await toTarget();
     choosePathChange(true);
     click("browseTarget");
     await waitFor(() => expect(element("folderSelect")).toBeEnabled());
@@ -736,7 +851,6 @@ describe("setup wizard directory picker", () => {
       ),
     );
 
-    await toTarget();
     choosePathChange(true);
     click("browseTarget");
     await waitFor(() => expect(element("folderSelect")).toBeEnabled());
@@ -787,7 +901,6 @@ describe("setup wizard directory picker", () => {
     "cancels with %s without losing the edited destination or step",
     async (method) => {
       await mountPage(firstRun, () => listing("/server/other-directory"));
-      await toTarget();
       selectTarget("/server/my-choice");
       click("browseTarget");
       await waitFor(() => expect(element("folderSelect")).toBeEnabled());
@@ -808,7 +921,6 @@ describe("setup wizard directory picker", () => {
     await mountPage(firstRun, (url) =>
       url.searchParams.has("newFolderName") ? pending.promise : listing("/server/parent"),
     );
-    await toTarget();
     choosePathChange(true);
     click("browseTarget");
     await waitFor(() => expect(element("folderSelect")).toBeEnabled());
@@ -832,7 +944,6 @@ describe("setup wizard directory picker", () => {
     await mountPage(firstRun, () =>
       ++loads === 1 ? pending.promise : listing("/server/new-listing"),
     );
-    await toTarget();
     choosePathChange(true);
     click("browseTarget");
     expect(element("folderSelect")).toBeDisabled();
@@ -848,7 +959,7 @@ describe("setup wizard directory picker", () => {
     expect(element<HTMLDialogElement>("folderDialog").open).toBe(true);
     expect(element("folderPath")).toHaveTextContent("/server/new-listing");
     expect(element("folderList")).not.toHaveTextContent("Stale folder");
-    expect(input("target")).toHaveValue(firstRun.currentPath);
+    expect(input("target")).toHaveValue("");
   });
 });
 
@@ -891,17 +1002,16 @@ describe("import path preflight", () => {
   it("requires a scan-backed preview even when keeping all original paths", async () => {
     const fetchMock = await importPreflight();
 
-    expect(element("step2")).not.toBeVisible();
-    expect(element("step3")).toHaveTextContent("2Check paths");
-    expect(element("step4")).toHaveTextContent("3Review");
-    expect(element("step3")).toHaveAttribute("aria-current", "step");
-    expect(element("step4")).toBeDisabled();
+    expect(element("step2")).toHaveTextContent("2Check paths");
+    expect(element("step3")).toHaveTextContent("3Review");
+    expect(element("step2")).toHaveAttribute("aria-current", "step");
+    expect(element("step3")).toBeDisabled();
     expect(element("submit")).not.toBeVisible();
     expect(element("noRules")).toHaveTextContent("original paths are kept");
     expect(callsTo(fetchMock, "/apply")).toHaveLength(0);
     click("next");
     await waitFor(() => expect(element("reviewSection")).toBeVisible());
-    expect(element("step4")).toHaveAttribute("aria-current", "step");
+    expect(element("step3")).toHaveAttribute("aria-current", "step");
     expect(element("reviewMappings")).toHaveTextContent("Keep the original paths unchanged");
     expect(JSON.parse(callsTo(fetchMock, "/preflight/preview")[0][1].body)).toEqual({
       scanId: "scan-one",
@@ -1011,7 +1121,7 @@ describe("import path preflight", () => {
 
   it("localizes known preview warnings in Chinese and preserves unknown diagnostic text", async () => {
     history.replaceState({}, "", "/bakabase/setup#setupToken=test-setup-token&lang=cn");
-    await importPreflight({
+    const fetchMock = await importPreflight({
       preview: () => ({
         previewId: "cn-preview",
         matchedPaths: 0,
@@ -1026,6 +1136,7 @@ describe("import path preflight", () => {
         ],
       }),
     });
+
     click("previewMappings");
     await waitFor(() => expect(element("mappingPreview")).toBeVisible());
     expect(element("previewWarnings")).toHaveTextContent(
@@ -1037,6 +1148,14 @@ describe("import path preflight", () => {
     expect(element("previewWarnings")).toHaveTextContent("Unknown scanner diagnostic: code 42");
     expect(element("previewWarnings")).not.toHaveTextContent("Unmapped references");
     expect(element("previewWarnings")).not.toHaveTextContent("Destination availability");
+
+    chooseLanguage("en");
+    expect(element("scanStatus")).toHaveTextContent("Scan complete");
+    expect(element("previewWarnings")).toHaveTextContent("Unmapped references");
+    expect(element("previewWarnings")).toHaveTextContent("Destination availability");
+    expect(element("previewWarnings")).toHaveTextContent("Unknown scanner diagnostic: code 42");
+    expect(element("mappingPreview")).toBeVisible();
+    expect(callsTo(fetchMock, "/preflight/preview")).toHaveLength(1);
   });
 
   it("chooses an existing server-side mapping destination without creating a folder", async () => {
@@ -1075,7 +1194,7 @@ describe("import path preflight", () => {
     await waitFor(() => expect(element("dataSection")).toBeVisible());
     await waitFor(() => expect(element("next")).toBeEnabled());
     expect(element("mappingPreview")).not.toBeVisible();
-    expect(element("step4")).toBeDisabled();
+    expect(element("step3")).toBeDisabled();
     await toPreflight();
     expect(JSON.parse(callsTo(fetchMock, "/preflight").at(-1)![1].body).sourcePath).toBe(
       "/imports/changed-library",
@@ -1089,12 +1208,11 @@ describe("import path preflight", () => {
     click("next");
     await waitFor(() => expect(element("reviewSection")).toBeVisible());
     click("step1");
-    click("editDestination");
     choosePathChange(true);
     click("manualTarget");
     enter("target", "/storage/changed");
+    expect(element("step2")).toBeDisabled();
     expect(element("step3")).toBeDisabled();
-    expect(element("step4")).toBeDisabled();
     await toPreflight();
     await waitFor(() => expect(element("mappingEditor")).toBeVisible());
     expect(element("mappingPreview")).not.toBeVisible();
@@ -1139,7 +1257,7 @@ describe("import path preflight", () => {
     await waitFor(() => expect(element("next")).toBeEnabled());
     expect(mappingInput("C:/Media")).toHaveValue("/media");
     expect(element("mappingPreview")).not.toBeVisible();
-    expect(element("step4")).toBeDisabled();
+    expect(element("step3")).toBeDisabled();
     const post = callsTo(fetchMock, "/preflight").filter(
       ([, options]) => options.method === "POST",
     );
@@ -1234,15 +1352,14 @@ describe("server-side setup drafts", () => {
 
     expect(input("import")).toBeChecked();
     expect(input("source")).toHaveValue("/source/resumed");
-    expect(input("changePath")).toBeChecked();
+    expect(element("editDestination")).toHaveAttribute("aria-expanded", "true");
     expect(input("target")).toHaveValue("/storage/resumed");
     expect(element("draftStatus")).toHaveTextContent("Draft restored");
-    expect(element("step4")).toBeDisabled();
+    expect(element("step3")).toBeDisabled();
     expect(callsTo(fetchMock, "/preflight")).toHaveLength(0);
     expect(callsTo(fetchMock, "/apply")).toHaveLength(0);
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
-    await toTarget();
     await toPreflight();
     await waitFor(() => expect(mappingInput("C:/Media")).toHaveValue("/media"));
     expect(
@@ -1310,7 +1427,7 @@ describe("server-side setup drafts", () => {
 
     await mountPage(firstRun, undefined, {
       saveDraft: () => {
-        if (++attempts === 1) throw new Error("Storage unavailable");
+        if (++attempts === 1) return { error: "Storage unavailable" };
 
         return { draft: { id: "draft-one" } };
       },

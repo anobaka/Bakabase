@@ -22,6 +22,7 @@ public sealed class ImportProgressServer : IAsyncDisposable
     public const string TokenHeader = "X-Bakabase-Import-Token";
     public const string SetupPath = "/setup";
     public const string SetupTokenHeader = "X-Bakabase-Setup-Token";
+    private static readonly string I18nScript = ReadResource("SetupI18n.js");
     private static readonly string Page = ReadPage("ImportProgress");
     private static readonly string SetupPage = ReadPage("ServerSetup");
     private readonly WebApplication _app;
@@ -272,10 +273,14 @@ public sealed class ImportProgressServer : IAsyncDisposable
         await context.Response.WriteAsync(page.Replace("__NONCE__", nonce));
     }
 
-    private static string ReadPage(string name)
+    // Keep both startup pages self-contained under the per-response CSP nonce.
+    private static string ReadPage(string name) =>
+        ReadResource(name + ".html").Replace("/*__SETUP_I18N__*/", I18nScript);
+
+    private static string ReadResource(string name)
     {
-        using var stream = typeof(ImportProgressServer).Assembly.GetManifestResourceStream($"Bakabase.Service.{name}.html")
-                           ?? throw new InvalidOperationException("Import progress page is missing.");
+        using var stream = typeof(ImportProgressServer).Assembly.GetManifestResourceStream($"Bakabase.Service.{name}")
+                           ?? throw new InvalidOperationException($"Missing embedded setup resource: {name}");
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }

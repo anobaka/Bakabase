@@ -187,11 +187,11 @@ def verify_frontend(base):
         raise RuntimeError("The shared setup page is missing the general AppData import entry")
     if b"Choose data storage folder" not in setup_page:
         raise RuntimeError("The shared setup page is missing the accessible directory selector")
-    data_section = setup_page.find(b'<section id="dataSection"')
-    target_section = setup_page.find(b'<section id="targetSection"')
-    review_section = setup_page.find(b'<section id="reviewSection"')
-    if data_section < 0 or target_section <= data_section or review_section <= target_section or b'id="keepPath"' not in setup_page:
-        raise RuntimeError("The shared setup page is missing the three-step import and directory workflow")
+    for control in (b'id="language"', b'id="targetSection"', b'id="preflightSection"', b'id="reviewSection"'):
+        if control not in setup_page:
+            raise RuntimeError(f"The shared setup page is missing {control.decode()}")
+    if b"/*__SETUP_I18N__*/" in setup_page or b"const setupI18n =" not in setup_page:
+        raise RuntimeError("The shared setup page is missing its embedded language support")
 
 
 def verify_native_components(container, base, data, architecture):

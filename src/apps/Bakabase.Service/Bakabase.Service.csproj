@@ -8,6 +8,7 @@
         <EmbeddedResource Include="Components/ServerData/ImportProgress.html" LogicalName="Bakabase.Service.ImportProgress.html" />
         <EmbeddedResource Include="Components/CloudDownloads/WebProviders/CloudPythonBridge.py" LogicalName="Bakabase.Service.CloudPythonBridge.py" />
         <EmbeddedResource Include="Components/ServerData/ServerSetup.html" LogicalName="Bakabase.Service.ServerSetup.html" />
+        <EmbeddedResource Include="Components/ServerData/SetupI18n.js" LogicalName="Bakabase.Service.SetupI18n.js" />
         <!-- So a helper can stay internal and still be tested, rather than being made public to
              suit the tests. -->
         <InternalsVisibleTo Include="Bakabase.Tests" />

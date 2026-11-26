@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -22,13 +23,12 @@ public sealed class SetupWindow : Window
     private bool _continuingStartup;
     private bool _pickerOpen;
 
-    public static string Language => CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "zh" ? "cn" : "en";
     public CancellationToken Cancelled => _cancelled.Token;
     public Task ClosedTask => _closed.Task;
 
     public SetupWindow()
     {
-        Title = Language == "cn" ? "Bakabase · 初始化" : "Bakabase · Setup";
+        Title = "Bakabase";
         Width = 1000;
         Height = 800;
         MinWidth = 760;
@@ -49,7 +49,28 @@ public sealed class SetupWindow : Window
         };
     }
 
-    public void Navigate(string url) => _webView.Navigate(url);
+    public void Navigate(string url)
+    {
+        // The coordinator can navigate to progress before the page handles the apply
+        // response. Keep the language chosen in this window across that handoff.
+        var language = CurrentPageLanguage();
+        var page = new Uri(url);
+        if (language != null && HttpUtility.ParseQueryString(page.Fragment.TrimStart('#'))["lang"] == null)
+        {
+            var builder = new UriBuilder(page);
+            var fragment = page.Fragment.TrimStart('#');
+            builder.Fragment = (fragment.Length > 0 ? fragment + "&" : "") + "lang=" + language;
+            url = builder.Uri.AbsoluteUri;
+        }
+        _webView.Navigate(url);
+    }
+
+    private string? CurrentPageLanguage()
+    {
+        if (!Uri.TryCreate(_webView.GetCurrentUrl(), UriKind.Absolute, out var page)) return null;
+        var language = HttpUtility.ParseQueryString(page.Fragment.TrimStart('#'))["lang"];
+        return language is "cn" or "en" ? language : null;
+    }
 
     public void BringToFront()
     {
@@ -68,7 +89,8 @@ public sealed class SetupWindow : Window
         {
             var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = Language == "cn" ? "选择目录" : "Choose a directory",
+                Title = (CurrentPageLanguage() ?? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName) is "cn" or "zh"
+                    ? "选择目录" : "Choose a directory",
                 AllowMultiple = false
             });
             return folders.FirstOrDefault()?.TryGetLocalPath();

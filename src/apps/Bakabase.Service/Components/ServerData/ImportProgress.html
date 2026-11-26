@@ -6,7 +6,7 @@
 <style nonce="__NONCE__">
 :root{color-scheme:light dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#242938;background:#f5f6fa}
 *{box-sizing:border-box}body{margin:0;padding:48px 20px}main{max-width:760px;margin:auto;background:#fff;border:1px solid #e2e5eb;border-radius:20px;padding:32px;box-shadow:0 8px 40px #20283c08}
-.brand{font-size:14px;font-weight:650;color:#6366f1;letter-spacing:.08em}h1{font-size:28px;line-height:1.3;margin:18px 0 10px}p{line-height:1.7;margin:10px 0;color:#5c6270}
+.masthead{display:flex;align-items:center;justify-content:space-between;gap:16px}.language{display:flex;align-items:center;gap:8px;font-size:14px}.language select{font:inherit;color:inherit;background:transparent;border:1px solid #a4aab6;border-radius:6px;padding:5px}.brand{font-size:14px;font-weight:650;color:#6366f1;letter-spacing:.08em}h1{font-size:28px;line-height:1.3;margin:18px 0 10px}p{line-height:1.7;margin:10px 0;color:#5c6270}
 .connection{font-size:13px;margin-top:20px;padding:10px 14px;border-radius:8px;background:#f0f2ff;color:#4b50a4}.connection[data-state=offline]{background:#fff4df;color:#886321}
 .stage{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:26px;font-weight:650}progress{width:100%;height:14px;margin:14px 0 4px;accent-color:#6366f1}
 .metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}.metric{background:#f7f8fb;border-radius:10px;padding:15px}.label{font-size:12px;color:#747b89}.value{font-size:19px;margin-top:6px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
@@ -18,7 +18,8 @@
 </style>
 </head>
 <body><main>
-<div class="brand">BAKABASE</div><h1 id="title">初始化与维护进度</h1>
+<header class="masthead"><span class="brand">BAKABASE</span>
+<label class="language"><span id="languageLabel">语言</span><select id="language"><option value="cn" lang="zh-CN">简体中文</option><option value="en" lang="en">English</option></select></label></header><h1 id="title">初始化与维护进度</h1>
 <p id="intro">正在读取服务保存的进度…</p>
 <div class="connection" id="connection" role="status" aria-live="polite">正在连接…</div>
 <p class="detail" id="lastKnown" hidden></p><p class="detail" id="reconnectAdvice" hidden></p>
@@ -36,9 +37,10 @@
 <section class="failure" id="failure" role="alert" hidden><h2 id="failureTitle"></h2><p id="failureAdvice"></p><details id="errorDetails"><summary id="errorSummary">查看技术详情</summary><pre id="error"></pre></details></section>
 <p class="detail" id="backup" hidden></p><p class="detail locations" id="locations" hidden></p>
 <div class="actions"><a class="button" id="return" href="/#/configuration" hidden>返回配置</a></div>
-<footer id="footer">来源数据保持不变。请保持来源实例关闭，不要移动来源目录或卸载磁盘。复制阶段中断后会重新复制。</footer>
+<footer id="footer" hidden>来源数据保持不变。请保持来源实例关闭，不要移动来源目录或卸载磁盘。复制阶段中断后会重新复制。</footer>
 </main>
 <script nonce="__NONCE__">
+/*__SETUP_I18N__*/
 (() => {
   const pagePath = '/app/data-path/import/progress';
   const prefix = location.pathname.endsWith(pagePath) ? location.pathname.slice(0, -pagePath.length) : '';
@@ -47,38 +49,45 @@
   let storedToken, storedLanguage;
   try { storedToken = sessionStorage.getItem('bakabase.import.monitorToken'); storedLanguage = sessionStorage.getItem('bakabase.import.monitorLanguage'); } catch {}
   const token = hash.get('token') || storedToken || '';
-  const english = (hash.get('lang') || storedLanguage || navigator.language).toLowerCase().startsWith('en');
-  const lang = english ? 'en' : 'cn';
-  try { if (/^[a-f0-9]{64}$/i.test(token)) sessionStorage.setItem('bakabase.import.monitorToken', token); sessionStorage.setItem('bakabase.import.monitorLanguage', lang); } catch {}
-  const t = (cn, en) => english ? en : cn;
+  let lang = setupI18n.resolve(hash.get('lang'), storedLanguage);
+  const validToken = /^[a-f0-9]{64}$/i.test(token);
+  try { if (validToken) sessionStorage.setItem('bakabase.import.monitorToken', token); } catch {}
+  const t = (cn, en) => lang === 'en' ? en : cn;
   const el = id => document.getElementById(id);
   const set = (id, value) => { el(id).textContent = value; };
-  document.documentElement.lang = english ? 'en' : 'zh-CN';
-  document.title = t('Bakabase · 初始化与维护进度', 'Bakabase · Setup progress');
-  set('title', t('初始化与维护进度', 'Setup and maintenance progress'));
-  set('intro', t('正在读取服务保存的进度。重启期间若连接中断，本页会自动重连。', 'Reading the progress saved by the server. This page reconnects if the connection drops during a restart.'));
-  set('timelineLabel', t('执行步骤', 'Execution steps'));
-  set('sizeLabel', t('已复制 / 总大小', 'Copied / total size')); set('filesLabel', t('已复制 / 总文件数', 'Copied / total files'));
-  set('speedLabel', t('平均复制速度', 'Average copy speed')); set('elapsedLabel', t('本次执行耗时', 'Elapsed this attempt'));
-  set('fileLabel', t('当前文件或目录', 'Current file or directory'));
-  set('errorSummary', t('查看技术详情', 'View technical details'));
-  set('return', t('返回配置', 'Back to settings')); el('return').href = prefix + '/#/configuration';
-  el('bar').setAttribute('aria-label', t('文件复制进度', 'File copy progress'));
+  function renderLabels() {
+    document.documentElement.lang = t('zh-CN', 'en');
+    document.title = t('Bakabase · 初始化与维护进度', 'Bakabase · Setup progress');
+    set('languageLabel', t('语言', 'Language'));
+    el('language').value = lang;
+    set('title', t('初始化与维护进度', 'Setup and maintenance progress'));
+    set('intro', t('正在读取服务保存的进度。重启期间若连接中断，本页会自动重连。', 'Reading the progress saved by the server. This page reconnects if the connection drops during a restart.'));
+    set('phase', t('正在读取状态', 'Reading status'));
+    set('connection', t('正在连接…', 'Connecting…'));
+    set('timelineLabel', t('执行步骤', 'Execution steps'));
+    set('sizeLabel', t('已复制 / 总大小', 'Copied / total size')); set('filesLabel', t('已复制 / 总文件数', 'Copied / total files'));
+    set('speedLabel', t('平均复制速度', 'Average copy speed')); set('elapsedLabel', t('本次执行耗时', 'Elapsed this attempt'));
+    set('fileLabel', t('当前文件或目录', 'Current file or directory'));
+    set('errorSummary', t('查看技术详情', 'View technical details'));
+    set('return', t('返回配置', 'Back to settings')); el('return').href = prefix + '/#/configuration';
+    el('bar').setAttribute('aria-label', t('文件复制进度', 'File copy progress'));
+    try { sessionStorage.setItem('bakabase.import.monitorLanguage', lang); } catch {}
+  }
   const stages = {
-    queued: t('等待重新启动', 'Waiting for a restart'), stopping: t('正在保存并关闭应用', 'Saving and closing the app'), scanning: t('正在扫描来源文件', 'Scanning source files'),
-    copying: t('正在复制文件', 'Copying files'), verifying: t('正在检查数据完整性', 'Checking data integrity'),
-    mapping: t('正在修正导入数据中的路径', 'Updating imported path references'),
-    'backing-up': t('正在备份当前数据', 'Backing up current data'), installing: t('正在安装导入数据', 'Installing imported data'),
-    starting: t('正在准备数据库并启动服务', 'Preparing databases and starting the server'),
-    completed: t('服务已就绪', 'The server is ready'), failed: t('操作或服务启动失败', 'The operation or startup failed'),
-    cancelled: t('操作已取消', 'Operation cancelled')
+    queued: ['等待重新启动', 'Waiting for a restart'], stopping: ['正在保存并关闭应用', 'Saving and closing the app'], scanning: ['正在扫描来源文件', 'Scanning source files'],
+    copying: ['正在复制文件', 'Copying files'], verifying: ['正在检查数据完整性', 'Checking data integrity'],
+    mapping: ['正在修正导入数据中的路径', 'Updating imported path references'],
+    'backing-up': ['正在备份当前数据', 'Backing up current data'], installing: ['正在安装导入数据', 'Installing imported data'],
+    starting: ['正在准备数据库并启动服务', 'Preparing databases and starting the server'],
+    completed: ['服务已就绪', 'The server is ready'], failed: ['操作或服务启动失败', 'The operation or startup failed'],
+    cancelled: ['操作已取消', 'Operation cancelled']
   };
   const stepIndex = {queued:0, stopping:0, scanning:1, copying:2, verifying:3, mapping:3, 'backing-up':4, installing:4, starting:5, completed:6};
   const bytes = n => { if (!Number.isFinite(n) || n < 0) return '—'; const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB']; let i = 0; while (n >= 1024 && i < 4) { n /= 1024; i++; } return n.toFixed(i ? 1 : 0) + ' ' + units[i]; };
   const duration = n => { n = Math.max(0, Math.floor(n || 0)); return Math.floor(n / 3600) + ':' + String(Math.floor(n / 60) % 60).padStart(2,'0') + ':' + String(n % 60).padStart(2,'0'); };
-  const count = n => Number.isFinite(n) ? n.toLocaleString() : '—';
-  const timestamp = value => { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleTimeString() : t('时间未知', 'time unavailable'); };
-  let stopped = false, lastStatus = null, lastConfirmedAt = null, offlineSince = null;
+  const count = n => Number.isFinite(n) ? n.toLocaleString(document.documentElement.lang) : '—';
+  const timestamp = value => { const date = new Date(value); return Number.isFinite(date.getTime()) ? date.toLocaleTimeString(document.documentElement.lang) : t('时间未知', 'time unavailable'); };
+  let stopped = false, unauthorized = false, lastStatus = null, lastConfirmedAt = null, offlineSince = null;
   let attempt = '', highestStep = -1, lastActivePhase = null;
   function phaseLabel(p, phase = p.phase) {
     if (phase === 'queued' && p.automaticMaintenance) return t('正在准备执行','Preparing to begin');
@@ -88,7 +97,7 @@
     if (phase === 'completed') return p.operation === 'initialize' ? t('媒体库创建完成，服务已就绪', 'Library created — the server is ready')
       : p.operation === 'relocate' ? t('目录变更完成，服务已就绪', 'Directory move complete — the server is ready')
       : t('导入完成，服务已就绪', 'Import complete — the server is ready');
-    return stages[phase] || t('正在读取执行阶段', 'Reading the execution stage');
+    return Object.hasOwn(stages, phase) ? t(...stages[phase]) : t('正在读取执行阶段', 'Reading the execution stage');
   }
   function renderTimeline(p) {
     const initializing = p.operation === 'initialize';
@@ -211,13 +220,11 @@
       set('failureTitle', failedPhase && failedPhase !== 'failed' ? t('失败阶段：', 'Failed during: ') + phaseLabel(p, failedPhase) : t('执行未完成', 'The operation did not finish'));
       set('failureAdvice', failureAdvice(p));
     }
-    el('errorDetails').hidden = !p.error; set('error', p.error || '');
+    el('errorDetails').hidden = !p.error; set('error', p.error ? setupI18n.message(p.error, lang) : '');
     el('backup').hidden = !p.backupPath || (!retainingDirectory && !['completed','failed','backing-up','installing','starting'].includes(p.phase));
     set('backup', (retainingDirectory ? t('保留的原数据目录：', 'Retained previous data directory: ') : t('备份位置（备份阶段开始后创建）：', 'Backup location (created when backup begins): ')) + (p.backupPath || ''));
     el('return').hidden = !['completed','cancelled'].includes(p.phase) && !(p.phase === 'queued' && !p.automaticMaintenance);
     set('return', p.phase === 'completed' ? t('打开应用', 'Open the app') : t('返回配置', 'Back to settings'));
-    lastStatus = p; lastConfirmedAt = Date.now(); offlineSince = null;
-    if (terminal) stopped = true;
   }
   function showLastKnown() {
     el('lastKnown').hidden = false;
@@ -226,7 +233,6 @@
       : t('尚未收到服务状态，无法确认任务是否开始或完成。', 'No server status has been received yet. Whether the operation has started or finished is unknown.'));
   }
   function disconnected() {
-    if (offlineSince == null) offlineSince = Date.now();
     const longDisconnect = Date.now() - offlineSince >= 30000;
     set('connection', longDisconnect
       ? t('仍未能确认服务状态 · 已断连 ', 'Service status is still unconfirmed · disconnected for ') + duration((Date.now() - offlineSince) / 1000) + t('，继续自动重连。', '; retrying automatically.')
@@ -246,24 +252,49 @@
     try {
       const response = await fetch(endpoint, {headers:{'X-Bakabase-Import-Token':token}, credentials:'omit', cache:'no-store', signal:controller.signal});
       if (response.status === 401) {
-        stopped = true; el('bar').hidden = true; el('activity').hidden = true;
-        set('connection', t('进度链接无效或没有查看权限，已停止重连。这不代表任务失败。', 'The progress link is invalid or unauthorized. Reconnecting has stopped; this does not mean the operation failed.'));
-        el('connection').dataset.state = 'offline'; showLastKnown();
-        el('reconnectAdvice').hidden = false;
-        set('reconnectAdvice', t('请从应用配置重新打开进度，或使用最近一次服务启动日志中的进度链接。获取有效链接前，无法确认当前执行状态。', 'Reopen progress from the app settings, or use the progress link in the latest server startup logs. The current execution state cannot be confirmed without a valid link.'));
+        stopped = unauthorized = true;
+        showUnauthorized();
       } else {
         if (!response.ok) throw new Error('unavailable');
-        render(await response.json());
+        const status = await response.json();
+        render(status);
+        lastStatus = status; lastConfirmedAt = Date.now(); offlineSince = null;
+        stopped = ['completed','cancelled'].includes(status.phase);
       }
-    } catch { disconnected(); }
+    } catch {
+      offlineSince ??= Date.now();
+      disconnected();
+    }
     finally { clearTimeout(timer); if (!stopped) setTimeout(poll, 1500); }
   }
-  if (/^[a-f0-9]{64}$/i.test(token)) poll();
-  else {
+  function showUnauthorized() {
+    el('bar').hidden = true; el('activity').hidden = true;
+    set('connection', t('进度链接无效或没有查看权限，已停止重连。这不代表任务失败。', 'The progress link is invalid or unauthorized. Reconnecting has stopped; this does not mean the operation failed.'));
+    el('connection').dataset.state = 'offline'; showLastKnown();
+    el('reconnectAdvice').hidden = false;
+    set('reconnectAdvice', t('请从应用配置重新打开进度，或使用最近一次服务启动日志中的进度链接。获取有效链接前，无法确认当前执行状态。', 'Reopen progress from the app settings, or use the progress link in the latest server startup logs. The current execution state cannot be confirmed without a valid link.'));
+  }
+  function showMissingToken() {
     el('bar').hidden = true; el('metrics').hidden = true; el('timelineSection').hidden = true;
     set('phase', t('需要有效的进度链接', 'A valid progress link is required'));
     set('connection', t('请从应用配置或最近一次服务启动日志中打开进度链接。', 'Open the progress link from the app settings or the latest server startup logs.'));
   }
+  function renderPage() {
+    renderLabels();
+    if (lastStatus) render(lastStatus);
+    if (!validToken) showMissingToken();
+    else if (unauthorized) showUnauthorized();
+    else if (offlineSince != null) disconnected();
+  }
+  el('language').addEventListener('change', () => {
+    lang = el('language').value;
+    setupI18n.remember(lang);
+    hash.set('lang', lang);
+    history.replaceState(history.state, '', '#' + hash);
+    renderPage();
+  });
+  renderPage();
+  if (validToken) poll();
 })();
 </script>
 </body></html>

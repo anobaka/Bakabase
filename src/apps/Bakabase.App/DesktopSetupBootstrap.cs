@@ -191,7 +191,7 @@ internal sealed class DesktopSetupBootstrap : IDisposable
         {
             if (_stopping.IsCancellationRequested) return;
             var window = EnsureWindow();
-            window.Navigate(WithLanguage(url));
+            window.Navigate(url);
             window.BringToFront();
         }, DispatcherPriority.Normal, _stopping.Token);
     }
@@ -211,15 +211,6 @@ internal sealed class DesktopSetupBootstrap : IDisposable
             _window = window;
         }
         return _window;
-    }
-
-    private static string WithLanguage(string url)
-    {
-        var builder = new UriBuilder(url);
-        var fragment = builder.Fragment.TrimStart('#').Split('&', StringSplitOptions.RemoveEmptyEntries)
-            .Where(item => !item.StartsWith("lang=", StringComparison.Ordinal));
-        builder.Fragment = string.Join('&', fragment.Append("lang=" + SetupWindow.Language));
-        return builder.Uri.AbsoluteUri;
     }
 
     internal void OnActivated(ActivatedEventArgs e)
