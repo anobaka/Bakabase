@@ -9,6 +9,7 @@ using System.Text.Json;
 namespace Bakabase.Abstractions.Components.FileSystem;
 
 public sealed record StorageVolumeCapacity(string VolumePath, long AvailableBytes, long TotalBytes);
+internal readonly record struct StorageVolumeIdentity(string Capacity, string Mount);
 public sealed record VerifiedStorageMount(string Identity, bool NativeFileIdentities);
 
 /// <summary>Read-only actual server-volume measurement, shared by safety checks and capacity display.</summary>
@@ -22,13 +23,18 @@ public static class StorageVolumes
     /// Other platforms retain their resolved volume path; this does not identify shared allocation
     /// pools spanning separate filesystems, such as an APFS container or an overlay's backing store.
     /// </summary>
-    public static string CapacityIdentity(StorageVolumeCapacity capacity) => OperatingSystem.IsLinux()
-        ? LinuxCapacityIdentity(capacity.VolumePath, File.ReadLines("/proc/self/mountinfo"), capacity.TotalBytes,
+    public static string CapacityIdentity(StorageVolumeCapacity capacity) => Identify(capacity).Capacity;
+
+    internal static StorageVolumeIdentity Identify(StorageVolumeCapacity capacity) => OperatingSystem.IsLinux()
+        ? IdentifyLinuxMount(capacity.VolumePath, File.ReadLines("/proc/self/mountinfo"), capacity.TotalBytes,
             Environment.GetEnvironmentVariable(DeploymentMountsVariable))
-        : capacity.VolumePath;
+        : new(capacity.VolumePath, capacity.VolumePath);
 
     internal static string LinuxCapacityIdentity(string volumePath, IEnumerable<string> mountInfo, long? totalBytes = null,
-        string? deploymentMetadata = null)
+        string? deploymentMetadata = null) => IdentifyLinuxMount(volumePath, mountInfo, totalBytes, deploymentMetadata).Capacity;
+
+    internal static StorageVolumeIdentity IdentifyLinuxMount(string volumePath, IEnumerable<string> mountInfo,
+        long? totalBytes, string? deploymentMetadata)
     {
         var expected = Path.TrimEndingDirectorySeparator(Path.GetFullPath(volumePath));
         var mounts = new List<LinuxMount>();
@@ -38,7 +44,7 @@ public static class StorageVolumes
             if (fields.Length < 10) continue;
             var separator = Array.IndexOf(fields, "-", 6);
             if (separator < 6 || separator + 3 >= fields.Length) continue;
-            mounts.Add(new(DecodeMountPath(fields[4]), DecodeMountPath(fields[3]), fields[2],
+            mounts.Add(new(fields[0], DecodeMountPath(fields[4]), DecodeMountPath(fields[3]), fields[2],
                 fields[separator + 1] == "virtiofs" && fields[separator + 2] == "mac"));
         }
         var matching = mounts.Where(m => m.Target == expected).ToArray();
@@ -47,11 +53,13 @@ public static class StorageVolumes
         var device = selected.Device.Split(':');
         if (device.Length != 2 || !uint.TryParse(device[0], out var major) || !uint.TryParse(device[1], out var minor))
             throw new IOException("The storage mount identity is invalid.");
-        if (matching.Any(m => m.Device != selected.Device))
+        if (matching.Length != 1)
             throw new IOException("The storage mount identity is ambiguous.");
-        var identity = $"linux-device:{major}:{minor}";
-        if (matching.Length != 1 || !selected.IsMacVirtioFs || totalBytes is null)
-            return identity;
+        if (selected.Root.EndsWith(DeletedMountRootSuffix, StringComparison.Ordinal))
+            throw new IOException("The storage mount root was removed.");
+        var deviceIdentity = $"linux-device:{major}:{minor}";
+        var identity = new StorageVolumeIdentity(deviceIdentity, $"{selected.Id}:{selected.Device}:{selected.Root}");
+        if (!selected.IsMacVirtioFs || totalBytes is null) return identity;
 
         var claims = ReadHostCapacityClaims(deploymentMetadata);
         if (!claims.TryGetValue(selected.Target, out var selectedClaim) || selectedClaim.Root != selected.Root)
@@ -62,7 +70,10 @@ public static class StorageVolumes
         var hostDevices = new Dictionary<long, long>();
         foreach (var mount in mounts.Where(m => m.Device == selected.Device))
         {
-            if (!mount.IsMacVirtioFs || !claims.TryGetValue(mount.Target, out var claim) || claim.Root != mount.Root ||
+            // Linux keeps the mount ID, device and former backing root of an unlinked bind.
+            // Its capacity claim remains attributable, although it can no longer be a destination.
+            if (!mount.IsMacVirtioFs || !claims.TryGetValue(mount.Target, out var claim) ||
+                (claim.Root != mount.Root && claim.Root + DeletedMountRootSuffix != mount.Root) ||
                 !peerTargets.Add(mount.Target))
                 return identity;
             if (hostDevices.TryGetValue(claim.Device, out var known) && known != claim.TotalBytes)
@@ -72,7 +83,7 @@ public static class StorageVolumes
 
         // Different APFS volumes may share one allocation pool. Leave groups with the
         // same measured total together, even when the host gives them different devices.
-        return $"{identity}:mac-host-capacity:{totalBytes}";
+        return identity with { Capacity = $"{deviceIdentity}:mac-host-capacity:{totalBytes}" };
     }
 
     /// <summary>A single unambiguous Linux mount for these paths. Unknown network mounts and
@@ -147,7 +158,8 @@ public static class StorageVolumes
         return result;
     }
 
-    private sealed record LinuxMount(string Target, string Root, string Device, bool IsMacVirtioFs);
+    private const string DeletedMountRootSuffix = "//deleted";
+    private sealed record LinuxMount(string Id, string Target, string Root, string Device, bool IsMacVirtioFs);
     private sealed record MacHostCapacity(string Root, long Device, long TotalBytes);
 
     public static StorageVolumeCapacity Measure(string path)

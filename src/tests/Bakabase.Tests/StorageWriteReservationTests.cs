@@ -251,8 +251,72 @@ public sealed class StorageWriteReservationTests
             Assert.AreEqual(Identity("/data", 10000, null), Identity("/media/nas", 20000, invalidClaims));
             Assert.AreEqual(Identity("/data", 10000, null), Identity("/data", 10000, invalidClaims));
         }
+        foreach (var unverifiedRoot in new[] { "/host/unknown//deleted", "/host/other-nas/deleted" })
+        {
+            var unknown = mounts.Select(line => line.Replace("/host/other-nas ", unverifiedRoot + " "));
+            Assert.AreEqual(Identity("/data", 10000, null), StorageVolumes.LinuxCapacityIdentity("/data", unknown, 10000, metadata));
+        }
         var sharedTotal = metadata.Replace("30000", "20000", StringComparison.Ordinal);
         Assert.AreEqual(Identity("/media/nas", 20000, sharedTotal), Identity("/media/other", 20000, sharedTotal));
+    }
+
+    [TestMethod, Timeout(10000)]
+    public async Task RemovingAnUnrelatedBindDirectoryKeepsTheWriterAndItsReservation()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        const string target = "61 25 0:36 /host/work /work rw - virtiofs mac rw";
+        const string peer = "62 25 0:36 /host/staging /staging rw - virtiofs mac rw";
+        const string metadata = """
+            {"schemaVersion":1,"mounts":[
+                {"type":"bind","target":"/work","hostCapacity":{"root":"/host/work","device":10,"totalBytes":1000000000}},
+                {"type":"bind","target":"/staging","hostCapacity":{"root":"/host/staging","device":20,"totalBytes":2000000000}}]}
+            """;
+        var currentPeer = peer;
+        StorageVolumeIdentity Identify(string path) => StorageVolumes.IdentifyLinuxMount(path,
+            [target, Volatile.Read(ref currentPeer)], path == "/work" ? 1000000000 : 2000000000, metadata);
+        var guard = new StorageWriteGuard(new Policy(), path => (Identify(path), Floor + Budget), TimeSpan.FromMilliseconds(5));
+        var release = Signal(); var started = Signal(); var waiting = Signal();
+        var first = guard.RunReservedAsync([new("/work", Payload)], Owner, async token =>
+        {
+            started.SetResult();
+            await release.Task.WaitAsync(token);
+            return true;
+        });
+        try
+        {
+            await started.Task;
+            Volatile.Write(ref currentPeer, peer.Replace("/host/staging ", "/host/staging//deleted "));
+            Assert.ThrowsException<IOException>(() => Identify("/staging"));
+            var second = guard.RunReservedAsync([new("/work", Payload)], Owner, _ => Task.FromResult(true),
+                () => { waiting.TrySetResult(); return Task.CompletedTask; });
+            await waiting.Task.WaitAsync(TimeSpan.FromSeconds(3));
+            Assert.IsFalse(second.IsCompleted);
+            release.SetResult();
+            Assert.IsTrue(await first);
+            Assert.IsTrue(await second);
+        }
+        finally { release.TrySetResult(); }
+    }
+
+    [DataTestMethod]
+    [DataRow("62 25 0:36 /host/work /work rw - virtiofs mac rw")]
+    [DataRow("61 25 0:36 /host/another /work rw - virtiofs mac rw")]
+    [DataRow("61 25 0:36 /host/work//deleted /work rw - virtiofs mac rw")]
+    [DataRow("61 25 0:36 /host/work /elsewhere rw - virtiofs mac rw")]
+    public async Task ReplacingOrRemovingTheActualMountStopsTheWriter(string replacement)
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var mount = "61 25 0:36 /host/work /work rw - virtiofs mac rw";
+        var guard = new StorageWriteGuard(new Policy(),
+            path => (StorageVolumes.IdentifyLinuxMount(path, [Volatile.Read(ref mount)], Floor + Budget, null), Floor + Budget),
+            TimeSpan.FromHours(1));
+        var error = await Assert.ThrowsExactlyAsync<LocalStorageException>(() =>
+            guard.RunAsync(["/work"], Owner, _ =>
+            {
+                Volatile.Write(ref mount, replacement);
+                return Task.FromResult(true);
+            }));
+        Assert.AreEqual("LOCAL_STORAGE_UNAVAILABLE", error.Code);
     }
 
     private sealed class Policy : IStorageWritePolicyProvider

@@ -55,7 +55,7 @@ public sealed partial class StorageWriteGuard : IStorageWriteGuard, IStorageWrit
 {
     public const string ReserveLowCode = "LOCAL_STORAGE_RESERVE_LOW";
     private readonly IStorageWritePolicyProvider _policy;
-    private readonly Func<string, (string Volume, long Available)> _measure;
+    private readonly Func<string, (StorageVolumeIdentity Volume, long Available)> _measure;
     private readonly TimeSpan _interval;
     private readonly IFileIoObservationProvider? _fileIo;
     private static readonly StringComparer Paths = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS()
@@ -66,6 +66,14 @@ public sealed partial class StorageWriteGuard : IStorageWriteGuard, IStorageWrit
 
     public StorageWriteGuard(IStorageWritePolicyProvider policy,
         Func<string, (string Volume, long Available)> measure, TimeSpan interval, IFileIoObservationProvider? fileIo = null)
+        : this(policy, path =>
+        {
+            var (volume, available) = measure(path);
+            return (new StorageVolumeIdentity(volume, volume), available);
+        }, interval, fileIo) { }
+
+    internal StorageWriteGuard(IStorageWritePolicyProvider policy,
+        Func<string, (StorageVolumeIdentity Volume, long Available)> measure, TimeSpan interval, IFileIoObservationProvider? fileIo = null)
     {
         if (interval <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(interval));
         _policy = policy; _measure = measure; _interval = interval; _fileIo = fileIo;
@@ -81,7 +89,7 @@ public sealed partial class StorageWriteGuard : IStorageWriteGuard, IStorageWrit
     }
 
     private async Task CheckCoreAsync(string destination, StorageWriteContext? context, long additionalBytes,
-        Dictionary<string, string>? pinnedVolumes, CancellationToken ct, bool requireVolumeCheck = false)
+        Dictionary<string, StorageVolumeIdentity>? pinnedVolumes, CancellationToken ct, bool requireVolumeCheck = false)
     {
         ct.ThrowIfCancellationRequested();
         var minimum = await _policy.GetMinimumFreeBytesAsync(context, ct);
@@ -104,13 +112,13 @@ public sealed partial class StorageWriteGuard : IStorageWriteGuard, IStorageWrit
         RunCoreAsync(destinations, context, writer, null, ct);
 
     private async Task<T> RunCoreAsync<T>(IReadOnlyList<string> destinations, StorageWriteContext? context,
-        Func<CancellationToken, Task<T>> writer, Dictionary<string, string>? pinnedVolumes, CancellationToken ct)
+        Func<CancellationToken, Task<T>> writer, Dictionary<string, StorageVolumeIdentity>? pinnedVolumes, CancellationToken ct)
     {
         context ??= StorageWriteScope.Current;
         using var scope = StorageWriteScope.Enter(context);
         using var ioScope = FileIoObservationScope.EnterIfUnowned(_fileIo, context);
         var paths = destinations.Where(p => !string.IsNullOrWhiteSpace(p)).Select(Path.GetFullPath).Distinct(Paths).ToArray();
-        var volumes = pinnedVolumes ?? new Dictionary<string, string>(Paths);
+        var volumes = pinnedVolumes ?? new Dictionary<string, StorageVolumeIdentity>(Paths);
         foreach (var path in paths) await CheckCoreAsync(path, context, 0, volumes, ct, pinnedVolumes != null);
         using var work = CancellationTokenSource.CreateLinkedTokenSource(ct);
         using var watch = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -170,7 +178,7 @@ public sealed partial class StorageWriteGuard : IStorageWriteGuard, IStorageWrit
         {
             using var observed = FileIoObservationScope.Begin(readFile, write: true);
             var buffer = new byte[1024 * 1024];
-            var volumes = new Dictionary<string, string>(Paths);
+            var volumes = new Dictionary<string, StorageVolumeIdentity>(Paths);
             int read;
             while ((read = await source.ReadAsync(buffer, token)) > 0)
             {
@@ -183,10 +191,10 @@ public sealed partial class StorageWriteGuard : IStorageWriteGuard, IStorageWrit
         }, ct);
     }
 
-    private static (string Volume, long Available) NativeMeasure(string path)
+    private static (StorageVolumeIdentity Volume, long Available) NativeMeasure(string path)
     {
         var capacity = StorageVolumes.Measure(path);
-        return (StorageVolumes.CapacityIdentity(capacity), capacity.AvailableBytes);
+        return (StorageVolumes.Identify(capacity), capacity.AvailableBytes);
     }
 
     internal static (string Volume, long Available)? MeasureWindowsUnc(string path, Func<string, ulong> availableToCaller)

@@ -46,7 +46,7 @@ public sealed partial class StorageWriteGuard
     private async Task<Reservation> ReserveAsync(IReadOnlyList<StorageWriteBudget> allocations,
         StorageWriteContext? context, Func<Task>? waiting, CancellationToken ct)
     {
-        var pins = new Dictionary<string, string>(Paths);
+        var pins = new Dictionary<string, StorageVolumeIdentity>(Paths);
         var nextHeartbeat = DateTime.MinValue;
         while (true)
         {
@@ -109,7 +109,7 @@ public sealed partial class StorageWriteGuard
         }
     }
 
-    private (string Volume, long Available) MeasurePinned(string path, Dictionary<string, string>? pins)
+    private (string Volume, long Available) MeasurePinned(string path, Dictionary<string, StorageVolumeIdentity>? pins)
     {
         try
         {
@@ -118,12 +118,13 @@ public sealed partial class StorageWriteGuard
             {
                 lock (pins)
                 {
-                    if (pins.TryGetValue(path, out var original) && !Paths.Equals(original, measured.Volume))
+                    if (pins.TryGetValue(path, out var original) &&
+                        (!Paths.Equals(original.Mount, measured.Volume.Mount) || !Paths.Equals(original.Capacity, measured.Volume.Capacity)))
                         throw new LocalStorageException("LOCAL_STORAGE_UNAVAILABLE");
                     pins[path] = measured.Volume;
                 }
             }
-            return measured;
+            return (measured.Volume.Capacity, measured.Available);
         }
         catch (LocalStorageException) { throw; }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException)
@@ -133,10 +134,10 @@ public sealed partial class StorageWriteGuard
     private sealed record VolumeBudget(long Available, long Bytes);
 
     private sealed class Reservation(StorageWriteGuard owner, Dictionary<string, VolumeBudget> volumes,
-        Dictionary<string, string> pinnedVolumes, long minimum) : IDisposable
+        Dictionary<string, StorageVolumeIdentity> pinnedVolumes, long minimum) : IDisposable
     {
         public Dictionary<string, VolumeBudget> Volumes { get; } = volumes;
-        public Dictionary<string, string> PinnedVolumes { get; } = pinnedVolumes;
+        public Dictionary<string, StorageVolumeIdentity> PinnedVolumes { get; } = pinnedVolumes;
         public long Minimum { get; } = minimum;
         public void Dispose()
         {
