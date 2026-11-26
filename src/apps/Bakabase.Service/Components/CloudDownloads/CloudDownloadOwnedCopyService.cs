@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -104,8 +105,15 @@ public sealed class CloudDownloadOwnedCopyService(BakabaseDbContext db, IUserSto
         {logger.LogWarning("Could not enqueue temporary cloud copy cleanup for download {TaskId} ({Failure})", id, error.GetType().Name);}
     }
 
+    // Legacy PikPak CLI errors on stderr could leave a verified release waiting for review.
+    // Only a user-requested retry may re-enter release with its original ownership and local result proofs.
+    private static readonly Expression<Func<CloudDownloadOwnedCopyDbModel, bool>> Retryable = row =>
+        row.State == "retryable" || row.State == "reviewRequired" && row.ReasonCode == "PIKPAK_CLI_REQUEST_FAILED" &&
+        row.CopyJson != null && row.CopyJson != "" && row.ResultId > 0 && row.ResultKey != null && row.ResultKey != "";
+    private static readonly Func<CloudDownloadOwnedCopyDbModel, bool> CanRetry = Retryable.Compile();
+
     internal static CloudDownloadOwnedCopyView View(CloudDownloadOwnedCopyDbModel row) => new(row.DownloadTaskId,
-        row.State, row.ReasonCode, DateTime.SpecifyKind(row.UpdatedAt, DateTimeKind.Utc), row.State == "retryable");
+        row.State, row.ReasonCode, DateTime.SpecifyKind(row.UpdatedAt, DateTimeKind.Utc), CanRetry(row));
 
     public async Task<CloudDownloadOwnedCopyView> GetAsync(int id, CancellationToken ct) =>
         await db.CloudDownloadOwnedCopies.AsNoTracking().SingleOrDefaultAsync(o => o.DownloadTaskId == id &&
@@ -115,7 +123,7 @@ public sealed class CloudDownloadOwnedCopyService(BakabaseDbContext db, IUserSto
     public async Task<CloudDownloadOwnedCopyView> RetryAsync(int id, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        await db.CloudDownloadOwnedCopies.Where(o => o.DownloadTaskId == id && o.State == "retryable" &&
+        await db.CloudDownloadOwnedCopies.Where(Retryable).Where(o => o.DownloadTaskId == id &&
                 db.DownloadTasks.Any(t => t.Id == id && t.Status == DownloadTaskDbModelStatus.Complete))
             .ExecuteUpdateAsync(s => s.SetProperty(o => o.State, "pending").SetProperty(o => o.UpdatedAt, now)
                 .SetProperty(o => o.ReasonCode, (string?)null), ct);

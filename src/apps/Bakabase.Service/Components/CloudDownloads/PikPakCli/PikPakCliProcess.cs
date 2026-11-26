@@ -32,6 +32,7 @@ internal interface IPikPakCliProcess
 /// token-bearing arguments or environment, and never inherits a user's CLI credentials.</summary>
 internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebProxy proxy) : IPikPakCliProcess
 {
+    private const int DiagnosticLimit = 256 * 1024;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _profiles = new(StringComparer.Ordinal);
     public async Task<JsonElement> RunAsync(string profile, IReadOnlyList<string> arguments, CancellationToken ct,
         bool payload = false, Action? observeProgress = null)
@@ -99,27 +100,14 @@ internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebP
             ? LocalFileProcessIo.ObserveStorageWritesAsync(process.Id, exited, observeProgress)
             : Task.CompletedTask;
         var output = Read(process.StandardOutput, Kill, 32 * 1024 * 1024);
-        var errors = Read(process.StandardError, Kill, 256 * 1024, truncate: true);
+        var errors = Read(process.StandardError, Kill, DiagnosticLimit, truncate: true);
         process.StandardInput.Close();
         try
         {
             await exited.WaitAsync(deadline.Token);
             var stdout = await output; var stderr = await errors;
             deadline.Token.ThrowIfCancellationRequested();
-            var authorization = arguments.Count >= 2 && arguments[0] == "auth" && arguments[1] == "login";
-            JsonElement result;
-            try { using var parsed = JsonDocument.Parse(stdout); result = parsed.RootElement.Clone(); }
-            catch (JsonException)
-            {
-                if (process.ExitCode == 0 && payload) return JsonSerializer.SerializeToElement(new {success = true});
-                throw new PikPakCliException(process.ExitCode == 0 ? "PIKPAK_CLI_RESPONSE_INVALID" : Classify(null, stderr, authorization))
-                    {Evidence = FailureEvidence(arguments, process.ExitCode, "invalid", null)};
-            }
-            if (result.ValueKind != JsonValueKind.Object) throw new PikPakCliException("PIKPAK_CLI_RESPONSE_INVALID");
-            if (process.ExitCode != 0 || result.TryGetProperty("error", out _))
-                throw new PikPakCliException(Classify(result, stderr, authorization))
-                    {Evidence = FailureEvidence(arguments, process.ExitCode, "json", result)};
-            return result;
+            return ReadResponse(arguments, process.ExitCode, stdout, stderr, payload);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         { throw new PikPakCliException("PIKPAK_NETWORK_UNAVAILABLE")
@@ -131,6 +119,34 @@ internal sealed class PikPakCliProcess(PikPakCliService dependency, BakabaseWebP
             await writeObservation;
             try { await Task.WhenAll(output, errors); } catch { }
         }
+    }
+
+    internal static JsonElement ReadResponse(IReadOnlyList<string> arguments, int exitCode, string stdout, string stderr, bool payload = false)
+    {
+        var authorization = arguments.Count >= 2 && arguments[0] == "auth" && arguments[1] == "login";
+        // CLI 0.6 writes its JSON error envelope to stderr and leaves stdout empty.
+        // A mixed diagnostic or a truncated prefix cannot establish a provider file ID was absent.
+        var fromStderr = exitCode != 0 && string.IsNullOrWhiteSpace(stdout) && stderr.Length < DiagnosticLimit;
+        JsonElement result;
+        try
+        {
+            using var parsed = JsonDocument.Parse(fromStderr ? stderr : stdout);
+            result = parsed.RootElement.Clone();
+        }
+        catch (JsonException)
+        {
+            if (exitCode == 0 && payload) return JsonSerializer.SerializeToElement(new {success = true});
+            throw new PikPakCliException(exitCode == 0 ? "PIKPAK_CLI_RESPONSE_INVALID" : Classify(null, stderr, authorization))
+                {Evidence = FailureEvidence(arguments, exitCode, "invalid", null)};
+        }
+        if (fromStderr && (result.ValueKind != JsonValueKind.Object || !result.TryGetProperty("error", out var error) || error.ValueKind != JsonValueKind.Object))
+            throw new PikPakCliException(Classify(null, stderr, authorization))
+                {Evidence = FailureEvidence(arguments, exitCode, "invalid", null)};
+        if (result.ValueKind != JsonValueKind.Object) throw new PikPakCliException("PIKPAK_CLI_RESPONSE_INVALID");
+        if (exitCode != 0 || result.TryGetProperty("error", out _))
+            throw new PikPakCliException(Classify(result, stderr, authorization))
+                {Evidence = FailureEvidence(arguments, exitCode, "json", result)};
+        return result;
     }
 
     internal static ProcessStartInfo CreateStartInfo(string executable, string profile, IReadOnlyList<string> arguments)

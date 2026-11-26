@@ -51,9 +51,7 @@ public sealed class DownloadCenterService(BakabaseDbContext db, DownloadTaskServ
             .ToDictionaryAsync(o => o.DownloadTaskId!.Value, ct);
         var ownedCopies = await (from copy in db.CloudDownloadOwnedCopies.AsNoTracking()
             join native in db.DownloadTasks on copy.DownloadTaskId equals native.Id
-            select new {copy.DownloadTaskId, copy.State, copy.ReasonCode, copy.UpdatedAt}).ToDictionaryAsync(
-                c => c.DownloadTaskId, c => new Bakabase.Modules.Downloader.Cloud.CloudDownloadOwnedCopyView(
-                    c.DownloadTaskId, c.State, c.ReasonCode, DateTime.SpecifyKind(c.UpdatedAt, DateTimeKind.Utc), c.State == "retryable"), ct);
+            select copy).ToDictionaryAsync(c => c.DownloadTaskId, CloudDownloadOwnedCopyService.View, ct);
         var ownerRunIds = owners.Values.Select(o => o.WorkflowRunId).Concat(cloudOwners.Values.Select(o => o.WorkflowRunId)).Distinct().ToArray();
         var ownerRuns = await db.Set<WorkflowRunDbModel>().AsNoTracking().Where(r => ownerRunIds.Contains(r.Id))
             .ToDictionaryAsync(r => r.Id, ct);

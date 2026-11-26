@@ -270,6 +270,22 @@ public sealed class PikPakOwnedCopyTests
         }
     }
 
+    [TestMethod]
+    public async Task RecheckingFailedLookupAfterPurgeConfirmsTheExistingIntentWithoutAnotherDelete()
+    {
+        var (copy, proof) = await Download(permanently: true);
+        _native.FileLookupError = "unstructured diagnostic";
+        var first = await _provider.ReleaseOwnedCopyAsync(_request, copy, proof, default);
+        Assert.AreEqual("reviewRequired", first.Status);
+        Assert.AreEqual("PIKPAK_CLI_REQUEST_FAILED", first.ReasonCode);
+        Assert.IsTrue(_native.FilePurged);
+        _native.FileLookupError = """{"error":{"code":"FILE_NOT_FOUND"}}""";
+        _provider = new(new PikPakCliAccountService(Path.Combine(_root, "appdata"), _native));
+        Assert.AreEqual("released", (await _provider.ReleaseOwnedCopyAsync(_request, copy, proof, default)).Status);
+        Assert.AreEqual(1, _native.PurgeRequests.Count);
+        Assert.AreEqual(1, _native.TrashRequests.Count);
+    }
+
     private async Task Authorize(bool enabled, bool permanently = false)
     {
         var session = permanently ? await _accounts.StartPurgeFilesAuthorizationAsync(default) :
@@ -308,6 +324,7 @@ public sealed class PikPakOwnedCopyTests
         public List<string[]> PurgeRequests { get; } = [];
         public bool FilePurged;
         public string PurgeMode = "";
+        public string FileLookupError = """{"error":{"code":"FILE_NOT_FOUND"}}""";
         public bool CreatedFolder, FileTrashed, AccountOverQuota;
         public int Restores, MkdirCount, Calls;
         public string RemoteChange = "";
@@ -341,7 +358,7 @@ public sealed class PikPakOwnedCopyTests
                 "mkdir" => Mkdir(arguments[1]),
                 "ls" => AccountFiles(Value("--parent")),
                 "get" when arguments[1] == "own-file" => FilePurged && PurgeMode != "restored-elsewhere"
-                    ? throw new PikPakCliException("PIKPAK_CLI_REQUEST_FAILED") {Evidence = new("command", 1, "json", "FILE_NOT_FOUND")}
+                    ? PikPakCliProcess.ReadResponse(arguments, 1, "", FileLookupError)
                     : J("""{"id":"own-file"}"""),
                 "rm" => Trash(arguments.Skip(1).ToArray()),
                 "trash" when arguments[1] == "ls" => TrashFiles(),

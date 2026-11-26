@@ -826,6 +826,36 @@ public sealed partial class PikPakCliTests
         Assert.IsFalse(JsonSerializer.Serialize(evidence).Contains("rejected"));
     }
 
+    [TestMethod]
+    public void FailedCommandUsesTheStructuredStderrErrorWhenStdoutIsEmpty()
+    {
+        const string diagnostic = """{"error":{"code":"FILE_NOT_FOUND","message":"private-name-canary"}}""";
+        var failure = Assert.ThrowsException<PikPakCliException>(() =>
+            PikPakCliProcess.ReadResponse(["get", "private-id-canary", "--raw"], 1, "", diagnostic));
+        Assert.AreEqual("FILE_NOT_FOUND", failure.Evidence?.ProviderCode);
+        Assert.AreEqual("json", failure.Evidence?.ResponseKind);
+        Assert.IsFalse(JsonSerializer.Serialize(failure.Evidence).Contains("canary"));
+
+        var stdout = """{"error":{"code":"CAPTCHA_REQUIRED"}}""";
+        var verification = Assert.ThrowsException<PikPakCliException>(() =>
+            PikPakCliProcess.ReadResponse(["get"], 1, stdout, diagnostic));
+        Assert.AreEqual("PIKPAK_VERIFICATION_REQUIRED", verification.Code);
+        Assert.AreEqual("CAPTCHA_REQUIRED", verification.Evidence?.ProviderCode);
+        Assert.IsTrue(PikPakCliProcess.ReadResponse(["download"], 0, "", diagnostic, payload: true).GetProperty("success").GetBoolean());
+    }
+
+    [TestMethod]
+    public void UnstructuredConflictingOrTruncatedDiagnosticsCannotProveFileAbsence()
+    {
+        const string error = """{"error":{"code":"FILE_NOT_FOUND"}}""";
+        foreach (var (stdout, stderr) in new[] {("", "FILE_NOT_FOUND"), ("", "warning " + error),
+                     ("", """{"code":"FILE_NOT_FOUND"}"""), ("", error.PadRight(256 * 1024)), ("partial stdout", error)})
+        {
+            var failure = Assert.ThrowsException<PikPakCliException>(() => PikPakCliProcess.ReadResponse(["get"], 1, stdout, stderr));
+            Assert.IsNull(failure.Evidence?.ProviderCode);
+        }
+    }
+
     [DataTestMethod]
     [DataRow("Need Password", "PIKPAK_ACCESS_CODE_REQUIRED")]
     [DataRow("Wrong Password", "PIKPAK_ACCESS_CODE_REQUIRED")]

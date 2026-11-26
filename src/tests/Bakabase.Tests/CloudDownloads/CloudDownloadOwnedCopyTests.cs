@@ -235,6 +235,40 @@ public sealed class CloudDownloadOwnedCopyTests
     }
 
     [DataTestMethod]
+    [DataRow("bound", true)]
+    [DataRow("local-changed", true)]
+    [DataRow("no-owner", false)]
+    [DataRow("no-result-id", false)]
+    [DataRow("no-result-key", false)]
+    [DataRow("remote-changed", false)]
+    public async Task UserCanRecheckAnEarlierCliFailureOnlyForABoundDownload(string scenario, bool canRetry)
+    {
+        await Prepare(); await Record(); await Complete();
+        _provider.Result = new("reviewRequired", scenario == "remote-changed" ? "PIKPAK_OWNED_COPY_REMOTE_FILES_CHANGED" : "PIKPAK_CLI_REQUEST_FAILED");
+        await _copies.ProcessNextAsync(default);
+        var rows = _db.CloudDownloadOwnedCopies.Where(o => o.DownloadTaskId == _task.Id);
+        switch (scenario)
+        {
+            case "no-owner": await rows.ExecuteUpdateAsync(s => s.SetProperty(o => o.CopyJson, (string?)null)); break;
+            case "no-result-id": await rows.ExecuteUpdateAsync(s => s.SetProperty(o => o.ResultId, (int?)null)); break;
+            case "no-result-key": await rows.ExecuteUpdateAsync(s => s.SetProperty(o => o.ResultKey, (string?)null)); break;
+            case "local-changed": await File.WriteAllTextAsync(_file, "replacement"); break;
+        }
+        Assert.AreEqual(canRetry, (await _copies.GetAsync(_task.Id, default)).CanRetry);
+        var center = _services.GetRequiredService<DownloadCenterService>();
+        Assert.AreEqual(canRetry, (await center.GetAsync("site:" + _task.Id))!.OwnedCopy!.CanRetry);
+        Assert.IsFalse(await _copies.ProcessNextAsync(default));
+        Assert.AreEqual(canRetry ? "pending" : "reviewRequired", (await _copies.RetryAsync(_task.Id, default)).Status);
+        _provider.Result = new("released");
+        Assert.AreEqual(canRetry, await _copies.ProcessNextAsync(default));
+        var view = await _copies.GetAsync(_task.Id, default);
+        Assert.AreEqual(scenario == "bound" ? "released" : "reviewRequired", view.Status);
+        if (scenario == "local-changed") Assert.AreEqual("CLOUD_OWNED_COPY_LOCAL_CHANGED", view.ReasonCode);
+        Assert.AreEqual(scenario == "bound" ? 2 : 1, _provider.ReleaseCalls);
+        Assert.AreEqual(1, _provider.PrepareCalls);
+    }
+
+    [DataTestMethod]
     [DataRow(true)]
     [DataRow(false)]
     public async Task InterruptedReceiptHandoffRecoversOnlyAnUnambiguousNewReceipt(bool newReceipt)
