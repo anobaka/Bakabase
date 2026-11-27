@@ -1442,7 +1442,10 @@ const PostParserPage = () => {
       <div
         ref={pageScroll}
         className="min-h-0 flex-1 overflow-auto overscroll-contain"
+        aria-label={t("postParser.page.title")}
         data-post-parser-scroll
+        role="region"
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users can focus and scroll the task viewport independently.
         tabIndex={0}
       >
         <div className="flex min-h-full min-w-0 flex-col gap-2">

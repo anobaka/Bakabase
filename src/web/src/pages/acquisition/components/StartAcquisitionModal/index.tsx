@@ -47,6 +47,7 @@ export default function StartAcquisitionModal({ onStarted, onDestroyed }: Props)
           {t("acquisition.draft.createHint")}
         </p>
         <Input
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- The user opened this dialog to enter a new task.
           autoFocus
           label={t("acquisition.plan.titleLabel")}
           value={title}

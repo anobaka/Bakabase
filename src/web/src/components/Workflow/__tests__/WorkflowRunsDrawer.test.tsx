@@ -1,3 +1,4 @@
+import type * as ReactI18next from "react-i18next";
 import React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,7 +22,7 @@ vi.mock("@/sdk/BApi", () => ({
   },
 }));
 vi.mock("react-i18next", async (importOriginal) => ({
-  ...await importOriginal<typeof import("react-i18next")>(),
+  ...await importOriginal<typeof ReactI18next>(),
   useTranslation: () => ({
     t: (key: string, options?: { count?: number }) =>
       key === "acquire.history.files" ? `${key}:${options?.count}` : key,

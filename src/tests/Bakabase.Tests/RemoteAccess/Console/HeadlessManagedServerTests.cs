@@ -46,8 +46,8 @@ public class HeadlessManagedServerTests
     [TestCleanup]
     public async Task Stop()
     {
-        await _provider.DisposeAsync();
-        await _owner.DisposeAsync();
+        if (_provider != null) await _provider.DisposeAsync();
+        if (_owner != null) await _owner.DisposeAsync();
         if (Directory.Exists(_root)) Directory.Delete(_root, true);
     }
 

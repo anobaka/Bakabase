@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Accordion, AccordionItem, Chip, Input } from "@/components/bakaui";
 import { activityDisplayName } from "@/components/Workflow/displayNames";
 import { processingStepInputs } from "@/components/Workflow/processingStepInputs";
-import BApi from "@/sdk/BApi";
+import type BApi from "@/sdk/BApi";
 import type { PlanTaskDetail } from "./models";
 import PlanRevisionHistory from "./PlanRevisionHistory";
 import TaskStoragePolicySettings from "./TaskStoragePolicySettings";

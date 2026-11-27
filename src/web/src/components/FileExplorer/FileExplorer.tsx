@@ -1156,7 +1156,13 @@ const FilesystemExplorer = forwardRef<FileExplorerRef, FileExplorerProps & { dir
           </p>
         )}
         {/* Keep the viewport independent of virtual rows, which derive their height from it. */}
-        <div ref={keyboardScopeRef} data-file-explorer-keyboard-scope="" tabIndex={keyboard ? 0 : undefined}
+        <div
+          ref={keyboardScopeRef}
+          aria-label={root.path || t("fileExplorer.navigation.path")}
+          data-file-explorer-keyboard-scope=""
+          role="region"
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- File shortcuts are scoped to this viewport when it has focus.
+          tabIndex={keyboard ? 0 : undefined}
           className={`min-h-0 overflow-hidden outline-none ${fitContent ? "shrink-0" : "flex-1"} ${compact ? "file-explorer-list" : ""}`}
           onPointerDownCapture={event => {
             if (keyboard && event.target instanceof Element &&

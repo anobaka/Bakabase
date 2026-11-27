@@ -80,7 +80,6 @@ export default function DeleteTasksConfirmationModal({
         <>
           <Button
             ref={cancelButton}
-            autoFocus
             color="default"
             variant="flat"
             isDisabled={submitting}

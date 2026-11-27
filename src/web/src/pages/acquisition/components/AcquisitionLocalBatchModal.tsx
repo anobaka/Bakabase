@@ -1177,6 +1177,7 @@ export default function AcquisitionLocalBatchModal({
                 </div>
                 {!!volume.paths.length && (
                   <Tooltip
+                    focusableTrigger
                     delay={1000}
                     placement="bottom"
                     content={
@@ -1188,7 +1189,6 @@ export default function AcquisitionLocalBatchModal({
                     }
                   >
                     <p
-                      tabIndex={0}
                       aria-label={t("acquisition.localBatch.space.paths", {
                         count: volume.paths.length,
                       })}

@@ -1,6 +1,7 @@
+import type { ReactElement, ReactNode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
-import { useState } from "react";
+import { cloneElement, useState } from "react";
 import DirectoryTaskStatus, { directoryTasks } from "../components/DirectoryTaskStatus";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskResourceType, BTaskStatus, BTaskType } from "@/sdk/constants";
@@ -11,8 +12,11 @@ vi.mock("@/components/FloatingAssistant/components/TaskTable", () => ({
 vi.mock("@/components/bakaui", () => ({
   Spinner: () => <span>loading</span>,
   Button: ({ children, onPress, color, startContent }: any) => <button onClick={onPress} data-color={color}>{startContent}{children}</button>,
-  Popover: ({ children, trigger }: any) => { const [open, setOpen] = useState(false);
-    return <><div onClick={() => setOpen(!open)}>{trigger}</div>{open && children}</>; },
+  Popover: ({ children, trigger }: { trigger: ReactElement<{ onPress?: () => void }>; children: ReactNode }) => {
+    const [open, setOpen] = useState(false);
+
+    return <>{cloneElement(trigger, { onPress: () => setOpen(!open) })}{open && children}</>;
+  },
 }));
 const task = (patch: Partial<BTask> = {}) => ({ id: "decompress", name: "Extract renamed archive",
   resourceType: BTaskResourceType.FileSystemEntry, type: BTaskType.Decompress,

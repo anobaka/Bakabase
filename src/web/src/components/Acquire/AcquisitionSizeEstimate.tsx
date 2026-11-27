@@ -30,10 +30,9 @@ export default function AcquisitionSizeEstimate({
     ? t(`acquisition.size.value.${basis}`, { size: bytesToSize(estimate!.bytes) })
     : t("acquisition.size.unknown");
   return (
-    <Tooltip content={description}>
+    <Tooltip focusableTrigger content={description}>
       <span
         className="text-xs text-default-500"
-        tabIndex={0}
         aria-label={`${label}. ${description}`}
       >
         {label}

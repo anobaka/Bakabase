@@ -71,11 +71,11 @@ const FilePathValue: React.FC<Props> = ({ path, description, size = "sm", classN
   const renderCopyable = (value: string, pathLabel?: string, actions?: React.ReactNode) => (
     <div className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg border border-default-200 px-2 py-1">
       <code className="min-w-0 select-text break-all text-xs text-foreground-700">{value}</code>
-      {compact && pathLabel && <Tooltip content={<div className="max-w-xs space-y-1 text-xs">
+      {compact && pathLabel && <Tooltip focusableTrigger content={<div className="max-w-xs space-y-1 text-xs">
         <p>{t(pathLabel)}{entry?.readOnly ? ` · ${t("filePath.readOnlyMount")}` : ""}</p>
         {storageHint && <p>{storageHint}</p>}
       </div>}>
-        <span tabIndex={0} aria-label={t(pathLabel)}
+        <span aria-label={t(pathLabel)}
           className={`inline-flex shrink-0 items-center justify-center leading-none text-default-400 ${
             size === "lg" ? "h-12 w-12" : size === "md" ? "h-10 w-10" : "h-8 w-8"
           }`}><InfoCircleOutlined aria-hidden /></span>

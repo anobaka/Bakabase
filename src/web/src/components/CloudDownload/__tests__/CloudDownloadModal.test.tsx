@@ -1,3 +1,4 @@
+import type * as HeroUI from "@heroui/react";
 import type { ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -43,7 +44,7 @@ vi.mock("@heroui/react", () => ({
   SelectItem: () => null,
 }));
 vi.mock("@/components/bakaui", async () => ({
-  ...(await vi.importActual<typeof import("@heroui/react")>("@heroui/react").then(({ Radio, RadioGroup }) => ({
+  ...(await vi.importActual<typeof HeroUI>("@heroui/react").then(({ Radio, RadioGroup }) => ({
     Radio,
     RadioGroup,
   }))),

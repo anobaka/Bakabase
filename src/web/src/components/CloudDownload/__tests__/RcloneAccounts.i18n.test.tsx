@@ -17,7 +17,7 @@ vi.mock("react-i18next", async (importOriginal) => await importOriginal());
 vi.mock("@/sdk/BApi", () => ({ default: { rclone: api } }));
 vi.mock("@/utils/openExternalUrl", () => ({ openExternalUrl: vi.fn() }));
 vi.mock("@/components/OAuthClientConfiguration", () => ({
-  default: ({ onStatusChange }: any) => {
+  default: function MockOAuthClientConfiguration({ onStatusChange }: any) {
     useEffect(() => {
       let active = true;
       void Promise.resolve().then(() => {

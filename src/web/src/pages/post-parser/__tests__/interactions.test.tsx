@@ -1,8 +1,10 @@
+import type * as DownloadInfoRenderer from "../components/DownloadInfoResultRenderer";
 import type { ReactNode } from "react";
 import type { PostParserTask } from "@/core/models/PostParserTask";
 
 import { HeroUIProvider, Select as HeroSelect, SelectItem } from "@heroui/react";
 import { StrictMode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { act } from "react-dom/test-utils";
 import { createRoot, type Root } from "react-dom/client";
@@ -82,7 +84,7 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../components/DownloadInfoResultRenderer", async (importOriginal) => {
   const original =
-    await importOriginal<typeof import("../components/DownloadInfoResultRenderer")>();
+    await importOriginal<typeof DownloadInfoRenderer>();
   return {
     ...original,
     default: (props: Parameters<typeof original.default>[0]) => {
@@ -126,7 +128,10 @@ vi.mock("@/sdk/BApi", () => ({
     gui: { openUrlInDefaultBrowser: api.openUrl },
   },
 }));
-vi.mock("react-router-dom", () => ({ useNavigate: () => api.navigate }));
+vi.mock(import("react-router-dom"), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useNavigate: () => api.navigate,
+}));
 vi.mock("@/components/FileSystemSelector/components/Modal", () => ({ default: () => null }));
 vi.mock("@/components/FileSystemSelector/components/Panel", () => ({ default: () => null }));
 vi.mock("@/components/Workflow/displayNames", () => ({
@@ -249,7 +254,11 @@ let container: HTMLDivElement;
 let root: Root;
 const show = (content: ReactNode) =>
   act(async () => {
-    root.render(<HeroUIProvider disableAnimation>{content}</HeroUIProvider>);
+    root.render(
+      <MemoryRouter initialEntries={["/post-parser"]}>
+        <HeroUIProvider disableAnimation>{content}</HeroUIProvider>
+      </MemoryRouter>,
+    );
   });
 const byRole = (role: string, name?: string) =>
   Array.from(

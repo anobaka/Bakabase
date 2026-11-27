@@ -1,3 +1,4 @@
+import type * as ReactI18next from "react-i18next";
 import { Children, useState, type ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -6,7 +7,7 @@ import cn from "@/locales/cn/pages/cloudDownload.json";
 
 const api = vi.hoisted(() => ({ files: vi.fn() }));
 vi.mock("react-i18next", async (importOriginal) => ({
-  ...await importOriginal<typeof import("react-i18next")>(),
+  ...await importOriginal<typeof ReactI18next>(),
   useTranslation: () => ({
     t: (key: string) =>
       key.startsWith("cloudDownload.problemCode.")

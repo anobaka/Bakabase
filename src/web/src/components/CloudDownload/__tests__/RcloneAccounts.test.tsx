@@ -26,7 +26,7 @@ const oauthStatus = vi.hoisted(() => ({
 }));
 vi.mock("@/utils/openExternalUrl", () => ({ openExternalUrl }));
 vi.mock("@/components/OAuthClientConfiguration", () => ({
-  default: ({ providerId, onStatusChange }: any) => {
+  default: function MockOAuthClientConfiguration({ providerId, onStatusChange }: any) {
     useEffect(() => {
       let active = true;
       void Promise.resolve().then(() => {

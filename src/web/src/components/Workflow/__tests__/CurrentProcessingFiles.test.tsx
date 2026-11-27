@@ -1,3 +1,4 @@
+import type { ExplorerDirectoryPage } from "@/core/models/FileExplorer/DirectoryPage";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, it, vi } from "vitest";
 import type { BakabaseModulesWorkflowAbstractionsModelsViewWorkflowRunViewModel as Run } from "@/sdk/Api";
@@ -14,7 +15,7 @@ vi.mock("@/sdk/BApi", () => ({ default: { workflow: { getWorkflowArtifactDirecto
 // The shared tree's own tests cover rendering and expansion. Exercise this adapter's
 // exact run/artifact/page requests through the public data-source contract.
 vi.mock("@/components/FileExplorer/FileExplorer", () => ({
-  default: ({ recordedDirectory: page, ...props }: { recordedDirectory?: import("@/core/models/FileExplorer/DirectoryPage").ExplorerDirectoryPage }) => {
+  default: ({ recordedDirectory: page, ...props }: { recordedDirectory?: ExplorerDirectoryPage }) => {
     if (!page) { directoryProps(props); return <div>Current directory</div>; }
     return (
     <div>

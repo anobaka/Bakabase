@@ -372,6 +372,8 @@ module.exports = async function serverSwitching({ browser, config, artifacts }) 
     const controlMark = received().length;
     // Search using the label this destination actually renders. Its initialized
     // language need not be the browser's locale or this fixture's English names.
+    await win.getByRole('navigation', { name: exactly('configuration.workspace.navigation') })
+      .getByRole('button', { name: exactly('configuration.workspace.group.remote-access') }).click();
     const transcodeLabel = win.getByText(exactly('configuration.remoteAccess.liveTranscode.label'));
     await transcodeLabel.waitFor();
     await win.getByPlaceholder(exactly('configuration.search.placeholder')).fill(await transcodeLabel.innerText());

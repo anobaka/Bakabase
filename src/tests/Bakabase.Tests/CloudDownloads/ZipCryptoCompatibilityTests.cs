@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
-using Bakabase.InsideWorld.Models.Configs;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bakabase.Tests.CloudDownloads;
@@ -30,7 +29,7 @@ public sealed class ZipCryptoCompatibilityTests
     {
         var file = await Fixture(method, descriptor);
         var hash = SHA256.HashData(await File.ReadAllBytesAsync(file));
-        var service = new Service();
+        var service = new Service(await ZipCompatibilityTestRuntime.GetAsync());
         var wrongEncoding = await service.TestCompressedFile(file, Password, null, null, null, default,
             ArchiveOpenOptions.WithZipPasswordCodePage(null, ZipPasswordCodePage.Utf8));
         Assert.AreEqual(2, wrongEncoding.ExitCode);
@@ -53,7 +52,8 @@ public sealed class ZipCryptoCompatibilityTests
         var file = await Fixture(8, true, corruption);
         var original = await File.ReadAllBytesAsync(file);
         var output = Path.Combine(_root, "rejected");
-        var error = await Assert.ThrowsExactlyAsync<ArchivePasswordEncodingException>(() => Extract(new Service(), file, output));
+        var service = new Service(await ZipCompatibilityTestRuntime.GetAsync());
+        var error = await Assert.ThrowsExactlyAsync<ArchivePasswordEncodingException>(() => Extract(service, file, output));
         Assert.IsTrue(error.Code is "ArchiveIntegrityFailure" or "ArchivePasswordEncodingUnsupported" or "ArchiveUnsafeOutput", error.Code);
         Assert.IsFalse(Directory.Exists(output));
         CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(file));
@@ -99,13 +99,8 @@ public sealed class ZipCryptoCompatibilityTests
         service.ExtractWithProgress(file, output, Password, true, CompressedFileService.OverwriteMode.None,
             CompressedFileService.ProgressOutputTarget.StandardOutput, null, null, null, default, Options());
 
-    private sealed class Service() : CompressedFileService(null!, NullLogger<CompressedFileService>.Instance)
+    private sealed class Service(PythonRuntimeExecution runtime) : CompressedFileService(null!, NullLogger<CompressedFileService>.Instance)
     {
-        protected override Task<PythonRuntimeExecution> GetZipCompatibilityExecutionAsync(CancellationToken ct)
-        {
-            var executable = Environment.GetEnvironmentVariable("BAKABASE_TEST_PYZIPPER_PYTHON");
-            if (string.IsNullOrEmpty(executable) || !File.Exists(executable)) Assert.Inconclusive("Set BAKABASE_TEST_PYZIPPER_PYTHON to an isolated pyzipper 0.4.0 environment.");
-            return Task.FromResult(new PythonRuntimeExecution(new() {Mode = PythonRuntimeMode.External, PythonExecutable = executable}, new("test", "test", executable!, "fixture")));
-        }
+        protected override Task<PythonRuntimeExecution> GetZipCompatibilityExecutionAsync(CancellationToken ct) => Task.FromResult(runtime);
     }
 }

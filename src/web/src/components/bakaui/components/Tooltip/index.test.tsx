@@ -56,23 +56,37 @@ describe("shared Tooltip", () => {
     expect(trigger).not.toHaveAttribute("data-bakabase-tooltip-open");
   });
 
-  it("supports keyboard focus and removes the overlay immediately on Escape", async () => {
-    const user = userEvent.setup();
+  it.each(["button", "span"] as const)(
+    "supports keyboard focus on a %s trigger and dismisses the overlay on Escape",
+    async (Trigger) => {
+      const user = userEvent.setup();
 
-    renderTooltip(
-      <Tooltip content="Keyboard help">
-        <button>Help</button>
-      </Tooltip>,
-    );
-    await user.tab();
-    await screen.findByRole("tooltip");
-    const trigger = screen.getByRole("button", { name: "Help" });
+      renderTooltip(
+        <>
+          <Tooltip closeDelay={0} content="Keyboard help" focusableTrigger={Trigger === "span"}>
+            <Trigger>Help</Trigger>
+          </Tooltip>
+          <button>Next</button>
+        </>,
+      );
+      await user.tab();
+      await screen.findByRole("tooltip");
+      const trigger = screen.getByText("Help");
 
-    expect(trigger).toHaveAttribute("data-bakabase-tooltip-open", "true");
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
-    expect(trigger).not.toHaveAttribute("data-bakabase-tooltip-open");
-  });
+      expect(trigger).toHaveFocus();
+      expect(trigger).toHaveAttribute("data-bakabase-tooltip-open", "true");
+      await user.keyboard("{Escape}");
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+      expect(trigger).not.toHaveAttribute("data-bakabase-tooltip-open");
+
+      await user.tab();
+      await user.tab({ shift: true });
+      await screen.findByRole("tooltip");
+      await user.tab();
+      expect(screen.getByRole("button", { name: "Next" })).toHaveFocus();
+      await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+    },
+  );
 
   it("honors controlled state and forwards open changes", async () => {
     const user = userEvent.setup();

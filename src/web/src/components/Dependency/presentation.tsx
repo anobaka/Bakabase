@@ -9,7 +9,7 @@ import {
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { DependentComponentStatus } from "@/sdk/constants";
-import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
+import type { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
 
 export type DependencyContext = ReturnType<
   typeof useDependentComponentContextsStore.getState
