@@ -206,12 +206,14 @@ public class ThirdPartyHttpMessageHandlerConcurrencyTests
     {
         const int intervalMs = 180;
         await using var server = new DelayedHeadersServer();
-        using var handler = new TestHandler(new TestOptions {MaxConcurrency = 1, RequestInterval = intervalMs});
+        var firstPreparing = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var handler = new TestHandler(new TestOptions {MaxConcurrency = 1, RequestInterval = intervalMs},
+            _ =>
+            {
+                firstPreparing.TrySetResult(Stopwatch.GetTimestamp());
+                return Task.CompletedTask;
+            });
         using var client = new HttpClient(handler) {Timeout = Timeout};
-        var first = client.GetAsync(server.Url);
-        var pendingFirst = await server.NextAsync();
-        pendingFirst.Respond();
-        (await first).Dispose();
         long checkedAt = 0;
         using var request = new HttpRequestMessage(HttpMethod.Get, server.Url);
         request.Options.Set(ThirdPartyRequestOptions.BeforeSend, _ =>
@@ -220,12 +222,18 @@ public class ThirdPartyHttpMessageHandlerConcurrencyTests
             Assert.AreEqual(1, server.ReceivedRequests, "The final check must precede network transmission.");
             return Task.CompletedTask;
         });
+        var first = client.GetAsync(server.Url);
+        var beforeFirstStart = await firstPreparing.Task.WaitAsync(Timeout);
         var second = synchronous ? Task.Run(() => client.Send(request)) : client.SendAsync(request);
+        (await server.NextAsync()).Respond();
         var pendingSecond = await server.NextAsync();
-        Assert.IsTrue(Stopwatch.GetElapsedTime(pendingFirst.ArrivedAt, checkedAt).TotalMilliseconds >= intervalMs - 25,
-            "The final check ran before the configured request interval elapsed.");
+        // Pacing starts after preparation on the client. The server can read the first request much later.
+        var elapsed = Stopwatch.GetElapsedTime(beforeFirstStart, checkedAt);
+        Assert.IsTrue(elapsed >= TimeSpan.FromMilliseconds(intervalMs),
+            $"The final check ran after {elapsed.TotalMilliseconds:F2} ms, before the {intervalMs} ms interval elapsed.");
         Assert.IsTrue(pendingSecond.ArrivedAt >= checkedAt);
         pendingSecond.Respond();
+        (await first).Dispose();
         (await second).Dispose();
     }
 

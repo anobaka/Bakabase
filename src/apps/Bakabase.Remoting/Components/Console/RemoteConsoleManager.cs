@@ -265,7 +265,7 @@ public sealed class RemoteConsoleManager : ManagedServerManager, IMainViewSwitch
                 {
                     await relay.StartAsync(ct);
                 }
-                catch (IOException e)
+                catch (Exception e) when (e is IOException or SocketException {SocketErrorCode: SocketError.AddressAlreadyInUse})
                 {
                     // Taken between the check and the bind. Rare, and the next port will do.
                     _logger.LogWarning(e, "Could not bind the relay for {ServerId} to port {Port}", serverId, port);

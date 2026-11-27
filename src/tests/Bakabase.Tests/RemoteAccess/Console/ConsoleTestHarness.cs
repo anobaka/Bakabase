@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -457,7 +458,7 @@ internal sealed class FakeServer : IAsyncDisposable
 
     public string ServerId { get; private init; } = null!;
     public string Name { get; private init; } = null!;
-    public int Port { get; private init; }
+    public int Port { get; private set; }
     public string BaseAddress => $"http://127.0.0.1:{Port}";
 
     public RemoteAccessMode Mode { get; set; } = RemoteAccessMode.Enabled;
@@ -521,25 +522,16 @@ internal sealed class FakeServer : IAsyncDisposable
     public sealed record Received(string Method, string Path, string Query, string? DeviceId, bool? SignatureValid,
         string? Cookie = null, string? Origin = null);
 
-    /// <remarks>
-    /// The port is only a preference: the first free one at or after it is taken, and one
-    /// that another process grabs between the check and the bind — test runs in other
-    /// checkouts share this machine's ports — is skipped for the next.
-    /// </remarks>
+    /// <summary>Bind the preferred port, or let the OS assign a port if another listener owns it.</summary>
     public static async Task<FakeServer> StartAsync(string serverId, string name, int preferredPort)
     {
-        for (var attempt = 0;; attempt++)
+        try
         {
-            var port = LoopbackPortAllocator.Allocate(preferredPort);
-
-            try
-            {
-                return await StartOnAsync(serverId, name, port);
-            }
-            catch (IOException) when (attempt < LoopbackPortAllocator.MaxAttempts)
-            {
-                preferredPort = port + 1;
-            }
+            return await StartOnAsync(serverId, name, preferredPort);
+        }
+        catch (Exception e) when (IsAddressInUse(e))
+        {
+            return await StartOnAsync(serverId, name, 0);
         }
     }
 
@@ -555,7 +547,7 @@ internal sealed class FakeServer : IAsyncDisposable
             {
                 return await StartOnAsync(serverId, name, port);
             }
-            catch (IOException) when (attempt < 20)
+            catch (Exception e) when (attempt < 20 && IsAddressInUse(e))
             {
                 // The previous listener's socket may take a moment to be released.
                 await Task.Delay(100);
@@ -563,18 +555,20 @@ internal sealed class FakeServer : IAsyncDisposable
         }
     }
 
+    private static bool IsAddressInUse(Exception error) =>
+        error.GetBaseException() is SocketException {SocketErrorCode: SocketError.AddressAlreadyInUse};
+
     private static async Task<FakeServer> StartOnAsync(string serverId, string name, int port)
     {
         var server = new FakeServer
         {
             ServerId = serverId,
-            Name = name,
-            Port = port
+            Name = name
         };
 
         var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions {Args = []});
         builder.Logging.ClearProviders();
-        builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Loopback, server.Port));
+        builder.WebHost.ConfigureKestrel(k => k.Listen(IPAddress.Loopback, port));
 
         var app = builder.Build();
         app.Urls.Clear();
@@ -591,6 +585,7 @@ internal sealed class FakeServer : IAsyncDisposable
             throw;
         }
 
+        server.Port = new Uri(app.Urls.Single()).Port;
         server._app = app;
 
         return server;
