@@ -158,6 +158,8 @@ python3 docker/smoke-test.py --image bakabase:local --architecture arm64 --runti
 
 `source.sh` 先用容器中的 NBGV 读取当前提交的完整版本（支持 Git worktree），再传给构建，避免源码镜像丢失提交高度、错误显示为较旧版本。可用 `./docker/source.sh logs -f server` 查看日志。
 
+如需在源码 Compose 命令前后运行自己的工具，可通过环境变量 `BAKABASE_SOURCE_WRAPPER=/absolute/path/to/executable` 指定包装程序，或用 `git config --local bakabase.sourceWrapper /absolute/path/to/executable` 仅为当前仓库配置。程序收到完整的原始命令参数与已解析的 `BAKABASE_VERSION`，可用 `"$@"` 运行原命令并传递退出状态。设置空的 `BAKABASE_SOURCE_WRAPPER=` 可单次跳过包装。
+
 修改源码后重新执行 `./docker/source.sh` 即可升级；构建失败时，现有容器仍保留。新镜像替换旧容器，宿主机 AppData 不变，启动时走相同的数据迁移流程。源码构建与官方镜像之间切换时，保持 `/data` 和媒体挂载一致，避免运行比数据库版本更旧的代码。若要回退，使用升级前备份；只回退镜像不保证数据库兼容。
 
 ### 源码与打包镜像互相升级

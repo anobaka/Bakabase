@@ -55,4 +55,13 @@ fi
 printf 'Source version: %s\n' "$BAKABASE_VERSION"
 
 if [[ $# == 0 ]]; then set -- up -d --build; fi
-exec "$repo_root/docker/compose.sh" source "$@"
+command=("$repo_root/docker/compose.sh" source "$@")
+wrapper="${BAKABASE_SOURCE_WRAPPER-$(git -C "$repo_root" config --local --path --get bakabase.sourceWrapper || true)}"
+if [[ -n "$wrapper" ]]; then
+  if [[ "$wrapper" != /* || ! -f "$wrapper" || ! -x "$wrapper" ]]; then
+    printf 'Source wrapper must be an absolute path to an executable file: %s\n' "$wrapper" >&2
+    exit 2
+  fi
+  exec "$wrapper" "${command[@]}"
+fi
+exec "${command[@]}"
