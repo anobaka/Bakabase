@@ -151,6 +151,12 @@ const groupedTask: PostParserTask = {
 const show = (content: ReactNode) =>
   render(<HeroUIProvider disableAnimation>{content}</HeroUIProvider>);
 
+async function openFolderPicker(button: HTMLElement) {
+  const calls = api.portal.mock.calls.length;
+  fireEvent.click(button);
+  await waitFor(() => expect(api.portal).toHaveBeenCalledTimes(calls + 1));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   api.import.mockResolvedValue({ code: 0, data: { resourceId: 77 } });
@@ -185,7 +191,7 @@ describe("deduplicated post resource actions", () => {
       expect(row).not.toContainElement(directories()[index]);
     }
     expect(screen.queryByRole("textbox")).toBeNull();
-    fireEvent.click(pickers()[0]);
+    await openFolderPicker(pickers()[0]);
     expect(api.portal).toHaveBeenLastCalledWith(
       FileSystemSelectorModal,
       expect.objectContaining({ targetType: "folder", multiple: false, startPath: undefined }),
@@ -196,10 +202,10 @@ describe("deduplicated post resource actions", () => {
     expect(directories()[1]).toHaveTextContent("workflow.processing.chooseDirectory");
     expect(screen.queryByText("workflow.processing.binding.noDirectory")).toBeNull();
     expect(document.querySelector("code")).toBeNull();
-    fireEvent.click(pickers()[1]);
+    await openFolderPicker(pickers()[1]);
     act(() => api.portal.mock.lastCall![1].onSelected({ path: "/server/picked-other" }));
     expect(directories()[1]).toHaveTextContent("/server/picked-other");
-    fireEvent.click(pickers()[0]);
+    await openFolderPicker(pickers()[0]);
     expect(api.portal.mock.lastCall![1]).toEqual(
       expect.objectContaining({
         startPath: "/server/picked-first",
@@ -227,10 +233,10 @@ describe("deduplicated post resource actions", () => {
       screen.getAllByRole("button", { name: /workflow.processing.chooseDirectory/ });
     const pickers = () =>
       screen.getAllByRole("button", { name: /workflow.processing.chooseDirectory/ });
-    fireEvent.click(pickers()[0]);
+    await openFolderPicker(pickers()[0]);
     act(() => api.portal.mock.lastCall![1].onSelected({ path: "/server/first" }));
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
-    fireEvent.click(pickers()[0]);
+    await openFolderPicker(pickers()[0]);
     const lateSelection = api.portal.mock.lastCall![1].onSelected;
     fireEvent.click(screen.getByRole("button", { name: "workflow.processing.startSelected" }));
     await waitFor(() => expect(api.runWorkflow).toHaveBeenCalledTimes(1));
@@ -248,7 +254,7 @@ describe("deduplicated post resource actions", () => {
   it("opens the shared compatible workflow browser without navigation and preserves directory drafts", async () => {
     show(<LocalProcessingModal task={task} />);
     await waitFor(() => expect(api.workflows).toHaveBeenCalled());
-    fireEvent.click(
+    await openFolderPicker(
       screen.getAllByRole("button", { name: /workflow.processing.chooseDirectory/ })[0],
     );
     act(() => api.portal.mock.lastCall![1].onSelected({ path: "/server/draft" }));
@@ -326,7 +332,7 @@ describe("deduplicated post resource actions", () => {
       [other!, "/downloads/other"],
     ] as const) {
       fireEvent.click(within(section).getByRole("checkbox"));
-      fireEvent.click(
+      await openFolderPicker(
         within(section).getByRole("button", { name: /workflow.processing.chooseDirectory/ }),
       );
       act(() => api.portal.mock.lastCall![1].onSelected({ path: directory }));
@@ -509,7 +515,7 @@ describe("content-grouped post resource actions", () => {
       const choice = within(source).getByRole("checkbox");
 
       fireEvent.click(choice);
-      fireEvent.click(
+      await openFolderPicker(
         within(source).getByRole("button", { name: /workflow.processing.chooseDirectory/ }),
       );
       act(() => api.portal.mock.lastCall![1].onSelected({ path: directory }));

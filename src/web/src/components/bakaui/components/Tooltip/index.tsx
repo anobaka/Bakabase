@@ -5,15 +5,18 @@ import { Tooltip as HeroTooltip } from "@heroui/react";
 import React, { useState } from "react";
 
 interface IProps extends NextUITooltipProps {
+  /** Include a static text or icon trigger in the keyboard tab order. */
+  focusableTrigger?: boolean;
   content: ReactNode;
   children: React.ReactNode;
 }
-const Tooltip = (props: IProps) => {
+const Tooltip = ({ focusableTrigger, ...props }: IProps) => {
   const [observedOpen, setObservedOpen] = useState(!!props.defaultOpen);
   const isOpen = !props.isDisabled && (props.isOpen ?? observedOpen);
   const trigger =
     React.isValidElement(props.children) && props.children.type !== React.Fragment
       ? React.cloneElement(props.children as React.ReactElement<Record<string, unknown>>, {
+          ...(focusableTrigger && !props.isDisabled ? { tabIndex: 0 } : {}),
           // Hover-only controls must keep their anchor visible while the pointer
           // moves into a tooltip portaled outside their CSS hover group.
           "data-bakabase-tooltip-open": isOpen ? "true" : undefined,

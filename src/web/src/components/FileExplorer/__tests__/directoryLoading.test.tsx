@@ -1,3 +1,4 @@
+import type * as ComponentUtils from "@/components/utils";
 import type { ReactNode } from "react";
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -37,7 +38,7 @@ vi.mock("@/components/utils", async importOriginal => ({
   buildLogger: () => () => {},
   standardizePath: (path: string) => path,
   getStandardParentPath: (path: string) => path?.slice(0, path.lastIndexOf("/")),
-  humanFileSize: (await importOriginal<typeof import("@/components/utils")>()).humanFileSize,
+  humanFileSize: (await importOriginal<typeof ComponentUtils>()).humanFileSize,
   uuidv4: () => String(++mocks.uuid),
 }));
 vi.mock("@/components/ContextProvider/BakabaseContextProvider", () => ({

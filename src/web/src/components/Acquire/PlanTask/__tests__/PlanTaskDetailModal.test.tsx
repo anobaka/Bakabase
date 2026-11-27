@@ -1,3 +1,4 @@
+import type * as RevisionForm from "../CompletedProcessingRevisionForm";
 import { Children, isValidElement, type ReactNode } from "react";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
@@ -60,7 +61,7 @@ vi.mock("../RuntimeOverviewSummary", () => ({
 }));
 vi.mock("@/pages/acquisition/components/AcquisitionRecoveryModal", () => ({ default: () => null }));
 vi.mock("../CompletedProcessingRevisionForm", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../CompletedProcessingRevisionForm")>()),
+  ...(await importOriginal<typeof RevisionForm>()),
   default: (props: { detail: { task: { planRevision: number } } }) => {
     mocks.completedRevision(props);
     return <div>completed revision {props.detail.task.planRevision}</div>;

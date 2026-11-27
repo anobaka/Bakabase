@@ -38,7 +38,7 @@ vi.mock("@/components/ThirdPartyConfig/base/DownloadDirectoryField", () => ({
 vi.mock("@/components/Acquire/AcquireDownloadForm", async () => {
   const { useEffect } = await import("react");
   return {
-    default: ({ providerId, formId, onStateChange, onCreated }: any) => {
+    default: function MockAcquireDownloadForm({ providerId, formId, onStateChange, onCreated }: any) {
       useEffect(() => onStateChange({ canSubmit: true, busy: false }), [onStateChange]);
       return (
         <form

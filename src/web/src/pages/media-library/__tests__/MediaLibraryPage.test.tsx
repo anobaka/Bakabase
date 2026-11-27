@@ -574,13 +574,20 @@ describe("media library creation and management", () => {
       })),
     });
     renderPage();
-    await waitFor(() => expect(browseButtons()).toHaveLength(101));
-    await enterSelectionMode();
-    await userEvent.click(
-      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectVisible" }),
+    expect(await screen.findAllByLabelText(/^mediaLibrary\.action\.browseNamed:/)).toHaveLength(
+      101,
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "mediaLibrary.action.deleteSelected" }),
+      within(screen.getByRole("banner")).getByRole("button", {
+        name: "mediaLibrary.action.bulkManage",
+      }),
+    );
+    const toolbar = within(screen.getByRole("group", { name: "mediaLibrary.selection.label" }));
+    await userEvent.click(
+      toolbar.getByRole("checkbox", { name: "mediaLibrary.selection.selectVisible" }),
+    );
+    await userEvent.click(
+      toolbar.getByRole("button", { name: "mediaLibrary.action.deleteSelected" }),
     );
     const confirmation = mocks.createPortal.mock.lastCall![1];
 
@@ -592,17 +599,17 @@ describe("media library creation and management", () => {
     });
     expect(mocks.local.remove.mock.calls.map(([body]) => body.ids.length)).toEqual([100, 1]);
     expect(
-      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Library 1" }),
+      screen.getByLabelText("mediaLibrary.selection.selectNamed:Library 1", { selector: "input" }),
     ).not.toBeChecked();
     expect(
-      screen.getByRole("checkbox", { name: "mediaLibrary.selection.selectNamed:Library 101" }),
+      screen.getByLabelText("mediaLibrary.selection.selectNamed:Library 101", { selector: "input" }),
     ).toBeChecked();
     await act(async () => confirmation.onOk());
     expect(mocks.local.remove).toHaveBeenLastCalledWith({
       ids: [101],
       removeRelatedPathMarks: false,
     });
-  });
+  }, 30_000); // Rendering 101 interactive rows crosses the real 100-item deletion boundary.
 
   it("excludes read-only libraries from select-all and revalidates every owner before deleting", async () => {
     mocks.sources = [source("local"), source("remote", false)];

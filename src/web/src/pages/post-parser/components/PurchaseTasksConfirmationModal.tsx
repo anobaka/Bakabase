@@ -114,7 +114,6 @@ export default function PurchaseTasksConfirmationModal({
           <Button
             ref={cancelButton}
             className="shrink-0"
-            autoFocus
             variant="flat"
             isDisabled={submitting}
             onPress={close}

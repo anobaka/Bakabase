@@ -1,3 +1,4 @@
+import type * as BakaUI from "@/components/bakaui";
 import { useState } from "react";
 import { HeroUIProvider, Chip } from "@heroui/react";
 import { act, render, screen } from "@testing-library/react";
@@ -15,7 +16,7 @@ import acquisitionEn from "@/locales/en/pages/acquisition.json";
 
 vi.unmock("react-i18next");
 vi.mock("@/components/bakaui", async () => {
-  const actual = await vi.importActual<typeof import("@/components/bakaui")>("@/components/bakaui");
+  const actual = await vi.importActual<typeof BakaUI>("@/components/bakaui");
   return { ...actual, Chip: (props: any) => <Chip {...props} /> };
 });
 vi.mock("@/i18n", () => ({ getEnumKey: (_name: string, label: string) => `enum.thirdPartyId.${label[0].toLowerCase()}${label.slice(1)}` }));
@@ -83,7 +84,7 @@ it.each([
   expect(pending).toBe(selected);
   const user = userEvent.setup();
   act(() => pending.focus());
-  await act(async () => user.keyboard("{Enter}"));
+  await user.keyboard("{Enter}");
   expect(pending).toHaveFocus();
   expect(change).toHaveBeenCalledTimes(2);
   expect(change).toHaveBeenLastCalledWith(undefined);

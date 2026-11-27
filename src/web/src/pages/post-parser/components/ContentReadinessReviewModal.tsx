@@ -241,7 +241,7 @@ export default function ContentReadinessReviewModal({
       onDestroyed={onDestroyed}
       footer={
         <>
-          <Button ref={cancel} autoFocus variant="flat" isDisabled={!!working} onPress={close}>
+          <Button ref={cancel} variant="flat" isDisabled={!!working} onPress={close}>
             {t("postParser.contentReadiness.close")}
           </Button>
           {view?.canRevoke && (

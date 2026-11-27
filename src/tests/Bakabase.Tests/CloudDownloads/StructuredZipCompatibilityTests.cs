@@ -5,7 +5,6 @@ using System.Text.Json;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
-using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.FileProcessing;
@@ -223,14 +222,8 @@ public sealed class StructuredZipCompatibilityTests
     {
         public int CompatibilityStarts {get;private set;}
         protected override Task<PythonRuntimeExecution> GetZipCompatibilityExecutionAsync(CancellationToken ct)
-        { CompatibilityStarts++; return Task.FromResult(Runtime()); }
+        { CompatibilityStarts++; return ZipCompatibilityTestRuntime.GetAsync(); }
         protected override string? GetSevenZipExecutable() => throw new AssertFailedException("The verified media prefix must not trigger a CLI scan.");
-    }
-    private static PythonRuntimeExecution Runtime()
-    {
-        var executable=Environment.GetEnvironmentVariable("BAKABASE_TEST_PYZIPPER_PYTHON");
-        if(string.IsNullOrWhiteSpace(executable)||!File.Exists(executable))Assert.Inconclusive("Set BAKABASE_TEST_PYZIPPER_PYTHON.");
-        return new(new(){Mode=PythonRuntimeMode.External,PythonExecutable=executable},new("fixture","fixture",executable!,"fixture"));
     }
     private static Task<CompressedFileService.TestResult> Extract(CompressedFileService service,string file,string output,ArchiveOpenOptions options) =>
         service.ExtractWithProgress(file,output,null,false,CompressedFileService.OverwriteMode.None,
@@ -276,7 +269,7 @@ if r['zip64']:
 with open(r['file'],'wb') as f:
  f.write(b'\0\0\0\x18ftypisom');f.seek(r['prefix']);f.write(data);f.write(b'T'*r['trailing'])
 """;
-        using var process=new Process{StartInfo=Runtime().StartInfo(["-I","-c",script],_root)};
+        using var process=new Process{StartInfo=(await ZipCompatibilityTestRuntime.GetAsync()).StartInfo(["-I","-c",script],_root)};
         process.Start();await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new{file,prefix,zip64,trailing,encrypted,centralZip64}));process.StandardInput.Close();
         var output=process.StandardOutput.ReadToEndAsync();var error=process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();await output;Assert.AreEqual(0,process.ExitCode,await error);

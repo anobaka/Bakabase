@@ -23,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Bakabase.Tests;
 
 [TestClass]
+[DoNotParallelize] // Independent database fixtures reuse IDs guarded by process-wide task and run gates.
 public sealed partial class AcquisitionReplanTests
 {
     private IServiceProvider _services = null!;

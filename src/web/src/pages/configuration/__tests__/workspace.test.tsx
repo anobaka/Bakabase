@@ -144,7 +144,7 @@ vi.mock("../components/Dependency", () => ({
   ),
 }));
 vi.mock("@/pages/dependencies", () => ({
-  default: ({ embedded, active }: { embedded: boolean; active: boolean }) => {
+  default: function MockDependencyManager({ embedded, active }: { embedded: boolean; active: boolean }) {
     useEffect(() => {
       state.mounted("DependencyManager");
       return () => {

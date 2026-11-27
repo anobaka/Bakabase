@@ -6,7 +6,6 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.CloudTools;
-using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Modules.Workflow.Artifacts;
 using Bakabase.Service.Components.FileProcessing;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -166,7 +165,7 @@ public sealed class ZipPasswordCodePageTests
     [TestMethod]
     public async Task CancellationKillsOnlyAdapterAndCannotReturnSuccess()
     {
-        var start = Runtime().StartInfo(["-I", "-c", "import sys,time; sys.stdin.read(); print('{\"progress\":1}',flush=True); time.sleep(60)"], _root);
+        var start = (await ZipCompatibilityTestRuntime.GetAsync()).StartInfo(["-I", "-c", "import sys,time; sys.stdin.read(); print('{\"progress\":1}',flush=True); time.sleep(60)"], _root);
         using var cancellation = new CancellationTokenSource();
         var watch = Stopwatch.StartNew();
         await Assert.ThrowsAsync<OperationCanceledException>(() => ZipPasswordCompatibility.RunProcessAsync(start, "{}", _ => cancellation.Cancel(), cancellation.Token));
@@ -176,16 +175,10 @@ public sealed class ZipPasswordCodePageTests
     private Task<CompressedFileService.TestResult> Extract(string archive, string output) => Service().ExtractWithProgress(archive, output, Password,
         true, CompressedFileService.OverwriteMode.None, CompressedFileService.ProgressOutputTarget.StandardOutput, null, null, null, default, Options());
     private static ArchiveOpenOptions Options(ZipPasswordCodePage code = ZipPasswordCodePage.SimplifiedChineseGbk) => ArchiveOpenOptions.WithZipPasswordCodePage(null, code)!;
-    private static PythonRuntimeExecution Runtime()
-    {
-        var executable = Environment.GetEnvironmentVariable("BAKABASE_TEST_PYZIPPER_PYTHON");
-        if (string.IsNullOrEmpty(executable) || !File.Exists(executable)) Assert.Inconclusive("Set BAKABASE_TEST_PYZIPPER_PYTHON to an isolated pyzipper 0.4.0 environment.");
-        return new(new() {Mode = PythonRuntimeMode.External, PythonExecutable = executable}, new("test", "test", executable!, "fixture"));
-    }
     private static CompressedFileService Service() => new CompatibilityService();
     private sealed class CompatibilityService() : CompressedFileService(null!, NullLogger<CompressedFileService>.Instance)
     {
-        protected override Task<PythonRuntimeExecution> GetZipCompatibilityExecutionAsync(CancellationToken ct) => Task.FromResult(Runtime());
+        protected override Task<PythonRuntimeExecution> GetZipCompatibilityExecutionAsync(CancellationToken ct) => ZipCompatibilityTestRuntime.GetAsync();
     }
     private sealed class MissingDependency : IArchiveExtractionService
     {
@@ -245,7 +238,7 @@ elif what=='expanded-total':
   ns,es,cs=struct.unpack_from('<HHH',b,p+28);p+=46+ns+es+cs
 open(r['path'],'wb').write(b)
 """;
-        using var process = new Process {StartInfo = Runtime().StartInfo(["-I", "-c", script], _root)};
+        using var process = new Process {StartInfo = (await ZipCompatibilityTestRuntime.GetAsync()).StartInfo(["-I", "-c", script], _root)};
         process.Start();
         await process.StandardInput.WriteAsync(JsonSerializer.Serialize(new {path, password = Password, bits, method, version, corruption, unsafeName, legacyNames, companions}));
         process.StandardInput.Close();

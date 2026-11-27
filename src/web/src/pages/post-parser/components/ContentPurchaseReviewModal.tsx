@@ -470,7 +470,7 @@ export default function ContentPurchaseReviewModal({
               )}
             </div>
           </div>
-          <Button ref={closeButton} autoFocus variant="flat" isDisabled={!!working} onPress={close}>
+          <Button ref={closeButton} variant="flat" isDisabled={!!working} onPress={close}>
             {label("close")}
           </Button>
           <Button
@@ -887,8 +887,8 @@ export default function ContentPurchaseReviewModal({
                                   </>
                                 )}
                                 {unavailableReason && (
-                                  <Tooltip content={unavailableReason}>
-                                    <span tabIndex={0} className="inline-flex shrink-0">
+                                  <Tooltip focusableTrigger content={unavailableReason}>
+                                    <span className="inline-flex shrink-0">
                                       <Chip
                                         size="sm"
                                         color="warning"

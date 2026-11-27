@@ -51,6 +51,7 @@ it("opens parsed content on the acquisition page and confirms before navigating 
     </MemoryRouter>,
   );
   fireEvent.click(screen.getByRole("button", { name: "acquisition.origin.postTask" }));
+  await act(() => vi.dynamicImportSettled());
   const modal = within(await screen.findByRole("dialog", { name: "acquisition.origin.postTask" }));
   expect(await modal.findByText("Parsed post content")).toBeVisible();
   expect(modal.getByRole("link", { name: "acquisition.origin.openPost" })).toHaveAttribute(

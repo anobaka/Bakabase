@@ -119,7 +119,7 @@ function ImagePicker({
       if (!controller.signal.aborted) setBusy(false);
     }
   };
-  const useSelected = async () => {
+  const applySelectedImage = async () => {
     if (!chosen || busy || saving) return;
     setSaving(true);
     try {
@@ -190,7 +190,7 @@ function ImagePicker({
             color="primary"
             isDisabled={!chosen || busy || saving}
             isLoading={saving}
-            onPress={() => void useSelected()}
+            onPress={() => void applySelectedImage()}
           >
             {t("acquisition.sourceImage.use")}
           </Button>

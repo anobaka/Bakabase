@@ -48,7 +48,7 @@ vi.mock("@/components/FileSystemSelector/components/Button", () => ({
   ),
 }));
 vi.mock("@/components/SourceAvailability/SourcePriorityConfiguration", () => ({
-  default: ({ onSavingChange }: any) => {
+  default: function MockSourcePriorityConfiguration({ onSavingChange }: any) {
     const [value, setValue] = useState("original priority");
     return (
       <div>

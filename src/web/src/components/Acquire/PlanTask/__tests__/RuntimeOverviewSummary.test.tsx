@@ -1,7 +1,8 @@
+import type { ReactElement, ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { createInstance } from "i18next";
-import { useState } from "react";
+import { cloneElement, useState } from "react";
 import RuntimeOverviewSummary from "../RuntimeOverviewSummary";
 import type { RuntimeOverview } from "../runtimeOverview";
 import acquisition from "@/locales/cn/pages/acquisition.json";
@@ -35,11 +36,11 @@ vi.mock("@/components/bakaui", () => ({
   Progress: ({ value, ...props }: any) => (
     <div role="progressbar" aria-label={props["aria-label"]} aria-valuenow={value} />
   ),
-  Popover: ({ trigger, children }: any) => {
+  Popover: ({ trigger, children }: { trigger: ReactElement<{ onPress?: () => void }>; children: ReactNode }) => {
     const [open, setOpen] = useState(false);
     return (
       <div>
-        <div onClick={() => setOpen(!open)}>{trigger}</div>
+        {cloneElement(trigger, { onPress: () => setOpen(!open) })}
         {open && <div role="dialog">{children}</div>}
       </div>
     );

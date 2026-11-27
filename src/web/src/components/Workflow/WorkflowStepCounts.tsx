@@ -18,13 +18,13 @@ export default function WorkflowStepCounts({
   const labels = getWorkflowActivityUI(kind)?.executionLabels;
   return (
     <Tooltip
+      focusableTrigger
       delay={1000}
       placement="bottom"
       content={t(labels?.explanationKey ?? "workflow.counts.explanation")}
     >
       <span
         className="inline-flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-default-500"
-        tabIndex={0}
       >
         <span>
           {t(labels?.inputLabelKey ?? "workflow.counts.input")}: {inputCount}
